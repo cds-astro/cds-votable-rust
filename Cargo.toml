@@ -1,0 +1,28 @@
+[package]
+name = "votable"
+version = "0.1.0"
+edition = "2021"
+authors = ["F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>"]
+license = "Apache-2.0 OR MIT"
+readme = "README.md"
+categories = ["encoding", "parse-implementation", "science"] 
+# repository = "https://github.com/cds-astro/cds-votable-rust/"
+description = """
+Rust implementation of a VOTable serializer/deserializer with support for
+format other than XML, such as JSON, TOML or YAML.
+"""
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+byteorder = "1.4"
+paste = "1.0" # To create new identifier in macro
+quick-xml = "0.23"
+# quick-xml = { version = "0.23", features = [ "serialize" ] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+toml = "0.5"
+quick-error = "2.0" # To handke error more easily
+base64 = "0.13"
+ucs2 = "0.3"

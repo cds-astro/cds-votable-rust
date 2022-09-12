@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VOTABLE version="1.4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="http://www.ivoa.net/xml/VOTable/v1.3"
+  xsi:schemaLocation="http://www.ivoa.net/xml/VOTable/v1.3 http://www.ivoa.net/xml/VOTable/v1.3">
+ <DESCRIPTION>
+   VizieR Astronomical Server vizier.u-strasbg.fr
+    Date: 2022-04-13T06:55:08 [V1.99+ (14-Oct-2013)]
+   Explanations and Statistics of UCDs:			See LINK below
+   In case of problem, please report to:	cds-question@unistra.fr
+   In this version, NULL integer columns are written as an empty string
+   &lt;TD&gt;&lt;/TD&gt;, explicitely possible from VOTable-1.3
+ </DESCRIPTION>
+<!-- VOTable description at http://www.ivoa.net/Documents/latest/VOT.html -->
+<INFO ID="VERSION" name="votable-version" value="1.99+ (14-Oct-2013)"/>
+<INFO ID="Ref" name="-ref" value="VIZ625673b123e6c2"/>
+<INFO ID="MaxTuples" name="-out.max" value="50"/>
+<INFO name="queryParameters" value="35">
+-oc.form=dec
+-out.max=50
+-nav=cat:V/147&amp;tab:{V/147/sdss12}&amp;key:source=V/147&amp;HTTPPRM:&amp;
+-c.eq=J2000
+-c.r=  2
+-c.u=arcmin
+-c.geom=r
+-source=V/147/sdss12
+-order=I
+-out.orig=standard
+-out=RA_ICRS
+-out=DE_ICRS
+-out=mode
+mode==1
+-out=q_mode
+-out=class
+-out=SDSS12
+-out=m_SDSS12
+Im=Im
+-out=ObsDate
+-out=Q
+-out=umag
+-out=e_umag
+-out=gmag
+-out=e_gmag
+-out=rmag
+-out=e_rmag
+-out=imag
+-out=e_imag
+-out=zmag
+-out=e_zmag
+-out=zsp
+-out=zph
+-out=e_zph
+-out=&lt;zph&gt;
+</INFO>
+
+<!--
+Execution Reports
+ -->
+
+<RESOURCE ID="yCat_5147" name="V/147">
+  <DESCRIPTION>The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)</DESCRIPTION>
+  <COOSYS ID="H" system="ICRS"/>
+
+  <TABLE ID="V_147_sdss12" name="V/147/sdss12">
+    <DESCRIPTION>* output of the SDSS photometric catalog</DESCRIPTION>
+<!-- Data Release 12 (469,053,874 {\em primary} sources plus 324,960,094 {\em secondary} sources); 3,538,079 spectroscopic targets (\originalcolumnnames) -->
+
+    <!-- Definitions of GROUPs and FIELDs -->
+    <FIELD name="RA_ICRS" ucd="pos.eq.ra;meta.main" ref="H" datatype="double" width="10" precision="6" unit="deg"><!-- ucd="POS_EQ_RA_MAIN" -->
+      <DESCRIPTION>Right Ascension of the object (ICRS) (ra)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="DE_ICRS" ucd="pos.eq.dec;meta.main" ref="H" datatype="double" width="10" precision="6" unit="deg"><!-- ucd="POS_EQ_DEC_MAIN" -->
+      <DESCRIPTION>Declination of the object (ICRS) (dec)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="mode" ucd="meta.code.class" datatype="unsignedByte" width="1"><!-- ucd="CLASS_CODE" -->
+      <DESCRIPTION>[1/2] 1: primary (469,053,874 sources), 2: secondary (324,960,094 sources)</DESCRIPTION>
+<!-- [1/2] 1: primary (469,053,874 sources), 2: secondary (324,960,094 sources) \vizQual{=1} -->
+
+    </FIELD>
+    <FIELD name="q_mode" ucd="meta.code.qual;instr.setup" datatype="char" arraysize="1"><!-- ucd="CODE_QUALITY" -->
+      <DESCRIPTION>[+] '+' indicates clean photometry (310,190,812 sources with mode 1+) (clean)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="class" ucd="src.class" datatype="unsignedByte" width="1"><!-- ucd="CLASS_OBJECT" -->
+      <DESCRIPTION>Type of object (3=galaxy, 6=star) (1)</DESCRIPTION>
+      <LINK href="http://vizier.u-strasbg.fr/viz-bin/nph-htx/A?%5cifnum%7b${class}%7d=0%7b${class}%7d%5celse%5cvNote%7b%26lt%3b%26quot%3bNote%26quot%3b%5c%26catid=5147%5c%26notid=2%5c%26-out.emph=${class}%7d%7b${class}%7d%5cfi"/>
+    </FIELD>
+    <FIELD name="SDSS12" ucd="meta.id" datatype="char" arraysize="19*"><!-- ucd="ID_ALTERNATIVE" -->
+      <DESCRIPTION>SDSS-DR12 name, based on J2000 position</DESCRIPTION>
+    </FIELD>
+    <FIELD name="m_SDSS12" ucd="meta.code.multip" datatype="char" arraysize="1"><!-- ucd="CODE_MULT_INDEX" -->
+      <DESCRIPTION>[*] The asterisk indicates that 2 different SDSS objects share the same SDSS12 name</DESCRIPTION>
+      <LINK href="http://vizier.u-strasbg.fr/viz-bin/VizieR-4?-info=XML&amp;-out.add=.&amp;-source=V/147&amp;SDSS12=${SDSS12}"/>
+    </FIELD>
+    <FIELD name="ObsDate" ucd="time.epoch;obs;stat.mean" datatype="double" width="9" precision="4" unit="yr"><!-- ucd="TIME_DATE" -->
+      <DESCRIPTION>Mean Observation date (6)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="Q" ucd="meta.code.qual;obs.param;obs" datatype="unsignedByte" width="1"><!-- ucd="CODE_QUALITY" -->
+      <DESCRIPTION>[1/3] Quality of the observation: 1=bad 2=acceptable 3=good</DESCRIPTION>
+    </FIELD>
+    <FIELD name="umag" ucd="phot.mag;em.opt.U" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="PHOT_SDSS_U" -->
+      <DESCRIPTION>[4/38]? Model magnitude in u filter, AB scale (u) (5)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_umag" ucd="stat.error;phot.mag" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Mean error on umag (err_u)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="gmag" ucd="phot.mag;em.opt.B" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="PHOT_SDSS_G" -->
+      <DESCRIPTION>[5/40]? Model magnitude in g filter, AB scale (g) (5)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_gmag" ucd="stat.error;phot.mag" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Mean error on gmag (err_g)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="rmag" ucd="phot.mag;em.opt.R" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="PHOT_SDSS_R" -->
+      <DESCRIPTION>[4/39]? Model magnitude in r filter, AB scale (r) (5)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_rmag" ucd="stat.error;phot.mag" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Mean error on rmag (err_r)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="imag" ucd="phot.mag;em.opt.I" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="PHOT_SDSS_I" -->
+      <DESCRIPTION>[3/40]? Model magnitude in i filter, AB scale (i) (5)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_imag" ucd="stat.error;phot.mag" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Mean error on imag (err_i)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="zmag" ucd="phot.mag;em.opt.I" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="PHOT_SDSS_Z" -->
+      <DESCRIPTION>[3/38]? Model magnitude in z filter, AB scale (z) (5)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_zmag" ucd="stat.error;phot.mag" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Mean error on zmag (err_z)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="zsp" ucd="src.redshift" datatype="double" width="8" precision="5"><!-- ucd="REDSHIFT_HC" -->
+      <DESCRIPTION>[-0.02/7.1]? Spectroscopic redshift (when SpObjID&gt;0) (7)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="zph" ucd="src.redshift" datatype="double" width="10" precision="4"><!-- ucd="REDSHIFT_PHOT" -->
+      <DESCRIPTION>[-9999/]? Photometric redshift; estimated by robust fit to nearest neighbors in a reference set (12)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_zph" ucd="stat.error" datatype="double" width="10" precision="4"><!-- ucd="ERROR" -->
+      <DESCRIPTION>[-9999/]? Estimated error of the photometric redshift (zErr) (12)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="&lt;zph&gt;" ucd="src.redshift.phot" datatype="float" width="7" precision="4"><!-- ucd="REDSHIFT_PHOT" -->
+      <DESCRIPTION>[0.009/0.9]? average redshift of the nearest neighbors; if significantly different from zph this might be a better estimate than zph (nnAvgZ)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+<DATA><TABLEDATA>
+<TR><TD>045.001638</TD><TD>+00.003727</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J030000.39+000013.4</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>23.823</TD><TD>1.041</TD><TD>23.177</TD><TD>0.320</TD><TD>22.802</TD><TD>0.349</TD><TD>21.693</TD><TD>0.208</TD><TD>20.916</TD><TD>0.431</TD><TD></TD><TD>0.8816</TD><TD>0.1046</TD><TD>0.7327</TD></TR>
+<TR><TD>044.996116</TD><TD>+00.005623</TD><TD>1</TD><TD>+</TD><TD>6</TD><TD>J025959.06+000020.2</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>19.548</TD><TD>0.028</TD><TD>18.186</TD><TD>0.006</TD><TD>17.619</TD><TD>0.007</TD><TD>17.379</TD><TD>0.007</TD><TD>17.241</TD><TD>0.013</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>044.997024</TD><TD>+00.008192</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J025959.28+000029.4</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>24.030</TD><TD>0.704</TD><TD>24.684</TD><TD>0.556</TD><TD>23.758</TD><TD>0.416</TD><TD>22.369</TD><TD>0.195</TD><TD>23.399</TD><TD>0.630</TD><TD></TD><TD>0.6184</TD><TD>0.1447</TD><TD>0.4056</TD></TR>
+<TR><TD>044.997256</TD><TD>+00.010397</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J025959.34+000037.4</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>26.117</TD><TD>0.562</TD><TD>23.713</TD><TD>0.445</TD><TD>22.330</TD><TD>0.206</TD><TD>21.243</TD><TD>0.118</TD><TD>21.132</TD><TD>0.453</TD><TD></TD><TD>0.5523</TD><TD>0.0616</TD><TD>0.5527</TD></TR>
+<TR><TD>045.002900</TD><TD>+00.015711</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J030000.69+000056.5</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>23.750</TD><TD>0.568</TD><TD>23.972</TD><TD>0.355</TD><TD>23.868</TD><TD>0.429</TD><TD>22.725</TD><TD>0.252</TD><TD>21.833</TD><TD>0.475</TD><TD></TD><TD>0.8905</TD><TD>0.1309</TD><TD>0.7365</TD></TR>
+<TR><TD>045.014132</TD><TD>+00.019725</TD><TD>1</TD><TD>+</TD><TD>6</TD><TD>J030003.39+000111.0</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>21.736</TD><TD>0.118</TD><TD>21.551</TD><TD>0.046</TD><TD>21.241</TD><TD>0.045</TD><TD>21.192</TD><TD>0.060</TD><TD>20.846</TD><TD>0.198</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>045.006977</TD><TD>+00.015972</TD><TD>1</TD><TD>+</TD><TD>6</TD><TD>J030001.67+000057.4</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>24.907</TD><TD>0.785</TD><TD>22.339</TD><TD>0.101</TD><TD>21.708</TD><TD>0.080</TD><TD>21.460</TD><TD>0.092</TD><TD>21.647</TD><TD>0.450</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>045.004509</TD><TD>+00.019681</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J030001.08+000110.8</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>24.566</TD><TD>2.393</TD><TD>25.148</TD><TD>1.716</TD><TD>17.596</TD><TD>0.032</TD><TD>13.890</TD><TD>0.001</TD><TD>22.827</TD><TD>2.226</TD><TD></TD><TD>-9999.0000</TD><TD>-9999.0000</TD><TD>0.3969</TD></TR>
+<TR><TD>045.004879</TD><TD>+00.019802</TD><TD>1</TD><TD></TD><TD>6</TD><TD>J030001.17+000111.2</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>17.398</TD><TD>0.011</TD><TD>15.191</TD><TD>0.005</TD><TD>14.183</TD><TD>0.003</TD><TD>16.934</TD><TD>0.018</TD><TD>13.777</TD><TD>0.006</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>045.004220</TD><TD>+00.020974</TD><TD>1</TD><TD>+</TD><TD>6</TD><TD>J030001.01+000115.5</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>21.956</TD><TD>0.141</TD><TD>19.689</TD><TD>0.014</TD><TD>18.110</TD><TD>0.008</TD><TD>16.886</TD><TD>0.006</TD><TD>16.261</TD><TD>0.008</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>044.988770</TD><TD>+00.012590</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J025957.30+000045.3</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>23.053</TD><TD>0.476</TD><TD>22.465</TD><TD>0.137</TD><TD>22.163</TD><TD>0.151</TD><TD>21.034</TD><TD>0.085</TD><TD>20.713</TD><TD>0.272</TD><TD></TD><TD>0.7064</TD><TD>0.0837</TD><TD>0.7412</TD></TR>
+<TR><TD>044.991889</TD><TD>+00.012931</TD><TD>1</TD><TD></TD><TD>6</TD><TD>J025958.05+000046.5</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>24.201</TD><TD>0.739</TD><TD>23.101</TD><TD>0.188</TD><TD>25.611</TD><TD>0.462</TD><TD>24.810</TD><TD>0.545</TD><TD>23.702</TD><TD>0.532</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>044.991421</TD><TD>+00.015398</TD><TD>1</TD><TD>+</TD><TD>6</TD><TD>J025957.94+000055.4</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>24.206</TD><TD>0.698</TD><TD>24.793</TD><TD>0.530</TD><TD>22.622</TD><TD>0.156</TD><TD>21.756</TD><TD>0.106</TD><TD>20.638</TD><TD>0.183</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>044.989599</TD><TD>+00.018751</TD><TD>1</TD><TD></TD><TD>6</TD><TD>J025957.50+000107.5</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>24.761</TD><TD>0.788</TD><TD>25.606</TD><TD>0.507</TD><TD>24.213</TD><TD>0.519</TD><TD>22.575</TD><TD>0.216</TD><TD>22.740</TD><TD>0.675</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>045.004030</TD><TD>+00.026238</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J030000.96+000134.4</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>24.864</TD><TD>0.654</TD><TD>23.975</TD><TD>0.331</TD><TD>22.893</TD><TD>0.180</TD><TD>22.356</TD><TD>0.163</TD><TD>22.178</TD><TD>0.523</TD><TD></TD><TD>0.4863</TD><TD>0.1227</TD><TD>0.4648</TD></TR>
+<TR><TD>045.003618</TD><TD>+00.032434</TD><TD>1</TD><TD></TD><TD>6</TD><TD>J030000.86+000156.7</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>25.308</TD><TD>0.597</TD><TD>23.091</TD><TD>0.173</TD><TD>23.269</TD><TD>0.259</TD><TD>23.177</TD><TD>0.332</TD><TD>22.039</TD><TD>0.516</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>044.996835</TD><TD>+00.031176</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J025959.24+000152.2</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>23.377</TD><TD>0.557</TD><TD>24.038</TD><TD>0.462</TD><TD>23.107</TD><TD>0.316</TD><TD>22.116</TD><TD>0.192</TD><TD>21.431</TD><TD>0.465</TD><TD></TD><TD>0.7702</TD><TD>0.0909</TD><TD>0.6989</TD></TR>
+<TR><TD>045.002655</TD><TD>+00.034948</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J030000.63+000205.8</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>22.929</TD><TD>0.386</TD><TD>21.813</TD><TD>0.071</TD><TD>20.623</TD><TD>0.037</TD><TD>20.061</TD><TD>0.032</TD><TD>19.741</TD><TD>0.103</TD><TD></TD><TD>0.4195</TD><TD>0.0987</TD><TD>0.4136</TD></TR>
+<TR><TD>045.024305</TD><TD>+00.025648</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J030005.83+000132.3</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>22.294</TD><TD>2.816</TD><TD>21.599</TD><TD>0.679</TD><TD>19.873</TD><TD>0.223</TD><TD>26.982</TD><TD>1.876</TD><TD>18.715</TD><TD>0.528</TD><TD></TD><TD>-9999.0000</TD><TD>-9999.0000</TD><TD>0.3477</TD></TR>
+<TR><TD>045.027561</TD><TD>+00.029177</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J030006.61+000145.0</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>24.395</TD><TD>0.762</TD><TD>23.826</TD><TD>0.327</TD><TD>23.625</TD><TD>0.364</TD><TD>22.328</TD><TD>0.186</TD><TD>21.314</TD><TD>0.337</TD><TD></TD><TD>0.0824</TD><TD>0.1473</TD><TD>0.6917</TD></TR>
+<TR><TD>045.018972</TD><TD>+00.029774</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J030004.55+000147.1</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>24.845</TD><TD>1.244</TD><TD>21.542</TD><TD>0.074</TD><TD>20.871</TD><TD>0.062</TD><TD>20.773</TD><TD>0.083</TD><TD>20.854</TD><TD>0.377</TD><TD></TD><TD>0.1164</TD><TD>0.0744</TD><TD>0.1464</TD></TR>
+<TR><TD>045.036820</TD><TD>+00.039350</TD><TD>1</TD><TD>+</TD><TD>6</TD><TD>J030008.83+000221.6</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>24.657</TD><TD>0.678</TD><TD>23.331</TD><TD>0.200</TD><TD>22.018</TD><TD>0.087</TD><TD>20.915</TD><TD>0.049</TD><TD>20.128</TD><TD>0.110</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>045.029173</TD><TD>+00.034136</TD><TD>1</TD><TD>+</TD><TD>6</TD><TD>J030007.00+000202.8</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>25.464</TD><TD>0.493</TD><TD>23.378</TD><TD>0.208</TD><TD>22.802</TD><TD>0.165</TD><TD>22.246</TD><TD>0.145</TD><TD>22.497</TD><TD>0.581</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>045.030535</TD><TD>+00.041092</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J030007.32+000227.9</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>22.842</TD><TD>0.330</TD><TD>22.646</TD><TD>0.134</TD><TD>22.332</TD><TD>0.139</TD><TD>22.208</TD><TD>0.184</TD><TD>21.496</TD><TD>0.410</TD><TD></TD><TD>0.7622</TD><TD>0.1876</TD><TD>0.5291</TD></TR>
+<TR><TD>045.012253</TD><TD>+00.030213</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J030002.94+000148.7</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>24.921</TD><TD>0.731</TD><TD>24.382</TD><TD>0.470</TD><TD>22.598</TD><TD>0.160</TD><TD>21.917</TD><TD>0.128</TD><TD>21.478</TD><TD>0.380</TD><TD></TD><TD>0.5238</TD><TD>0.0617</TD><TD>0.4261</TD></TR>
+<TR><TD>045.013296</TD><TD>+00.030391</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J030003.19+000149.4</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>22.394</TD><TD>0.289</TD><TD>23.200</TD><TD>0.268</TD><TD>21.499</TD><TD>0.094</TD><TD>20.812</TD><TD>0.081</TD><TD>20.105</TD><TD>0.172</TD><TD></TD><TD>0.4922</TD><TD>0.0715</TD><TD>0.4882</TD></TR>
+<TR><TD>045.019940</TD><TD>+00.036401</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J030004.78+000211.0</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>23.827</TD><TD>0.655</TD><TD>23.044</TD><TD>0.190</TD><TD>23.386</TD><TD>0.336</TD><TD>24.499</TD><TD>0.638</TD><TD>23.314</TD><TD>0.684</TD><TD></TD><TD>0.1626</TD><TD>0.1487</TD><TD>0.3813</TD></TR>
+<TR><TD>045.015517</TD><TD>+00.040671</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J030003.72+000226.4</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>21.996</TD><TD>0.170</TD><TD>25.026</TD><TD>0.625</TD><TD>25.442</TD><TD>0.552</TD><TD>24.638</TD><TD>0.619</TD><TD>22.103</TD><TD>0.620</TD><TD></TD><TD>-9999.0000</TD><TD>-9999.0000</TD><TD>0.5916</TD></TR>
+<TR><TD>045.025212</TD><TD>+00.041375</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J030006.05+000228.9</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>24.190</TD><TD>0.868</TD><TD>22.530</TD><TD>0.133</TD><TD>21.795</TD><TD>0.098</TD><TD>21.323</TD><TD>0.093</TD><TD>21.624</TD><TD>0.501</TD><TD></TD><TD>0.3200</TD><TD>0.1453</TD><TD>0.2638</TD></TR>
+<TR><TD>045.023985</TD><TD>+00.042446</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J030005.75+000232.8</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>24.536</TD><TD>0.753</TD><TD>22.577</TD><TD>0.115</TD><TD>21.464</TD><TD>0.060</TD><TD>20.153</TD><TD>0.029</TD><TD>19.409</TD><TD>0.065</TD><TD></TD><TD>0.7037</TD><TD>0.0754</TD><TD>0.6646</TD></TR>
+<TR><TD>045.022021</TD><TD>+00.046859</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J030005.28+000248.6</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>24.682</TD><TD>0.684</TD><TD>25.171</TD><TD>0.511</TD><TD>23.083</TD><TD>0.209</TD><TD>22.046</TD><TD>0.125</TD><TD>21.452</TD><TD>0.322</TD><TD></TD><TD>0.6469</TD><TD>0.0408</TD><TD>0.5593</TD></TR>
+<TR><TD>044.980278</TD><TD>+00.021280</TD><TD>1</TD><TD>+</TD><TD>6</TD><TD>J025955.26+000116.6</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>24.429</TD><TD>0.681</TD><TD>23.175</TD><TD>0.178</TD><TD>22.753</TD><TD>0.159</TD><TD>22.282</TD><TD>0.151</TD><TD>21.208</TD><TD>0.269</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>044.982620</TD><TD>+00.022707</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J025955.82+000121.7</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>25.285</TD><TD>0.623</TD><TD>24.414</TD><TD>0.464</TD><TD>22.950</TD><TD>0.207</TD><TD>21.630</TD><TD>0.098</TD><TD>21.240</TD><TD>0.301</TD><TD></TD><TD>0.6558</TD><TD>0.0649</TD><TD>0.6542</TD></TR>
+<TR><TD>044.988637</TD><TD>+00.028290</TD><TD>1</TD><TD></TD><TD>6</TD><TD>J025957.27+000141.8</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>24.788</TD><TD>0.705</TD><TD>25.107</TD><TD>0.544</TD><TD>23.095</TD><TD>0.225</TD><TD>23.269</TD><TD>0.352</TD><TD>22.775</TD><TD>0.645</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>044.975475</TD><TD>+00.026592</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J025954.11+000135.7</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>26.068</TD><TD>0.392</TD><TD>24.218</TD><TD>0.444</TD><TD>23.434</TD><TD>0.340</TD><TD>22.056</TD><TD>0.161</TD><TD>20.515</TD><TD>0.186</TD><TD></TD><TD>0.2448</TD><TD>0.0923</TD><TD>0.6546</TD></TR>
+<TR><TD>044.980432</TD><TD>+00.034338</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J025955.30+000203.6</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>23.297</TD><TD>1.013</TD><TD>22.610</TD><TD>0.273</TD><TD>21.285</TD><TD>0.138</TD><TD>21.180</TD><TD>0.182</TD><TD>22.063</TD><TD>1.385</TD><TD></TD><TD>0.6063</TD><TD>0.0967</TD><TD>0.1728</TD></TR>
+<TR><TD>044.991431</TD><TD>+00.030246</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J025957.94+000148.8</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>25.810</TD><TD>0.763</TD><TD>22.711</TD><TD>0.207</TD><TD>25.892</TD><TD>0.648</TD><TD>25.058</TD><TD>0.826</TD><TD>21.999</TD><TD>0.884</TD><TD></TD><TD>0.7592</TD><TD>0.2250</TD><TD>0.5059</TD></TR>
+<TR><TD>044.991683</TD><TD>+00.034768</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J025958.00+000205.1</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>22.876</TD><TD>0.745</TD><TD>21.975</TD><TD>0.157</TD><TD>21.279</TD><TD>0.141</TD><TD>20.847</TD><TD>0.181</TD><TD>20.324</TD><TD>0.358</TD><TD></TD><TD>0.4256</TD><TD>0.1573</TD><TD>0.4057</TD></TR>
+<TR><TD>044.995029</TD><TD>+00.038145</TD><TD>1</TD><TD>+</TD><TD>6</TD><TD>J025958.80+000217.3</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>24.543</TD><TD>0.690</TD><TD>21.773</TD><TD>0.055</TD><TD>20.167</TD><TD>0.021</TD><TD>18.857</TD><TD>0.012</TD><TD>18.180</TD><TD>0.024</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>044.991889</TD><TD>+00.040779</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J025958.05+000226.8</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>23.206</TD><TD>0.844</TD><TD>21.733</TD><TD>0.109</TD><TD>20.132</TD><TD>0.042</TD><TD>19.491</TD><TD>0.034</TD><TD>18.978</TD><TD>0.094</TD><TD>0.46846</TD><TD>0.3671</TD><TD>0.0447</TD><TD>0.3701</TD></TR>
+<TR><TD>044.991863</TD><TD>+00.041823</TD><TD>1</TD><TD>+</TD><TD>6</TD><TD>J025958.04+000230.5</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>24.545</TD><TD>0.678</TD><TD>24.249</TD><TD>0.395</TD><TD>22.899</TD><TD>0.180</TD><TD>21.971</TD><TD>0.116</TD><TD>22.485</TD><TD>0.574</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>044.990423</TD><TD>+00.044109</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J025957.70+000238.7</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>24.832</TD><TD>0.834</TD><TD>23.828</TD><TD>0.356</TD><TD>22.568</TD><TD>0.176</TD><TD>23.241</TD><TD>0.427</TD><TD>21.588</TD><TD>0.453</TD><TD></TD><TD>0.4199</TD><TD>0.1013</TD><TD>0.3921</TD></TR>
+<TR><TD>044.972287</TD><TD>+00.037770</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J025953.34+000215.9</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>24.349</TD><TD>0.793</TD><TD>23.030</TD><TD>0.181</TD><TD>23.319</TD><TD>0.309</TD><TD>22.234</TD><TD>0.181</TD><TD>21.631</TD><TD>0.438</TD><TD></TD><TD>0.4465</TD><TD>0.1611</TD><TD>0.6520</TD></TR>
+<TR><TD>044.964134</TD><TD>+00.037205</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J025951.39+000213.9</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>24.286</TD><TD>0.697</TD><TD>23.611</TD><TD>0.262</TD><TD>21.984</TD><TD>0.089</TD><TD>21.215</TD><TD>0.066</TD><TD>20.455</TD><TD>0.153</TD><TD></TD><TD>0.5500</TD><TD>0.0888</TD><TD>0.5191</TD></TR>
+<TR><TD>044.963905</TD><TD>+00.038080</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J025951.33+000217.0</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>24.848</TD><TD>0.725</TD><TD>24.107</TD><TD>0.384</TD><TD>22.485</TD><TD>0.139</TD><TD>21.706</TD><TD>0.102</TD><TD>21.359</TD><TD>0.327</TD><TD></TD><TD>0.4355</TD><TD>0.0697</TD><TD>0.4620</TD></TR>
+<TR><TD>044.963874</TD><TD>+00.043591</TD><TD>1</TD><TD>+</TD><TD>6</TD><TD>J025951.32+000236.9</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>20.998</TD><TD>0.071</TD><TD>18.942</TD><TD>0.009</TD><TD>18.088</TD><TD>0.007</TD><TD>17.765</TD><TD>0.008</TD><TD>17.573</TD><TD>0.016</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>044.983006</TD><TD>+00.044281</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J025955.92+000239.4</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>24.800</TD><TD>0.872</TD><TD>23.365</TD><TD>0.255</TD><TD>21.956</TD><TD>0.108</TD><TD>21.456</TD><TD>0.100</TD><TD>21.015</TD><TD>0.293</TD><TD></TD><TD>0.4021</TD><TD>0.1020</TD><TD>0.3968</TD></TR>
+<TR><TD>044.980398</TD><TD>+00.047786</TD><TD>1</TD><TD>+</TD><TD>6</TD><TD>J025955.29+000252.0</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>22.756</TD><TD>0.271</TD><TD>22.074</TD><TD>0.074</TD><TD>21.792</TD><TD>0.076</TD><TD>21.479</TD><TD>0.082</TD><TD>20.905</TD><TD>0.221</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>044.983639</TD><TD>+00.049973</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J025956.07+000259.9</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>23.564</TD><TD>0.811</TD><TD>23.890</TD><TD>0.536</TD><TD>23.039</TD><TD>0.372</TD><TD>21.279</TD><TD>0.118</TD><TD>20.331</TD><TD>0.230</TD><TD></TD><TD>0.8829</TD><TD>0.0884</TD><TD>0.6986</TD></TR>
+<TR><TD>044.973284</TD><TD>+00.044973</TD><TD>1</TD><TD>+</TD><TD>3</TD><TD>J025953.58+000241.9</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>23.519</TD><TD>0.529</TD><TD>23.650</TD><TD>0.298</TD><TD>22.182</TD><TD>0.123</TD><TD>21.591</TD><TD>0.112</TD><TD>21.892</TD><TD>0.522</TD><TD></TD><TD>0.4221</TD><TD>0.1318</TD><TD>0.4475</TD></TR>
+</TABLEDATA></DATA>
+</TABLE>
+<INFO name="matches" value="50">matching records</INFO>
+
+<INFO name="Warning" value="No center provided++++"/>
+<INFO name="Warning" value="truncated result (maxtup=50)"/><INFO name="QUERY_STATUS" value="OVERFLOW">truncated result (maxtup=50)</INFO>
+
+</RESOURCE>
+</VOTABLE>

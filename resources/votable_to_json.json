@@ -1,0 +1,379 @@
+{
+  "VOTABLE": {
+    "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+    "@xmlns": "http://www.ivoa.net/xml/VOTable/v1.3",
+    "@version": "1.4",
+    "@xsi:schemaLocation": "http://www.ivoa.net/xml/VOTable/v1.3 http://www.ivoa.net/xml/VOTable/v1.3",
+    "DESCRIPTION": "VizieR Astronomical Server vizier.u-strasbg.fr\n    Date: 2022-04-13T06:55:08 [V1.99+ (14-Oct-2013)]\n   Explanations and Statistics of UCDs:\t\t\tSee LINK below\n   In case of problem, please report to:\tcds-question@unistra.fr\n   In this version, NULL integer columns are written as an empty string\n   <TD></TD>, explicitely possible from VOTable-1.3",
+    "INFO": [
+      {
+        "@ID": "VERSION",
+        "@name": "votable-version",
+        "@value": "1.99+ (14-Oct-2013)"
+      },
+      {
+        "@ID": "Ref",
+        "@name": "-ref",
+        "@value": "VIZ625673b123e6c2"
+      }
+    ],
+    "COOSYS": {
+      "@ID": "H",
+      "@system": "ICRS"
+    },
+    "RESOURCE": [
+      {
+        "@ID": "dummy"
+      },
+      {
+        "@ID": "yCat_5147",
+        "@name": "V/147",
+        "DESCRIPTION": "The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)",
+        "INFO": [
+          {
+            "@ID": "MaxTuples",
+            "@name": "-out.max",
+            "@value": "50"
+          },
+          {
+            "@name": "matches",
+            "@value": "50",
+            "#text": "matching records"
+          },
+          {
+            "@name": "Warning",
+            "@value": "No center provided++++"
+          },
+          {
+            "@name": "Warning",
+            "@value": "truncated result (maxtup=50)"
+          },
+          {
+            "@name": "QUERY_STATUS",
+            "@value": "OVERFLOW",
+            "#text": "truncated result (maxtup=50)"
+          }
+        ],
+        "COOSYS": {
+          "@ID": "H",
+          "@system": "ICRS"
+        },
+        "TABLE": {
+          "@ID": "V_147_sdss12",
+          "@name": "V/147/sdss12",
+          "DESCRIPTION": "* output of the SDSS photometric catalog",
+          "FIELD": [
+            {
+              "@name": "RA_ICRS",
+              "@ucd": "pos.eq.ra;meta.main",
+              "@ref": "H",
+              "@datatype": "double",
+              "@width": "10",
+              "@precision": "6",
+              "@unit": "deg",
+              "DESCRIPTION": "Right Ascension of the object (ICRS) (ra)"
+            },
+            {
+              "@name": "DE_ICRS",
+              "@ucd": "pos.eq.dec;meta.main",
+              "@ref": "H",
+              "@datatype": "double",
+              "@width": "10",
+              "@precision": "6",
+              "@unit": "deg",
+              "DESCRIPTION": "Declination of the object (ICRS) (dec)"
+            },
+            {
+              "@name": "mode",
+              "@ucd": "meta.code.class",
+              "@datatype": "unsignedByte",
+              "@width": "1",
+              "DESCRIPTION": "[1/2] 1: primary (469,053,874 sources), 2: secondary (324,960,094 sources)"
+            },
+            {
+              "@name": "q_mode",
+              "@ucd": "meta.code.qual;instr.setup",
+              "@datatype": "char",
+              "@arraysize": "1",
+              "DESCRIPTION": "[+] '+' indicates clean photometry (310,190,812 sources with mode 1+) (clean)"
+            },
+            {
+              "@name": "class",
+              "@ucd": "src.class",
+              "@datatype": "unsignedByte",
+              "@width": "1",
+              "DESCRIPTION": "Type of object (3=galaxy, 6=star) (1)",
+              "LINK": {
+                "@href": "http://vizier.u-strasbg.fr/viz-bin/nph-htx/A?%5cifnum%7b${class}%7d=0%7b${class}%7d%5celse%5cvNote%7b%26lt%3b%26quot%3bNote%26quot%3b%5c%26catid=5147%5c%26notid=2%5c%26-out.emph=${class}%7d%7b${class}%7d%5cfi"
+              }
+            },
+            {
+              "@name": "SDSS12",
+              "@ucd": "meta.id",
+              "@datatype": "char",
+              "@arraysize": "19*",
+              "DESCRIPTION": "SDSS-DR12 name, based on J2000 position"
+            },
+            {
+              "@name": "m_SDSS12",
+              "@ucd": "meta.code.multip",
+              "@datatype": "char",
+              "@arraysize": "1",
+              "DESCRIPTION": "[*] The asterisk indicates that 2 different SDSS objects share the same SDSS12 name",
+              "LINK": {
+                "@href": "http://vizier.u-strasbg.fr/viz-bin/VizieR-4?-info=XML&-out.add=.&-source=V/147&SDSS12=${SDSS12}"
+              }
+            },
+            {
+              "@name": "ObsDate",
+              "@ucd": "time.epoch;obs;stat.mean",
+              "@datatype": "double",
+              "@width": "9",
+              "@precision": "4",
+              "@unit": "yr",
+              "DESCRIPTION": "Mean Observation date (6)"
+            },
+            {
+              "@name": "Q",
+              "@ucd": "meta.code.qual;obs.param;obs",
+              "@datatype": "unsignedByte",
+              "@width": "1",
+              "DESCRIPTION": "[1/3] Quality of the observation: 1=bad 2=acceptable 3=good"
+            },
+            {
+              "@name": "umag",
+              "@ucd": "phot.mag;em.opt.U",
+              "@datatype": "float",
+              "@width": "6",
+              "@precision": "3",
+              "@unit": "mag",
+              "DESCRIPTION": "[4/38]? Model magnitude in u filter, AB scale (u) (5)",
+              "VALUES": {
+                "@null": "NaN"
+              }
+            },
+            {
+              "@name": "e_umag",
+              "@ucd": "stat.error;phot.mag",
+              "@datatype": "float",
+              "@width": "6",
+              "@precision": "3",
+              "@unit": "mag",
+              "DESCRIPTION": "? Mean error on umag (err_u)",
+              "VALUES": {
+                "@null": "NaN"
+              }
+            },
+            {
+              "@name": "gmag",
+              "@ucd": "phot.mag;em.opt.B",
+              "@datatype": "float",
+              "@width": "6",
+              "@precision": "3",
+              "@unit": "mag",
+              "DESCRIPTION": "[5/40]? Model magnitude in g filter, AB scale (g) (5)",
+              "VALUES": {
+                "@null": "NaN"
+              }
+            },
+            {
+              "@name": "e_gmag",
+              "@ucd": "stat.error;phot.mag",
+              "@datatype": "float",
+              "@width": "6",
+              "@precision": "3",
+              "@unit": "mag",
+              "DESCRIPTION": "? Mean error on gmag (err_g)",
+              "VALUES": {
+                "@null": "NaN"
+              }
+            },
+            {
+              "@name": "rmag",
+              "@ucd": "phot.mag;em.opt.R",
+              "@datatype": "float",
+              "@width": "6",
+              "@precision": "3",
+              "@unit": "mag",
+              "DESCRIPTION": "[4/39]? Model magnitude in r filter, AB scale (r) (5)",
+              "VALUES": {
+                "@null": "NaN"
+              }
+            },
+            {
+              "@name": "e_rmag",
+              "@ucd": "stat.error;phot.mag",
+              "@datatype": "float",
+              "@width": "6",
+              "@precision": "3",
+              "@unit": "mag",
+              "DESCRIPTION": "? Mean error on rmag (err_r)",
+              "VALUES": {
+                "@null": "NaN"
+              }
+            },
+            {
+              "@name": "imag",
+              "@ucd": "phot.mag;em.opt.I",
+              "@datatype": "float",
+              "@width": "6",
+              "@precision": "3",
+              "@unit": "mag",
+              "DESCRIPTION": "[3/40]? Model magnitude in i filter, AB scale (i) (5)",
+              "VALUES": {
+                "@null": "NaN"
+              }
+            },
+            {
+              "@name": "e_imag",
+              "@ucd": "stat.error;phot.mag",
+              "@datatype": "float",
+              "@width": "6",
+              "@precision": "3",
+              "@unit": "mag",
+              "DESCRIPTION": "? Mean error on imag (err_i)",
+              "VALUES": {
+                "@null": "NaN"
+              }
+            },
+            {
+              "@name": "zmag",
+              "@ucd": "phot.mag;em.opt.I",
+              "@datatype": "float",
+              "@width": "6",
+              "@precision": "3",
+              "@unit": "mag",
+              "DESCRIPTION": "[3/38]? Model magnitude in z filter, AB scale (z) (5)",
+              "VALUES": {
+                "@null": "NaN"
+              }
+            },
+            {
+              "@name": "e_zmag",
+              "@ucd": "stat.error;phot.mag",
+              "@datatype": "float",
+              "@width": "6",
+              "@precision": "3",
+              "@unit": "mag",
+              "DESCRIPTION": "? Mean error on zmag (err_z)",
+              "VALUES": {
+                "@null": "NaN"
+              }
+            },
+            {
+              "@name": "zsp",
+              "@ucd": "src.redshift",
+              "@datatype": "double",
+              "@width": "8",
+              "@precision": "5",
+              "DESCRIPTION": "[-0.02/7.1]? Spectroscopic redshift (when SpObjID>0) (7)",
+              "VALUES": {
+                "@null": "NaN"
+              }
+            },
+            {
+              "@name": "zph",
+              "@ucd": "src.redshift",
+              "@datatype": "double",
+              "@width": "10",
+              "@precision": "4",
+              "DESCRIPTION": "[-9999/]? Photometric redshift; estimated by robust fit to nearest neighbors in a reference set (12)",
+              "VALUES": {
+                "@null": "NaN"
+              }
+            },
+            {
+              "@name": "e_zph",
+              "@ucd": "stat.error",
+              "@datatype": "double",
+              "@width": "10",
+              "@precision": "4",
+              "DESCRIPTION": "[-9999/]? Estimated error of the photometric redshift (zErr) (12)",
+              "VALUES": {
+                "@null": "NaN"
+              }
+            },
+            {
+              "@name": "<zph>",
+              "@ucd": "src.redshift.phot",
+              "@datatype": "float",
+              "@width": "7",
+              "@precision": "4",
+              "DESCRIPTION": "[0.009/0.9]? average redshift of the nearest neighbors; if significantly different from zph this might be a better estimate than zph (nnAvgZ)",
+              "VALUES": {
+                "@null": "NaN"
+              }
+            }
+          ],
+          "PARAM": {
+            "@name": "toto",
+            "@datatype": "char",
+            "@width": "*",
+            "@value": "juste_pour_tester",
+            "DESCRIPTION": "Declination of the object (ICRS) (dec)"
+          },
+          "DATA": {
+            "TABLEDATA": {
+              "TR": [
+                {
+                  "TD": [
+                    "045.001638",
+                    "+00.003727",
+                    "1",
+                    null,
+                    "3",
+                    "J030000.39+000013.4",
+                    null,
+                    "2003.8858",
+                    "3",
+                    "23.823",
+                    "1.041",
+                    "23.177",
+                    "0.320",
+                    "22.802",
+                    "0.349",
+                    "21.693",
+                    "0.208",
+                    "20.916",
+                    "0.431",
+                    null,
+                    "0.8816",
+                    "0.1046",
+                    "0.7327"
+                  ]
+                },
+                {
+                  "TD": [
+                    "044.996116",
+                    "+00.005623",
+                    "1",
+                    "+",
+                    "6",
+                    "J025959.06+000020.2",
+                    "*",
+                    "2003.8858",
+                    "3",
+                    "19.548",
+                    "0.028",
+                    "18.186",
+                    "0.006",
+                    "17.619",
+                    "0.007",
+                    "17.379",
+                    "0.007",
+                    "17.241",
+                    "0.013",
+                    null,
+                    null,
+                    null,
+                    null
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  }
+}

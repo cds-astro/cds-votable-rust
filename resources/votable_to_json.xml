@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VOTABLE version="1.4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="http://www.ivoa.net/xml/VOTable/v1.3"
+  xsi:schemaLocation="http://www.ivoa.net/xml/VOTable/v1.3 http://www.ivoa.net/xml/VOTable/v1.3">
+ <DESCRIPTION>
+   VizieR Astronomical Server vizier.u-strasbg.fr
+    Date: 2022-04-13T06:55:08 [V1.99+ (14-Oct-2013)]
+   Explanations and Statistics of UCDs:			See LINK below
+   In case of problem, please report to:	cds-question@unistra.fr
+   In this version, NULL integer columns are written as an empty string
+   &lt;TD&gt;&lt;/TD&gt;, explicitely possible from VOTable-1.3
+ </DESCRIPTION>
+<!-- VOTable description at http://www.ivoa.net/Documents/latest/VOT.html -->
+<INFO ID="VERSION" name="votable-version" value="1.99+ (14-Oct-2013)"/>
+<COOSYS ID="H" system="ICRS"/>
+<INFO ID="Ref" name="-ref" value="VIZ625673b123e6c2"/>
+
+<!--
+Execution Reports
+ -->
+<RESOURCE ID="dummy"></RESOURCE>
+<RESOURCE ID="yCat_5147" name="V/147">
+  <DESCRIPTION>The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)</DESCRIPTION>
+  <INFO ID="MaxTuples" name="-out.max" value="50"/>
+  <COOSYS ID="H" system="ICRS"/>
+
+  <TABLE ID="V_147_sdss12" name="V/147/sdss12">
+    <DESCRIPTION>* output of the SDSS photometric catalog</DESCRIPTION>
+<!-- Data Release 12 (469,053,874 {\em primary} sources plus 324,960,094 {\em secondary} sources); 3,538,079 spectroscopic targets (\originalcolumnnames) -->
+
+    <!-- Definitions of GROUPs and FIELDs -->
+    <FIELD name="RA_ICRS" ucd="pos.eq.ra;meta.main" ref="H" datatype="double" width="10" precision="6" unit="deg"><!-- ucd="POS_EQ_RA_MAIN" -->
+      <DESCRIPTION>Right Ascension of the object (ICRS) (ra)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="DE_ICRS" ucd="pos.eq.dec;meta.main" ref="H" datatype="double" width="10" precision="6" unit="deg"><!-- ucd="POS_EQ_DEC_MAIN" -->
+      <DESCRIPTION>Declination of the object (ICRS) (dec)</DESCRIPTION>
+    </FIELD>
+    <PARAM name="toto" datatype="char" width="*" value="juste_pour_tester"><!-- ucd="POS_EQ_DEC_MAIN" -->
+      <DESCRIPTION>Declination of the object (ICRS) (dec)</DESCRIPTION>
+    </PARAM>
+    <FIELD name="mode" ucd="meta.code.class" datatype="unsignedByte" width="1"><!-- ucd="CLASS_CODE" -->
+      <DESCRIPTION>[1/2] 1: primary (469,053,874 sources), 2: secondary (324,960,094 sources)</DESCRIPTION>
+<!-- [1/2] 1: primary (469,053,874 sources), 2: secondary (324,960,094 sources) \vizQual{=1} -->
+
+    </FIELD>
+    <FIELD name="q_mode" ucd="meta.code.qual;instr.setup" datatype="char" arraysize="1"><!-- ucd="CODE_QUALITY" -->
+      <DESCRIPTION>[+] '+' indicates clean photometry (310,190,812 sources with mode 1+) (clean)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="class" ucd="src.class" datatype="unsignedByte" width="1"><!-- ucd="CLASS_OBJECT" -->
+      <DESCRIPTION>Type of object (3=galaxy, 6=star) (1)</DESCRIPTION>
+      <LINK href="http://vizier.u-strasbg.fr/viz-bin/nph-htx/A?%5cifnum%7b${class}%7d=0%7b${class}%7d%5celse%5cvNote%7b%26lt%3b%26quot%3bNote%26quot%3b%5c%26catid=5147%5c%26notid=2%5c%26-out.emph=${class}%7d%7b${class}%7d%5cfi"/>
+    </FIELD>
+    <FIELD name="SDSS12" ucd="meta.id" datatype="char" arraysize="19*"><!-- ucd="ID_ALTERNATIVE" -->
+      <DESCRIPTION>SDSS-DR12 name, based on J2000 position</DESCRIPTION>
+    </FIELD>
+    <FIELD name="m_SDSS12" ucd="meta.code.multip" datatype="char" arraysize="1"><!-- ucd="CODE_MULT_INDEX" -->
+      <DESCRIPTION>[*] The asterisk indicates that 2 different SDSS objects share the same SDSS12 name</DESCRIPTION>
+      <LINK href="http://vizier.u-strasbg.fr/viz-bin/VizieR-4?-info=XML&amp;-out.add=.&amp;-source=V/147&amp;SDSS12=${SDSS12}"/>
+    </FIELD>
+    <FIELD name="ObsDate" ucd="time.epoch;obs;stat.mean" datatype="double" width="9" precision="4" unit="yr"><!-- ucd="TIME_DATE" -->
+      <DESCRIPTION>Mean Observation date (6)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="Q" ucd="meta.code.qual;obs.param;obs" datatype="unsignedByte" width="1"><!-- ucd="CODE_QUALITY" -->
+      <DESCRIPTION>[1/3] Quality of the observation: 1=bad 2=acceptable 3=good</DESCRIPTION>
+    </FIELD>
+    <FIELD name="umag" ucd="phot.mag;em.opt.U" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="PHOT_SDSS_U" -->
+      <DESCRIPTION>[4/38]? Model magnitude in u filter, AB scale (u) (5)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_umag" ucd="stat.error;phot.mag" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Mean error on umag (err_u)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="gmag" ucd="phot.mag;em.opt.B" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="PHOT_SDSS_G" -->
+      <DESCRIPTION>[5/40]? Model magnitude in g filter, AB scale (g) (5)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_gmag" ucd="stat.error;phot.mag" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Mean error on gmag (err_g)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="rmag" ucd="phot.mag;em.opt.R" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="PHOT_SDSS_R" -->
+      <DESCRIPTION>[4/39]? Model magnitude in r filter, AB scale (r) (5)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_rmag" ucd="stat.error;phot.mag" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Mean error on rmag (err_r)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="imag" ucd="phot.mag;em.opt.I" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="PHOT_SDSS_I" -->
+      <DESCRIPTION>[3/40]? Model magnitude in i filter, AB scale (i) (5)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_imag" ucd="stat.error;phot.mag" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Mean error on imag (err_i)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="zmag" ucd="phot.mag;em.opt.I" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="PHOT_SDSS_Z" -->
+      <DESCRIPTION>[3/38]? Model magnitude in z filter, AB scale (z) (5)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_zmag" ucd="stat.error;phot.mag" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Mean error on zmag (err_z)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="zsp" ucd="src.redshift" datatype="double" width="8" precision="5"><!-- ucd="REDSHIFT_HC" -->
+      <DESCRIPTION>[-0.02/7.1]? Spectroscopic redshift (when SpObjID&gt;0) (7)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="zph" ucd="src.redshift" datatype="double" width="10" precision="4"><!-- ucd="REDSHIFT_PHOT" -->
+      <DESCRIPTION>[-9999/]? Photometric redshift; estimated by robust fit to nearest neighbors in a reference set (12)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_zph" ucd="stat.error" datatype="double" width="10" precision="4"><!-- ucd="ERROR" -->
+      <DESCRIPTION>[-9999/]? Estimated error of the photometric redshift (zErr) (12)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="&lt;zph&gt;" ucd="src.redshift.phot" datatype="float" width="7" precision="4"><!-- ucd="REDSHIFT_PHOT" -->
+      <DESCRIPTION>[0.009/0.9]? average redshift of the nearest neighbors; if significantly different from zph this might be a better estimate than zph (nnAvgZ)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+<DATA><TABLEDATA>
+<TR><TD>045.001638</TD><TD>+00.003727</TD><TD>1</TD><TD></TD><TD>3</TD><TD>J030000.39+000013.4</TD><TD></TD><TD>2003.8858</TD><TD>3</TD><TD>23.823</TD><TD>1.041</TD><TD>23.177</TD><TD>0.320</TD><TD>22.802</TD><TD>0.349</TD><TD>21.693</TD><TD>0.208</TD><TD>20.916</TD><TD>0.431</TD><TD></TD><TD>0.8816</TD><TD>0.1046</TD><TD>0.7327</TD></TR>
+<TR><TD>044.996116</TD><TD>+00.005623</TD><TD>1</TD><TD>+</TD><TD>6</TD><TD>J025959.06+000020.2</TD><TD>*</TD><TD>2003.8858</TD><TD>3</TD><TD>19.548</TD><TD>0.028</TD><TD>18.186</TD><TD>0.006</TD><TD>17.619</TD><TD>0.007</TD><TD>17.379</TD><TD>0.007</TD><TD>17.241</TD><TD>0.013</TD><TD></TD><TD></TD><TD></TD><TD></TD></TR>
+</TABLEDATA></DATA>
+</TABLE>
+<INFO name="matches" value="50">matching records</INFO>
+
+<INFO name="Warning" value="No center provided++++"/>
+<INFO name="Warning" value="truncated result (maxtup=50)"/><INFO name="QUERY_STATUS" value="OVERFLOW">truncated result (maxtup=50)</INFO>
+
+</RESOURCE>
+</VOTABLE>

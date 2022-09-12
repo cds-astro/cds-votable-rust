@@ -1,0 +1,632 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VOTABLE version="1.4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="http://www.ivoa.net/xml/VOTable/v1.3"
+  xsi:schemaLocation="http://www.ivoa.net/xml/VOTable/v1.3 http://www.ivoa.net/xml/VOTable/v1.3">
+ <DESCRIPTION>
+   VizieR Astronomical Server vizier.u-strasbg.fr
+    Date: 2022-06-20T11:24:41 [V1.99+ (14-Oct-2013)]
+   Explanations and Statistics of UCDs:			See LINK below
+   In case of problem, please report to:	cds-question@unistra.fr
+ </DESCRIPTION>
+<!-- VOTable description at http://www.ivoa.net/Documents/latest/VOT.html -->
+<INFO ID="VERSION" name="votable-version" value="1.99+ (14-Oct-2013)"/>
+<INFO ID="Ref" name="-ref" value="VIZ62b058f01e5f65"/>
+<INFO ID="MaxTuples" name="-out.max" value="50"/>
+<INFO name="queryParameters" value="67">
+-oc.form=dec
+-out.max=50
+-nav=cat:I/355&amp;tab:{I/355/gaiadr3}&amp;key:source=I/355/gaiadr3&amp;HTTPPRM:&amp;
+-c.eq=J2000
+-c.r=  2
+-c.u=arcmin
+-c.geom=r
+-source=I/355/gaiadr3
+-order=I
+-out.orig=standard
+-out=RA_ICRS
+-out=e_RA_ICRS
+-out=DE_ICRS
+-out=e_DE_ICRS
+-out=Source
+-out=Plx
+-out=e_Plx
+-out=PM
+-out=pmRA
+-out=e_pmRA
+-out=pmDE
+-out=e_pmDE
+-out=RUWE
+-out=FG
+-out=e_FG
+-out=Gmag
+-out=FBP
+-out=e_FBP
+-out=BPmag
+-out=FRP
+-out=e_FRP
+-out=RPmag
+-out=BP-RP
+-out=RV
+-out=e_RV
+-out=Vbroad
+-out=GRVSmag
+-out=QSO
+-out=Gal
+-out=NSS
+-out=XPcont
+-out=XPsamp
+-out=RVS
+-out=EpochPh
+-out=EpochRV
+-out=MCMCGSP
+-out=MCMCMSC
+-out=And
+-out=Teff
+-out=logg
+-out=[Fe/H]
+-out=Dist
+-out=A0
+-out=HIP
+-out=PS1
+-out=SDSS13
+-out=SKYM2
+-out=TYC2
+-out=URAT1
+-out=AllWISE
+-out=APASS9
+-out=GSC23
+-out=RAVE5
+-out=2MASS
+-out=RAVE6
+-out=RAJ2000
+-out=DEJ2000
+</INFO>
+
+<!--
+Execution Reports
+ -->
+
+<RESOURCE ID="yCat_1355" name="I/355">
+  <DESCRIPTION>Gaia DR3 Part 1. Main source (Gaia Collaboration, 2022)</DESCRIPTION>
+  <COOSYS ID="H_2016.000" system="ICRS" epoch="2016.000"/>
+  <TABLE ID="I_355_gaiadr3" name="I/355/gaiadr3">
+    <DESCRIPTION>Gaia DR3 source catalog (1811709771 sources)</DESCRIPTION>
+<!-- Gaia data release 3 (Gaia DR3). (\originalcolumnnames)\vizContent{timeSerie}\vizContent{spectrum} -->
+
+    <!-- Definitions of GROUPs and FIELDs -->
+    <FIELD name="RA_ICRS" ucd="pos.eq.ra;meta.main" ref="H_2016.000" datatype="double" width="15" precision="11" unit="deg"><!-- ucd="POS_EQ_RA_MAIN" -->
+      <DESCRIPTION>Right ascension (ICRS) at Ep=2016.0 (ra)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="e_RA_ICRS" ucd="stat.error;pos.eq.ra" datatype="double" width="7" precision="4" unit="mas"><!-- ucd="ERROR" -->
+      <DESCRIPTION>Standard error of right ascension (ra_error)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="DE_ICRS" ucd="pos.eq.dec;meta.main" ref="H_2016.000" datatype="double" width="15" precision="11" unit="deg"><!-- ucd="POS_EQ_DEC_MAIN" -->
+      <DESCRIPTION>Declination (ICRS) at Ep=2016.0 (dec)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="e_DE_ICRS" ucd="stat.error;pos.eq.dec" datatype="double" width="7" precision="4" unit="mas"><!-- ucd="ERROR" -->
+      <DESCRIPTION>Standard error of declination (dec_error)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="Source" ucd="meta.id;meta.main" datatype="long" width="19"><!-- ucd="ID_MAIN" -->
+      <DESCRIPTION>Unique source identifier (unique within a particular Data Release) (source_id)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="Plx" ucd="pos.parallax.trig" datatype="double" width="9" precision="4" unit="mas"><!-- ucd="POS_PARLX_TRIG" -->
+      <DESCRIPTION>? Parallax (parallax)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_Plx" ucd="stat.error;pos.parallax.trig" datatype="float" width="7" precision="4" unit="mas"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Standard error of parallax (parallax_error)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="PM" ucd="pos.pm;pos.eq" datatype="double" width="9" precision="3" unit="mas/yr"><!-- ucd="POS_EQ_PM" -->
+      <DESCRIPTION>? Total proper motion (pm)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="pmRA" ucd="pos.pm;pos.eq.ra" ref="H_2016.000" datatype="double" width="9" precision="3" unit="mas/yr"><!-- ucd="POS_EQ_PMRA" -->
+      <DESCRIPTION>? Proper motion in right ascension direction, pmRA*cosDE (pmra)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_pmRA" ucd="stat.error;pos.pm;pos.eq.ra" datatype="float" width="6" precision="3" unit="mas/yr"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Standard error of proper motion in right ascension direction (pmra_error)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="pmDE" ucd="pos.pm;pos.eq.dec" ref="H_2016.000" datatype="double" width="9" precision="3" unit="mas/yr"><!-- ucd="POS_EQ_PMDEC" -->
+      <DESCRIPTION>? Proper motion in declination direction (pmdec)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_pmDE" ucd="stat.error;pos.pm;pos.eq.dec" datatype="double" width="13" precision="10" unit="mas/yr"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Standard error of proper motion in declination direction (pmdec_error)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="RUWE" ucd="stat.error" datatype="double" width="7" precision="3"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Renormalised unit weight error (ruwe)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="FG" ucd="phot.flux;em.opt" datatype="double" width="16" precision="5" unit="e-/s"><!-- ucd="PHOT_FLUX_OPTICAL" -->
+      <DESCRIPTION>? G-band mean flux (phot_g_mean_flux)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_FG" ucd="stat.error;phot.flux;em.opt" datatype="float" width="11" precision="E4" unit="e-/s"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Error on G-band mean flux (phot_g_mean_flux_error)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="Gmag" ucd="phot.mag;em.opt" datatype="double" width="9" precision="6" unit="mag"><!-- ucd="PHOT_MAG_OPTICAL" -->
+      <DESCRIPTION>? G-band mean magnitude (phot_g_mean_mag)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="FBP" ucd="phot.flux;em.opt.B" datatype="float" width="11" precision="E4" unit="e-/s"><!-- ucd="PHOT_FLUX_B" -->
+      <DESCRIPTION>? Integrated BP mean flux (phot_bp_mean_flux)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_FBP" ucd="stat.error;phot.flux;em.opt.B" datatype="float" width="11" precision="E4" unit="e-/s"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Error on the integrated BP mean flux (phot_bp_mean_flux_error)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="BPmag" ucd="phot.mag;em.opt.B" datatype="double" width="9" precision="6" unit="mag"><!-- ucd="PHOT_MAG_B" -->
+      <DESCRIPTION>? Integrated BP mean magnitude (phot_bp_mean_mag)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="FRP" ucd="phot.flux;em.opt.R" datatype="float" width="11" precision="E4" unit="e-/s"><!-- ucd="PHOT_FLUX_R" -->
+      <DESCRIPTION>? Integrated RP mean flux (phot_rp_mean_flux)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_FRP" ucd="stat.error;phot.flux;em.opt.R" datatype="float" width="11" precision="E4" unit="e-/s"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Error on the integrated RP mean flux (phot_rp_mean_flux_error)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="RPmag" ucd="phot.mag;em.opt.R" datatype="double" width="9" precision="6" unit="mag"><!-- ucd="PHOT_MAG_R" -->
+      <DESCRIPTION>? Integrated RP mean magnitude (phot_rp_mean_mag)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="BP-RP" ucd="phot.color;em.opt.B;em.opt.R" datatype="double" width="9" precision="6" unit="mag"><!-- ucd="PHOT_CI_B-R" -->
+      <DESCRIPTION>? BP-RP colour (bp_rp)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="RV" ucd="spect.dopplerVeloc.opt;em.opt.I" datatype="double" width="7" precision="2" unit="km/s"><!-- ucd="VELOC_BARYCENTER" -->
+      <DESCRIPTION>? Radial velocity (radial_velocity)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_RV" ucd="stat.error;spect.dopplerVeloc.opt;em.opt.I" datatype="float" width="5" precision="2" unit="km/s"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Radial velocity error (radial_velocity_error)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="Vbroad" ucd="spect.dopplerVeloc.opt;em.opt.I" datatype="double" width="8" precision="4" unit="km/s"><!-- ucd="SPECT_LINE_BROADENING" -->
+      <DESCRIPTION>? Spectral line broadening parameter</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="GRVSmag" ucd="phot.mag;em.opt" datatype="double" width="9" precision="6" unit="mag"><!-- ucd="PHOT_MAG_OPTICAL" -->
+      <DESCRIPTION>? Integrated Grvs magnitude (grvs_mag)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="QSO" ucd="meta.code.status" datatype="unsignedByte" width="1"><!-- ucd="CODE_MISC" -->
+      <DESCRIPTION>[0/1] Flag indicating the availability of additional information in the QSO candidates table (in_qso_candidates)</DESCRIPTION>
+      <LINK href="http://vizier.u-strasbg.fr/viz-bin/nph-htx/A?%5cifmatch%7b1%7d%7b${QSO}%7d%5cvMore%7b-source=I/356/qsocand%5c%26Source=${Source}%7d%7b${QSO}%7d%5celse%7b${QSO}%7d%5cfi"/>
+    </FIELD>
+    <FIELD name="Gal" ucd="meta.code.status" datatype="unsignedByte" width="1"><!-- ucd="CODE_MISC" -->
+      <DESCRIPTION>[0/1] Flag indicating the availability of additional information in the galaxy candidates table (in_galaxy_candidates)</DESCRIPTION>
+      <LINK href="http://vizier.u-strasbg.fr/viz-bin/nph-htx/A?%5cifmatch%7b1%7d%7b${Gal}%7d%5cvMore%7b-source=I/356/galcand%5c%26Source=${Source}%7d%7b${Gal}%7d%5celse%7b${Gal}%7d%5cfi"/>
+    </FIELD>
+    <FIELD name="NSS" ucd="meta.code.status" datatype="unsignedByte" width="1"><!-- ucd="CODE_MISC" -->
+      <DESCRIPTION>[0/7] Flag indicating the availability of additional information in the various Non-Single Star tables (non_single_star)</DESCRIPTION>
+      <LINK href="http://vizier.u-strasbg.fr/viz-bin/nph-htx/A?%5cifmatch%7b1%7d%7b${NSS}%7d%5cvMore%7b-source=I/357/tb%2a%5c%26Source=${Source}%7d%7b${NSS}%7d%5celse%7b${NSS}%7d%5cfi"/>
+    </FIELD>
+    <FIELD name="XPcont" ucd="meta.code.status" datatype="unsignedByte" width="1"><!-- ucd="CODE_MISC" -->
+      <DESCRIPTION>[0/1] Flag indicating the availability of mean BP/RP spectrum in continuous representation for this source (has_xp_continuous)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="XPsamp" ucd="meta.code.status" datatype="unsignedByte" width="1"><!-- ucd="CODE_MISC" -->
+      <DESCRIPTION>[0/1] Flag indicating the availability of mean BP/RP spectrum in sampled form for this source (has_xp_sampled)</DESCRIPTION>
+
+<!-- No link in: \ifmatch{1}{${XPsamp}}\vizContent{spectrum}\vplotTS{${$cat}}{.graph_sql_xpsamp}{Pos=${RA_ICRS}${DE_ICRS}&amp;Source=${***Source}}{${}}\else{${}}\fi -->
+    </FIELD>
+    <FIELD name="RVS" ucd="meta.code.status" datatype="unsignedByte" width="1"><!-- ucd="CODE_MISC" -->
+      <DESCRIPTION>[0/1] Flag indicating the availability of mean RVS spectrum for this source (has_rvs)</DESCRIPTION>
+
+<!-- No link in: \ifmatch{1}{${RVS}}\vizContent{timeSerie}\vplotTS{${$cat}}{.graph_sql_rvs}{Pos=${RA_ICRS}${DE_ICRS}&amp;Source=${***Source}}{${}}\else{${}}\fi -->
+    </FIELD>
+    <FIELD name="EpochPh" ucd="meta.code.status" datatype="unsignedByte" width="1"><!-- ucd="CODE_MISC" -->
+      <DESCRIPTION>[0/1] Flag indicating the availability of epoch photometry for this source (has_epoch_photometry)</DESCRIPTION>
+
+<!-- No link in: \ifmatch{1}{${EpochPh}}\vizContent{timeSerie}\vplotTS{${$cat}}{.graph_sql_epphot}{Pos=${RA_ICRS}${DE_ICRS}&amp;Source=${***Source}}{${}}\else{${}}\fi -->
+    </FIELD>
+    <FIELD name="EpochRV" ucd="meta.code.status" datatype="unsignedByte" width="1"><!-- ucd="CODE_MISC" -->
+      <DESCRIPTION>[0/1] Flag indicating the availability of epoch radial velocity for this source (has_epoch_rv)</DESCRIPTION>
+      <LINK href="http://vizier.u-strasbg.fr/viz-bin/nph-htx/A?%5cifmatch%7b1%7d%7b${EpochRV}%7d%5cvMore%7b-source=I/358/veprv%5c%26Source=${Source}%7d%7b${EpochRV}%7d%5celse%7b${EpochRV}%7d%5cfi"/>
+    </FIELD>
+    <FIELD name="MCMCGSP" ucd="meta.code.status" datatype="unsignedByte" width="1"><!-- ucd="CODE_MISC" -->
+      <DESCRIPTION>[0/1] Flag indicating the availability of GSP-Phot MCMC samples for this source (has_mcmc_gspphot)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="MCMCMSC" ucd="meta.code.status" datatype="unsignedByte" width="1"><!-- ucd="CODE_MISC" -->
+      <DESCRIPTION>[0/1] Flag indicating the availability of MSC MCMC samples for this source (has_mcmc_msc)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="And" ucd="meta.code.status" datatype="unsignedByte" width="1"><!-- ucd="CODE_MISC" -->
+      <DESCRIPTION>[0/1] Flag indicating that the source is present in the Gaia Andromeda Photometric Survey (GAPS) (in_andromeda_survey)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="Teff" ucd="phys.temperature.effective" datatype="double" width="7" precision="1" unit="K"><!-- ucd="PHYS_TEMP_EFFEC" -->
+      <DESCRIPTION>? Effective temperature from GSP-Phot Aeneas best library using BP/RP spectra (teff_gspphot)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="logg" ucd="phys.gravity" datatype="double" width="7" precision="4" unit="[cm/s2]"><!-- ucd="PHYS_GRAVITY_SURFACE" -->
+      <DESCRIPTION>? Surface gravity from GSP-Phot Aeneas best library using BP/RP spectra (logg_gspphot)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="[Fe/H]" ucd="phys.abund.Z" datatype="double" width="7" precision="4" unit="[-]"><!-- ucd="PHYS_ABUND_FE/H" -->
+      <DESCRIPTION>? Iron abundance from GSP-Phot Aeneas best library using BP/RP spectra (mh_gspphot)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="Dist" ucd="pos.distance;pos.eq" datatype="double" width="10" precision="4" unit="pc"><!-- ucd="PHYS_DISTANCE_TRUE" -->
+      <DESCRIPTION>? Distance from GSP-Phot Aeneas best library using BP/RP spectra (distance_gspphot)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="A0" ucd="phys.absorption;em.opt" datatype="double" width="7" precision="4" unit="mag"><!-- ucd="PHOT_EXTINCTION_TOTAL" -->
+      <DESCRIPTION>? Monochromatic extinction A_0 at 547.7nm from GSP-Phot Aeneas best library using BP/RP spectra (azero_gspphot)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="HIP" ucd="meta.number;phys.atmol.number" datatype="int" width="6"><!-- ucd="ID_NUMBER" -->
+      <DESCRIPTION>? HIP cross-id number, van Leeuwen, Cat. I/311 (hip_original_ext_source id) [NULL integer written as an empty string]</DESCRIPTION>
+      <VALUES null="-2147483648" />
+    </FIELD>
+    <FIELD name="PS1" ucd="meta.id.cross" datatype="long" width="18"><!-- ucd="ID_CROSSID" -->
+      <DESCRIPTION>? PS1 cross-id name, Chambers et al., Cat. II/349 (ps1_original_ext_source_id) [NULL integer written as an empty string]</DESCRIPTION>
+      <VALUES null="-9223372036854775808" />
+    </FIELD>
+    <FIELD name="SDSS13" ucd="meta.id.cross" datatype="long" width="19"><!-- ucd="ID_CROSSID" -->
+      <DESCRIPTION>? SDSS name, Albareti et al., 2017ApJS..233...25A (sdss13_ext_source_id) [NULL integer written as an empty string]</DESCRIPTION>
+      <VALUES null="-9223372036854775808" />
+    </FIELD>
+    <FIELD name="SKYM2" ucd="meta.id.cross" datatype="int" width="9"><!-- ucd="ID_CROSSID" -->
+      <DESCRIPTION>? SkyMapperDR2 cross-id name, Onken et al., 2019PASA...36...33O (skym2_original_ext_source_id) [NULL integer written as an empty string]</DESCRIPTION>
+      <VALUES null="-2147483648" />
+    </FIELD>
+    <FIELD name="TYC2" ucd="meta.id.cross" datatype="char" arraysize="12*"><!-- ucd="ID_CROSSID" -->
+      <DESCRIPTION>Tycho-2 cross-id name, Hog et al., Cat. I/259 (tyc2_original_ext_source_id)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="URAT1" ucd="meta.id.cross" datatype="char" arraysize="15*"><!-- ucd="ID_CROSSID" -->
+      <DESCRIPTION>URAT1 name, Zacharias et al., Cat. I/329 (urat1_original_ext_source_id)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="AllWISE" ucd="meta.id.cross" datatype="char" arraysize="19*"><!-- ucd="ID_CROSSID" -->
+      <DESCRIPTION>ALLWISE cross-id name, Cutri et al., Cat. II/328 (allwise_original_ext_source_id)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="APASS9" ucd="meta.id.cross" datatype="int" width="8"><!-- ucd="ID_CROSSID" -->
+      <DESCRIPTION>? APASS9 identification, Henden et al., Cat. II/336 (apass9_original_ext_source_id) [NULL integer written as an empty string]</DESCRIPTION>
+      <VALUES null="-2147483648" />
+    </FIELD>
+    <FIELD name="GSC23" ucd="meta.id.cross" datatype="char" arraysize="10*"><!-- ucd="ID_CROSSID" -->
+      <DESCRIPTION>GSC2.3 cross-id name, Lasker et al., Cat. I/305 (gsc23_original_ext_source_id)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="RAVE5" ucd="meta.id.cross" datatype="char" arraysize="16*"><!-- ucd="ID_CROSSID" -->
+      <DESCRIPTION>RAVE DR5 cross-id name, Kunder et al., Cat. III/279 (rave5_original_ext_source_id)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="2MASS" ucd="meta.id.cross" datatype="char" arraysize="17*"><!-- ucd="ID_CROSSID" -->
+      <DESCRIPTION>2MASS cross-id name, Cutri et al., Cat. II/246 (twomass_original_ext_source_id)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="RAVE6" ucd="meta.id.cross" datatype="char" arraysize="21*"><!-- ucd="ID_CROSSID" -->
+      <DESCRIPTION>RAVE DR6 cross-id name, Steinmetz et al., Cat. III/283 (rave6_original_ext_source_id)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="RAJ2000" ucd="pos.eq.ra" datatype="double" width="15" precision="11" unit="deg"><!-- ucd="POS_EQ_RA_OTHER" -->
+      <DESCRIPTION>Barycentric right ascension (ICRS) at Ep=2000.0 (added by CDS) (ra2000)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="DEJ2000" ucd="pos.eq.dec" datatype="double" width="15" precision="11" unit="deg"><!-- ucd="POS_EQ_DEC_OTHER" -->
+      <DESCRIPTION>Barycentric declination (ICRS) at Ep=2000.0 (added by CDS) (dec2000)</DESCRIPTION>
+    </FIELD>
+<DATA><BINARY2><STREAM encoding="base64">
+AAAB4APz7gBAIFO53P+bDD/TOlhgAAAAQE6IU5uTonQ/0dd4oAAAAAX4HwAAHyOAP+47Efdp
+Vjo+2r3iQAHwwSXPnWLAACkk+3wCDT64jew/7yllqSM3uz/XFTQkdNRoP/GTToAAAABAaU3Y
+BNtVkD8zvy9AM+vyPMjeK0KGMrFAxKavQDTFkXk5p8FDTVaHQMTFDEAy93sXzlLfP/zhZfvd
+W5D/////////////////////////////////////AAAAAAAAAAAAAAD/////////////////
+////////////////////////////////////gAAAAAKEAC3IYeI6gAAAAAAAAACAAAAAAAAA
+AAAAAAAAAAAAgAAAAAAAAApOQUxVMDA3ODU1AAAAAAAAAAAAAAAAQCBTvEuq+8BATohTd0VK
+ZAf4AeAD8/4AQCBPQ98DXPZACgPCIAAAAEBOiHwElHWUP/2aqgAAAAAF+B8BACSygP//////
+////////////////////////////////////////////////////////////////////QFHz
+NBEFUTc/zZItQDUMC7sfJV9CbxszQWdFxEA05a/h2nsLQhDYOkFPES9ANNnNX5nDiz+nxQAC
+YeKn/////////////////////////////////////wAAAAAAAAAAAAAA////////////////
+/////////////////////////////////////4AAAAAChAlGEY8yD4AAAAAAAAAAgAAAAAAA
+AAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAQCBPQ98DXPZAToh8BJR1lQAAAeAD83oA
+QCBREPK46Ac/xqJWAAAAAEBOiOH43QdRP8SA1gAAAAAF+B8BAAEMgD/IQMg3TqbkPnaIdz/9
+sa/bJH5lv/wyhbj0m8o+VS/lv+Kd9BoGxHk/ywVBiGCMMj/xcICgAAAAQHvWEw6QYuA/eVa7
+QDMQxzq8lHBDUDb0QU2I3UAzitG/etSyRAyPzUGaViZAMd+B+WnjyT/6tPv1r0Qm////////
+/////////////////////////////wAAAAAAAAAAAAAA////////////////////////////
+/////////////////////////4AAAAAChAlGE6VPYoAAAAAAAAAAgAAAAAAAAAAAAAAPVVJB
+VDEtNzU2MDI0OTgwAAAAAIAAAAAAAAAAAAAAAAAAABAwMDMyMzgwMis2MTA0MDk3AAAAAEAg
+URMSBCamQE6I4g6Nw8sAAAHgA/PuAEAgTpqe6qv2P+FoVsAAAABATokb8Kp9CT/hYmFgAAAA
+BfgfAQAW3AA/9ysbuWL99D8+CVhACvuQZGax5sAGXRi57FkXPzW+Jr/+Md2Z6g4EP+nGTYx6
+zSY/8L2tQAAAAEBbBDrGcg7LPylxV0A0mmelKsdUQisyWUDxrB9ANUKMWGh24kLvvqxBCuG3
+QDONFMIu5Bk/+1d6BKjcLf////////////////////////////////////8AAAAAAAAAAAAA
+AP////////////////////////////////////////////////////+AAAAAAoQJRhDJ1hqA
+AAAAAAAAAIAAAAAAAAAAAAAAAAAAAACAAAAAAAAACk5BTFUwMDgxNjkAAAAAAAAAAAAAAABA
+IE6d/MA2hUBOiRw3BmAmAAAB4APzvgBAIF6qAzPDeT/WA5UAAAAAQE6H6nw+a9I/1dMOIAAA
+AAX4HwkA29mAP+pkMWKSvZI+/PwlQBrwzYVZcLXAGeeRMsGQVj7gYx2//ZkE+OyX0j/eVnE7
+Vpg9P/FuzCAAAABAZoDPfZKj0D9D4e1ANAyNXHR1HUI2lChAypTOQDUwqDsdDIBDW7MzQKpx
+70Ay5LCemNzbQAJfvP75b8P/////////////////////////////////////AAAAAAAAAAAA
+AAD/////////////////////////////////////////////////////gAAAAAKEAC3VDxAd
+gAAAAAAAAACAAAAAAAAAAAAAAAAAAAATSjAwMzI0NC40Mis2MTAzNDIuNYAAAAAAAAAAAAAA
+AAAAAAAAAAAAQCBesc8yOLNATofqwTYgxgAAAeAD8/4AQCBXb0Acq2E/5T8c4AAAAEBOiMGY
++0QcP+aTu4AAAAAF+B8JABbpgD/vnr+saB1ZP3wHaUAFO38/e0ASv/f6CarB/w0/Vu4kwAGG
+LGlFxKA/8G7Ackt29z/yQGEgAAAAQFycLdX6sD4/WNYlQDSKebutwJhCKVdYQNieiUA1RZPE
+bYK6Qtf0XEDe5tFAM6og3cYZVD/5ty3/Fsv0////////////////////////////////////
+/wAAAAAAAAAAAAAA/////////////////////////////////////////////////////4AA
+AAAChAlGGy2LSIAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAA
+QCBXcQ4R9bVATojB6qZZKwAAAeAAE2oAQCBdJv2/8yk/sllIoAAAAEBOiNkeqa5mP7ORNsAA
+AAAF+B8JAKDqAD/nFCYcXYPQPdjnukAmdvddmg8KQCX6WHAy9M89uNohQAKa8DEPHHM/uC+K
+3RNA+j/yAKFgAAAAQJR8QWM6JA4/tpBOQDHkr8R+SbJDvBZ0QNTDhkAy5mq5sj3VRKxRj0DG
+OoBAMOY7JW/8EUAAAX0ABd89/////////////////////////////////////wAAAAAAAAAA
+AQEAQLI5hmAAAABAEv2/QAAAAL/udfcAAAAAQIXVK59Vmz1AAD/lwAAAAIAAAAAChAlGIalo
+3IAAAAAAAAAAgAAAAAAAAAAAAAAPVVJBVDEtNzU2MDI1MDUyAAAAAIAAAAAAAAAKTkFMVTAw
+ODA4MQAAAAAAAAAQMDAzMjQzNjQrNjEwNDA4NwAAAABAIF0ZwhiJAEBOiNjH9LMHAAAB4AAT
+agBAIF6N91uxtz+xjtYgAAAAQE6JA8Y2ajc/s0iWoAAAAAX4HwgAH6mAP9SEAaB2Isw9zySq
+QAAXXgVu1Mq//QMnNZVKuj2vvDm/69tgqTNhDz+44DPc0VHCP/Epv8AAAABAldMMES94lT+0
+OeVAMdMWXTmW+0P2l55AyiDpQDKbI/7iyY5EocRfQNVG6UAw98s+V1OkP/o1jAi3Xqb/////
+////////////////////////////////AAAAAAAAAAABAQBAs2iLgAAAAEATFK9AAAAAv/ii
+M6AAAABAjApDye7L+z/4oCdgAAAAgAAAAAKECUYjVoLVgAAAAAAAAACAAAAAAAAAAAAAAA9V
+UkFUMS03NTYwMjUwNjUAAAAAgAAAAAAAAApOQUxVMDA4MTY4AAAAAAAAABAwMDMyNDQzMis2
+MTA0MTM2AAAAAEAgXpAmX2koQE6JA+arEd4AAAHgA/P+AEAgXD08WBx5P+0WtCAAAABATolV
+PasG9z/sp5OgAAAABfgfCQAgqABAAP52p9rdkD+kt1s/xY6y4L1vjb+8rG+XrjXhP4vXdT/A
+GVnfxVRxP/ImHv3yCMY/8M4uAAAAAEBX9XYNONI7P1MAT0A0u8ohIOH4Qrgt8UIlD8NANG2S
+ZBsyi0KvYO1BDGx/QDPj+cYqG1w/4TMT89LLFP//////////////////////////////////
+//8AAAAAAAAAAAAAAP////////////////////////////////////////////////////+A
+AAAAAoQJRiCj8W+AAAAAAAAAAIAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAA
+AEAgXD1e4JspQE6JVTj6mMEH+AHgA/P+AEAgXcX3ZgYSQAWsKWAAAABATokj47CCX0AHY2DA
+AAAABfgfCQAksQD/////////////////////////////////////////////////////////
+/////////////////0BPK3TTuAX2P7GR40A1M1FH8TBZQkisMUEYzsdANRZkf9xZMkIwsiVB
+RUB/QDSijgydnTQ/3PWf/7o08P////////////////////////////////////8AAAAAAAAA
+AAAAAP////////////////////////////////////////////////////+AAAAAAoQJRiJx
+84yAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAEAgXcX3ZgYS
+QE6JI+Owgl8AAAHgA/MqAEAgW2JP7H/9P8f1dsAAAABATolQjDZzwD/GL2fAAAAABfgfCAAf
+xoA/3LlXhe/PiT6Fzjw/6vQxlaRBk7+13Ap6LdBuPlohWb/q0KV4Lql1P8r+GSAMj9s/7x1E
+AAAAAEB2mG4hdmVYP1jm90AzSsF+uvECQvZRXECj+C5ANBzEvTPSlUOyqfFAmRxBQDJdf6XS
+jQA/+/RR/EwWWf////////////////////////////////////8AAAAAAAAAAAAAAP//////
+//////////////////////////////////////////////+AAAAAAoQJRh+u4riAAAAAAAAA
+AIAAAAAAAAAAAAAAD1VSQVQxLTc1NjAyNTAzOAAAABNKMDAzMjQyLjkxKzYxMDQyMi4xgAAA
+AAAAAApOQUxVMDA4MjM2AAAAAAAAABAwMDMyNDI4NSs2MTA0MjI1AAAAAEAgW2JqQBfsQE6J
+UKt0WEcAAAHgABMKAEAgVCKoWELyP4+sm6AAAABATojd1ndXLD+R6X4gAAAABfgfCQCg54A/
+7wOKToBPTzy9MUxAMm0U47zTW0As2HYLSRnCPKHZAsAm72LCHuFmP5kEB0ujwmc/8Nc0QAAA
+AEDStmF207JEQISSxUAt9mvnr6ciRgN23UFSpb1ALw1ZX+2mYUZxIJRBlDjfQCyNvKlpGnY/
+8/zmBKw3K/////////////////////////////////////8AAAABAQAAAAEBAEC2Zn5gAAAA
+QBDTw2AAAAC/xJHRQAAAAECNYwFvAGjcP/EWHkAAAACAAAAAAoQJRhcraE+AAAAAAAAAAIAA
+AAAAAAAAAAAAD1VSQVQxLTc1NjAyNDk5NQAAABNKMDAzMjM5LjQxKzYxMDQwOS41ADRvGQAA
+AApOQUxVMDA4MTI3AAAAAAAAABAwMDMyMzk0MCs2MTA0MDk2AAAAAEAgVBFKFzvDQE6I34IB
+w9IH+AHgA/P+AEAgViiWGykRP/r4P+AAAABATolGJqITUj/9Js4AAAAABfgfCQAgqgD/////
+/////////////////////////////////////////////////////////////////////0BV
+LP9Y87KSP9xHX0A03hxHXmNjQg3/MUEeChZANXaG5+Ytx0LDmoZBlA6VQDPFo6CDmKY/+w40
+CsmHnv////////////////////////////////////8AAAAAAAAAAAAAAP//////////////
+//////////////////////////////////////+AAAAAAoQJRhm+VtyAAAAAAAAAAIAAAAAA
+AAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAEAgViiWGykRQE6JRiaiE1IAAAHgA/Nu
+AEAgUWKv7zIvP8fwqUAAAABATojr4cNh8T/E8aqAAAAABfgfCAAfnYA/3GCGeSaegj6BFH9A
+EFbaRISUT8AK23f1ukyAPl/VfMACnc+MMMAnP8ulTFVDKHQ/8PVVAAAAAEB6MnMUXlTFP5sN
+nEAzIaW5Yoy9QzUrBkFKSQxAM7F+mWMS9UPm09RCE37jQDIWTEBKcus/+bMl/OnLCv//////
+//////////////////////////////8AAAAAAAAAAAAAAP//////////////////////////
+//////////////////////////+AAAAAAoQJRhPlZtaAAAAAAAAAAIAAAAAAAAAAAAAAD1VS
+QVQxLTc1NjAyNDk4MAAAAACAAAAAAAAACk5BTFUwMDgxNDEAAAAAAAAAAAAAAABAIFFmuuSr
+QEBOiOw4hamuAAAB4AAT/gBAIFHNQ7BRRz/AvIHgAAAAQE6I/7xH/E8/wX1bAAAAAAX4HwgA
+hxsAP+Cv7bWWTlM+RExKQBDvLowEhaHAELODMB2IAT4oWQY/5mZbRwmPoD/H7BnZmuZ2P/Es
+lcAAAABAgdDxqBBh+T91IpZAMswmAskIHENHf85BDD0hQDOWtGNJe3REBPz1QQdC9kAx7ucc
+2itaP/p80/uVNzT/////////////////////////////////////AAAAAAAAAAABAABArjQQ
+oAAAAEATYKpgAAAAv/w0bcAAAABAgyluLrHEMz+/t+kAAAAAgAAAAAKECUYUgJhzgAAAAAAA
+AACAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAABAIFHSSuRRwkBOiP+iLvbd
+AAAB4AATKgBAIE5/QyyEbj+XMCMgAAAAQE6JkrByMjk/mNngQAAAAAX4HwkAoN8AP9UPc/Yz
+SVw9BlwyQAdGVP5fFhA/+55snWjL+Dzl9A3AArw/eXR7/j+gFeGCgDw/P/EHr6AAAABAwZZw
+VRrWmkBJh7VAL5ozN2TxG0UhF/xBIc0YQDDPgAIY3vRGEs8yQQLsWEAtoZE2Hck/P//rdgU/
+2uH/////////////////////////////////////AAAAAQAAAAABAQBAszxzYAAAAEAJVP4A
+AAAAP8HUlSAAAABAp0yIZZSvT0ACYRNAAAAAgAAAAAKEEl5fI6f3gAAAAAAAAACAAAAAAAAA
+AAAAAA9VUkFUMS03NTYwMjQ5NTgAAAATSjAwMzIzNi44MCs2MTA0MjkuM4AAAAAAAAAKTkFM
+VTAwODM3NwAAAAAAAAAQMDAzMjM2NzkrNjEwNDI5MwAAAABAIE59Lu+F0UBOiZMHwlRmAAAB
+4AATagBAIE/gPfzowj+macFgAAAAQE6J2+Acd3c/phtXIAAAAAX4HwgAICkAP/Ab0/xc1ls9
+eEkrQCM+PJaJQ+FAGWkyXBeAzT1a2mtAHOeSW+Eo3T+snsUnkepOP+/w9iAAAABApvs1vMZp
+8T/f/fVAMQQSWZ7Xx0SK4w5A2VJFQDG5Yr8R+SdFI+ekQL54U0AwM3xnWattP/heZgG8mKL/
+////////////////////////////////////AAAAAQAAAAABAQBAs66hQAAAAEAS11jgAAAA
+v/ESbqAAAABAiHecDr7fpD/z92YAAAAAgAAAAAKEEl5gra3CgAAAAAAAAACAAAAAAAAAAAAA
+AA9VUkFUMS03NTYwMjQ5NzAAAAAAgAAAAAAAAApOQUxVMDA4NDY1AAAAAAAAABAwMDMyMzc0
+Mis2MTA0MzcyAAAAAEAgT9iXF9y6QE6J2tKzbrUAAABAABMKAEAgVGVMThCeP5B+GSAAAABA
+TompwM+F9T+Ri4ugAAAABfgfCQCg4AA/yNx1IOEH8Dy9mShABd4XhVfDNcADQPPRzFwFPKia
+H7/0vCDqrYURP5fCUjlMlqA/8BSIwAAAAEDSUnM3h+kEQLy3s0AuAiQDFId3RY1cdEEIdeBA
+MDMo2GZeA0al+vVBgZ74QCvcBXCCSRtAAikxASnLq8BbBwggAAAAQGjNnf//////////QCr0
+bo8p1A8AAAABAAAAAAABAEC0hMGAAAAAQAbfpEAAAAC/pDlYIAAAAECnom47zTWoQAnvNOAA
+AACAAAAAAoQSXmX00OKAAAAAAAAAAIAAAAAAAAAAAAAAD1VSQVQxLTc1NjAyNDk5NwAAABNK
+MDAzMjM5LjU2KzYxMDQzMS44ADRvGwAAAApOQUxVMDA4NDMyAAAAAAAAABAwMDMyMzk1Nis2
+MTA0MzE4AAAAAEAgVGgyZEX+QE6JqfEgWesAAAHgABNqAEAgV7kwxyJGP76tGYAAAABATomz
+XB9tRD/A5inAAAAABfgfCAAgCAA/zbK0yU8tED4xIdRABszDXOGCZsAFmlYGcJ8YPhwrTr/t
+KVHkydZkP8eOsqBQwuY/72GWIAAAAECCMB79RMefP4VNOUAyxmh/RVp9Q0cGcUDLyWxAM5dd
+mg8KX0QFDuVA+3CpQDHuwaBI4EQ/+onAB8JsIf//////////////////////////////////
+//8AAAAAAAAAAAEAAECuP/FAAAAAQBONuMAAAAC/6mF8IAAAAECNYHIS13MZP5hE0CAAAACA
+AAAAAoQSXmnQhfyAAAAAAAAAAIAAAAAAAAAAAAAAD1VSQVQxLTc1NjAyNTAxNgAAAACAAAAA
+AAAACk5BTFUwMDgzODkAAAAAAAAAEDAwMzI0MTA5KzYxMDQzMjQAAAAAQCBXvHFqNpRATomz
+fhkmaAAAAeAAE/4AQCBXPxTrTxg/w6fx4AAAAEBOiZx+XVc6P8NulEAAAAAF+B8JAAD+gD/E
+pf4U3Q4rPmAb5j/vxI/naTBFv+T3wplxJss+QGTPv+fdej8cYqQ/yNrkPKsBID/xaklgAAAA
+QH5rKli8aug/gAkZQDL4Hs1KoQ5DHbzKQOkzQ0Az1/z8P4EfQ+17lkFk4WlAMg5lvqC6Hz/8
+mXP0xGKb/////////////////////////////////////wAAAAAAAAAAAQAAQKyVokAAAABA
+E1RgoAAAAL/2BvagAAAAQIMs8NhE0BQ/frhR4AAAAIAAAAAChBJeaUubp4AAAAAAAAAAgAAA
+AAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAQCBXP970ZuVATomcmitlzgAAAeAA
+E24AQCBT+ARb0Fw/vf6GAAAAAEBOihI18tvfP8B9FOAAAAAF+B8IACBAAD/C8ENOgl8aPi9G
+dT/5+JBqRe74v/lt3zKJUd4+FOVEv9UbqXgxe04/x1RIgaQEgj/wJo5AAAAAQIEo4b6NyuY/
+UlqEQDLWlYU34sVDT8HIQL5pYkAzi25hBqsVRADM9kEcJfZAMffLkjopxz/5Oiv7MI1n////
+/////////////////////////////////wAAAAAAAAAAAQAAQLCb/YAAAABAFDw2IAAAAMAA
+rQ5gAAAAQIbUYhllK9Q/zWoWIAAAAIAAAAAChBJeZZRJ14AAAAAAAAAAgAAAAAAAAAAAAAAP
+VVJBVDEtNzU2MDI0OTk0AAAAAIAAAAAAAAAKTkFMVTAwODUyMgAAAAAAAAAAAAAAAEAgU/nu
+deFmQE6KEkI+t+wAAAHgA/P+AEAgVVLyMlJeP9WXGIAAAABATonaden8Lj/WHkRAAAAABfgf
+CACHG4C/7im9YJ6nFj73lk8/6a4aWh5Zh7/pTzC8Bvk3Ps8DI7/BZEfiojG7P+FO9+qHyLc/
+7/yHoAAAAEBkghgWakTcPzqxL0A0JlrdnCfpQlBVXkCihk5ANQv6wdKdx0MgzJhAoe3dQDM7
+cHnlnyw//Qij+Jgssv////////////////////////////////////8AAAAAAAAAAAAAAP//
+//////////////////////////////////////////////////+AAAAAAoQSXmcLnxqAAAAA
+AAAAAIAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAEAgVVPmFFUnQE6J2nr6
+zjAAAP/gA/P+AEAgVHmNS/2SP+Kyt8AAAABATooaJfKDQD/hUijgAAAABfgfCQAW3YBABBUw
+/bdjGD9XnwJAImWfTTfBN8AZgtxyB4GGP0+1msAag310cq91P+1CtA9mpVE/8PnBgAAAAEBa
+3JaB0qn0P0JQg0A0nACnxaxH////////////////////////////////////////////////
+//////////////////////////////////////////8AAAAAAAAAAAAAAP//////////////
+//////////////////////////////////////+AAAAAAoQSXmYUAdyAAAAAAAAAAIAAAAAA
+AAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAEAgVIE8Cqy8QE6KGx0SemQAAAHgA/P+
+AEAgUMGbom8vP99W0QAAAABATop6O+TAHD/dHTGAAAAABfgfCQAW14A/5b2iW5rW+j8tN1tA
+CR9Net0V8MAC4SLfCWB8Pwort8AAku30a1AAP+S0T5LlSnI/7dncYAAAAEBc4iTk6gCyPx0k
+JUA0h9VFQVKxQhYiyECP1XFANWcI/qxC6kLfT4FAsYjFQDOg0YTCcgA//GN4CfzZBP//////
+//////////////////////////////8AAAAAAAAAAAAAAP//////////////////////////
+//////////////////////////+AAAAAAoQSXmG9hnuAAAAAAAAAAIAAAAAAAAAAAAAAAAAA
+AACAAAAAAAAAAAAAAAAAAAAAAAAAAEAgUMRzcSwSQE6KeokiOzsAAAHgA/NqAEAgTIqKtPQh
+P8W566AAAABATogLlICCKT/D1aYAAAAABfgfEQABG4A/gxLZIt7P6D581Ig/3GoM5BQRLz/Y
+8nlrHGjMPlmSYz/LNB+kTSvCP8m2dzVrnLE/8VQpAAAAAEB7/VqrXbbhP4Aad0AzD0AcT8Hf
+QvjDa0C3PGJANBoF3Y+SsEPkxa5Ay5VwQDIYyLyc0+FAAAnpB5X2d///////////////////
+//////////////////8AAAAAAAAAAAAAAP//////////////////////////////////////
+//////////////+AAAAAAoQALb/vXeeAAAAAAAAAAIAAAAAAAAAAAAAAD1VSQVQxLTc1NjAy
+NDk0NwAAAACAAAAAAAAACk5BTFUwMDc3NzgAAAAAAAAAEDAwMzIzNTkxKzYxMDM0NjUAAAAA
+QCBMihKQYchATogLjJQPcAAAAeAD8+4AQCBI3MwgnHA/0XjI4AAAAEBOiGcllGrEP8xe9IAA
+AAAF+B8RAA3kgD+Q3d5sj3mYPsCogEAmANXo1UEQwCGkaYTXad8+pHbmwBpMRI1f05E/0qVC
+r6f42D/uzgngAAAAQG8jsy8Y47E/S2X7QDOyRPoFFDxCQ1FdQKEE+kA1HekHlfZ3Q48u6EDY
+iYpAMpsH8jzI3kAEFwf8TcPY/////////////////////////////////////wAAAAAAAAAA
+AAAA/////////////////////////////////////////////////////4AAAAAChAAtu7pz
+yYAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAKTkFMVTAwNzkxNQAAAAAAAAAAAAAA
+AEAgSOdrMGlmQE6IaBqxphIAAAHgABMqAEAgS4PolMsRP7TTZcAAAABATohV0Bu4Bj+0hkrA
+AAAABfgfEAAfNwA/3DWCKg6FQz31+x8//m05U96kZj/4AgigwZ2JPd7pgb/ysTcdFeW/P7xA
+oC4zRCU/8PrQAAAAAECR0RfilimEP7VdiEAyC3rleWv9Q6bJBkCijIVAMwfTodMj/0SPugVA
+38qBQDEYqOLiuMc//vKsCd6mE/////////////////////////////////////8AAAAAAAAA
+AAEBAECxlKrgAAAAQBJ+dsAAAAA/gqMFYAAAAECQNCg+QlruP/Z8hMAAAACAAAAAAoQALb6s
+/WKAAAAAAAAAAIAAAAAAAAAAAAAAD1VSQVQxLTc1NjAyNDk0MQAAABNKMDAzMjM1LjM4KzYx
+MDM1NC41gAAAAAAAAApOQUxVMDA3OTAwAAAAAAAAABAwMDMyMzU0MCs2MTAzNTQ1AAAAAEAg
+S4IaEcKDQE6IVfuqE8AAAAHgA/NqAEAgRFtpxSK6P6eAtqAAAABAToiPR5Iy/T+m5tBgAAAA
+BfgfEAAfYoA/0iHthNqs6j2DucU/9hA3hahLDb/yfWY5ote4PW1e9L/oE4h91kv6P61MieAs
+6rQ/8RVxoAAAAEClGXD+h8HjP+wSgkAxG9GZuyeJRHjqwEDmWotAMdffoA4n4UUe3/VBGHSs
+QDA8JkXk5p8/+buV8xvr7/////////////////////////////////////8AAAABAAAAAAAB
+AP////////////////////////////////////////////////////+AAAAAAoQJRgTP9hiA
+AAAAAAAAAIAAAAAAAAAAAAAAD1VSQVQxLTc1NjAyNDg5MAAAAACAAAAAAAAACk5BTFUwMDc5
+OTgAAAAAAAAAEDAwMzIzMjAzKzYxMDQwMDgAAAAAQCBEXM3+4b9AToiPY588IQAAAeAD8+4A
+QCBGiXPZlXo/7eOkwAAAAEBOiNQctVptP+qlPQAAAAAF+B8RABbVAD/i/hludbbeP2XHsEAR
+1kB+dVDlwAVZjrV8IW8/iG+nQAyUcMEDwrQ/8V0gh18Ecj/vxR9AAAAAQFahW+Tx+go/NWe7
+QDTLpTuOS4hCGEQeQNyylEA1Yx59mYjTQp40b0DyzrZANACemNzbOD/2J/37QwHd////////
+/////////////////////////////wAAAAAAAAAAAAAA////////////////////////////
+/////////////////////////4AAAAAChAlGB4Fj5oAAAAAAAAAAgAAAAAAAAAAAAAAAAAAA
+AIAAAAAAAAAKTkFMVTAwODA2NgAAAAAAAAAAAAAAAEAgRoyqjnUsQE6I05eEQ78AAAHgA/Pu
+AEAgRhLP5didP+ahmwAAAABATolApRkRPT/i0FHgAAAABfgfEQAW04BAAMjCbVuJEz9445c/
+1kPjhJ82kr/Su1lwmv7TP3KkBr/IEkIYLBLlP+vEzVm6hnk/8IKrYAAAAEBYMOPrEk3/PzwS
++0A0uRv3rUsnQgm570DbEZBANX8Dr7fpEEKo005AtjQ5QDPuj1wo9cM/+QdD9s/Vlv//////
+//////////////////////////////8AAAAAAAAAAAAAAP//////////////////////////
+//////////////////////////+AAAAAAoQJRgba+rqAAAAAAAAAAIAAAAAAAAAAAAAAAAAA
+AACAAAAAAAAACk5BTFUwMDgyMzcAAAAAAAAAAAAAAABAIEYTKiKcj0BOiUCsG/SAAAAB4AAT
+/gBAIEOEWo/xWD+19uGAAAAAQE6Ij6M/NEI/t0qdYAAAAAX4HxEAAQiAP8bGgJynHgc9+skT
+P//FuIvNKDy//7oPKKkNyj3jm9+/uzZZ7wdKET++Xe1GFAt7P/DYPeAAAABAjFcR0rMT4D+h
+LFZAMksiB5HEuUOspdVBD/lOQDL+OYIBzWBEUTPSQUFnC0AxcPrfLs8gP/jT6fd//r7/////
+////////////////////////////////AAAAAAAAAAABAABAsnpMoAAAAEATqMFgAAAAwAXy
+R0AAAABAjRnpeNT99D/wGCqgAAAAgAAAAAKECUYD3QqtgAAAAAAAAACAAAAAAAAAAAAAAAAA
+AAAAgAAAAAAAAAAAAAAAAAAAAAAAAABAIEOGvc+0N0BOiI+nNb/8AAAB4APz/gBAIEA8mi5M
+aD/QBbHgAAAAQE6I3CTYafY/zvTtAAAAAAX4HxEAAQCAP+Te6DN9IPo+tHJDP/pJ+UhV2ie/
+9dvU0cxZDD6NvWs/7TXB7KPdED/SLJMGAaHBP/EehcAAAABAb15gAgS6+D9REgdAM7A7HQyA
+QUK3K61A+8+JQDRvGR3eN1hDlwYpQPFTAUAyjDZlFtsOP/4uK/fVjxP/////////////////
+////////////////////AAAAAAAAAAAAAAD/////////////////////////////////////
+////////////////gAAAAAKECUYACrDggAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAgAAAAAAA
+AAAAAAAAAAAAAAAAAABAIEA+P1eiK0BOiNwC0DGVB/gB4APz/gBAIED7gOCnMUALEfvgAAAA
+QE6JEic6nBxAAEuvAAAAAAX4HxEAIK8A////////////////////////////////////////
+//////////////////////////////////9AVJHGx8BNMz+0e41ANOYvWYnfEUKAiCVBgi5q
+QDTRjx0+1ShCiHN8QSV26kA0KbxEv0yyP+T6XAGIljz/////////////////////////////
+////////AAAAAAAAAAAAAAD/////////////////////////////////////////////////
+////gAAAAAKECUYA7tcsgAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAA
+AAAAAABAIED7gOCnMUBOiRInOpwcAAAB4APz7gBAIEH9GR5U5D/VtHegAAAAQE6JR1aF7q8/
+1eiRAAAAAAX4HxEAAPOAP9aY0yn8sMs+/r7GQAGVDuLx0kC/85EMpq7DYD7bM22//TfOv+Vj
+bD/cVnh86V+rP/CjKaAAAABAY/RSny52/z8k1/5ANC32ugYgq0JDGqtAjNXjQDUeNwR5C4VD
+NDpEQH2jKUAzG7xd6cAjQAAT1P7Kddr/////////////////////////////////////AAAA
+AAAAAAAAAAD/////////////////////////////////////////////////////gAAAAAKE
+CUYCEbOVgAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAApOQUxVMDA4MjQ4AAAAAAAA
+AAAAAAAAQCBB/pIn49VATolHmpsleAAAAeAAEwoAQCA/IMfJ4aU/jVo4AAAAAEBOiPviIatv
+P46TMGAAAAAF+B8RAKDhAD/eCqcj+f24PKPWb0AHId+eYKi3wAUAxOtPT8Y8kfPIv/NjcWvD
+bBw/k3nUV1qvzz/wKQhgAAAAQNWbU+l34rpAhpbWQC2meUY8+zNGKVYXQTIfn0AugJ+DvmYC
+Rn3avEF6gFFALHEkv9LpRz/we9YEg/M//////////////////////////////////////wAA
+AAEBAAAAAAEAQLq33UAAAABADv+XIAAAAL/T1wpAAAAAQKA2GF8G9pQ/84hloAAAAIAAAAAC
+hAlF/sDQMIAAAAAAAAAAgAAAAAAAAAAAAAAPVVJBVDEtNzU2MDI0ODUzAAAAE0owMDMyMjku
+NjArNjEwNDEyLjUANG8XAAAACk5BTFUwMDgxOTAAAAAAAAAAEDAwMzIyOTYwKzYxMDQxMjcA
+AAAAQCA/I/Epa0pAToj8D09TXAAAAeAD8/4AQCBDP25wVPI/21FvQAAAAEBOiiaszrIbP9tv
+xsAAAAAF+B8RABbOgD/Rlr3VLV8sPx8WAT/4Gr/UlsWqv/Hz2F4i/j4/Cji8P/AVz1vVe2w/
+4oJUvp414T/wQKtgAAAAQGBMm5uXo6E/QPDpQDRmM3qAz55CFJKlQIjtiUA1afGdZq20QwML
+qEC0p/9AM3RPoFFDvz//WiAHBoR+/////////////////////////////////////wAAAAAA
+AAAAAAAA/////////////////////////////////////////////////////4AAAAAChBJe
+Udq0w4AAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAQCBDQMhy
+tYZAToomh1OAjAAAAeAD8yoAQCA+DlPAgSE/rqz7wAAAAEBOiiX3RCs7P69Z3MAAAAAF+B8Q
+ACBlAD/Sl+FOaBquPapZ4UAHF1V5rxiHwAb/MZDds3c9l16MP9CteawYwKc/s5uTxMNo9j/w
+sDYgAAAAQJl4NZOPXhs/pf2BQDGoKBun/DNEBeKKQMvV4EAyhD15B1LbRMghVEECSmtAMLyk
+wevIOz/8eYv38GcG/////////////////////////////////////wAAAAAAAAAAAAEA////
+/////////////////////////////////////////////////4AAAAAChBJeS/Pu5YAAAAAA
+AAAAgAAAAAAAAAAAAAAPVVJBVDEtNzU2MDI0ODUxAAAAE0owMDMyMjkuMTArNjEwNDQ1LjWA
+AAAAAAAACk5BTFUwMDg2MDMAAAAAAAAAEDAwMzIyOTA5KzYxMDQ0NTQAAAAAQCA+Eco271dA
+Tool7Y0DggAAAeAD8+oAQCBBIU2lsp4/zWESQAAAAEBOigr+mkS+P8sf3WAAAAAF+B8RAADc
+gD/3g8uPlfruPp8yOEAyLFM7EHdHQDIbx5pxgik+gTzjP/iAO7CEpSo/0LOVAtv9bD/wRhMA
+AAAAQHFpAD4yuTc/PsfzQDOTNyHVPN5CZkTIQH7i9UA08CemNzbOQ6cra0Cnj8RAMm/7SApa
+zUAEAWLxZuAJ/////////////////////////////////////wAAAAAAAAAAAAAA////////
+/////////////////////////////////////////////4AAAAAChBJeT37mioAAAAAAAAAA
+gAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAKTkFMVTAwODUyNAAAAAAAAAAQMDAzMjMwNDkrNjEw
+NDQyNAAAAABAIEELfYsE90BOigrFgq+tAAAB4APzagBAID+wudtzzj/HSRAgAAAAQE6KVUST
+O/0/xg9uYAAAAAX4HxAAIIEAP9DwU1dF7Uk+epCyQA/LTaZ8ACxAD8UKqso7AD5Rlka/w/NL
+tPMOMj/K8sxlybNoP/AfSyAAAABAdwtcRJ9kvz9XHutAM0VJpWV/t0LsNndAj51jQDQoaWHD
+aXdDrhvlQIsy0kAyZK1G9YfXP/w7wf1l8cz/////////////////////////////////////
+AAAAAAAAAAAAAAD/////////////////////////////////////////////////////gAAA
+AAKEEl5N1w2xgAAAAAAAAACAAAAAAAAAAAAAAA9VUkFUMS03NTYwMjQ4NTkAAAAAgAAAAAAA
+AApOQUxVMDA4NjYzAAAAAAAAABAwMDMyMjk4Mis2MTA0NTA3AAAAAEAgP6vxK7R1QE6KVUpi
+1NsAAAHgA/PuAEAgS39aGvv3P804mYAAAABATolzJHk/qz/J90WAAAAABfgfGQAA94A/wxRd
+sZaQZz6WqM9ADgxeYovmU8AK51S9eMDfPoOiUL/6w+vwW7WcP9EQs8Hj5Zg/8B4JoAAAAEBx
+dm+n82lTP0PRm0AzkmEGqxTsQqsS70CxQAdANIIWpIczZkOJOmFApQriQDKm1pj+aSc//bP/
+/KUBrf////////////////////////////////////8AAAAAAAAAAAAAAP//////////////
+//////////////////////////////////////+AAAAAAoQJRg0tge6AAAAAAAAAAIAAAAAA
+AAAAAAAAAAAAAACAAAAAAAAACk5BTFUwMDgzMTkAAAAAAAAAAAAAAABAIEuDZvwoEEBOiXNi
+12AxAAAB4AATagBAIEq8mRLOwT+gkxugAAAAQE6J37ocQmQ/oOPPQAAAAAX4HxgAIDiAP8xj
+A1cpROU9OGvzQAaV6J+RKl/ABohC0HnsKD0lSDk/yNBzE5JjVj+mdXRchHaDP+4SMeAAAABA
+sPYvMzPERD/vC2ZAMJfVI7Njb0S9n4xAxdXYQDFi1stTUAlFgEQUQO1hM0AvbfLLZBcBP/q9
+1gmMcLz/////////////////////////////////////AAAAAQAAAAABAQBAwLH2YAAAAEAQ
+xW1gAAAAv/HbIuAAAABAoE3XZf2K20ALU/fAAAAAgAAAAAKEEl5atuLDgAAAAAAAAACAAAAA
+AAAAAAAAAA9VUkFUMS03NTYwMjQ5MzMAAAAAgAAAAAAAAApOQUxVMDA4NTAzAAAAAAAAABAw
+MDMyMzUwNCs2MTA0Mzc4AAAAAEAgSr/9kayGQE6J37Lh+BAAAAHgA/PuAEAgTURLz6m9P8Tw
+18AAAABATonjmdOzST/DsTJgAAAABfgfGAAgJYC/tRu0eKt5zD5oPQ0//nXufs48Ob/98g9a
+qf3VPj11+r/WUBs6AMM0P8juOxwKzY4/7dLi4AAAAEB6TK6HRqAYP2K+K0AzII/7iyY5Qwgc
+0kDOPxZANAD4xk/bCkPRJ5NAvEn0QDIxtALRa5g//PRMAjcR5f//////////////////////
+//////////////8AAAAAAAAAAAAAAP//////////////////////////////////////////
+//////////+AAAAAAoQSXl2WDk6AAAAAAAAAAIAAAAAAAAAAAAAAAAAAAACAAAAAAAAACk5B
+TFUwMDg0NTUAAAAAAAAAAAAAAABAIE1GjO6JfUBOieOm0z25AAAB4APz/gBAIEqhzQPQWj/E
+EAXgAAAAQE6KBrtv4j4/wnJCIAAAAAX4HxgAhxqAP8I2craFDLA+WjP1P/YzJfzpywq/31V3
+zyHvuD45mrK/9MWU92GL4D/HuFNYl5u+P/AWVeAAAABAe9ziDNYRIz9M22NAMxCDZlFtsUMS
+ONBAlZ/UQDPtDv3JxNtD0FGUQKn69EAyMtDlYEGJP/uj4gzP8hv/////////////////////
+////////////////AAAAAAAAAAAAAAD/////////////////////////////////////////
+////////////gAAAAAKEEl5akdQegAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAA
+AAAAAAAAAAAAAABAIEqiY/07ZkBOigbr1r9dAAAB4APz/gBAIEvbCC7S/z/bHoHAAAAAQE6J
+/dd9Hes/3PzVQAAAAAX4HxkAAOgAP+CLMNQnXtI/E+PtP9zkf7wi23c/0JmWPTwhYD7+YJU/
+16Xb8fAytj/jlHlpeGmeP/EBpkAAAABAYHYGPh1fvT8n+zRANGN0mtyPuEI79rdAdvk9QDUo
+k9lmOENDBl/uQJIm9UAzbVZ9uxbCP/uz1gs57+b/////////////////////////////////
+////AAAAAAAAAAAAAAD/////////////////////////////////////////////////////
+gAAAAAKEEl5cAKU8gAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAA
+AABAIEvauDNxdEBOif3Jtn0AAAAB4APz7gBAIEYtISh2Mz/T97LAAAAAQE6KDBVnimg/1Doe
+YAAAAAX4HxkADeGAP7bEtuBW8JU+3w6EP+26P2E+3zm/5FmP1IJFJj7BV1+/5aukYAvxkT/b
+UGqb1TMjP/B18wAAAABAZQb2wLQzzD8qZiBANB9oexOclUJh9fJAgEaAQDT1Z3cHnlpDKczq
+QIw900AzLEzfrKNiP/yRqfvnbIv/////////////////////////////////////AAAAAAAA
+AAAAAAD/////////////////////////////////////////////////////gAAAAAKEEl5V
+UufggAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAApOQUxVMDA4NTIzAAAAAAAAAAAA
+AAAAQCBGLeVCogRATooMLqcDCgAAAeAAEyoAQCBHarKS/Zk/qp2AgAAAAEBOijTZxismP6tT
+IYAAAAAF+B8ZANvTgD/RPwD+ujvjPZSwCkAFyExB9/IVwAVS+u6/YPA9g5lkv+HHR4WeHHE/
+shg3r0PP5D/wb7wgAAAAQJ4xUeQ0UAU/sWT/QDF4371qWTpEPzxJQKyE40AyISTyJ9ApRNA9
+GkDWgaZAMLGax5cC5j/2+KQGBCX//////////////////////////////////////wAAAAEA
+AAAAAQEAQMCQtOAAAABAEfX3AAAAAL/tk92gAAAAQKVGJwOvt+lABm/SIAAAAIAAAAAChBJe
+VtoC1YAAAAAAAAAAgAAAAAAAAAAAAAAPVVJBVDEtNzU2MDI0OTE2AAAAE0owMDMyMzMuNDQr
+NjEwNDQ3LjKAAAAAAAAACk5BTFUwMDg2MTgAAAAAAAAAEDAwMzIzMzUwKzYxMDQ0NzAAAAAA
+QCBHbeiSENxAToo07nzJ4gf4/+AD8+4AQCBGXGEx2e5AFxBOYAAAAEBOinMbyyJ4QAUP5sAA
+AAAF+B8ZAADTAP//////////////////////////////////////////////////////////
+////////////////QFJuVtqx+sU/8hkaQDUEsiB5HEz/////////////////////////////
+/////////////////////////////////////////////////////////////wAAAAAAAAAA
+AAAA/////////////////////////////////////////////////////4AAAACAAAAAAAAA
+AIAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAKTkFMVTAwODc1OQAAAAAAAAAAAAAA
+AEAgRlxhMdnuQE6KcxvLInkAAAHgABNqAEAgRqY2Sm9RP7VSHkAAAABATop9/OIStz+2tk9g
+AAAABfgfGQCg0YA/zY+YL2A97T3xNYRAAp9TnTYGTMABPf0UjlowPdIQCz/sJJAW9diQP79z
+HkDu7sc/8BRDoAAAAECMoZXu6vdxP4rwbEAySEroW56MQ6aU/0CuLcxAMwgqZtvXLERg649A
+6d7oQDFc2ETQE6k/+rUiBeRFj/////////////////////////////////////8AAAAAAAAA
+AAEAAECzrb1AAAAAQBMpKkAAAAC/+9kWgAAAAECQtWHk92X+P/r8uSAAAACAAAAAAoQSXlXr
+3LqAAAAAAAAAAIAAAAAAAAAAAAAAD1VSQVQxLTc1NjAyNDkwNwAAAACAAAAAAAAACk5BTFUw
+MDg3NTkAAAAAAAAAEDAwMzIzMzExKzYxMDQ1NDkAAAAAQCBGqM77dhpATop93BglWQAAAeAD
+8+4AQCBOUz4RRzs/1z+B4AAAAEBOihr04d7kP9kNZmAAAAAF+B8ZABbWAD/dVE9BcF/CPwiT
+CkAODCP6sQumQAmWu87ixTA+84Ppv/9/+SXU288/4MBCD28IzD/uRAvgAAAAQGF7RnvaEzA/
+KghPQDRSvMbFS89CP5OqQIYKnEA1I0knkT6BQwgFuUC2JUBAM2nzYmLLpz/7lVwCX1XR////
+/////////////////////////////////wAAAAAAAAAAAAAA////////////////////////
+/////////////////////////////4AAAAAChBJeXuLhy4AAAAAAAAAAgAAAAAAAAAAAAAAA
+AAAAAIAAAAAAAAAKTkFMVTAwODU0MgAAAAAAAAAAAAAAAEAgTk9js+JdQE6KGz5ISIoAAAHg
+ABNqAEAgTx3zbRJLP7IBDaAAAABATopidQqjUD+ysFbAAAAABfgfGAAgpQA/232dA6H5cT3P
+FA9ACWPUoNakvcAHbMaHomdSPa7naD/zlpJb9iskP7gdzMSURBo/77494AAAAECStOdDRJQ4
+P4xv/kAx/e7cwg1WQ9wDQkDGRYBAMrrXQMQVbkSK1gBAzLXpQDEiSEDhcZ8/+Yjv/io86v//
+//////////////////////////////////8AAAAAAAAAAAEBAEC0eJVgAAAAQBMYXwAAAAC/
+/kYKoAAAAECRI5mz0HyFP/k3S8AAAACAAAAAAoQSXl/PvSuAAAAAAAAAAIAAAAAAAAAAAAAA
+D1VSQVQxLTc1NjAyNDk2MgAAAACAAAAAAAAACk5BTFUwMDg3NDUAAAAAAAAAEDAwMzIzNzA3
+KzYxMDQ1MjIAAAAAQCBPIXpxBPlATopiR2XV TA==
+</STREAM></BINARY2></DATA>
+</TABLE>
+<INFO name="matches" value="50">matching records</INFO>
+
+<INFO name="Warning" value="No center provided++++"/>
+<INFO name="Warning" value="truncated result (maxtup=50)"/><INFO name="QUERY_STATUS" value="OVERFLOW">truncated result (maxtup=50)</INFO>
+
+</RESOURCE>
+</VOTABLE>

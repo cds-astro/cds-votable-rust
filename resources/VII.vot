@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VOTABLE version="1.4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="http://www.ivoa.net/xml/VOTable/v1.3"
+  xsi:schemaLocation="http://www.ivoa.net/xml/VOTable/v1.3 http://www.ivoa.net/xml/VOTable/v1.3">
+ <DESCRIPTION>
+   VizieR Astronomical Server vizier.u-strasbg.fr
+    Date: 2022-04-19T13:38:24 [V1.99+ (14-Oct-2013)]
+   Explanations and Statistics of UCDs:			See LINK below
+   In case of problem, please report to:	cds-question@unistra.fr
+   In this version, NULL integer columns are written as an empty string
+   &lt;TD&gt;&lt;/TD&gt;, explicitely possible from VOTable-1.3
+ </DESCRIPTION>
+<!-- VOTable description at http://www.ivoa.net/Documents/latest/VOT.html -->
+<INFO ID="VERSION" name="votable-version" value="1.99+ (14-Oct-2013)"/>
+<INFO ID="Ref" name="-ref" value="VIZ625ebb1f17666b"/>
+<INFO ID="MaxTuples" name="-out.max" value="50"/>
+<INFO name="queryParameters" value="25">
+-oc.form=dec
+-out.max=50
+-out.all=2
+-nav=cat:J/ApJ/701/1219&amp;tab:{J/ApJ/701/1219/table4}&amp;key:source=J/ApJ/701/1219&amp;HTTPPRM:&amp;
+-c.eq=J2000
+-c.r=  2
+-c.u=arcmin
+-c.geom=r
+-source=J/ApJ/701/1219/table4
+-order=I
+-out=ID
+-out=RAJ2000
+-out=DEJ2000
+-out=Sep
+-out=Dist
+-out=Bmag
+-out=e_Bmag
+-out=Rmag
+-out=e_Rmag
+-out=Imag
+-out=e_Imag
+-out=z
+-out=Type
+-out=RMag
+-out.all=2
+</INFO>
+
+<!--
+Execution Reports
+ -->
+
+<RESOURCE ID="yCat_17011219" name="J/ApJ/701/1219">
+  <DESCRIPTION>Galaxy survey in 3 QSO fields (Chen+, 2009)</DESCRIPTION>
+  <COOSYS ID="J2000" system="eq_FK5" equinox="J2000"/>
+  <TABLE ID="J_ApJ_701_1219_table4" name="J/ApJ/701/1219/table4">
+    <DESCRIPTION>Photometric and spectroscopic catalog of objects in the field around HE0226-4110</DESCRIPTION>
+<!-- Photometric and spectroscopic catalog of objects in the field around HE0226-4110 (\objS{HE 0226-4110}{Simbad}) -->
+
+    <!-- Definitions of GROUPs and FIELDs -->
+    <FIELD name="recno" ucd="meta.record" datatype="int" width="8" type="hidden"><!-- ucd="RECORD" -->
+      <DESCRIPTION>Record number assigned by the VizieR team. Should Not be used for identification.</DESCRIPTION>
+      <LINK href="http://vizier.u-strasbg.fr/viz-bin/VizieR-5?-info=XML&amp;-out.add=.&amp;-source=J/ApJ/701/1219/table4&amp;recno=${recno}"/>
+    </FIELD>
+    <FIELD name="ID" ucd="meta.id;meta.main" datatype="int" width="5"><!-- ucd="ID_MAIN" -->
+      <DESCRIPTION>Identification number (see the "Nomenclature Notes" section below)</DESCRIPTION>
+<!-- Identification number (see the "\Acat{J/ApJ/701/1219\#sRM12.1}{Nomenclature Notes}" section below) (\dicS{[CM2009b] HE0226-4110 NNNNN} in Simbad) -->
+
+      <LINK href="http://vizier.u-strasbg.fr/viz-bin/VizieR-5?-info=XML&amp;-out.add=.&amp;-source=J/ApJ/701/1219/table4&amp;recno=${recno}"/>
+    </FIELD>
+    <FIELD name="RAJ2000" ucd="pos.eq.ra;meta.main" ref="J2000" datatype="char" arraysize="11" unit="&quot;h:m:s&quot;"><!-- ucd="POS_EQ_RA_MAIN" -->
+      <DESCRIPTION>Hour of Right Ascension (J2000)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="DEJ2000" ucd="pos.eq.dec;meta.main" ref="J2000" datatype="char" arraysize="11" unit="&quot;d:m:s&quot;"><!-- ucd="POS_EQ_DEC_MAIN" -->
+      <DESCRIPTION>Degree of Declination (J2000)</DESCRIPTION>
+    </FIELD>
+    <FIELD name="offRA" ucd="pos.eq.ra;arith.diff" datatype="float" width="6" precision="1" unit="arcsec"><!-- ucd="POS_EQ_RA_OFF" -->
+      <DESCRIPTION>Offset in Right Ascension from QSO</DESCRIPTION>
+    </FIELD>
+    <FIELD name="offDE" ucd="pos.eq.dec;arith.diff" datatype="float" width="6" precision="1" unit="arcsec"><!-- ucd="POS_EQ_DEC_OFF" -->
+      <DESCRIPTION>Offset in Declination from QSO</DESCRIPTION>
+    </FIELD>
+    <FIELD name="Sep" ucd="pos.angDistance" datatype="float" width="5" precision="1" unit="arcsec"><!-- ucd="POS_ANG_DIST_GENERAL" -->
+      <DESCRIPTION>Angular distance to QSO</DESCRIPTION>
+    </FIELD>
+    <FIELD name="Dist" ucd="pos.distance" datatype="float" width="5" unit="kpc"><!-- ucd="PHYS_DISTANCE_PROJ" -->
+      <DESCRIPTION>? Projected physical distance in units of h^-1^kpc</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="Bmag" ucd="phot.mag;em.opt.B" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="PHOT_MAG_B" -->
+      <DESCRIPTION>? B band magnitude (not for table 5)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_Bmag" ucd="stat.error;phot.mag;em.opt.B" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Uncertainty in Bmag</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="Rmag" ucd="phot.mag;em.opt.R" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="PHOT_MAG_R" -->
+      <DESCRIPTION>R band magnitude</DESCRIPTION>
+    </FIELD>
+    <FIELD name="e_Rmag" ucd="stat.error;phot.mag;em.opt.R" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="ERROR" -->
+      <DESCRIPTION>Uncertainty in Rmag</DESCRIPTION>
+    </FIELD>
+    <FIELD name="Imag" ucd="phot.mag;em.opt.I" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="PHOT_MAG_I" -->
+      <DESCRIPTION>? I band magnitude (not for table 5)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="e_Imag" ucd="stat.error;phot.mag;em.opt.I" datatype="float" width="6" precision="3" unit="mag"><!-- ucd="ERROR" -->
+      <DESCRIPTION>? Uncertainty in Imag</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="z" ucd="src.redshift" datatype="float" width="7" precision="4"><!-- ucd="REDSHIFT_HC" -->
+      <DESCRIPTION>? Spectroscopic redshift</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="Type" ucd="meta.note" datatype="unsignedByte" width="1"><!-- ucd="SPECT_FEATURE_PROP" -->
+      <DESCRIPTION>[1,2]? absorption or emission galaxy (2) [NULL integer written as an empty string]</DESCRIPTION>
+      <VALUES null="255" />
+      <LINK href="http://vizier.u-strasbg.fr/viz-bin/VizieR?-6N&amp;-info=XML&amp;-out.add=.&amp;&amp;lt;&amp;quot;Note&amp;quot;&amp;catid=17011219&amp;notid=4&amp;-out.emph=${Type}"/>
+    </FIELD>
+    <FIELD name="RMag" ucd="phys.magAbs;em.opt.R" datatype="float" width="6" precision="2" unit="mag"><!-- ucd="PHOT_ABS-MAG_BAND" -->
+      <DESCRIPTION>? Rest-frame R band absolute band magnitude (3)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+<DATA><TABLEDATA>
+<TR><TD>1</TD><TD>443</TD><TD>02 29 21.17</TD><TD>-40 54 57.7</TD><TD>743.2</TD><TD>132.2</TD><TD>754.9</TD><TD></TD><TD>22.740</TD><TD>0.034</TD><TD>20.199</TD><TD>0.006</TD><TD>18.865</TD><TD>0.002</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>2</TD><TD>542</TD><TD>02 29 19.35</TD><TD>-40 53 34.4</TD><TD>723.2</TD><TD>215.3</TD><TD>754.5</TD><TD></TD><TD>23.831</TD><TD>0.066</TD><TD>22.208</TD><TD>0.024</TD><TD>21.471</TD><TD>0.021</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>3</TD><TD>551</TD><TD>02 29 19.11</TD><TD>-40 52 56.0</TD><TD>720.7</TD><TD>253.5</TD><TD>764.0</TD><TD></TD><TD>23.595</TD><TD>0.048</TD><TD>22.316</TD><TD>0.022</TD><TD>21.853</TD><TD>0.025</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>4</TD><TD>562</TD><TD>02 29 19.09</TD><TD>-40 53 31.5</TD><TD>720.3</TD><TD>218.2</TD><TD>752.6</TD><TD></TD><TD>25.019</TD><TD>0.200</TD><TD>22.435</TD><TD>0.031</TD><TD>21.368</TD><TD>0.020</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>5</TD><TD>578</TD><TD>02 29 19.16</TD><TD>-40 56 50.2</TD><TD>719.9</TD><TD>20.5</TD><TD>720.2</TD><TD></TD><TD>22.480</TD><TD>0.024</TD><TD>20.453</TD><TD>0.006</TD><TD>19.700</TD><TD>0.005</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>6</TD><TD>595</TD><TD>02 29 19.14</TD><TD>-40 57 35.0</TD><TD>719.4</TD><TD>-24.1</TD><TD>719.8</TD><TD></TD><TD>23.495</TD><TD>0.066</TD><TD>21.802</TD><TD>0.023</TD><TD>20.779</TD><TD>0.015</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>7</TD><TD>604</TD><TD>02 29 18.79</TD><TD>-40 57 29.0</TD><TD>715.5</TD><TD>-18.1</TD><TD>715.7</TD><TD></TD><TD>24.723</TD><TD>0.147</TD><TD>22.970</TD><TD>0.048</TD><TD>22.043</TD><TD>0.036</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>8</TD><TD>676</TD><TD>02 29 18.10</TD><TD>-40 54 59.6</TD><TD>708.6</TD><TD>130.6</TD><TD>720.6</TD><TD></TD><TD>22.600</TD><TD>0.035</TD><TD>19.784</TD><TD>0.004</TD><TD>18.270</TD><TD>0.002</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>9</TD><TD>685</TD><TD>02 29 17.94</TD><TD>-40 54 45.2</TD><TD>706.8</TD><TD>145.0</TD><TD>721.6</TD><TD>2423</TD><TD>22.052</TD><TD>0.021</TD><TD>20.544</TD><TD>0.009</TD><TD>19.855</TD><TD>0.008</TD><TD>0.3347</TD><TD>2</TD><TD>-19.81</TD></TR>
+<TR><TD>10</TD><TD>686</TD><TD>02 29 18.30</TD><TD>-40 55 16.1</TD><TD>710.7</TD><TD>114.2</TD><TD>719.9</TD><TD>2838</TD><TD>23.014</TD><TD>0.047</TD><TD>21.567</TD><TD>0.021</TD><TD>21.286</TD><TD>0.021</TD><TD>0.4329</TD><TD>2</TD><TD>-19.45</TD></TR>
+<TR><TD>11</TD><TD>693</TD><TD>02 29 17.59</TD><TD>-40 57 16.5</TD><TD>702.0</TD><TD>-5.6</TD><TD>702.0</TD><TD></TD><TD>25.241</TD><TD>0.267</TD><TD>22.480</TD><TD>0.035</TD><TD>21.038</TD><TD>0.016</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>12</TD><TD>694</TD><TD>02 29 17.55</TD><TD>-40 58 40.0</TD><TD>701.1</TD><TD>-88.6</TD><TD>706.7</TD><TD>2640</TD><TD>23.287</TD><TD>0.051</TD><TD>21.406</TD><TD>0.014</TD><TD>20.639</TD><TD>0.012</TD><TD>0.3957</TD><TD>1</TD><TD>-19.87</TD></TR>
+<TR><TD>13</TD><TD>699</TD><TD>02 29 17.64</TD><TD>-40 55 33.3</TD><TD>703.3</TD><TD>97.1</TD><TD>709.9</TD><TD></TD><TD>24.376</TD><TD>0.160</TD><TD>22.318</TD><TD>0.038</TD><TD>22.169</TD><TD>0.047</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>14</TD><TD>731</TD><TD>02 29 17.06</TD><TD>-40 56 26.8</TD><TD>696.4</TD><TD>43.9</TD><TD>697.8</TD><TD></TD><TD>24.646</TD><TD>0.137</TD><TD>22.940</TD><TD>0.045</TD><TD>22.294</TD><TD>0.036</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>15</TD><TD>733</TD><TD>02 29 17.17</TD><TD>-40 57 12.2</TD><TD>697.3</TD><TD>-1.2</TD><TD>697.3</TD><TD></TD><TD>22.885</TD><TD>0.041</TD><TD>19.942</TD><TD>0.005</TD><TD>18.311</TD><TD>0.002</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>16</TD><TD>734</TD><TD>02 29 16.84</TD><TD>-40 55 31.4</TD><TD>694.3</TD><TD>99.1</TD><TD>701.3</TD><TD></TD><TD>24.860</TD><TD>0.220</TD><TD>22.249</TD><TD>0.031</TD><TD>21.780</TD><TD>0.028</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>17</TD><TD>766</TD><TD>02 29 16.52</TD><TD>-40 52 29.9</TD><TD>691.7</TD><TD>279.7</TD><TD>746.1</TD><TD>1807</TD><TD>21.877</TD><TD>0.016</TD><TD>19.504</TD><TD>0.003</TD><TD>18.689</TD><TD>0.002</TD><TD>0.2125</TD><TD>1</TD><TD>-20.00</TD></TR>
+<TR><TD>18</TD><TD>768</TD><TD>02 29 16.67</TD><TD>-40 55 35.8</TD><TD>692.2</TD><TD>94.7</TD><TD>698.7</TD><TD></TD><TD>24.080</TD><TD>0.137</TD><TD>21.605</TD><TD>0.021</TD><TD>20.676</TD><TD>0.012</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>19</TD><TD>808</TD><TD>02 29 15.82</TD><TD>-40 58 33.1</TD><TD>681.7</TD><TD>-81.6</TD><TD>686.6</TD><TD></TD><TD>24.985</TD><TD>0.197</TD><TD>21.960</TD><TD>0.020</TD><TD>20.525</TD><TD>0.009</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>20</TD><TD>811</TD><TD>02 29 15.78</TD><TD>-40 54 39.6</TD><TD>682.6</TD><TD>150.7</TD><TD>699.0</TD><TD></TD><TD>23.763</TD><TD>0.060</TD><TD>22.377</TD><TD>0.029</TD><TD>21.780</TD><TD>0.028</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>21</TD><TD>820</TD><TD>02 29 15.78</TD><TD>-40 59 06.4</TD><TD>681.0</TD><TD>-114.7</TD><TD>690.6</TD><TD>2936</TD><TD>23.482</TD><TD>0.060</TD><TD>21.809</TD><TD>0.020</TD><TD>20.971</TD><TD>0.016</TD><TD>0.4951</TD><TD>2</TD><TD>-19.58</TD></TR>
+<TR><TD>22</TD><TD>830</TD><TD>02 29 15.39</TD><TD>-40 52 03.5</TD><TD>679.0</TD><TD>306.1</TD><TD>744.8</TD><TD></TD><TD>24.118</TD><TD>0.095</TD><TD>22.542</TD><TD>0.036</TD><TD>21.686</TD><TD>0.026</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>23</TD><TD>855</TD><TD>02 29 15.28</TD><TD>-40 59 43.4</TD><TD>675.2</TD><TD>-151.6</TD><TD>692.0</TD><TD></TD><TD>24.084</TD><TD>0.095</TD><TD>22.935</TD><TD>0.049</TD><TD>21.812</TD><TD>0.029</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>24</TD><TD>861</TD><TD>02 29 14.92</TD><TD>-40 57 10.5</TD><TD>672.1</TD><TD>0.6</TD><TD>672.1</TD><TD></TD><TD>24.847</TD><TD>0.172</TD><TD>22.933</TD><TD>0.046</TD><TD>21.701</TD><TD>0.025</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>25</TD><TD>862</TD><TD>02 29 14.97</TD><TD>-40 57 27.7</TD><TD>672.5</TD><TD>-16.5</TD><TD>672.7</TD><TD></TD><TD>25.048</TD><TD>0.182</TD><TD>22.919</TD><TD>0.042</TD><TD>21.489</TD><TD>0.018</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>26</TD><TD>863</TD><TD>02 29 14.97</TD><TD>-40 52 05.7</TD><TD>674.3</TD><TD>303.9</TD><TD>739.7</TD><TD></TD><TD>24.107</TD><TD>0.099</TD><TD>22.633</TD><TD>0.041</TD><TD>22.033</TD><TD>0.036</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>27</TD><TD>871</TD><TD>02 29 15.13</TD><TD>-40 57 02.0</TD><TD>674.4</TD><TD>9.0</TD><TD>674.5</TD><TD></TD><TD>24.085</TD><TD>0.081</TD><TD>22.600</TD><TD>0.034</TD><TD>21.911</TD><TD>0.029</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>28</TD><TD>875</TD><TD>02 29 15.62</TD><TD>-40 59 51.0</TD><TD>678.9</TD><TD>-159.1</TD><TD>697.3</TD><TD></TD><TD>22.372</TD><TD>0.037</TD><TD>20.852</TD><TD>0.015</TD><TD>20.062</TD><TD>0.012</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>29</TD><TD>879</TD><TD>02 29 15.09</TD><TD>-40 55 48.3</TD><TD>674.4</TD><TD>82.4</TD><TD>679.4</TD><TD></TD><TD>23.696</TD><TD>0.076</TD><TD>22.361</TD><TD>0.035</TD><TD>21.305</TD><TD>0.022</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>30</TD><TD>885</TD><TD>02 29 14.50</TD><TD>-40 52 28.3</TD><TD>668.9</TD><TD>281.4</TD><TD>725.7</TD><TD></TD><TD>25.539</TD><TD>0.282</TD><TD>22.831</TD><TD>0.038</TD><TD>21.314</TD><TD>0.014</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>31</TD><TD>888</TD><TD>02 29 15.03</TD><TD>-40 53 34.6</TD><TD>674.5</TD><TD>215.5</TD><TD>708.0</TD><TD></TD><TD>19.489</TD><TD>0.002</TD><TD>18.245</TD><TD>0.001</TD><TD>17.793</TD><TD>0.001</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>32</TD><TD>892</TD><TD>02 29 14.88</TD><TD>-40 52 38.2</TD><TD>673.1</TD><TD>271.5</TD><TD>725.8</TD><TD>2478</TD><TD>23.583</TD><TD>0.068</TD><TD>21.961</TD><TD>0.024</TD><TD>21.383</TD><TD>0.021</TD><TD>0.3433</TD><TD>2</TD><TD>-18.46</TD></TR>
+<TR><TD>33</TD><TD>899</TD><TD>02 29 14.32</TD><TD>-40 52 23.6</TD><TD>666.9</TD><TD>286.2</TD><TD>725.7</TD><TD></TD><TD>25.590</TD><TD>0.340</TD><TD>22.460</TD><TD>0.032</TD><TD>21.381</TD><TD>0.017</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>34</TD><TD>909</TD><TD>02 29 14.36</TD><TD>-40 50 32.2</TD><TD>668.0</TD><TD>397.0</TD><TD>777.0</TD><TD></TD><TD>23.705</TD><TD>0.075</TD><TD>22.009</TD><TD>0.025</TD><TD>21.304</TD><TD>0.022</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>35</TD><TD>913</TD><TD>02 29 14.51</TD><TD>-40 51 23.2</TD><TD>669.4</TD><TD>346.2</TD><TD>753.6</TD><TD>1587</TD><TD>22.620</TD><TD>0.034</TD><TD>21.280</TD><TD>0.015</TD><TD>20.608</TD><TD>0.013</TD><TD>0.1780</TD><TD>2</TD><TD>-17.55</TD></TR>
+<TR><TD>36</TD><TD>923</TD><TD>02 29 14.63</TD><TD>-40 51 27.8</TD><TD>670.7</TD><TD>341.6</TD><TD>752.7</TD><TD></TD><TD>24.078</TD><TD>0.124</TD><TD>22.619</TD><TD>0.051</TD><TD>21.885</TD><TD>0.044</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>37</TD><TD>951</TD><TD>02 29 02.72</TD><TD>-41 03 04.1</TD><TD>532.8</TD><TD>-350.3</TD><TD>637.6</TD><TD></TD><TD>21.101</TD><TD>0.035</TD><TD>19.415</TD><TD>0.014</TD><TD>18.930</TD><TD>0.012</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>38</TD><TD>981</TD><TD>02 29 14.48</TD><TD>-40 59 45.5</TD><TD>666.2</TD><TD>-153.6</TD><TD>683.7</TD><TD></TD><TD>22.787</TD><TD>0.039</TD><TD>21.440</TD><TD>0.018</TD><TD>20.808</TD><TD>0.017</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>39</TD><TD>984</TD><TD>02 29 13.31</TD><TD>-40 49 55.3</TD><TD>656.4</TD><TD>433.7</TD><TD>786.7</TD><TD></TD><TD>21.695</TD><TD>0.010</TD><TD>20.201</TD><TD>0.004</TD><TD>19.596</TD><TD>0.004</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>40</TD><TD>995</TD><TD>02 29 13.28</TD><TD>-40 50 55.5</TD><TD>655.7</TD><TD>373.9</TD><TD>754.8</TD><TD></TD><TD>24.004</TD><TD>0.090</TD><TD>22.788</TD><TD>0.046</TD><TD>21.793</TD><TD>0.031</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>41</TD><TD>997</TD><TD>02 29 13.37</TD><TD>-40 52 41.5</TD><TD>656.1</TD><TD>268.4</TD><TD>708.9</TD><TD>3088</TD><TD>23.194</TD><TD>0.045</TD><TD>21.806</TD><TD>0.020</TD><TD>21.232</TD><TD>0.018</TD><TD>0.5187</TD><TD>2</TD><TD>-19.70</TD></TR>
+<TR><TD>42</TD><TD>1019</TD><TD>02 29 13.24</TD><TD>-40 58 05.2</TD><TD>652.8</TD><TD>-53.7</TD><TD>655.0</TD><TD>3004</TD><TD>23.452</TD><TD>0.064</TD><TD>21.699</TD><TD>0.021</TD><TD>20.821</TD><TD>0.016</TD><TD>0.5746</TD><TD>2</TD><TD>-20.11</TD></TR>
+<TR><TD>43</TD><TD>1025</TD><TD>02 29 13.17</TD><TD>-40 56 20.7</TD><TD>652.5</TD><TD>50.3</TD><TD>654.5</TD><TD></TD><TD>23.484</TD><TD>0.054</TD><TD>22.313</TD><TD>0.030</TD><TD>21.561</TD><TD>0.020</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>44</TD><TD>1027</TD><TD>02 29 13.17</TD><TD>-40 57 38.3</TD><TD>652.1</TD><TD>-26.9</TD><TD>652.7</TD><TD>1845</TD><TD>23.199</TD><TD>0.048</TD><TD>21.985</TD><TD>0.026</TD><TD>21.333</TD><TD>0.022</TD><TD>0.2612</TD><TD>2</TD><TD>-17.75</TD></TR>
+<TR><TD>45</TD><TD>1031</TD><TD>02 29 12.55</TD><TD>-40 50 48.7</TD><TD>647.5</TD><TD>380.7</TD><TD>751.1</TD><TD></TD><TD>23.873</TD><TD>0.068</TD><TD>22.704</TD><TD>0.037</TD><TD>22.098</TD><TD>0.034</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>46</TD><TD>1035</TD><TD>02 29 12.86</TD><TD>-40 57 05.6</TD><TD>648.8</TD><TD>5.7</TD><TD>648.8</TD><TD></TD><TD>23.820</TD><TD>0.056</TD><TD>22.420</TD><TD>0.024</TD><TD>21.553</TD><TD>0.020</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>47</TD><TD>1036</TD><TD>02 29 13.12</TD><TD>-40 55 22.2</TD><TD>652.3</TD><TD>108.5</TD><TD>661.3</TD><TD>2774</TD><TD>24.683</TD><TD>0.231</TD><TD>21.623</TD><TD>0.025</TD><TD>20.760</TD><TD>0.014</TD><TD>0.4832</TD><TD>2</TD><TD>-19.69</TD></TR>
+<TR><TD>48</TD><TD>1055</TD><TD>02 29 12.28</TD><TD>-40 49 27.1</TD><TD>644.9</TD><TD>461.9</TD><TD>793.3</TD><TD></TD><TD>23.873</TD><TD>0.061</TD><TD>22.385</TD><TD>0.026</TD><TD>22.127</TD><TD>0.026</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>49</TD><TD>1056</TD><TD>02 29 12.83</TD><TD>-40 58 20.1</TD><TD>648.1</TD><TD>-68.5</TD><TD>651.7</TD><TD></TD><TD>24.524</TD><TD>0.134</TD><TD>22.471</TD><TD>0.034</TD><TD>21.136</TD><TD>0.016</TD><TD></TD><TD></TD><TD></TD></TR>
+<TR><TD>50</TD><TD>1085</TD><TD>02 29 12.18</TD><TD>-40 54 07.8</TD><TD>642.2</TD><TD>182.6</TD><TD>667.6</TD><TD></TD><TD>24.553</TD><TD>0.156</TD><TD>22.215</TD><TD>0.028</TD><TD>21.407</TD><TD>0.015</TD><TD></TD><TD></TD><TD></TD></TR>
+</TABLEDATA></DATA>
+</TABLE>
+<INFO name="matches" value="50">matching records</INFO>
+
+<INFO name="Warning" value="No center provided++++"/>
+<INFO name="Warning" value="skip recno in all column selection"/>
+<INFO name="Warning" value="truncated result (maxtup=50)"/><INFO name="QUERY_STATUS" value="OVERFLOW">truncated result (maxtup=50)</INFO>
+
+</RESOURCE>
+</VOTABLE>

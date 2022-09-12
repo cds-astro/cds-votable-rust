@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VOTABLE version="1.4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="http://www.ivoa.net/xml/VOTable/v1.3"
+  xsi:schemaLocation="http://www.ivoa.net/xml/VOTable/v1.3 http://www.ivoa.net/xml/VOTable/v1.3">
+ <DESCRIPTION>
+   VizieR Astronomical Server vizier.cds.unistra.fr
+    Date: 2022-06-17T06:46:56 [V1.99+ (14-Oct-2013)]
+   Explanations and Statistics of UCDs:			See LINK below
+   In case of problem, please report to:	cds-question@unistra.fr
+ </DESCRIPTION>
+<!-- VOTable description at http://www.ivoa.net/Documents/latest/VOT.html -->
+<INFO ID="VERSION" name="votable-version" value="1.99+ (14-Oct-2013)"/>
+<INFO ID="Ref" name="-ref" value="VIZ62ac235a326335"/>
+<INFO ID="MaxTuples" name="-out.max" value="50"/>
+<INFO name="queryParameters" value="26">
+-oc.form=dec
+-out.max=50
+-out.add=_r
+-out.add=_RAJ,_DEJ
+-sort=_r
+-nav=cat:I/5&amp;tab:{I/5/czc}&amp;key:source=I/5&amp;HTTPPRM:&amp;-out.max=50&amp;-out.form=HTML Table&amp;-out.add=_r&amp;-out.add=_RAJ,_DEJ&amp;-sort=_r&amp;-oc.form=sexa&amp;
+-c.eq=J2000
+-c.r=  2
+-c.u=arcmin
+-c.geom=r
+-source=I/5/czc
+-order=I
+-out=CZC
+-out=Vmag
+-out=RA1900
+-out=DE1900
+-out=Ep-1900
+-out=CPDZone
+-out=CPDNo
+-out=Pmag
+-out=Sp
+-out=pmRAs
+-out=pmRA
+-out=pmDE
+-out=_RA.icrs
+-out=_DE.icrs
+</INFO>
+
+<!--
+Execution Reports
+ -->
+
+<RESOURCE ID="yCat_1005" name="I/5">
+  <DESCRIPTION>Proper Motions in Cape Zone Catalogue -40/-52 (Spencer Jones H.+ 1936)</DESCRIPTION>
+  <COOSYS ID="B1900" system="eq_FK4" equinox="B1900"/>
+  <COOSYS ID="J2000" system="eq_FK5" equinox="J2000"/>
+  <TABLE ID="I_5_czc" name="I/5/czc">
+    <DESCRIPTION>The catalogue</DESCRIPTION>
+    <!-- RowName: ${CZC} -->
+    <!-- Definitions of GROUPs and FIELDs -->
+    <FIELD name="_RAJ2000" ucd="pos.eq.ra" ref="J2000" datatype="double" width="11" precision="7" unit="deg"><!-- ucd="POS_EQ_RA" -->
+      <DESCRIPTION>Right ascension (FK5, Equinox=J2000.0) at Epoch=J2000, proper motions taken into account </DESCRIPTION>
+    </FIELD>
+    <FIELD name="_DEJ2000" ucd="pos.eq.dec" ref="J2000" datatype="double" width="11" precision="7" unit="deg"><!-- ucd="POS_EQ_DEC" -->
+      <DESCRIPTION>Declination (FK5, Equinox=J2000.0) at Epoch=J2000, proper motions taken into account </DESCRIPTION>
+    </FIELD>
+    <FIELD name="CZC" ucd="meta.id;meta.main" datatype="int" width="5"><!-- ucd="ID_MAIN" -->
+      <DESCRIPTION>[1/20843]+ Catalogue Identification Number</DESCRIPTION>
+      <LINK href="http://vizier.cds.unistra.fr/viz-bin/VizieR-5?-info=XML&amp;-out.add=.&amp;-source=I/5/czc&amp;recno=${recno}"/>
+    </FIELD>
+    <FIELD name="Vmag" ucd="phot.mag;em.opt" datatype="float" width="4" precision="1" unit="mag"><!-- ucd="PHOT_MAG_EYE" -->
+      <DESCRIPTION>? Visual Magnitude</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="RA1900" ucd="pos.eq.ra;meta.main" ref="B1900" datatype="double" width="11" precision="5" unit="deg"><!-- ucd="POS_EQ_RA_MAIN" -->
+      <DESCRIPTION>Right Ascension for 1900 hours</DESCRIPTION>
+    </FIELD>
+    <FIELD name="DE1900" ucd="pos.eq.dec;meta.main" ref="B1900" datatype="double" width="11" precision="5" unit="deg"><!-- ucd="POS_EQ_DEC_MAIN" -->
+      <DESCRIPTION>[39/51] Declination for 1900 degrees</DESCRIPTION>
+    </FIELD>
+    <FIELD name="Ep-1900" ucd="time.epoch" ref="B1900" datatype="int" width="5" unit="cyr"><!-- ucd="TIME_EPOCH" -->
+      <DESCRIPTION>[-318/1156] Epoch -1900</DESCRIPTION>
+    </FIELD>
+    <FIELD name="CPDZone" ucd="meta.id" datatype="short" width="3"><!-- ucd="ID_ALTERNATIVE" -->
+      <DESCRIPTION>[-52/-39]? Cape Photographic Durchmusterung Zone [NULL integer written as an empty string]</DESCRIPTION>
+      <VALUES null="-32768" />
+    </FIELD>
+    <FIELD name="CPDNo" ucd="meta.id" datatype="int" width="5"><!-- ucd="ID_ALTERNATIVE" -->
+      <DESCRIPTION>? Cape Photographic Durchmusterung Number [NULL integer written as an empty string]</DESCRIPTION>
+      <VALUES null="-2147483648" />
+    </FIELD>
+    <FIELD name="Pmag" ucd="phot.mag;em.opt.B" datatype="float" width="4" precision="1" unit="mag"><!-- ucd="PHOT_PHG_B" -->
+      <DESCRIPTION>? Photographic Magnitude</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="Sp" ucd="src.spType" datatype="char" arraysize="4"><!-- ucd="SPECT_TYPE_GENERAL" -->
+      <DESCRIPTION>HD Spectral Type</DESCRIPTION>
+    </FIELD>
+    <FIELD name="pmRAs" ucd="pos.pm;pos.eq.ra" datatype="float" width="6" precision="1" unit="ms/yr"><!-- ucd="POS_EQ_PMRA" -->
+      <DESCRIPTION>? Proper Motion in RA</DESCRIPTION>
+    </FIELD>
+    <FIELD name="pmRA" ucd="pos.pm;pos.eq.ra" ref="B1900" datatype="int" width="5" unit="mas/yr"><!-- ucd="POS_EQ_PMRA" -->
+      <DESCRIPTION>? Proper Motion in RA</DESCRIPTION>
+    </FIELD>
+    <FIELD name="pmDE" ucd="pos.pm;pos.eq.dec" ref="B1900" datatype="int" width="5" unit="mas/yr"><!-- ucd="POS_EQ_PMDEC" -->
+      <DESCRIPTION>? Proper Motion in Dec</DESCRIPTION>
+    </FIELD>
+    <FIELD name="_RA.icrs" ucd="pos.eq.ra" datatype="double" width="11" precision="5" unit="deg"><!-- ucd="POS_EQ_RA_OTHER" -->
+      <DESCRIPTION>Right ascension (ICRS) at Epoch=J2000, proper motions taken into account  (computed by VizieR, not part of the original data)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="_DE.icrs" ucd="pos.eq.dec" datatype="double" width="11" precision="5" unit="deg"><!-- ucd="POS_EQ_DEC_OTHER" -->
+      <DESCRIPTION>Declination (ICRS) at Epoch=J2000, proper motions taken into account  (computed by VizieR, not part of the original data)</DESCRIPTION>
+      <VALUES null="NaN" />
+    </FIELD>
+    <FIELD name="recno" ucd="meta.record" datatype="int" width="8" type="hidden"><!-- ucd="RECORD" -->
+      <DESCRIPTION>Record number assigned by the VizieR team. Should Not be used for identification.</DESCRIPTION>
+      <LINK href="http://vizier.cds.unistra.fr/viz-bin/VizieR-5?-info=XML&amp;-out.add=.&amp;-source=I/5/czc&amp;recno=${recno}"/>
+    </FIELD>
+<DATA><BINARY><STREAM encoding="base64">
+P/RyQ5zG/q3ARUi6CrwHqAAAAAFBDMzNP3fksX5LF+TARY/i33WlbgAAAPf/1QAAJlNBIZma
+RzUgIMDzMzP///+t////4T/0ckN730S2wEVIugpSaVkAAAABP/SoYvXUHF7ARezoiAI0hgAA
+AAJBDMzNP47OKlNJC5rARjQ0yvrEJgAAAVT/1AAAKKJBHmZmSzAgIEBTMzMAAAAjAAAACT/0
+qGL1mJ3wwEXs6IjTGUYAAAACP/TyiQej3hbARuRZdk0wygAAAANBGzMzP6HgmOrWW3rARyvK
+TADpAwAAAOH/0gAAKX9BJmZmRzAgID7MzM0AAAAEAAAAMj/08okZAPlTwEbkWXc64dwAAAAD
+P/UGprOpHLbASJIw+UZR+AAAAARBFMzNP6P9RPMHgmPASNmOrWW3ogAAAaz/zwAALk9BHmZm
+RjggIECTMzMAAAAtAAAAHT/1BqbFWrjKwEiSMPhPAd0AAAAEP/XbZ/G3M8nARXGdtaqIQQAA
+AAVA8zMzP7fRlCN/qJ7ARbjhvDA95AAAAHj/1QAAJlVBEZmaTUIgIMBAAAD////fAAAAAD/1
+22fY5ZgtwEVxnbSBlEgAAAAFP/ZZ33ju1urAR8jjerNfoAAAAAZBIZmaP77/UTzB4JjASBAc
+N4YHvAAAAbP/0AAAKwNBJMzNSzAgIED5mZoAAABO////8z/2Wd+BTAyPwEfI43uUs/cAAAAG
+P/Zr/WnG9DXASaFA69zzjAAAAAdA7MzNP8CQua9yAV3ASeiLQ5WBBQAAARb/zQAALytBBMzN
+SzIgID+AAAAAAAAJAAAABz/2a/1qO2auwEmhQOrDt0oAAAAHP/d9WtmgwR/AROBslXYWGwAA
+AAhA+ZmaP8iBtOgbToHARSdkWhysB////2j/1gAAJb5BBMzNRzAgIEDjMzMAAABP////rj/3
+fVrLb0ZQwETgbJSVrUsAAAAIP/glYSJ0pJPARdiNfOi3SwAAAAlBFMzNP85G/1E8wd/ARh+8
+pMAOjwAAAUP/1AAAKKNBGZmaRjIgIL7MzM3////8////6T/4JWEhO3JUwEXYjXwlLGgAAAAJ
+P/k/4fwkhuzASImmcbI94gAAAApAuZmaP9JJul41P3zASNDDsqGQfwAAARX/zwAALlJAyZma
+RzAgIEJaAAAAAAIS////1T/5P+H/w2pkwEiJpnF34qcAAAAKP/pgiVbCnPbAR8rWiCnxPQAA
+AAtBFMzNP9g3S8an753ASBIj9CrHygAAAR3/0AAAAAJBJmZmRjggID7MzM0AAAAEAAAADD/6
+YIl63vMnwEfK1ofAI4gAAAALP/qDBLfBbYXAST/uExn0WwAAAAxBEzMzP9iwIMSbpeLASYdA
+2nQNpgAAARf/zQAAAANBJMzNICAgIEDGZmYAAAA6AAAAEj/6gwS+BJsQwEk/7hPlv8oAAAAM
+P/tQcKRYCLPARHTt7aL2FgAAAA1BFMzNP9vWW3oyhG/ARLw0yvrEJv///2f/1wAAAAJBIzMz
+RzUgID9mZmYAAAAKAAAABT/7UHCTh2CZwER07e6dYJ4AAAANP/uQ2UwKxqvARH7MymQnuwAA
+AA5BJMzNP9zVrLb0ZQjARMYUeuFHrf///3X/1wAAAANBKAAARjUgID/MzM0AAAASAAAABj/7
+kNlvEw0KwER+zMp4RtkAAAAOP/u9vN2dKMPARf4ZBiDeWgAAAA9A8zMzP92a9yAV2GfARkVz
+XuQCugAAAKv/1AAAAANBBMzNRzUgID/mZmYAAAATAAAAGz/7vbzz+djNwEX+GQWiX+EAAAAP
+P/v0opBKkRDARDT9xpeS7QAAABBBEAAAP95si0OVgQXARHw8Ex1ay////43/1wAAAARBFmZm
+RjIgID8AAAAAAAAG/////D/79KJ+LM0WwEQ0/cdwVJ0AAAAQP/0EJtMe/gvARPHc1xl82QAA
+ABFBCzMzP+F3IBXYZ8PARTkyvrEJyP///3v/1gAAAANBCZmaRzAgIMDWZmb///+2AAAAFj/9
+BCbZKStawETx3NaOvbUAAAARP/2yWlBIu+7ARD14kNbwhAAAABJBBMzNP+KCuwz4fZzARISs
+CDEm6f///4j/1wAAAAVBGZmaRzUgIEGDMzMAAAC5////8T/9sloz+UOswEQ9eJFqxzUAAAAS
+P/2ZgB/ypPPARUeuhIRLkQAAABNBEzMzP+KWL8li/JbARY70ZQjf6QAAAJL/1QAAAAJBJMzN
+RjUgIMAAAAD////qAAAABT/9mYBCaOmGwEVHroRT/swAAAATP/3VBaXAHPrARlJ1XKoqSAAA
+ABRBFmZmP+MQCuwz4fbARpm10R+hVQAAAAz/0wAAAANBKAAARzUgIL8AAAD////7/////z/9
+1QWGaZqdwEZSdV0ymWgAAAAUP/6APQVlD9nARo9UzjJc2wAAABVBBMzNP+RfO2RaHKvARtY4
+44444wAAAFD/0wAAAARBEAAARzAgIEBGZmYAAAAh////mT/+gDzgK2Y+wEaPVM4u/FQAAAAV
+P/7Yj9tsXNXAR0W59HqRBgAAABZBCAAAP+UWL8li/JXAR4ztkWhyrwAAANL/0QAAAARBIAAA
+SzAgIEBZmZoAAAAj////8T/+2I/1835YwEdFufVZs9AAAAAWP/+oJ++lV7fASaDyM5U2FAAA
+ABdBAzMzP+blYEGJN0vASegyD+3LqQAAARP/zQAAAAhBEAAASzAgIMBZmZr////g/////z//
+qCfU0a3EwEmg8jN2xl8AAAAXP//torjcH/DARbpPtW/FXwAAABhBGzMzP+dPMHgmOrXARgGD
+wTHVrAAAAUP/1AAAAAVBKAAARzAgIMA5mZr////h////8j//7aKXzo6FwEW6T7VJ+UgAAAAY
+QAAHo3hKtPrAQ85i1jb0bAAAABlBIZmaP+drhR64UevARBWHZUMg/v///43/2AAAAANBJmZm
+RjUgIECczM0AAAA4////4kAAB6Ny172pwEPOYtdN0JwAAAAZQAAQtZrAuFDARrDzhLucWgAA
+ABpBDmZmP+estvRlCN/ARvgeCY6tZQAAAAn/0gAAAARBIAAASzAgIEAmZmYAAAAb////6EAA
+ELWbh5iGwEaw84VWpOAAAAAaQABy9VIoiNbASNxt5J5RFwAAABtA+ZmaP+lZxUppIXLASSOr
+WW3oyQAAATX/zgAAAAhBKAAARzAgIL+mZmb////0/////UAAcvVODTK+wEjcbeQhBdkAAAAb
+QADZkNv/FAXASbNFbaDFzQAAABxBFMzNP+rw+zipTSPASfqRLjGbawAAAkH/zAAAAANBEzMz
+RjIgIEB5mZoAAAAkAAAADkAA2ZDco0s6wEmzRW6HPaUAAAAcQADgXCwkSOzARiL/CZvojwAA
+AB1BGAAAP+r4fZxUppHARmpJRdwL1AAAAK7/1AAAAAdBIZmaQTAgIL5MzM3////+AAAADEAA
+4Fwv81RnwEYi/wkAiXoAAAAdQAGeVUQuNYXAR4fVS4+4awAAAB5A/MzNP+3h9nFSmkfAR87h
+R64UegAAAM3/0QAAAAZBBMzNRjggIEEhmZoAAABm////x0ABnlVJrreXwEeH1UrY+pAAAAAe
+QAGfi0QxlKbASFHx4CVJogAAAB9BKAAAP+4NT987ZFnASJkppIXNewAAARn/zwAAAAdBLmZm
+RzUgID9mZmYAAAAJ////+EABn4szRddiwEhR8d+T8DsAAAAfQAH9fIsWxVjAQ95YDC9DSQAA
+ACBA+ZmaP+9B4Jjq1lrARCWLCVRsUP///yf/2AAAAAVBBMzNRzAgIEEgAAAAAABy////9EAB
+/XyVBYZpwEPeWAu5Qe0AAAAgQAI2modrXmrASU3TDpiETgAAACFBAzMzP/A/fO2RaHLASZT5
+ZqCnegAAARb/zQAAAA5BFmZmSzIgIL5MzM3////+////5UACNpqJm35GwElN0w2gQ0gAAAAh
+QAI6Zfrm1GPASQHCImmWSgAAACJBBMzNP/BH2cVKaSHASUj5ZqCnegAAAdn/zgAAAAtBGAAA
+RzAgIL/ZmZr////w////+EACOmXtOzEWwEkBwiHXkWMAAAAiQAJHliavrwjASRVig4b74gAA
+ACNA5mZmP/Bg8Ex1ay3ASVySi7gXqgAAATP/zgAAAA1A1mZmQjggIL7MzM3////8////8EAC
+R5YyHejvwEkVYoNq+nkAAAAjQAKixxg3YvbARPFyEX2xvgAAACRBGzMzP/EHVrLb0ZTARTjB
+4Jjq1v///7r/1gAAAAZBIzMzRjUgIL/zMzP////rAAAAFEACoscjb1j0wETxchGtMB8AAAAk
+QALHLMtm5nTARIW2ndawEgAAACVBEAAAP/E3oyhG/1HARMx3PTZiwv///7r/1wAAAAhBHMzN
+RzAgIEE7MzMAAACD////eEACxyzBcL/NwESFtp4trMkAAAAlQALSEYRsA6PARt+yqmuO7wAA
+ACZAeZmaP/FZxUppIXPARyZKLuBeqQAAAMv/0gAAAAdAsAAASzAgIEEzMzMAAAB0////RkAC
+0hGH58BtwEbfsqrilzkAAAAmQAMTHoDGVt3ARFMcoo86fgAAACdBDMzNP/HeuFHrhR7ARJpq
+CnexuP///7r/1wAAAAlBIAAASzAgIEBGZmYAAAAjAAAAEkADEx6FDmiowERTHKK2GVsAAAAn
+QAMpFtaVV/DARzANOlCq2QAAAChBFMzNP/Ie5AK7DPjAR3crAgxJugAAAMz/0QAAAAlBJMzN
+RjUgIL8ZmZr////6////3UADKRbRu8BkwEcwDTm8QuEAAAAoQAOdC6tWhpDARHJUtTxySQAA
+AClBBMzNP/Lo9cKPXCjARLkdz02YsP///4j/1wAAAApBDMzNRzAgIEEkzM0AAAB0////g0AD
+nQu27Wd2wERyVLSNOuYAAAApQAOeCrWISFfASO595m3SiAAAACpBCzMzP/MUI3+onmDASTWp
+EuMZtgAAAdn/zgAAAA5BFmZmSzAgID3MzM0AAAAB////7EADngq48F8ZwEjufeblZOoAAAAq
+QAPCZDzyI0PASSJPQm99SAAAACtBBMzNP/Nwz4fZxUrASWlydd+v5gAAAdn/zgAAAA9BDMzN
+RzAgIMEuZmb///+Z////40ADwmRAeuqZwEkiT0McVdAAAAArQAPjjeSKJbbARlVd2st2VQAA
+ACxA8zMzP/ON0vGp++fARpyfSfSfSQAAAFH/0wAAAAlBAzMzRzUgIEAmZmYAAAAbAAAABkAD
+443uUs/gwEZVXdpfFPEAAAAsQARPI6p2Ng3ASJJgz6CwPwAAAC1BCAAAP/RrWW3oyhHASNl/
+NBw3hQAAARX/zwAAAA9BEAAARjIgIED5mZoAAABM////30AETyOnRYN/wEiSYM+tIiQAAAAt
+QAS3RjkgehXASBJc7bUJYwAAAC5BDmZmP/VGp++dsizASFmdPark6wAAATb/0AAAAAZBHmZm
+RjIgID8zMzMAAAAHAAAABkAEt0Y96c8MwEgSXOyxtjcAAAAuQATBwdk+84bARcLvgAQpFwAA
+AC9BGAAAP/VLF+SxfkrARgoqU0kLmgAAAXb/1AAAAAtBIAAARjUgIEA5mZoAAAAfAAAAAEAE
+wcHeRGTjwEXC739nX7oAAAAvQAU33Jk+pLzARI83j9J75gAAADBBDMzNP/Y87ZFocq/ARNZY
+vyWL8v///3T/1wAAAAtBHmZmRzUgIMA5mZr////g////5UAFN9yJqXlpwESPN49Z1G8AAAAw
+QAVrb1SOZ0HARo5NSwtdcQAAADFBHMzNP/anmDwTHVrARtV0R+hVjwAAAFH/0wAAAAtBMZma
+ICAgID/zMzMAAAAU////60AFa29GUI3+wEaOTUvLUPsAAAAxQAVoDtgYL4nASXwkYQW9uQAA
+ADJBFmZmP/axfksX5LHAScNRPMHgmAAAARj/zQAAABNBJmZmSzAgIEBTMzMAAAAf////8UAF
+aA7IMbwKwEl8JGGvX1wAAAAy
+</STREAM></BINARY></DATA>
+</TABLE>
+<INFO name="matches" value="50">matching records</INFO>
+
+<INFO name="Warning" value="No center provided++++"/>
+<INFO name="Warning" value="increase the precision for computed column 8"/>
+<INFO name="Warning" value="increase the precision for computed column 8"/>
+<INFO name="Warning" value="truncated result (maxtup=50)"/><INFO name="QUERY_STATUS" value="OVERFLOW">truncated result (maxtup=50)</INFO>
+
+</RESOURCE>
+</VOTABLE>
