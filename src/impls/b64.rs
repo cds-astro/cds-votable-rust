@@ -2,14 +2,11 @@
 
 use std::io::{self, Bytes, Read, BufRead, Error, ErrorKind, BufReader};
 
-use serde::{Deserializer, de::Visitor, Deserialize};
-
+use serde::{Deserializer, de::Visitor};
 use base64::read::DecoderReader;
 use byteorder::{BigEndian, ReadBytesExt};
-use serde::de::DeserializeSeed;
 
 use crate::error::VOTableError;
-use crate::impls::{Schema, VOTableValue};
 
 /// Take a Byte iterator from a BufRead and remove the '\n', 'r' and ' ' characters.
 /// We recall that the allowed characters in base64 are: '0-9a-zA-Z+-' and '=' (for padding).
@@ -112,7 +109,7 @@ impl<'de, 'b, 'a: 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializ
   
   type Error = VOTableError;
 
-  fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("No any in VOTable since we use a schema")
   }
 
@@ -125,7 +122,7 @@ impl<'de, 'b, 'a: 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializ
     }
   }
 
-  fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_i8<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("No i8 in VOTable")
   }
 
@@ -145,15 +142,15 @@ impl<'de, 'b, 'a: 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializ
     visitor.visit_u8(self.reader.read_u8().map_err(VOTableError::Io)?)
   }
 
-  fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_u16<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("No u16 in VOTable")
   }
 
-  fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_u32<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("No u32 in VOTable")
   }
 
-  fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_u64<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("No u64 in VOTable")
   }
 
@@ -165,45 +162,45 @@ impl<'de, 'b, 'a: 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializ
     visitor.visit_f64(self.reader.read_f64::<BigEndian>().map_err(VOTableError::Io)?)
   }
 
-  fn deserialize_char<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_char<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     // We deserialize either a u8 or u16 using a CharVisitor.
     unreachable!("Not used because there is a difference between ASCII and Unicode chars")
   }
 
-  fn deserialize_str<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_str<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("Not used because there is a difference between ASCII and Unicode Strings")
   }
 
-  fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_string<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("Not used because there is a difference between ASCII and Unicode Strings")
   }
 
-  fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_bytes<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     todo!()
     // visitor.visit_byte_buf()
   }
 
-  fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_byte_buf<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!()
   }
 
-  fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_option<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("No option in VOTable binary data")
   }
 
-  fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_unit<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("No unit in VOTable binary data")
   }
 
-  fn deserialize_unit_struct<V>(self, name: &'static str, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_unit_struct<V>(self, _name: &'static str, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("No unit struct in VOTable binary data")
   }
 
-  fn deserialize_newtype_struct<V>(self, name: &'static str, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_newtype_struct<V>(self, _name: &'static str, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("No newtype struct in VOTable binary data")
   }
 
-  fn deserialize_seq<V>(mut self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     // used to deserialize variable length array
     struct Access<'b, 'a: 'b, R: BufRead> {
       deserializer: &'b mut BinaryDeserializer<'a, R>,
@@ -235,7 +232,7 @@ impl<'de, 'b, 'a: 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializ
     let len = self.reader.read_i32::<BigEndian>().map_err(VOTableError::Io)? as usize;
     visitor.visit_seq(Access {
       deserializer: self,
-      len: len,
+      len,
     })
   }
 
@@ -274,27 +271,27 @@ impl<'de, 'b, 'a: 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializ
     })
   }
 
-  fn deserialize_tuple_struct<V>(self, name: &'static str, len: usize, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_tuple_struct<V>(self, _name: &'static str, _len: usize, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("No tuple struct in VOTable binary data")
   }
 
-  fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_map<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("No map in VOTable binary data")
   }
 
-  fn deserialize_struct<V>(self, name: &'static str, fields: &'static [&'static str], visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_struct<V>(self, _name: &'static str, _fields: &'static [&'static str], _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("No struct in VOTable binary data")
   }
 
-  fn deserialize_enum<V>(self, name: &'static str, variants: &'static [&'static str], visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_enum<V>(self, _name: &'static str, _variants: &'static [&'static str], _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("No map in VOTable binary data")
   }
 
-  fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_identifier<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("No identifier in VOTable binary data")
   }
 
-  fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+  fn deserialize_ignored_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
     unreachable!("We have to read everything in VOTable binary data")
   }
 }

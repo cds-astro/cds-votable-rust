@@ -5,7 +5,6 @@ use quick_xml::{Reader, Writer, events::{Event, BytesStart, attributes::Attribut
 
 use serde;
 use paste::paste;
-use serde::{Serialize, Serializer};
 
 
 use super::{
@@ -21,27 +20,27 @@ use super::{
 struct Void;
 
 impl TableDataContent for Void {
-  fn read_datatable_content<R: BufRead>(&mut self, reader: Reader<R>, reader_buff: &mut Vec<u8>, context: &Vec<TableElem>) -> Result<Reader<R>, VOTableError> {
+  fn read_datatable_content<R: BufRead>(&mut self, _reader: Reader<R>, _reader_buff: &mut Vec<u8>, _context: &[TableElem]) -> Result<Reader<R>, VOTableError> {
     unreachable!()
   }
 
-  fn read_binary_content<R: BufRead>(&mut self, reader: Reader<R>, reader_buff: &mut Vec<u8>, context: &Vec<TableElem>) -> Result<Reader<R>, VOTableError> {
+  fn read_binary_content<R: BufRead>(&mut self, _reader: Reader<R>, _reader_buff: &mut Vec<u8>, _context: &[TableElem]) -> Result<Reader<R>, VOTableError> {
     unreachable!()
   }
 
-  fn read_binary2_content<R: BufRead>(&mut self, reader: Reader<R>, reader_buff: &mut Vec<u8>, context: &Vec<TableElem>) -> Result<Reader<R>, VOTableError> {
+  fn read_binary2_content<R: BufRead>(&mut self, _reader: Reader<R>, _reader_buff: &mut Vec<u8>, _context: &[TableElem]) -> Result<Reader<R>, VOTableError> {
     unreachable!()
   }
 
-  fn write_in_datatable<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write_in_datatable<W: Write>(&mut self, _writer: &mut Writer<W>) -> Result<(), VOTableError> {
     unreachable!()
   }
 
-  fn write_in_binary<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write_in_binary<W: Write>(&mut self, _writer: &mut Writer<W>) -> Result<(), VOTableError> {
     unreachable!()
   }
 
-  fn write_in_binary2<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write_in_binary2<W: Write>(&mut self, _writer: &mut Writer<W>) -> Result<(), VOTableError> {
     unreachable!()
   }
 }
@@ -89,7 +88,7 @@ impl QuickXmlReadWrite for Fits {
     _context: &Self::Context,
   ) -> Result<Reader<R>, VOTableError> {
     loop {
-      let mut event = reader.read_event(&mut reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => {
           match e.name() {

@@ -123,7 +123,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
         b"type" => resource.set_type(value),
         b"utype" => resource.set_utype(value),
         _ => resource.insert_extra(
-          str::from_utf8(attr.key.as_ref()).map_err(VOTableError::Utf8)?,
+          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
           Value::String(value.into()),
         ),
       }
@@ -138,7 +138,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
     _context: &Self::Context,
   ) -> Result<Reader<R>, VOTableError> {
     loop {
-      let mut event = reader.read_event(&mut reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => {
           match e.name() {

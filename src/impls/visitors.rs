@@ -1,21 +1,17 @@
 
 use std::{
-  error,
+  fmt::{self, Formatter},
   str::from_utf8,
-  fmt::{self, Display},
   marker::PhantomData,
 };
-use std::fmt::Formatter;
-use serde::__private::{from_utf8_lossy, size_hint};
 
-use serde::de::{Error, SeqAccess, Unexpected, Visitor};
-use serde::Deserialize;
-
-
-use crate::{
-  error::VOTableError,
-  impls::VOTableValue
+use serde::{
+  Deserialize,
+  de::{Error, SeqAccess, Unexpected, Visitor},
+  __private::{from_utf8_lossy, size_hint}
 };
+
+use crate::error::VOTableError;
 
 /// Structure made to visit a primitive or an optional primitive.
 /// Attempts to visit a primitive different from the one it as been made for will fail.
@@ -216,12 +212,12 @@ impl<'a> Visitor<'a> for BytesVisitor {
 
 pub struct FixedLengthArrayVisitor<'de, T: Deserialize<'de>> {
   len: usize,
-  marker: &'de PhantomData<T>
+  _marker: &'de PhantomData<T>
 }
 
 impl<'de, T: Deserialize<'de>> FixedLengthArrayVisitor<'de, T> {
   pub fn new(len: usize) -> Self {
-    Self { len, marker: &PhantomData }
+    Self { len, _marker: &PhantomData }
   }
 }
 
@@ -239,7 +235,7 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for FixedLengthArrayVisitor<'de, T> 
   {
     let mut v: Vec<T> = Vec::with_capacity(self.len);
     for _ in 0..self.len {
-      v.push(seq.next_element()?.ok_or_else(|| Error::custom(format!("Premature end of stream")))?); 
+      v.push(seq.next_element()?.ok_or_else(|| Error::custom(String::from("Premature end of stream")))?); 
     }
     Ok(v)
   }
@@ -247,12 +243,18 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for FixedLengthArrayVisitor<'de, T> 
 
 
 pub struct VariableLengthArrayVisitor<'de, T: Deserialize<'de>> {
-  marker: &'de PhantomData<T>
+  _marker: &'de PhantomData<T>
+}
+
+impl<'de, T: Deserialize<'de>> Default for VariableLengthArrayVisitor<'de, T> {
+    fn default() -> Self {
+         Self::new()
+    }
 }
 
 impl<'de, T: Deserialize<'de>> VariableLengthArrayVisitor<'de, T> {
   pub fn new() -> Self {
-    Self { marker: &PhantomData }
+    Self { _marker: &PhantomData }
   }
 }
 

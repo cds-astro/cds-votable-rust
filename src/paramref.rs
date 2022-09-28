@@ -67,7 +67,7 @@ impl QuickXmlReadWrite for ParamRef {
         b"ucd" => paramref.set_ucd(value),
         b"utype" => paramref.set_utype(value),
         _ => paramref.insert_extra(
-          str::from_utf8(attr.key.as_ref()).map_err(VOTableError::Utf8)?,
+          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
           Value::String(value.into()),
         ),
       }

@@ -130,8 +130,8 @@ impl FromStr for BesselianYear {
   type Err = ParseFloatError;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
-    let decimal_year_str= if s.starts_with('B') {
-      &s[1..]
+    let decimal_year_str= if let Some(stripped) = s.strip_prefix('B') {
+      stripped
     } else {
       s
     };
@@ -146,8 +146,8 @@ impl FromStr for JulianYear {
   type Err = ParseFloatError;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
-    let decimal_year_str= if s.starts_with('J') {
-      &s[1..]
+    let decimal_year_str= if let Some(stripped) = s.strip_prefix('J') {
+      stripped
     } else {
       s
     };
@@ -311,29 +311,29 @@ impl System {
       System::EquatorialFK4 {
         equinox: _,
         epoch
-      } => { epoch.insert(BesselianYear(epoch_in_years)); }
+      } => { let _prev = epoch.insert(BesselianYear(epoch_in_years)); }
       System::EcliptiqueFK4 {
         equinox: _,
         epoch
-      } => { epoch.insert(BesselianYear(epoch_in_years)); }
+      } => { let _prev = epoch.insert(BesselianYear(epoch_in_years)); }
       System::EquatorialFK5 {
         equinox: _,
         epoch
-      } => { epoch.insert(JulianYear(epoch_in_years)); }
+      } => { let _prev = epoch.insert(JulianYear(epoch_in_years)); }
       System::EcliptiqueFK5 {
         equinox: _,
         epoch
-      } => { epoch.insert(JulianYear(epoch_in_years)); }
+      } => { let _prev = epoch.insert(JulianYear(epoch_in_years)); }
       System::ICRS {
         epoch
-      } => { epoch.insert(JulianYear(epoch_in_years)); }
+      } => { let _prev = epoch.insert(JulianYear(epoch_in_years)); }
       System::Galactic {
         epoch
-      } => { epoch.insert(JulianYear(epoch_in_years)); }
+      } => { let _prev = epoch.insert(JulianYear(epoch_in_years)); }
       System::SuperGalactic {
         epoch
-      } => { epoch.insert(JulianYear(epoch_in_years)); }
-    }
+      } => { let _prev = epoch.insert(JulianYear(epoch_in_years)); }
+    };
     self
   }
 
@@ -342,28 +342,28 @@ impl System {
       System::EquatorialFK4 {
         equinox: _,
         epoch
-      } => { epoch.insert(epoch_in_years.parse()?); }
+      } => { let _prev = epoch.insert(epoch_in_years.parse()?); }
       System::EcliptiqueFK4 {
         equinox: _,
         epoch
-      } => { epoch.insert(epoch_in_years.parse()?); }
+      } => { let _prev = epoch.insert(epoch_in_years.parse()?); }
       System::EquatorialFK5 {
         equinox: _,
         epoch
-      } => { epoch.insert(epoch_in_years.parse()?); }
+      } => { let _prev = epoch.insert(epoch_in_years.parse()?); }
       System::EcliptiqueFK5 {
         equinox: _,
         epoch
-      } => { epoch.insert(epoch_in_years.parse()?); }
+      } => { let _prev = epoch.insert(epoch_in_years.parse()?); }
       System::ICRS {
         epoch
-      } => { epoch.insert(epoch_in_years.parse()?); }
+      } => { let _prev = epoch.insert(epoch_in_years.parse()?); }
       System::Galactic {
         epoch
-      } => { epoch.insert(epoch_in_years.parse()?); }
+      } => { let _prev = epoch.insert(epoch_in_years.parse()?); }
       System::SuperGalactic {
         epoch
-      } => { epoch.insert(epoch_in_years.parse()?); }
+      } => { let _prev = epoch.insert(epoch_in_years.parse()?); }
     }
     Ok(self)
   }

@@ -45,11 +45,11 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary2<C> {
   fn read_sub_elements<R: BufRead>(
     &mut self,
     mut reader: Reader<R>,
-    mut reader_buff: &mut Vec<u8>,
+    reader_buff: &mut Vec<u8>,
     context: &Self::Context,
   ) -> Result<Reader<R>, VOTableError> {
     loop {
-      let mut event = reader.read_event(&mut reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) =>
           match e.name() {
@@ -63,7 +63,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary2<C> {
               // the next call is a failure (because we consume </STREAM> in read_binary_content)
               let tmp_reader = reader.check_end_names(false);
               loop {
-                let mut event = tmp_reader.read_event(&mut reader_buff).map_err(VOTableError::Read)?;
+                let mut event = tmp_reader.read_event(reader_buff).map_err(VOTableError::Read)?;
                 match &mut event {
                   Event::Text(e) if is_empty(e) => { },
                   Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(reader),
@@ -90,7 +90,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary2<C> {
     if self.stream.content.is_some() {
       self.stream.write_start(writer)?;
       let content = self.stream.content.as_mut().unwrap();
-      content.write_in_binary2(writer);
+      content.write_in_binary2(writer)?;
       // self.content.write_in_datatable(&mut writer)?;     
       self.stream.write_end(writer)?;
     } else {

@@ -120,7 +120,7 @@ impl QuickXmlReadWrite for Param {
           param
         }
         _ => param.insert_extra(
-          str::from_utf8(attr.key.as_ref()).map_err(VOTableError::Utf8)?,
+          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
           Value::String(value.into()),
         ),
       }
@@ -139,7 +139,7 @@ impl QuickXmlReadWrite for Param {
     _context: &Self::Context,
   ) -> Result<Reader<R>, VOTableError> {
     loop {
-      let mut event = reader.read_event(&mut reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => {
           match e.name() {

@@ -53,8 +53,8 @@ impl<C: TableDataContent> DataElem<C> {
   
   fn read_sub_elements<R: BufRead>(
     &mut self,
-    mut reader: Reader<R>,
-    mut reader_buff: &mut Vec<u8>,
+    reader: Reader<R>,
+    reader_buff: &mut Vec<u8>,
     context: &Vec<TableElem>,
   ) -> Result<Reader<R>, VOTableError> {
     match self {
@@ -110,7 +110,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
     context: &Self::Context,
   ) -> Result<Reader<R>, VOTableError> {
     loop {
-      let mut event = reader.read_event(&mut reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => {
           match e.name() {
@@ -146,10 +146,10 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
   }
 
   fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
     // Write sub-element
-    self.data.write(writer);
+    self.data.write(writer)?;
     write_elem_vec!(self, infos, writer);
     // Close tag
     writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)

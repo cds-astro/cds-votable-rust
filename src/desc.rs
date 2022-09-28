@@ -45,7 +45,7 @@ impl QuickXmlReadWrite for Description {
   }
 
   fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
-    let mut elem_writer = writer.create_element(Self::TAG_BYTES);
+    let elem_writer = writer.create_element(Self::TAG_BYTES);
     elem_writer.write_text_content(
       BytesText::from_plain_str(self.0.as_str())
     ).map_err(VOTableError::Write)?;

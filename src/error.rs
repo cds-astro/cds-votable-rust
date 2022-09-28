@@ -1,7 +1,5 @@
 
 use std::{
-  fmt,
-  error::Error,
   str::ParseBoolError,
   num::{ParseIntError, ParseFloatError},
 };
@@ -60,7 +58,10 @@ quick_error! {
       display("Utf8 error, valid up to {}", err)
     }
     FromUCS2(err: ucs2::Error) {
-      display("UCS2 error: {:?}", err)
+      display("From UCS2 error: {:?}", err)
+    }
+    ToUCS2(err: ucs2::Error) {
+      display("Into UCS2 error: {:?}", err)
     }
     Custom(err: std::string::String) {
       display("Custom error: {}", err)
@@ -70,6 +71,6 @@ quick_error! {
 
 impl serde::de::Error for VOTableError {
   fn custom<T: std::fmt::Display>(desc: T) -> Self {
-    VOTableError::Custom(desc.to_string()).into()
+    VOTableError::Custom(desc.to_string())
   }
 }

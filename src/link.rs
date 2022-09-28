@@ -109,7 +109,7 @@ impl QuickXmlReadWrite for Link {
         b"value" => link.set_value(value),
         b"href" => link.set_href(value),
         _ => link.insert_extra(
-          str::from_utf8(attr.key.as_ref()).map_err(VOTableError::Utf8)?,
+          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
           Value::String(value.into()),
         ),
       }

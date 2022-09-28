@@ -1,17 +1,21 @@
 
-use std::{mem, io::{self, BufRead, Read, Write, Bytes}};
-use std::fmt::Formatter;
-use std::io::BufReader;
+use std::{mem, io::{BufRead, Write}};
 
-use quick_xml::{Reader, Writer, events::{Event, BytesStart, BytesText}};
-
-use serde_json::Value;
+use quick_xml::{
+  Reader, Writer, 
+  events::{Event, BytesStart, BytesText}
+};
 
 use base64::read::DecoderReader;
-use serde::de::{DeserializeSeed, EnumAccess, Error, MapAccess, SeqAccess, Visitor};
-use serde::Deserializer;
-use crate::impls::b64::BinaryDeserializer;
-use crate::impls::visitors::{BytesVisitor, FixedLengthArrayVisitor};
+use serde::{
+  Deserializer,
+  de::DeserializeSeed
+};
+
+use crate::impls::{
+  b64::BinaryDeserializer,
+  visitors::FixedLengthArrayVisitor
+};
 
 use super::super::{
   is_empty,
@@ -19,7 +23,6 @@ use super::super::{
   table::TableElem,
   data::tabledata::TableData,
   error::VOTableError,
-  votable::VOTableElem,
   impls::{
     Schema, VOTableValue, b64::B64Cleaner
   }
@@ -47,16 +50,16 @@ fn read_td_content<R: BufRead>(mut reader: Reader<R>, mut reader_buff: &mut Vec<
 
 
 impl TableDataContent for InMemTableDataStringRows {
-  fn read_datatable_content<R: BufRead>(&mut self, mut reader: Reader<R>, mut reader_buff: &mut Vec<u8>, context: &Vec<TableElem>) -> Result<Reader<R>, VOTableError> {
+  fn read_datatable_content<R: BufRead>(&mut self, mut reader: Reader<R>, reader_buff: &mut Vec<u8>, context: &[TableElem]) -> Result<Reader<R>, VOTableError> {
     let mut row: Vec<String> = Vec::with_capacity(context.len());
     loop {
-      let mut event = reader.read_event(&mut reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) =>
           match e.name() {
             b"TR" => {}
             b"TD" => {
-              let mut event = reader.read_event(&mut reader_buff).map_err(VOTableError::Read)?;
+              let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
               match &mut event {
                 Event::Text(e) => row.push(e.unescape_and_decode(&reader).map_err(VOTableError::Read)?),
                 _ => eprintln!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
@@ -79,7 +82,7 @@ impl TableDataContent for InMemTableDataStringRows {
     }
   }
 
-  fn read_binary_content<R: BufRead>(&mut self, reader: Reader<R>, reader_buff: &mut Vec<u8>, context: &Vec<TableElem>) -> Result<Reader<R>, VOTableError> {
+  fn read_binary_content<R: BufRead>(&mut self, _reader: Reader<R>, _reader_buff: &mut Vec<u8>, _context: &[TableElem]) -> Result<Reader<R>, VOTableError> {
     Err(
       VOTableError::Custom(
         String::from("InMemTableDataStringRows not able to read/write BINARY data")
@@ -87,7 +90,7 @@ impl TableDataContent for InMemTableDataStringRows {
     )
   }
 
-  fn read_binary2_content<R: BufRead>(&mut self, reader: Reader<R>, reader_buff: &mut Vec<u8>, context: &Vec<TableElem>) -> Result<Reader<R>, VOTableError> {
+  fn read_binary2_content<R: BufRead>(&mut self, _reader: Reader<R>, _reader_buff: &mut Vec<u8>, _context: &[TableElem]) -> Result<Reader<R>, VOTableError> {
     Err(
       VOTableError::Custom(
         String::from("InMemTableDataStringRows not able to read/write BINARY2 data")
@@ -100,7 +103,7 @@ impl TableDataContent for InMemTableDataStringRows {
     for row in &self.rows {
       writer.write_event(Event::Start(tr_tag.to_borrowed())).map_err(VOTableError::Write)?;
       for field in row {
-        let mut elem_writer = writer.create_element(b"TD");
+        let elem_writer = writer.create_element(b"TD");
         elem_writer.write_text_content(
           BytesText::from_plain_str(field.as_str())
         ).map_err(VOTableError::Write)?;
@@ -110,7 +113,7 @@ impl TableDataContent for InMemTableDataStringRows {
     Ok(())
   }
 
-  fn write_in_binary<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write_in_binary<W: Write>(&mut self, _writer: &mut Writer<W>) -> Result<(), VOTableError> {
     Err(
       VOTableError::Custom(
         String::from("InMemTableDataStringRows not able to read/write BINARY data")
@@ -118,7 +121,7 @@ impl TableDataContent for InMemTableDataStringRows {
     )
   }
 
-  fn write_in_binary2<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write_in_binary2<W: Write>(&mut self, _writer: &mut Writer<W>) -> Result<(), VOTableError> {
     Err(
       VOTableError::Custom(
         String::from("InMemTableDataStringRows not able to read/write BINARY2 data")
@@ -157,7 +160,7 @@ IMPL VISITOR ROW!!!
 
 impl TableDataContent for InMemTableDataRows {
   
-  fn read_datatable_content<R: BufRead>(&mut self, mut reader: Reader<R>, mut reader_buff: &mut Vec<u8>, context: &Vec<TableElem>) -> Result<Reader<R>, VOTableError> {
+  fn read_datatable_content<R: BufRead>(&mut self, mut reader: Reader<R>, reader_buff: &mut Vec<u8>, context: &[TableElem]) -> Result<Reader<R>, VOTableError> {
     let schema: Vec<Schema> = context.iter()
       .filter_map(|table_elem|
         match table_elem {
@@ -167,13 +170,13 @@ impl TableDataContent for InMemTableDataRows {
       ).collect();
     let mut row: Vec<VOTableValue> = Vec::with_capacity(schema.len());
     loop {
-      let mut event = reader.read_event(&mut reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) =>
           match e.name() {
             b"TR" => { }
             b"TD" => {
-              let mut event = reader.read_event(&mut reader_buff).map_err(VOTableError::Read)?;
+              let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
               match &mut event {
                 Event::Text(e) => {
                   let s = e.unescape_and_decode(&reader).map_err(VOTableError::Read)?;
@@ -205,11 +208,11 @@ impl TableDataContent for InMemTableDataRows {
     }
   }
 
-  fn read_binary_content<R: BufRead>(&mut self, mut reader: Reader<R>, _reader_buff: &mut Vec<u8>, context: &Vec<TableElem>) -> Result<Reader<R>, VOTableError> {
+  fn read_binary_content<R: BufRead>(&mut self, mut reader: Reader<R>, _reader_buff: &mut Vec<u8>, context: &[TableElem]) -> Result<Reader<R>, VOTableError> {
     // Prepare reader
     let mut internal_reader = reader.get_mut();
     let mut b64_cleaner = B64Cleaner::new(&mut internal_reader);
-    let mut decoder = DecoderReader::new(&mut b64_cleaner, base64::STANDARD);
+    let decoder = DecoderReader::new(&mut b64_cleaner, base64::STANDARD);
     let mut binary_deser =  BinaryDeserializer::new(decoder);
     // Get schema
     let schema: Vec<Schema> = context.iter()
@@ -231,11 +234,11 @@ impl TableDataContent for InMemTableDataRows {
     Ok(reader)
   }
 
-  fn read_binary2_content<R: BufRead>(&mut self, mut reader: Reader<R>, _reader_buff: &mut Vec<u8>, context: &Vec<TableElem>) -> Result<Reader<R>, VOTableError> {
+  fn read_binary2_content<R: BufRead>(&mut self, mut reader: Reader<R>, _reader_buff: &mut Vec<u8>, context: &[TableElem]) -> Result<Reader<R>, VOTableError> {
     // Prepare reader
     let mut internal_reader = reader.get_mut();
     let mut b64_cleaner = B64Cleaner::new(&mut internal_reader);
-    let mut decoder = DecoderReader::new(&mut b64_cleaner, base64::STANDARD);
+    let decoder = DecoderReader::new(&mut b64_cleaner, base64::STANDARD);
     let mut binary_deser =  BinaryDeserializer::new(decoder);
     // Get schema
     let schema: Vec<Schema> = context.iter()
@@ -270,7 +273,7 @@ impl TableDataContent for InMemTableDataRows {
     for row in &self.rows {
       writer.write_event(Event::Start(tr_tag.to_borrowed())).map_err(VOTableError::Write)?;
       for field in row {
-        let mut elem_writer = writer.create_element(b"TD");
+        let elem_writer = writer.create_element(b"TD");
         elem_writer.write_text_content(
           BytesText::from_plain_str(field.to_string().as_str())
         ).map_err(VOTableError::Write)?;
@@ -280,11 +283,11 @@ impl TableDataContent for InMemTableDataRows {
     Ok(())
   }
 
-  fn write_in_binary<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write_in_binary<W: Write>(&mut self, _writer: &mut Writer<W>) -> Result<(), VOTableError> {
     todo!()
   }
 
-  fn write_in_binary2<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write_in_binary2<W: Write>(&mut self, _writer: &mut Writer<W>) -> Result<(), VOTableError> {
     todo!()
   }
 }

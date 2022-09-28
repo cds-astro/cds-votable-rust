@@ -124,7 +124,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
         b"ref" => table.set_ref(value),
         b"nrows" => table.set_nrows(value.parse().map_err(VOTableError::ParseInt)?),
         _ => table.insert_extra(
-          str::from_utf8(attr.key.as_ref()).map_err(VOTableError::Utf8)?,
+          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
           Value::String(value.into()),
         ),
       }
@@ -142,7 +142,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
     // `read_event_unbuffered` to avoid a copy.
     // But are more generic that this to be able to read in streaming mode
     loop {
-      let mut event = reader.read_event(&mut reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => {
           match e.name() {

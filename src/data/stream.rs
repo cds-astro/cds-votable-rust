@@ -5,7 +5,7 @@ use std::{
   str::{self, FromStr},
 };
 
-use quick_xml::{Reader, Writer, events::{BytesText, Event, attributes::Attributes}};
+use quick_xml::{Reader, Writer, events::{Event, attributes::Attributes}};
 
 use paste::paste;
 use quick_xml::events::BytesStart;
@@ -169,7 +169,7 @@ impl<C: TableDataContent> Stream<C> {
 
   pub fn write_end<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
     // Close tag
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
   }
 }
@@ -192,7 +192,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Stream<C> {
         b"expires" => stream.set_expires(value),
         b"rights" => stream.set_rights(value),
         _ => stream.insert_extra(
-          str::from_utf8(attr.key.as_ref()).map_err(VOTableError::Utf8)?,
+          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
           Value::String(value.into()),
         ),
       }

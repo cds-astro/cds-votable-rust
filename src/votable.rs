@@ -126,7 +126,7 @@ impl<C: TableDataContent> VOTable<C> {
   }
 
   pub fn new(resource: Resource<C>) -> Self {
-    let mut votable = Self::new_empty();
+    let votable = Self::new_empty();
     votable.push_resource(resource)
   }
 
@@ -154,17 +154,17 @@ impl<C: TableDataContent> VOTable<C> {
           eprintln!("XML declaration. Version: {}; Encoding: {}; Standalone: {}.", 
             e.version().map(|v| 
               unsafe { String::from_utf8_unchecked(v.as_ref().to_vec()) }
-            ).unwrap_or(String::from("error")),
+            ).unwrap_or_else(|e| format!("Error: {:?}", e)),
             e.encoding().map(|r| 
-              r.map(|r| unsafe { String::from_utf8_unchecked(r.as_ref().to_vec()) }).unwrap_or(String::from("error"))
-            ).unwrap_or(String::from("not specified")),
+              r.map(|r| unsafe { String::from_utf8_unchecked(r.as_ref().to_vec()) }).unwrap_or_else(|e| format!("Error: {:?}", e))
+            ).unwrap_or_else(|| String::from("error")),
             e.standalone().map(|r| 
-              r.map(|r| unsafe { String::from_utf8_unchecked(r.as_ref().to_vec()) }).unwrap_or(String::from("error"))
-            ).unwrap_or(String::from("not specified")),
+              r.map(|r| unsafe { String::from_utf8_unchecked(r.as_ref().to_vec()) }).unwrap_or_else(|e| format!("Error: {:?}", e))
+            ).unwrap_or_else(|| String::from("error")),
           ),
         Event::Start(ref mut e) if e.name() == VOTable::<C>::TAG_BYTES => {
           let mut votable = VOTable::<C>::from_attributes(e.attributes()).unwrap();
-          reader = votable.read_sub_elements_and_clean(reader, &mut buff, &())?;
+          votable.read_sub_elements_and_clean(reader, &mut buff, &())?;
           // ignore the remaining of the reader !
           return Ok(votable);
         }
@@ -209,7 +209,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
         b"ID" => votable.set_id(value),
         b"version" => votable.set_version(Version::from_str(value).map_err(VOTableError::Custom)?),
         _ => votable.insert_extra(
-          str::from_utf8(attr.key.as_ref()).map_err(VOTableError::Utf8)?,
+          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
           Value::String(value.into()),
         ),
       }
@@ -227,7 +227,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
     // `read_event_unbuffered` to avoid a copy.
     // But are more generic that this to be able to read in streaming mode
     loop {
-      let mut event = reader.read_event(&mut reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => {
           match e.name() {
