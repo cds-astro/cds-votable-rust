@@ -103,7 +103,7 @@ impl QuickXmlReadWrite for CooSys {
     unreachable!()
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(&mut self, writer: &mut Writer<W>,  _context: &Self::Context) -> Result<(), VOTableError> {
     let mut elem_writer = writer.create_element(Self::TAG_BYTES);
     elem_writer = elem_writer.with_attribute(("ID", self.id.as_str()));
     elem_writer = self.coosys.with_attributes(elem_writer);

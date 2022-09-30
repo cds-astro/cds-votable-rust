@@ -88,7 +88,11 @@ impl QuickXmlReadWrite for ParamRef {
     read_content!(Self, self, reader, reader_buff)
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>, 
+    _context: &Self::Context
+  ) -> Result<(), VOTableError> {
     let mut elem_writer = writer.create_element(Self::TAG_BYTES);
     elem_writer = elem_writer.with_attribute(("ref", self.ref_.as_str()));
     write_opt_string_attr!(self, elem_writer, ucd);

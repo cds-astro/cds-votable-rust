@@ -70,11 +70,17 @@ pub trait TableDataContent: Default + serde::Serialize { //+ serde::Deserialize<
         &mut self, reader: Reader<R>, reader_buff: &mut Vec<u8>, context: &[TableElem]
     ) -> Result<Reader<R>, VOTableError>;
 
-    fn write_in_datatable<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError>;
+    fn write_in_datatable<W: Write>(
+        &mut self, writer: &mut Writer<W>, context: &[TableElem]
+    ) -> Result<(), VOTableError>;
 
-    fn write_in_binary<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError>;
+    fn write_in_binary<W: Write>(
+        &mut self, writer: &mut Writer<W>, context: &[TableElem]
+    ) -> Result<(), VOTableError>;
 
-    fn write_in_binary2<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError>;
+    fn write_in_binary2<W: Write>(
+        &mut self, writer: &mut Writer<W>, context: &[TableElem]
+    ) -> Result<(), VOTableError>;
 
 }
 
@@ -115,7 +121,11 @@ trait QuickXmlReadWrite: Sized {
     /// `&mut self` in case internals are modified while writing (e.g. if we iterate on rows
     /// and discard them as we iterate).
     /// We could add a context, e.g. to modify the parent (adding infos for example).
-    fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError>;
+    fn write<W: Write>(
+        &mut self, 
+        writer: &mut Writer<W>,
+        context: &Self::Context,
+    ) -> Result<(), VOTableError>;
 }
 
 

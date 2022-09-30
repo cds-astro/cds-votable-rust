@@ -73,11 +73,11 @@ pub enum VOTableElem {
 impl VOTableElem {
   fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
     match self {
-      VOTableElem::CooSys(elem) => elem.write(writer),
-      VOTableElem::TimeSys(elem) => elem.write(writer),
-      VOTableElem::Group(elem) => elem.write(writer),
-      VOTableElem::Param(elem) => elem.write(writer),
-      VOTableElem::Info(elem) => elem.write(writer),
+      VOTableElem::CooSys(elem) => elem.write(writer,&()),
+      VOTableElem::TimeSys(elem) => elem.write(writer, &()),
+      VOTableElem::Group(elem) => elem.write(writer, &()),
+      VOTableElem::Param(elem) => elem.write(writer, &()),
+      VOTableElem::Info(elem) => elem.write(writer, &()),
     }
   }
 }
@@ -278,7 +278,11 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
     }
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>,
+    context: &Self::Context
+  ) -> Result<(), VOTableError> {
     writer.write(r#"<?xml version="1.0" encoding="UTF-8"?>
 "#.as_bytes()).map_err(VOTableError::Write)?;
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
@@ -288,10 +292,10 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
     push2write_extra!(self, tag);
     writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
     // Write sub-elems
-    write_elem!(self, description, writer);
-    write_elem_vec!(self, elems, writer);
-    write_elem_vec!(self, resources, writer);
-    write_elem_vec!(self, post_infos, writer);
+    write_elem!(self, description, writer, context);
+    write_elem_vec_no_context!(self, elems, writer);
+    write_elem_vec!(self, resources, writer, context);
+    write_elem_vec!(self, post_infos, writer, context);
     // Close tag
     writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
   }

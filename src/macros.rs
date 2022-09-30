@@ -302,17 +302,49 @@ macro_rules! write_content {
 }
 
 macro_rules! write_elem {
-  ($self:ident, $elem:ident, $writer:ident) => {
+  ($self:ident, $elem:ident, $writer:ident, $context:ident) => {
     if let Some(elem) = &mut $self.$elem {
-      elem.write($writer)?;
+      elem.write($writer, $context)?;
     }
   }
 }
 
 macro_rules! write_elem_vec {
+  ($self:ident, $elems:ident, $writer:ident, $context:ident) => {
+    for elem in &mut $self.$elems {
+      elem.write($writer, $context)?;
+    }
+  }
+}
+
+/*macro_rules! write_elem_no_context {
+  ($self:ident, $elem:ident, $writer:ident) => {
+    if let Some(elem) = &mut $self.$elem {
+      elem.write($writer)?;
+    }
+  }
+}*/
+
+macro_rules! write_elem_vec_no_context {
   ($self:ident, $elems:ident, $writer:ident) => {
     for elem in &mut $self.$elems {
       elem.write($writer)?;
+    }
+  }
+}
+
+/*macro_rules! write_elem_empty_context {
+  ($self:ident, $elem:ident, $writer:ident) => {
+    if let Some(elem) = &mut $self.$elem {
+      elem.write($writer, &())?;
+    }
+  }
+}*/
+
+macro_rules! write_elem_vec_empty_context {
+  ($self:ident, $elems:ident, $writer:ident) => {
+    for elem in &mut $self.$elems {
+      elem.write($writer, &())?;
     }
   }
 }

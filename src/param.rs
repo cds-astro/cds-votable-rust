@@ -163,7 +163,11 @@ impl QuickXmlReadWrite for Param {
     }
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>, 
+    _context: &Self::Context
+  ) -> Result<(), VOTableError> {
     // copy/paste + modified from `cargo expand field`
     
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
@@ -202,13 +206,13 @@ impl QuickXmlReadWrite for Param {
     }
     writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
     if let Some(elem) = &mut self.field.description {
-      elem.write(writer)?;
+      elem.write(writer, &())?;
     };
     if let Some(elem) = &mut self.field.values {
-      elem.write(writer)?;
+      elem.write(writer, &())?;
     };
     for elem in &mut self.field.links {
-      elem.write(writer)?;
+      elem.write(writer, &())?;
     }
     writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
   }

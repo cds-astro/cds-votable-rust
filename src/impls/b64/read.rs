@@ -1,4 +1,3 @@
-//! Module containing tools to help parsing the base 64 encoded stream in BINARY or BINARY2. 
 
 use std::io::{self, Bytes, Read, BufRead, Error, ErrorKind, BufReader};
 
@@ -11,9 +10,9 @@ use crate::error::VOTableError;
 /// Take a Byte iterator from a BufRead and remove the '\n', 'r' and ' ' characters.
 /// We recall that the allowed characters in base64 are: '0-9a-zA-Z+-' and '=' (for padding).
 /// but for display purposes other characters may be added in the VOTable base 64 stream.
-/// 
+///
 /// This object can then be decorated by a [DecoderReader](https://docs.rs/base64/latest/base64/read/struct.DecoderReader.html).
-/// 
+///
 /// # Remark
 ///   This Bytes based implementation (iterating char by char) is probably not the most
 ///   efficient, but is quite simple to implement. To be changed if performances are really poor.
@@ -23,22 +22,22 @@ pub struct B64Cleaner<'a, R: BufRead>{
 }
 
 impl<'a, R: BufRead> B64Cleaner<'a, R> {
-  
+
   pub fn new(reader: &'a mut R) -> Self {
     Self {
       bytes: reader.bytes(),
       is_over: false,
     }
   }
-  
+
   pub fn is_over(&self) -> bool {
     self.is_over
   }
-  
+
 }
 
 impl<'a, R: BufRead> Read for B64Cleaner<'a, R> {
-  
+
   fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
     if self.is_over {
       return Ok(0);
@@ -81,7 +80,7 @@ pub struct BinaryDeserializer<'a, R: BufRead> {
 }
 
 impl<'de, 'a, R: BufRead> BinaryDeserializer<'a, R> {
-  
+
   pub fn new(reader: DecoderReader<'a, B64Cleaner<'a, R>>) -> Self {
     Self { reader: BufReader::new(reader) }
   }
@@ -89,8 +88,8 @@ impl<'de, 'a, R: BufRead> BinaryDeserializer<'a, R> {
   pub fn has_data_left(&mut self) -> Result<bool, io::Error> {
     self.reader.fill_buf().map(|b| !b.is_empty())
   }
-  
-  
+
+
   /*
   pub fn deserialize_row(&'a mut self, row_schema: &[Schema]) -> Result<Vec<VOTableValue>, VOTableError> {
     let mut row: Vec<VOTableValue> = Vec::with_capacity(row_schema.len());
@@ -106,7 +105,7 @@ impl<'de, 'a, R: BufRead> BinaryDeserializer<'a, R> {
 // <'de, 'a: 'de, R: BufRead>
 //   'a lasts at least as long as 'de
 impl<'de, 'b, 'a: 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializer<'a, R> {
-  
+
   type Error = VOTableError;
 
   fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
@@ -176,12 +175,11 @@ impl<'de, 'b, 'a: 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializ
   }
 
   fn deserialize_bytes<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-    todo!()
-    // visitor.visit_byte_buf()
+    unreachable!("Use deserialize_seq or deserialize_tuple to deserialize bytes")
   }
 
   fn deserialize_byte_buf<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-    unreachable!()
+    unreachable!("Use deserialize_seq or deserialize_tuple to deserialize bytes")
   }
 
   fn deserialize_option<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {

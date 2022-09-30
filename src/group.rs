@@ -25,9 +25,9 @@ pub enum GroupElem {
 impl GroupElem {
   fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
     match self {
-      GroupElem::ParamRef(elem) => elem.write(writer),
-      GroupElem::Param(elem) => elem.write(writer),
-      GroupElem::Group(elem) => elem.write(writer),
+      GroupElem::ParamRef(elem) => elem.write(writer, &()),
+      GroupElem::Param(elem) => elem.write(writer, &()),
+      GroupElem::Group(elem) => elem.write(writer, &()),
     }
   }
 }
@@ -134,7 +134,11 @@ impl QuickXmlReadWrite for Group {
     }
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>,
+    context: &Self::Context
+  ) -> Result<(), VOTableError> {
     if self.description.is_none() && self.elems.is_empty() {
       let mut elem_writer = writer.create_element(Self::TAG_BYTES);
       write_opt_string_attr!(self, elem_writer, ID);
@@ -154,8 +158,8 @@ impl QuickXmlReadWrite for Group {
       push2write_opt_string_attr!(self, tag, utype);
       writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
       // Write sub-elems
-      write_elem!(self, description, writer);
-      write_elem_vec!(self, elems, writer);
+      write_elem!(self, description, writer, context);
+      write_elem_vec_no_context!(self, elems, writer);
       // Close tag
       writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
     }
@@ -177,10 +181,10 @@ pub enum TableGroupElem {
 impl TableGroupElem {
   fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
     match self {
-      TableGroupElem::FieldRef(elem) => elem.write(writer),
-      TableGroupElem::ParamRef(elem) => elem.write(writer),
-      TableGroupElem::Param(elem) => elem.write(writer),
-      TableGroupElem::TableGroup(elem) => elem.write(writer),
+      TableGroupElem::FieldRef(elem) => elem.write(writer, &()),
+      TableGroupElem::ParamRef(elem) => elem.write(writer, &()),
+      TableGroupElem::Param(elem) => elem.write(writer, &()),
+      TableGroupElem::TableGroup(elem) => elem.write(writer, &()),
     }
   }
 }
@@ -291,7 +295,11 @@ impl QuickXmlReadWrite for TableGroup {
     }
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>,
+    context: &Self::Context
+  ) -> Result<(), VOTableError> {
     if self.description.is_none() && self.elems.is_empty() {
       let mut elem_writer = writer.create_element(Self::TAG_BYTES);
       write_opt_string_attr!(self, elem_writer, ID);
@@ -311,8 +319,8 @@ impl QuickXmlReadWrite for TableGroup {
       push2write_opt_string_attr!(self, tag, utype);
       writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
       // Write sub-elems
-      write_elem!(self, description, writer);
-      write_elem_vec!(self, elems, writer);
+      write_elem!(self, description, writer, context);
+      write_elem_vec_no_context!(self, elems, writer);
       // Close tag
       writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
     }

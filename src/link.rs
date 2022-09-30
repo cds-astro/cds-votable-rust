@@ -126,7 +126,11 @@ impl QuickXmlReadWrite for Link {
     read_content!(Self, self, reader, reader_buff)
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>, 
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
     let mut elem_writer = writer.create_element(Self::TAG_BYTES);
     write_opt_string_attr!(self, elem_writer, ID);
     write_opt_into_attr!(self, elem_writer, content_role, "content-role");

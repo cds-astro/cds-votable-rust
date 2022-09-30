@@ -61,7 +61,7 @@ quick_error! {
       display("From UCS2 error: {:?}", err)
     }
     ToUCS2(err: ucs2::Error) {
-      display("Into UCS2 error: {:?}", err)
+      display("To UCS2 error: {:?}", err)
     }
     Custom(err: std::string::String) {
       display("Custom error: {}", err)
@@ -70,6 +70,12 @@ quick_error! {
 }
 
 impl serde::de::Error for VOTableError {
+  fn custom<T: std::fmt::Display>(desc: T) -> Self {
+    VOTableError::Custom(desc.to_string())
+  }
+}
+
+impl serde::ser::Error for VOTableError {
   fn custom<T: std::fmt::Display>(desc: T) -> Self {
     VOTableError::Custom(desc.to_string())
   }

@@ -85,16 +85,16 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary2<C> {
     }
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(&mut self, writer: &mut Writer<W>, context: &Self::Context) -> Result<(), VOTableError> {
     writer.write_event(Event::Start(BytesStart::borrowed_name(Self::TAG_BYTES))).map_err(VOTableError::Write)?;
     if self.stream.content.is_some() {
       self.stream.write_start(writer)?;
       let content = self.stream.content.as_mut().unwrap();
-      content.write_in_binary2(writer)?;
+      content.write_in_binary2(writer, context)?;
       // self.content.write_in_datatable(&mut writer)?;     
       self.stream.write_end(writer)?;
     } else {
-      self.stream.write(writer)?;
+      self.stream.write(writer, &())?;
     }
     writer.write_event(Event::End(BytesEnd::borrowed(Self::TAG_BYTES))).map_err(VOTableError::Write)
   }

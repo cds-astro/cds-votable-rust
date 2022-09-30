@@ -242,7 +242,11 @@ impl QuickXmlReadWrite for Field {
     }
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>, 
+    context: &Self::Context
+  ) -> Result<(), VOTableError> {
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     // Write tag + attributes
     push2write_opt_string_attr!(self, tag, ID);
@@ -259,9 +263,9 @@ impl QuickXmlReadWrite for Field {
     push2write_extra!(self, tag);
     writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
     // Write sub-elements
-    write_elem!(self, description, writer);
-    write_elem!(self, values, writer);
-    write_elem_vec!(self, links, writer);
+    write_elem!(self, description, writer, context);
+    write_elem!(self, values, writer, context);
+    write_elem_vec!(self, links, writer, context);
     // Close tag
     writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
   }

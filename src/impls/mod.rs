@@ -116,7 +116,7 @@ impl Display for VOTableValue {
       VOTableValue::Double(v) => fmt.write_fmt(format_args!("{}", v)),
       VOTableValue::ComplexFloat((l, r)) => fmt.write_fmt(format_args!("{} {}", l, r)),
       VOTableValue::ComplexDouble((l, r)) => fmt.write_fmt(format_args!("{} {}", l, r)),
-      VOTableValue::CharASCII(v) => fmt.write_char(*v as char),
+      VOTableValue::CharASCII(v) => fmt.write_char(*v),
       VOTableValue::CharUnicode(v) => fmt.write_char(*v),
       VOTableValue::String(v) => fmt.write_fmt(format_args!("{}", v)),
       VOTableValue::BitArray(v) => fmt.write_fmt(format_args!("{:?}", &v.0)),
@@ -398,7 +398,7 @@ impl Schema {
           Schema::FixedLengthBitArray { n_bits } => serialize_fixed_length_array(serializer, (7 + *n_bits)/ 8, &vec![0; (7 + *n_bits)/ 8]),
           Schema::VariableLengthBitArray => serialize_variable_length_array(serializer, &[0_u8; 0]),
         }
-      VOTableValue::Bool(v) => serializer.serialize_bool(*v),
+      VOTableValue::Bool(v) => serializer.serialize_u8(*v as u8),
       VOTableValue::Byte(v) => serializer.serialize_u8(*v),
       VOTableValue::Short(v) => serializer.serialize_i16(*v),
       VOTableValue::Int(v) => serializer.serialize_i32(*v),
@@ -407,7 +407,7 @@ impl Schema {
       VOTableValue::Double(v) => serializer.serialize_f64(*v),
       VOTableValue::ComplexFloat((l, r)) => [l, r].serialize(serializer),
       VOTableValue::ComplexDouble((l, r)) => [l, r].serialize(serializer),
-      VOTableValue::CharASCII(v) => serializer.serialize_char(*v as char),
+      VOTableValue::CharASCII(v) => serializer.serialize_u8(*v as u8),
       VOTableValue::CharUnicode(v) => serializer.serialize_char(*v),
       VOTableValue::String(s) =>
         match &self {
@@ -527,7 +527,7 @@ fn serialize_variable_length_array<T, S>(serializer: S, v: &[T]) -> Result<S::Ok
 
 impl From<&Field> for Schema {
   fn from(field: &Field) -> Self {
-    match (field.datatype, field.arraysize.as_deref().map(|string_ref| string_ref)) {
+    match (field.datatype, field.arraysize.as_deref()) {
       (Datatype::Logical, None) => Schema::Bool,
       (Datatype::Bit, None) => Schema::Bit,
       (Datatype::Byte, None) => Schema::Byte {
@@ -739,7 +739,12 @@ impl<'de> DeserializeSeed<'de> for &Schema {
       D: Deserializer<'de>
   {
     match self {
-      Schema::Bool => <bool>::deserialize(deserializer).map(VOTableValue::Bool),
+      Schema::Bool =>
+        Ok(match <u8>::deserialize(deserializer)? {
+          b'0' | b'f' | b'F' => VOTableValue::Bool(false),
+          b'1' | b't' | b'T' => VOTableValue::Bool(true),
+          _ => VOTableValue::Null,
+        }),
       Schema::Bit => <u8>::deserialize(deserializer).map(|b| VOTableValue::Bool(b != 0)),
       Schema::Byte { null: None } => <u8>::deserialize(deserializer).map(VOTableValue::Byte),
       Schema::Short { null: None } => <i16>::deserialize(deserializer).map(VOTableValue::Short),

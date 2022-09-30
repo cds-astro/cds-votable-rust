@@ -65,7 +65,11 @@ impl QuickXmlReadWrite for Min {
     unreachable!()
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>, 
+    _context: &Self::Context
+  ) -> Result<(), VOTableError> {
     let mut elem_writer = writer.create_element(Self::TAG_BYTES);
     elem_writer = elem_writer.with_attribute(("value", self.value.as_str()));
     if !self.inclusive {
@@ -132,7 +136,11 @@ impl QuickXmlReadWrite for Max {
     unreachable!()
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>, 
+    _context: &Self::Context
+  ) -> Result<(), VOTableError> {
     let mut elem_writer = writer.create_element(Self::TAG_BYTES);
     elem_writer = elem_writer.with_attribute(("value", self.value.as_str()));
     if !self.inclusive {
@@ -224,7 +232,11 @@ impl QuickXmlReadWrite for Opt {
     }
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>, 
+    context: &Self::Context
+  ) -> Result<(), VOTableError> {
     if  self.opts.is_empty() {
       let mut elem_writer = writer.create_element(Self::TAG_BYTES);
       write_opt_string_attr!(self, elem_writer, name);
@@ -237,7 +249,7 @@ impl QuickXmlReadWrite for Opt {
       tag.push_attribute(("value", self.value.as_str()));
       writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
       // Write sub-elements
-      write_elem_vec!(self, opts, writer);
+      write_elem_vec!(self, opts, writer, context);
       // Close tag
       writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)?;
     }
@@ -339,7 +351,11 @@ impl QuickXmlReadWrite for Values {
     }
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>,
+    context: &Self::Context
+  ) -> Result<(), VOTableError> {
     if self.min.is_none() && self.max.is_none() && self.opts.is_empty() {
       let mut elem_writer = writer.create_element(Self::TAG_BYTES);
       write_opt_string_attr!(self, elem_writer, ID);
@@ -357,9 +373,9 @@ impl QuickXmlReadWrite for Values {
       push2write_opt_string_attr!(self, tag, ref_, ref);
       writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
       // Write sub-elements
-      write_elem!(self, min, writer);
-      write_elem!(self, max, writer);
-      write_elem_vec!(self, opts, writer);
+      write_elem!(self, min, writer, context);
+      write_elem!(self, max, writer, context);
+      write_elem_vec!(self, opts, writer, context);
       // Close tag
       writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
     }

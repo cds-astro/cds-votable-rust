@@ -32,15 +32,15 @@ impl TableDataContent for Void {
     unreachable!()
   }
 
-  fn write_in_datatable<W: Write>(&mut self, _writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write_in_datatable<W: Write>(&mut self, _writer: &mut Writer<W>, _context: &[TableElem]) -> Result<(), VOTableError> {
     unreachable!()
   }
 
-  fn write_in_binary<W: Write>(&mut self, _writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write_in_binary<W: Write>(&mut self, _writer: &mut Writer<W>, _context: &[TableElem]) -> Result<(), VOTableError> {
     unreachable!()
   }
 
-  fn write_in_binary2<W: Write>(&mut self, _writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write_in_binary2<W: Write>(&mut self, _writer: &mut Writer<W>, _context: &[TableElem]) -> Result<(), VOTableError> {
     unreachable!()
   }
 }
@@ -109,13 +109,17 @@ impl QuickXmlReadWrite for Fits {
     }
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>, 
+    _context: &Self::Context
+  ) -> Result<(), VOTableError> {
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     // Write tag + attributes
     push2write_opt_tostring_attr!(self, tag, extnum);
     writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
     // Write sub-elements
-    self.stream.write(writer)?;
+    self.stream.write(writer, &())?;
     // Close tag
     writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
   }

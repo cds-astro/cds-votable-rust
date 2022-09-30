@@ -42,14 +42,6 @@ pub enum DataElem<C: TableDataContent> {
 }
 
 impl<C: TableDataContent> DataElem<C> {
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
-    match self {
-      DataElem::TableData(elem) => elem.write(writer),
-      DataElem::Binary(elem) => elem.write(writer),
-      DataElem::Binary2(elem) => elem.write(writer),
-      DataElem::Fits(elem) => elem.write(writer),
-    }
-  }
   
   fn read_sub_elements<R: BufRead>(
     &mut self,
@@ -64,6 +56,20 @@ impl<C: TableDataContent> DataElem<C> {
       DataElem::Fits(ref mut e) => e.read_sub_elements_and_clean(reader, reader_buff, context),
     }
   }
+
+  fn write<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>,
+    context: &Vec<TableElem>,
+  ) -> Result<(), VOTableError> {
+    match self {
+      DataElem::TableData(elem) => elem.write(writer, context),
+      DataElem::Binary(elem) => elem.write(writer, context),
+      DataElem::Binary2(elem) => elem.write(writer, context),
+      DataElem::Fits(elem) => elem.write(writer, context),
+    }
+  }
+  
 }
 
 
@@ -145,12 +151,12 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
     }
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(&mut self, writer: &mut Writer<W>, context: &Self::Context) -> Result<(), VOTableError> {
     let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
     // Write sub-element
-    self.data.write(writer)?;
-    write_elem_vec!(self, infos, writer);
+    self.data.write(writer, context)?;
+    write_elem_vec_empty_context!(self, infos, writer);
     // Close tag
     writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
   }

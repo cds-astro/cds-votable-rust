@@ -215,7 +215,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Stream<C> {
     )
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(&mut self, writer: &mut Writer<W>, _context: &Self::Context) -> Result<(), VOTableError> {
     assert!(self.content.is_none(), "Writing STREAM with a content must be taken in charge by \
     the parent element (since the encoding depends on the parent: BINARy of BINARY2");
     let mut elem_writer = writer.create_element(Self::TAG_BYTES);

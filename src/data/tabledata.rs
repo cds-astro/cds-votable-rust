@@ -5,7 +5,7 @@ use quick_xml::{Reader, Writer, events::{Event, BytesStart,BytesEnd, attributes:
 
 use serde;
 
-use super::super::{
+use crate::{
   QuickXmlReadWrite, TableDataContent,
   error::VOTableError,
   table::TableElem
@@ -46,9 +46,13 @@ impl<C: TableDataContent> QuickXmlReadWrite for TableData<C> {
     self.content.read_datatable_content(reader, reader_buff, context)
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>, 
+    context: &Self::Context
+  ) -> Result<(), VOTableError> {
     writer.write_event(Event::Start(BytesStart::borrowed_name(Self::TAG_BYTES))).map_err(VOTableError::Write)?;
-    self.content.write_in_datatable(writer)?;
+    self.content.write_in_datatable(writer, context)?;
     writer.write_event(Event::End(BytesEnd::borrowed(Self::TAG_BYTES))).map_err(VOTableError::Write)
   }
 }

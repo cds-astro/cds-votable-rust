@@ -108,7 +108,11 @@ impl QuickXmlReadWrite for Info {
     read_content!(Self, self, reader, reader_buff)
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>,
+    _context: &Self::Context
+  ) -> Result<(), VOTableError> {
     let mut elem_writer = writer.create_element(Self::TAG_BYTES);
     write_opt_string_attr!(self, elem_writer, ID);
     elem_writer = elem_writer.with_attribute(("name", self.name.as_str()));

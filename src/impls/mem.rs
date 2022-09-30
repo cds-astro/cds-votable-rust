@@ -6,27 +6,32 @@ use quick_xml::{
   events::{Event, BytesStart, BytesText}
 };
 
-use base64::read::DecoderReader;
+use base64::{
+  read::DecoderReader,
+  write::EncoderWriter,
+};
+
+
 use serde::{
-  Deserializer,
-  de::DeserializeSeed
+  Serializer, Deserializer,
+  de::DeserializeSeed,
+  ser::SerializeTuple
 };
 
-use crate::impls::{
-  b64::BinaryDeserializer,
-  visitors::FixedLengthArrayVisitor
-};
 
-use super::super::{
+use crate::{
   is_empty,
   TableDataContent, QuickXmlReadWrite,
   table::TableElem,
   data::tabledata::TableData,
   error::VOTableError,
   impls::{
-    Schema, VOTableValue, b64::B64Cleaner
+    Schema, VOTableValue,
+    visitors::FixedLengthArrayVisitor,
+    b64::read::{B64Cleaner, BinaryDeserializer}
   }
 };
+use crate::impls::b64::write::{B64Formatter, BinarySerializer};
 
 #[derive(Default, Debug, serde::Serialize, serde::Deserialize)]
 pub struct InMemTableDataStringRows {
@@ -98,7 +103,11 @@ impl TableDataContent for InMemTableDataStringRows {
     )
   }
 
-  fn write_in_datatable<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write_in_datatable<W: Write>(
+    &mut self, 
+    writer: &mut Writer<W>, 
+    _context: &[TableElem]
+  ) -> Result<(), VOTableError> {
     let tr_tag = BytesStart::borrowed_name(b"TR");
     for row in &self.rows {
       writer.write_event(Event::Start(tr_tag.to_borrowed())).map_err(VOTableError::Write)?;
@@ -113,7 +122,7 @@ impl TableDataContent for InMemTableDataStringRows {
     Ok(())
   }
 
-  fn write_in_binary<W: Write>(&mut self, _writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write_in_binary<W: Write>(&mut self, _writer: &mut Writer<W>, _context: &[TableElem]) -> Result<(), VOTableError> {
     Err(
       VOTableError::Custom(
         String::from("InMemTableDataStringRows not able to read/write BINARY data")
@@ -121,7 +130,7 @@ impl TableDataContent for InMemTableDataStringRows {
     )
   }
 
-  fn write_in_binary2<W: Write>(&mut self, _writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write_in_binary2<W: Write>(&mut self, _writer: &mut Writer<W>, _context: &[TableElem]) -> Result<(), VOTableError> {
     Err(
       VOTableError::Custom(
         String::from("InMemTableDataStringRows not able to read/write BINARY2 data")
@@ -141,22 +150,6 @@ impl InMemTableDataRows {
     Self { rows }
   }
 }
-
-/*
-impl Visitor for InMemTableDataRows {
-  type Value: Vec<Row>;
-
-  fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
-    todo!()
-  }
-
-  fn visit_seq<A>(self, seq: A) -> Result<Self::Value, serde::de::Error> where A: SeqAccess<'de> {
-    todo!()
-  }
-}
-
-IMPL VISITOR ROW!!!
-*/
 
 impl TableDataContent for InMemTableDataRows {
   
@@ -256,7 +249,7 @@ impl TableDataContent for InMemTableDataRows {
       let null_flags: Vec<u8> = (&mut binary_deser).deserialize_tuple(n_bytes, bytes_visitor)?;
       for (i_col, field_schema) in schema.iter().enumerate() {
         let field = field_schema.deserialize(&mut binary_deser)?;
-        let is_null = (null_flags[i_col >> 3] & (128_u8 >> i_col.rem_euclid(8))) != 0;
+        let is_null = (null_flags[i_col >> 3] & (128_u8 >> (i_col & 7))) != 0;
         if is_null {
           row.push(VOTableValue::Null) 
         } else {
@@ -268,7 +261,7 @@ impl TableDataContent for InMemTableDataRows {
     Ok(reader)
   }
 
-  fn write_in_datatable<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+  fn write_in_datatable<W: Write>(&mut self, writer: &mut Writer<W>, _context: &[TableElem]) -> Result<(), VOTableError> {
     let tr_tag = BytesStart::borrowed_name(b"TR");
     for row in &self.rows {
       writer.write_event(Event::Start(tr_tag.to_borrowed())).map_err(VOTableError::Write)?;
@@ -283,11 +276,63 @@ impl TableDataContent for InMemTableDataRows {
     Ok(())
   }
 
-  fn write_in_binary<W: Write>(&mut self, _writer: &mut Writer<W>) -> Result<(), VOTableError> {
-    todo!()
+  fn write_in_binary<W: Write>(&mut self, writer: &mut Writer<W>, context: &[TableElem]) -> Result<(), VOTableError> {
+    // Get schema
+    let schema: Vec<Schema> = context.iter()
+      .filter_map(|table_elem|
+        match table_elem {
+          TableElem::Field(field) => Some(field.into()),
+          _ => None
+        }
+      ).collect();
+    // Create serializer
+    let mut serializer = BinarySerializer::new(
+      EncoderWriter::new(B64Formatter::new(writer.inner()), base64::STANDARD)
+    );
+    // Write data
+    for row in &self.rows {
+      for (field_ref, schema_ref) in row.iter().zip(schema.iter()) {
+        schema_ref.serialize_seed(field_ref, &mut serializer)?;
+      }
+    }
+    Ok(())
   }
 
-  fn write_in_binary2<W: Write>(&mut self, _writer: &mut Writer<W>) -> Result<(), VOTableError> {
-    todo!()
+  fn write_in_binary2<W: Write>(&mut self, writer: &mut Writer<W>, context: &[TableElem]) -> Result<(), VOTableError> {
+    // Get schema
+    let schema: Vec<Schema> = context.iter()
+      .filter_map(|table_elem|
+        match table_elem {
+          TableElem::Field(field) => Some(field.into()),
+          _ => None
+        }
+      ).collect();
+    // Compute size of null flags
+    let n_null_flag_bytes = (schema.len() + 7) / 8;
+    // Create serializer
+    let mut serializer = BinarySerializer::new(
+      EncoderWriter::new(B64Formatter::new(writer.inner()), base64::STANDARD)
+    );
+    // Write data
+    for row in &self.rows {
+      // Check null values
+      let mut null_flags = vec![0_u8; n_null_flag_bytes];
+      for (i, field) in row.iter().enumerate() {
+        if matches!(field, VOTableValue::Null) {
+          null_flags[i >> 3] |= 128_u8 >> (i & 7);
+        }
+      }
+      // Write null falgs
+      let mut seq_ser = serializer.serialize_tuple(n_null_flag_bytes)?;
+      for byte in null_flags {
+        SerializeTuple::serialize_element(&mut seq_ser, &byte)?;
+      }
+      SerializeTuple::end(seq_ser)?;
+      // Write remaining
+      for (field_ref, schema_ref) in row.iter().zip(schema.iter()) {
+        schema_ref.serialize_seed(field_ref, &mut serializer)?;
+      }
+    }
+    Ok(())
   }
 }
