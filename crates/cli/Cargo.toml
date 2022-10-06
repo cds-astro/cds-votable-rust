@@ -1,0 +1,20 @@
+[package]
+name = "votable-cli"
+version = "0.1.0"
+authors = ["F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>"]
+description = "Command-line to convert IVOA VOTables in XML, JSON, YAML and TOML"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+path = "src/main.rs"
+name = "vot"
+bench = false
+test = false
+
+[dependencies]
+votable = { package = "votable", path = "../.." }
+clap = { version = "4.0", features = ["derive"] }
