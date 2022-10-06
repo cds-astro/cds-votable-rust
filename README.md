@@ -6,15 +6,23 @@ Library to read/write [VOTables](https://www.ivoa.net/documents/VOTable/)
 in Rust and to convert them in JSON, YAML, TOML and back to XML.
 
 VOT Lib Rust is used in: 
-* [VOTCli](TBW) convert VOTables from the command line;
-* [VOTWasm](TBW) read/write and convert VOTables in Web Browsers.
+* [VOTCli](https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli) 
+  convert VOTables from the command line;
+* [VOTWasm](https://github.com/cds-astro/cds-votable-rust/tree/main/crates/wasm) 
+  read/write and convert VOTables in Web Browsers.
 
 ## Status
 
-This library is in an early stage of development.
-More testing is required, especially the bit type and arrays.
+This library is in an early stage of development.  
+We are (reasonably) open to changes in the various format, e.g.:
+* we could flag attributes with a '@' prefix
+* we could use upper case elements tag names
+* we could remove the 's' suffix in elements arrays
+* we could change the `pos_infos` name for something else
+* ...
 
-Please, provide us with example VOTables!
+More testing is required, especially the bit type and arrays.
+Please, provide us with VOTable examples!
 
 
 ## Why JSON, TOML, YAML in addition to XML
@@ -65,6 +73,51 @@ GROUP may contain FIELDRef.
 
 In JSON/TOML/YAML, there is no difference between attribute and sub-elements 
 names (all in camel case).
+
+## Other way to convert from VOTable to JSON
+
+It is also possible to use the following python snippet from 
+[the MIVOT](https://github.com/ivoa-std/ModelInstanceInVot)
+[client code](https://github.com/ivoa/modelinstanceinvot-code)
+by [Laurent Michel](https://github.com/lmichel)
+to automatically convert XML (not VOTable specific) to JSON:
+```python
+import os
+import xmltodict
+import json
+import numpy
+from lxml import etree
+
+class MyEncoder(json.JSONEncoder):
+
+  def default(self, obj):
+    if isinstance(obj, numpy.integer):
+      return int(obj)
+    elif isinstance(obj, numpy.floating):
+      return float(obj)
+    elif isinstance(obj, numpy.ndarray):
+      return obj.tolist()
+    else:
+      return super(MyEncoder, self).default(obj)
+
+data_path = os.path.dirname(os.path.realpath(__file__))
+
+xml_block = etree.parse(os.path.join(data_path, "votable_to_json.xml"))
+raw_json = xmltodict.parse(etree.tostring(xml_block))
+pretty_json = json.dumps(raw_json, indent=2, cls=MyEncoder)
+print(pretty_json)
+
+with open(os.path.join(data_path, "votable_to_json.json"), 'w') as file:
+  file.write(json.dumps(raw_json, indent=2))
+```
+
+Advantages:
+* few lines of python
+
+Inconvenient:
+* the order of elements (especailly INFOs and post processing INFOs) is lost
+* it is a one wau=y conversion (not possible to then convert from JSON to VOTable)
+
 
 ## Example
 
