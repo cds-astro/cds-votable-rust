@@ -513,6 +513,7 @@ votable:
 * [ ] Add possibility to convert to/from `TABLEDATA`, `BINARY`, `BINARY2`
 * [ ] Enrich `votable::impls::Schema.serialize_seed`
 * [ ] Write a custom deserializer for `VOTableValue` (look at cargo-expand output for a basis)
+* [ ] Implements `toCSV` (but not `fromCSV`)
 
 ## License
 
