@@ -5,9 +5,19 @@
 WebAssembly Library to convert IVOA [VOTables](https://www.ivoa.net/documents/VOTable/20191021/REC-VOTable-1.4-20191021.html)
 in Json Objects, XML, JSON, YAML and TOML.
 
-## About
+## Status
 
-TBW
+The [library](https://github.com/cds-astro/cds-votable-rust) this WASM module
+is based on is in an early stage of development.
+We are (reasonably) open to changes in the various format, e.g.:
+* we could flag attributes with a '@' prefix
+* we could use upper case elements tag names
+* we could remove the 's' suffix in elements arrays
+* we could change the `pos_infos` name for something else
+* ...
+
+More testing is required, especially the bit type and arrays.
+Please, provide us with VOTable examples!
 
 
 ## Build
@@ -19,10 +29,14 @@ To build, c.f. wasm-bindgen [doc](https://rustwasm.github.io/docs/wasm-bindgen/r
 > wasm-pack build --out-name vot --target web --no-typescript --release
 
 
-## Insert in your web page
+## Insert in your own web page
 
-See example in [index.html](index.html), simply add the following code snippet in your web page
-(plus the `pkg` ou build or retrieve from the github release section):
+Download the last `vot-wasm-vxx.tar.gz` from the[github release page](https://github.com/cds-astro/cds-votable-rust/releases).
+Put it in the same directory of you web page and decompress it:
+```bash
+tar xvzf vot-wasm-vxx.tar.gz
+```
+And add this in your HTML body (see example in [index.html](index.html)):
 ```html
     <script type="module">
       import init, * as vot from './pkg/vot.js';

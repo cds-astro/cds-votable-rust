@@ -5,6 +5,11 @@ authors = ["F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>"]
 description = "Command-line to convert IVOA VOTables in XML, JSON, YAML and TOML"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
+categories = ["command-line-utilities", "science", "data-structures"]
+keywords = ["ivoa", "votable", "xml", "json", "toml", "yaml"]
+documentation = "https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli"
+homepage = "https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli"
+repository = "https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -18,3 +23,26 @@ test = false
 [dependencies]
 votable = { package = "votable", path = "../.." }
 clap = { version = "4.0", features = ["derive"] }
+
+[package.metadata.deb]
+maintainer = "F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>"
+depends = "$auto"
+section = "utility"
+priority = "optional"
+assets = [
+    ["target/release/vot", "usr/bin/vot", "755"],
+    ["COPYING", "usr/share/doc/vot/", "644"],
+    ["LICENSE-MIT", "usr/share/doc/vot/", "644"],
+    ["LICENSE-APACHE", "usr/share/doc/vot/", "644"],
+    ["CHANGELOG.md", "usr/share/doc/vot/CHANGELOG", "644"],
+    ["README.md", "usr/share/doc/vot/README", "644"],
+    #["FAQ.md", "usr/share/doc/vot/FAQ", "644"],
+    ["doc/vot.1", "usr/share/man/man1/vot.1", "644"],
+    # Similarly for shell completions.
+    #["deployment/deb/vot.bash", "usr/share/bash-completion/completions/vot", "644"],
+    #["deployment/deb/vot.fish", "usr/share/fish/vendor_completions.d/vot.fish", "644"],
+    #["deployment/deb/_vot", "usr/share/zsh/vendor-completions/", "644"],
+]
+extended-description = """\
+vot is a command-line to convert VOTable is various formats such as JSON, TOML and YAML and back to XML
+"""

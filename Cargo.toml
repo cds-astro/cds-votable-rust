@@ -1,16 +1,32 @@
 [package]
 name = "votable"
 version = "0.1.0-alpha"
-edition = "2021"
-authors = ["F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>"]
-license = "Apache-2.0 OR MIT"
-readme = "README.md"
-categories = ["encoding", "parse-implementation", "science"] 
-# repository = "https://github.com/cds-astro/cds-votable-rust/"
+authors = [
+  "F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>",
+  "T. Dumortier <thibault.dumortier@astro.unistra.fr>"
+]
 description = """
 Rust implementation of a VOTable serializer/deserializer with support for
 format other than XML, such as JSON, TOML or YAML.
 """
+license = "Apache-2.0 OR MIT"
+readme = "README.md"
+categories = ["encoding", "science"]
+keywords = ["ivoa", "votable", "xml", "json", "toml", "yaml"]
+documentation = "https://docs.rs/votable"
+homepage = "https://github.com/cds-astro/cds-votable-rust/"
+repository = "https://github.com/cds-astro/cds-votable-rust/"
+edition = "2021"
+exclude = [
+  "resources",
+]
+
+[lib]
+name = "votable"
+path = "src/lib.rs"
+test = true
+doctest = true
+bench = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -34,4 +50,11 @@ quick-error = "2.0" # To handke error more easily
 base64 = "0.13"
 ucs2 = "0.3"
 bitvec = { version = "1", features = ["std", "alloc", "serde"] }
+
+# See opti here: https://github.com/johnthagen/min-sized-rust
+[profile.release]
+# strip = true  # Automatically strip symbols from the binary (nightly feature :o/ ).
+lto = true    # Optimize at the link stage (may remove dead code)
+codegen-units = 1
+panic = "abort"
 
