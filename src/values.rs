@@ -41,7 +41,8 @@ impl QuickXmlReadWrite for Min {
     // Look for attributes
     for attr_res in attrs {
       let attr = attr_res.map_err(VOTableError::Attr)?;
-      let val = String::from_utf8(attr.value.as_ref().to_vec()).map_err(VOTableError::FromUtf8)?;
+      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
+      let val = String::from_utf8(unescaped.as_ref().to_vec()).map_err(VOTableError::FromUtf8)?;
       match attr.key {
         b"value" => value = Some(val),
         b"inclusive" => inclusive = val.parse::<bool>().map_err(VOTableError::ParseBool)?,

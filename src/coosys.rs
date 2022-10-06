@@ -478,7 +478,7 @@ mod tests {
     };
     // Test write
     let mut writer = Writer::new(Cursor::new(Vec::new()));
-    coosys.write(&mut writer);
+    coosys.write(&mut writer, &());
     let output = writer.into_inner().into_inner();
     let output_str = unsafe { std::str::from_utf8_unchecked(output.as_slice()) };
     assert_eq!(output_str, xml);

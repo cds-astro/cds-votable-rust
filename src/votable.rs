@@ -1,11 +1,11 @@
 use std::{
+  fs::File,
+  path::Path,
   str::{self, FromStr},
-  io::{BufRead, Write},
+  io::{BufRead, Write, BufReader, BufWriter},
   collections::HashMap,
 };
-use std::fs::File;
-use std::io::BufReader;
-use std::path::Path;
+
 
 use quick_xml::{
   Reader, Writer,
@@ -16,8 +16,9 @@ use quick_xml::{
 };
 
 use paste::paste;
-
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
 use crate::is_empty;
 
 use super::{
@@ -35,7 +36,9 @@ use super::{
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub enum Version {
+  #[serde(rename = "1.3")]
   V1_3,
+  #[serde(rename = "1.4")]
   V1_4,
 }
 
@@ -83,6 +86,203 @@ impl VOTableElem {
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct VOTableWrapper<C: TableDataContent> {
+  votable: VOTable<C>
+}
+impl <C: TableDataContent> VOTableWrapper<C> {
+  /// Returns the inner `VOTable` element
+  pub fn unwrap(self) -> VOTable<C> {
+    self.votable
+  }
+
+  // XML 
+
+  pub fn from_ivoa_xml_file<P: AsRef<Path>>(path: P) -> Result<Self, VOTableError> {
+    let file = File::open(path).map_err(VOTableError::Io)?;
+    let reader = BufReader::new(file);
+    Self::from_ivoa_xml_reader(reader)
+  }
+
+  pub fn from_ivoa_xml_str(s: &str) -> Result<Self, VOTableError> {
+    Self::from_ivoa_xml_reader(s.as_bytes())
+  }
+
+  pub fn from_ivoa_xml_bytes(s: &[u8]) -> Result<Self, VOTableError> {
+    Self::from_ivoa_xml_reader(s)
+  }
+
+  pub fn from_ivoa_xml_reader<R: BufRead>(reader: R) -> Result<Self, VOTableError> {
+    VOTable::from_reader(reader).map(|vot| vot.wrap())
+  }
+
+  pub fn to_ivoa_xml_file<P: AsRef<Path>>(&mut self, path: P) -> Result<(), VOTableError> {
+    let file = File::create(path).map_err(VOTableError::Io)?;
+    let write = BufWriter::new(file);
+    self.to_ivoa_xml_writer(write)
+  }
+
+  pub fn to_ivoa_xml_string(&mut self) -> Result<String, VOTableError> {
+    let buff = self.to_ivoa_xml_bytes()?;
+    String::from_utf8(buff).map_err(VOTableError::FromUtf8)
+  }
+
+  pub fn to_ivoa_xml_bytes(&mut self) -> Result<Vec<u8>, VOTableError> {
+    let mut votable: Vec<u8> = Vec::new();
+    self.to_ivoa_xml_writer(&mut votable)?;
+    Ok(votable)
+  }
+
+  pub fn to_ivoa_xml_writer<W: Write>(&mut self, write: W) -> Result<(), VOTableError> {
+    let mut write = Writer::new_with_indent(write, b' ', 4);
+    self.votable.write(&mut write, &())
+  }
+}
+
+
+impl <C> VOTableWrapper<C> 
+  where
+    C: TableDataContent + Serialize + for<'a> Deserialize<'a>
+{
+  // JSON
+
+  pub fn from_json_file<P: AsRef<Path>>(path: P) -> Result<Self, VOTableError> {
+    let file = File::open(path).map_err(VOTableError::Io)?;
+    let reader = BufReader::new(file);
+    Self::from_json_reader(reader)
+  }
+
+  pub fn from_json_str(s: &str) -> Result<Self, VOTableError> {
+    serde_json::from_str(s).map_err(VOTableError::Json)
+  }
+
+  pub fn from_json_bytes(s: &[u8]) -> Result<Self, VOTableError> {
+    serde_json::from_slice(s).map_err(VOTableError::Json)
+  }
+
+  pub fn from_json_reader<R: BufRead>(reader: R) -> Result<Self, VOTableError> {
+    serde_json::from_reader(reader).map_err(VOTableError::Json)
+  }
+
+  pub fn to_json_file<P: AsRef<Path>>(&mut self, path: P, pretty: bool) -> Result<(), VOTableError> {
+    let file = File::create(path).map_err(VOTableError::Io)?;
+    let write = BufWriter::new(file);
+    self.to_json_writer(write, pretty)
+  }
+
+  pub fn to_json_string(&mut self, pretty: bool) -> Result<String, VOTableError> {
+    if pretty {
+      serde_json::ser::to_string_pretty(&self)
+    } else {
+      serde_json::ser::to_string(&self)
+    }.map_err(VOTableError::Json)
+  }
+
+  pub fn to_json_bytes(&mut self, pretty: bool) -> Result<Vec<u8>, VOTableError> {
+    if pretty {
+      serde_json::ser::to_vec_pretty(&self)
+    } else {
+      serde_json::ser::to_vec(&self)
+    }.map_err(VOTableError::Json)
+  }
+
+  pub fn to_json_writer<W: Write>(&mut self, write: W, pretty: bool) -> Result<(), VOTableError> {
+    if pretty {
+      serde_json::ser::to_writer_pretty(write, &self)
+    } else {
+      serde_json::ser::to_writer(write, &self)
+    }.map_err(VOTableError::Json)
+  }
+
+  // YAML
+
+  pub fn from_yaml_file<P: AsRef<Path>>(path: P) -> Result<Self, VOTableError> {
+    let file = File::open(path).map_err(VOTableError::Io)?;
+    let reader = BufReader::new(file);
+    Self::from_yaml_reader(reader)
+  }
+
+  pub fn from_yaml_str(s: &str) -> Result<Self, VOTableError> {
+    serde_yaml::from_str(s).map_err(VOTableError::Yaml)
+  }
+
+  pub fn from_yaml_bytes(s: &[u8]) -> Result<Self, VOTableError> {
+    serde_yaml::from_slice(s).map_err(VOTableError::Yaml)
+  }
+
+  pub fn from_yaml_reader<R: BufRead>(reader: R) -> Result<Self, VOTableError> {
+    serde_yaml::from_reader(reader).map_err(VOTableError::Yaml)
+  }
+
+  pub fn to_yaml_file<P: AsRef<Path>>(&mut self, path: P) -> Result<(), VOTableError> {
+    let file = File::create(path).map_err(VOTableError::Io)?;
+    let write = BufWriter::new(file);
+    self.to_yaml_writer(write)
+  }
+
+  pub fn to_yaml_string(&mut self) -> Result<String, VOTableError> {
+    serde_yaml::to_string(&self).map_err(VOTableError::Yaml)
+  }
+
+  pub fn to_yaml_bytes(&mut self) -> Result<Vec<u8>, VOTableError> {
+    serde_yaml::to_string(&self).map(|s| s.into()).map_err(VOTableError::Yaml)
+  }
+
+  pub fn to_yaml_writer<W: Write>(&mut self, write: W) -> Result<(), VOTableError> {
+    serde_yaml::to_writer(write, &self).map_err(VOTableError::Yaml)
+  }
+
+  // TOML
+
+  pub fn from_toml_file<P: AsRef<Path>>(path: P) -> Result<Self, VOTableError> {
+    let file = File::open(path).map_err(VOTableError::Io)?;
+    let reader = BufReader::new(file);
+    Self::from_toml_reader(reader)
+  }
+
+  pub fn from_toml_str(s: &str) -> Result<Self, VOTableError> {
+    toml::from_str(s).map_err(VOTableError::TomlDe)
+  }
+
+  pub fn from_toml_bytes(s: &[u8]) -> Result<Self, VOTableError> {
+    toml::from_slice(s).map_err(VOTableError::TomlDe)
+  }
+
+  pub fn from_toml_reader<R: BufRead>(mut reader: R) -> Result<Self, VOTableError> {
+    let mut data = Vec::new();
+    reader.read_to_end(&mut data).map_err(VOTableError::Io)?;
+    Self::from_toml_bytes(data.as_slice())
+  }
+
+  pub fn to_toml_file<P: AsRef<Path>>(&mut self, path: P, pretty: bool) -> Result<(), VOTableError> {
+    let content = self.to_toml_string(pretty)?;
+    std::fs::write(path, content).map_err(VOTableError::Io)
+    /*let file = File::create(path).map_err(VOTableError::Io)?;
+    let write = BufWriter::new(file);
+    self.to_toml_writer(write)*/
+  }
+
+  pub fn to_toml_string(&mut self, pretty: bool) -> Result<String, VOTableError> {
+    if pretty {
+      toml::ser::to_string_pretty(&self)
+    } else {
+      toml::ser::to_string(&self)
+    }.map_err(VOTableError::TomlSer)
+  }
+
+  pub fn to_toml_bytes(&mut self, pretty: bool) -> Result<Vec<u8>, VOTableError> {
+    // toml::ser::to_vec(&self).map_err(VOTableError::TomlSer)
+    self.to_toml_string(pretty).map(|s| s.into_bytes())
+  }
+
+  pub fn to_toml_writer<W: Write>(&mut self, mut write: W, pretty: bool) -> Result<(), VOTableError> {
+    let bytes = self.to_toml_bytes(pretty)?;
+    write.write_all(bytes.as_slice()).map_err(VOTableError::Io)
+  }
+  
+}
+
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct VOTable<C: TableDataContent> {
   // attributes
   #[serde(rename = "ID", skip_serializing_if = "Option::is_none")]
@@ -112,6 +312,26 @@ xsi:schemaLocation="http://www.ivoa.net/xml/VOTable/v1.3 http://www.ivoa.net/xml
 /// in an `Option`, ...
 impl<C: TableDataContent> VOTable<C> {
   
+  /// Decorate this VOTable by an object to get the following serialization:
+  /// ```bash
+  /// {
+  ///   "votable": {
+  ///     "version": "1.4",
+  ///     ...
+  ///   }
+  /// }
+  /// ```
+  /// Instead of: 
+  /// ```bash
+  /// {
+  ///   "version": "1.4",
+  ///   ...
+  /// }
+  /// ```
+  pub fn wrap(self) -> VOTableWrapper<C> {
+    VOTableWrapper { votable: self } 
+  }
+  
   /// Not public because a VOTable is supposed to contains at least one Resource.
   fn new_empty() -> Self {
     Self {
@@ -130,7 +350,7 @@ impl<C: TableDataContent> VOTable<C> {
     votable.push_resource(resource)
   }
 
-  pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, VOTableError>  {
+  /*pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, VOTableError>  {
     let file = File::open(path).map_err(VOTableError::Io)?;
     let reader = BufReader::new(file);
     Self::from_reader(reader)
@@ -142,9 +362,9 @@ impl<C: TableDataContent> VOTable<C> {
 
   pub fn from_bytes(s: &[u8]) -> Result<Self, VOTableError> {
     Self::from_reader(s)
-  }
+  }*/
   
-  pub fn from_reader<R: BufRead>(reader: R) -> Result<Self, VOTableError> {
+  fn from_reader<R: BufRead>(reader: R) -> Result<Self, VOTableError> {
     let mut reader = Reader::from_reader(reader);
     let mut buff: Vec<u8> = Vec::with_capacity(1024);
     loop {
@@ -204,7 +424,8 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
     let mut votable = Self::new_empty();
     for attr_res in attrs {
       let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
+      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
+      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
       votable = match attr.key {
         b"ID" => votable.set_id(value),
         b"version" => votable.set_version(Version::from_str(value).map_err(VOTableError::Custom)?),
@@ -304,7 +525,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
 
 #[cfg(test)]
 mod tests {
-  use std::io::Cursor;
+  use std::io::{Cursor, stdout};
 
   use quick_xml::{
     Reader, Writer,
@@ -315,6 +536,7 @@ mod tests {
     votable::VOTable,
     impls::mem::{InMemTableDataStringRows, InMemTableDataRows}
   };
+  use crate::votable::VOTableWrapper;
 
   #[test]
   fn test_votable_read_from_str() {
@@ -333,14 +555,14 @@ mod tests {
     <RESOURCE>
     </RESOURCE>
 </VOTABLE>"#;
-    let votable =  VOTable::<InMemTableDataStringRows>::from_str(xml).unwrap();
+    let votable = VOTableWrapper::<InMemTableDataStringRows>::from_ivoa_xml_str(xml).unwrap().unwrap();
     assert!(votable.description.is_some())
   }
 
   #[test]
   fn test_votable_read_datatable_from_file() {
     // let votable =  VOTable::<InMemTableDataStringRows>::from_file("resources/sdss12.vot").unwrap();
-    let votable =  VOTable::<InMemTableDataRows>::from_file("resources/sdss12.vot").unwrap();
+    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/sdss12.vot").unwrap().unwrap();
     match serde_json::ser::to_string_pretty(&votable) {
       Ok(content) => println!("{}", &content),
       Err(error) => {
@@ -366,7 +588,7 @@ mod tests {
 
   #[test]
   fn test_votable_read_binary_from_file() {
-    let votable =  VOTable::<InMemTableDataRows>::from_file("resources/binary.b64").unwrap();
+    let votable =  VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/binary.b64").unwrap().unwrap();
     match toml::ser::to_string_pretty(&votable) {
       Ok(content) => println!("{}", &content),
       Err(error) => {
@@ -378,8 +600,42 @@ mod tests {
 
   #[test]
   fn test_votable_read_binary2_from_file() {
-    let votable =  VOTable::<InMemTableDataRows>::from_file("resources/gaia_dr3.b264").unwrap();
+    
+    let mut votable =  VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/gaia_dr3.b264").unwrap().unwrap();
+    let mut votable = votable.wrap();
+    match serde_json::ser::to_string_pretty(&votable) {
+      Ok(content) => println!("{}", &content),
+      Err(error) => {
+        println!("{:?}", &error);
+        assert!(false);
+      },
+    }
+    // let mut votable = votable.unwrap();
+    // if true { return; }
+    
     match toml::ser::to_string_pretty(&votable) {
+      Ok(content) => println!("{}", &content),
+      Err(error) => {
+        println!("{:?}", &error);
+        assert!(false);
+      },
+    }
+    
+    println!("\n\n#### VOTABLE ####\n");
+    let mut votable2: Vec<u8> = Vec::new();
+    let mut write = Writer::new_with_indent(/*stdout()*/ &mut votable2, b' ', 4);
+    match votable.votable.write(&mut write, &()) {
+      Ok(content) => {
+        println!("\nOK")
+      },
+      Err(error) => println!("Error: {:?}", &error),
+    }
+
+    let votable2 =  String::from_utf8(votable2).unwrap();
+    println!("{}", &votable2);
+
+    let mut votable3 = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_str(votable2.as_str()).unwrap();
+    match toml::ser::to_string_pretty(&votable3) {
       Ok(content) => println!("{}", &content),
       Err(error) => {
         println!("{:?}", &error);

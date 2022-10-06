@@ -11,7 +11,7 @@ use serde::ser::{SerializeMap, SerializeStruct, SerializeStructVariant, Serializ
 
 use crate::error::VOTableError;
 
-const N_CHAR_PER_LINE: usize = 73;
+const N_CHAR_PER_LINE: usize = 72;
 
 pub struct B64Formatter<W: Write> {
   n_curr: usize,
@@ -35,17 +35,18 @@ impl<W: Write> Write for B64Formatter<W> {
     let buf_size = buf.len();
     while !buf.is_empty() {
       let n = N_CHAR_PER_LINE - self.n_curr;
-      let n = if n <= buf.len() {
+      if n <= buf.len() {
         self.n_curr = 0;
-        n
+        let (bl, br) = buf.split_at(n);
+        self.writer.write_all(bl)?;
+        self.writer.write_all(b"\n")?;
+        buf = br;
       } else {
         self.n_curr += buf.len();
-        buf.len()
-      };
-      let (bl, br) = buf.split_at(n);
-      self.writer.write_all(bl)?;
-      self.writer.write_all(b"\n")?;
-      buf = br;
+        let (bl, br) = buf.split_at(buf.len());
+        self.writer.write_all(bl)?;
+        buf = br;
+      }
     }
     Ok(buf_size)
   }

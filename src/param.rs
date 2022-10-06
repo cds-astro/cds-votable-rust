@@ -96,7 +96,8 @@ impl QuickXmlReadWrite for Param {
     let mut param = Self::new(NULL, NULL_DT, NULL);
     for attr_res in attrs {
       let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
+      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
+      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
       param = match attr.key {
         b"ID" => param.set_id(value),
         b"name" => {

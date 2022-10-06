@@ -313,7 +313,7 @@ In this version, NULL integer columns are written as an empty string
         println!("\n\n#### VOTABLE ####\n");
 
         let mut write = Writer::new_with_indent(stdout(), b' ', 4);
-        match votable.write(&mut write) {
+        match votable.write(&mut write, &()) {
             Ok(content) => println!("\nOK"),
             Err(error) => println!("Error: {:?}", &error),
         }
@@ -340,8 +340,100 @@ In this version, NULL integer columns are written as an empty string
         // AVRO ?
     }
 
-    /*#[test]
-    fn test_read_existing() {
-        
-    }*/
+    #[test]
+    fn test_create_in_mem_simple() {
+        let rows = vec![
+            vec![VOTableValue::Double(f64::NAN), VOTableValue::CharASCII('*'), VOTableValue::Float(14.52)],
+            vec![VOTableValue::Double(1.25), VOTableValue::Null, VOTableValue::Float(-1.2)],
+        ];
+        let data_content = InMemTableDataRows::new(rows);
+        let table = Table::new()
+          .set_id("V_147_sdss12")
+          .set_name("V/147/sdss12")
+          .set_description("SDSS photometric catalog".into())
+          .push_field(
+              Field::new("RA_ICRS", Datatype::Double)
+                .set_unit("deg")
+                .set_ucd("pos.eq.ra;meta.main")
+                .set_width(10)
+                .set_precision(Precision::new_dec(6))
+                .set_description("Right Ascension of the object (ICRS) (ra)".into())
+          ).push_field(
+            Field::new("m_SDSS12", Datatype::CharACII)
+              .set_ucd("meta.code.multip")
+              .set_arraysize("1")
+              .set_width(10)
+              .set_precision(Precision::new_dec(6))
+              .set_description("[*] Multiple SDSS12 name".into())
+              .push_link(Link::new().set_href("http://vizier.u-strasbg.fr/viz-bin/VizieR-4?-info=XML&-out.add=.&-source=V/147&SDSS12=${SDSS12}"))
+        ).push_field(
+            Field::new("umag", Datatype::Float)
+              .set_unit("mag")
+              .set_ucd("phot.mag;em.opt.U")
+              .set_width(6)
+              .set_precision(Precision::new_dec(3))
+              .set_description("[4/38]? Model magnitude in u filter, AB scale (u) (5)".into())
+              .set_values(Values::new().set_null("NaN"))
+        ).set_data(Data::new_empty().set_tabledata(data_content));
+
+        let resource = Resource::default()
+          .set_id("yCat_17011219")
+          .set_name("J/ApJ/701/1219")
+          .set_description(r#"Photometric and spectroscopic catalog of objects in the field around HE0226-4110"#.into())
+          .push_coosys(CooSys::new("J2000", System::new_default_eq_fk5()))
+          .push_coosys(CooSys::new("J2015.5", System::new_icrs().set_epoch(2015.5)))
+          .push_table(table)
+          .push_post_info(Info::new("QUERY_STATUS", "OVERFLOW").set_content("truncated result (maxtup=2)"));
+
+        let mut votable = VOTable::new(resource)
+          .set_id("my_votable")
+          .set_version(Version::V1_4)
+          .set_description(r#"VizieR Astronomical Server vizier.u-strasbg.fr"#.into())
+          .push_info(Info::new("votable-version", "1.99+ (14-Oct-2013)").set_id("VERSION"))
+          .wrap();
+
+        println!("\n\n#### JSON ####\n");
+
+        match serde_json::to_string_pretty(&votable) {
+            Ok(content) => {
+                println!("{}", &content);
+            },
+            Err(error) => println!("{:?}", &error),
+        }
+
+        println!("\n\n#### YAML ####\n");
+
+        match serde_yaml::to_string(&votable) {
+            Ok(content) => {
+                println!("{}", &content);
+            },
+            Err(error) => println!("{:?}", &error),
+        }
+
+        println!("\n\n#### TOML ####\n");
+
+        match toml::ser::to_string_pretty(&votable) {
+            Ok(content) => {
+                println!("{}", &content);
+            },
+            Err(error) => println!("{:?}", &error),
+        }
+
+        println!("\n\n#### VOTABLE ####\n");
+
+        let mut write = Writer::new_with_indent(stdout(), b' ', 4);
+        match votable.unwrap().write(&mut write, &()) {
+            Ok(content) => println!("\nOK"),
+            Err(error) => println!("Error: {:?}", &error),
+        }
+
+        /*println!("\n\n#### XML ####\n");
+
+        match quick_xml::se::to_string(&votable) {
+          Ok(content) => println!("{}", &content),
+          Err(error) => println!("{:?}", &error),
+        }*/
+
+        // AVRO ?
+    }
 }

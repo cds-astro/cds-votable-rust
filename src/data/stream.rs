@@ -1,6 +1,5 @@
 use std::{
   fmt,
-  collections::HashMap,
   io::{BufRead, Write},
   str::{self, FromStr},
 };
@@ -11,7 +10,6 @@ use paste::paste;
 use quick_xml::events::BytesStart;
 
 use serde;
-use serde_json::Value;
 use crate::TableDataContent;
 
 use super::super::{
@@ -130,8 +128,8 @@ pub struct Stream<C: TableDataContent> {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub rights: Option<String>,
   // extra attributes
-  #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-  pub extra: HashMap<String, Value>,
+  // #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+  // pub extra: HashMap<String, Value>,
   // content, if not parsed by binary of binary2
   //#[serde(skip_serializing_if = "Option::is_none")]
   #[serde(flatten)]
@@ -152,7 +150,7 @@ impl<C: TableDataContent> Stream<C> {
   impl_builder_opt_string_attr!(expires);
   impl_builder_opt_string_attr!(rights);
   // extra attributes
-  impl_builder_insert_extra!();
+  // impl_builder_insert_extra!();
   
   pub fn write_start<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
@@ -163,7 +161,7 @@ impl<C: TableDataContent> Stream<C> {
     push2write_opt_tostring_attr!(self, tag, encoding);
     push2write_opt_string_attr!(self, tag, expires);
     push2write_opt_string_attr!(self, tag, rights);
-    push2write_extra!(self, tag);
+    // push2write_extra!(self, tag);
     writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)
   }
 
@@ -191,10 +189,10 @@ impl<C: TableDataContent> QuickXmlReadWrite for Stream<C> {
         b"encoding" => stream.set_encoding(value.parse::<EncodingType>().map_err(VOTableError::Variant)?),
         b"expires" => stream.set_expires(value),
         b"rights" => stream.set_rights(value),
-        _ => stream.insert_extra(
+        _ => stream /*stream.insert_extra(
           str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
           Value::String(value.into()),
-        ),
+        )*/,
       }
     }
     Ok(stream)
@@ -225,7 +223,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Stream<C> {
     write_opt_tostring_attr!(self, elem_writer, encoding);
     write_opt_string_attr!(self, elem_writer, expires);
     write_opt_string_attr!(self, elem_writer, rights);
-    write_extra!(self, elem_writer);
+    // write_extra!(self, elem_writer);
     elem_writer.write_empty().map_err(VOTableError::Write)?;
     Ok(())
   }

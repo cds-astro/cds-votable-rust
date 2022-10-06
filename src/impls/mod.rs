@@ -37,6 +37,7 @@ pub struct BitVec(BV<u8, Msb0>);
 }*/
 
 
+// WARNING: THE ORDER IS IMPORTANT WHEn DESERIALIZING JSON, NOT TO LOSSE SIGNIFICATN DIGITS!!
 #[derive(Debug, serde::Deserialize)]
 #[serde(untagged)]
 pub enum VOTableValue {
@@ -46,10 +47,10 @@ pub enum VOTableValue {
   Short(i16),
   Int(i32),
   Long(i64),
-  Float(f32),
   Double(f64),
-  ComplexFloat((f32, f32)),
+  Float(f32),
   ComplexDouble((f64, f64)),
+  ComplexFloat((f32, f32)),
   CharASCII(char),
   CharUnicode(char),
   String(String),
@@ -58,10 +59,10 @@ pub enum VOTableValue {
   ShortArray(Vec<i16>),
   IntArray(Vec<i32>),
   LongArray(Vec<i64>),
-  FloatArray(Vec<f32>),
   DoubleArray(Vec<f64>),
-  ComplexFloatArray(Vec<(f32, f32)>),
+  FloatArray(Vec<f32>),
   ComplexDoubleArray(Vec<(f64, f64)>),
+  ComplexFloatArray(Vec<(f32, f32)>),
 }
 
 impl Serialize for VOTableValue {
@@ -398,17 +399,95 @@ impl Schema {
           Schema::FixedLengthBitArray { n_bits } => serialize_fixed_length_array(serializer, (7 + *n_bits)/ 8, &vec![0; (7 + *n_bits)/ 8]),
           Schema::VariableLengthBitArray => serialize_variable_length_array(serializer, &[0_u8; 0]),
         }
-      VOTableValue::Bool(v) => serializer.serialize_u8(*v as u8),
-      VOTableValue::Byte(v) => serializer.serialize_u8(*v),
-      VOTableValue::Short(v) => serializer.serialize_i16(*v),
-      VOTableValue::Int(v) => serializer.serialize_i32(*v),
-      VOTableValue::Long(v) => serializer.serialize_i64(*v),
-      VOTableValue::Float(v) => serializer.serialize_f32(*v),
-      VOTableValue::Double(v) => serializer.serialize_f64(*v),
-      VOTableValue::ComplexFloat((l, r)) => [l, r].serialize(serializer),
-      VOTableValue::ComplexDouble((l, r)) => [l, r].serialize(serializer),
-      VOTableValue::CharASCII(v) => serializer.serialize_u8(*v as u8),
-      VOTableValue::CharUnicode(v) => serializer.serialize_char(*v),
+      VOTableValue::Bool(v) => {
+        assert!(matches!(self, Schema::Bool));
+        serializer.serialize_u8(*v as u8)
+      },
+      VOTableValue::Byte(v) => 
+        match self {
+          Schema::Byte { .. } => serializer.serialize_u8(*v),
+          Schema::Short { .. } => serializer.serialize_i16(*v as i16),
+          Schema::Int { .. } => serializer.serialize_i32(*v as i32),
+          Schema::Long { .. } => serializer.serialize_i64(*v as i64),
+          Schema::Float => serializer.serialize_f32(*v as f32),
+          Schema::Double => serializer.serialize_f64(*v as f64),
+          _ => Err(S::Error::custom(format!("Value of type Byte with schema: {:?}", self)))
+        }
+      VOTableValue::Short(v) => {
+        match self {
+          Schema::Short { .. } => serializer.serialize_i16(*v),
+          Schema::Int { .. } => serializer.serialize_i32(*v as i32),
+          Schema::Long { .. } => serializer.serialize_i64(*v as i64),
+          Schema::Float => serializer.serialize_f32(*v as f32),
+          Schema::Double => serializer.serialize_f64(*v as f64),
+          _ => Err(S::Error::custom(format!("Value of type Short with schema: {:?}", self)))
+        }
+      },
+      VOTableValue::Int(v) => {
+        match self {
+          Schema::Int { .. } => serializer.serialize_i32(*v),
+          Schema::Long { .. } => serializer.serialize_i64(*v as i64),
+          Schema::Float => serializer.serialize_f32(*v as f32),
+          Schema::Double => serializer.serialize_f64(*v as f64),
+          _ => Err(S::Error::custom(format!("Value of type Int with schema: {:?}", self)))
+        }
+      },
+      VOTableValue::Long(v) => {
+        match self {
+          Schema::Long { .. } => serializer.serialize_i64(*v),
+          Schema::Float => serializer.serialize_f32(*v as f32),
+          Schema::Double => serializer.serialize_f64(*v as f64),
+          _ => Err(S::Error::custom(format!("Value of type Long with schema: {:?}", self)))
+        }
+      },
+      VOTableValue::Float(v) => {
+        match self {
+          Schema::Float => serializer.serialize_f32(*v),
+          Schema::Double => serializer.serialize_f64(*v as f64),
+          _ => Err(S::Error::custom(format!("Value of type Float with schema: {:?}", self)))
+        }
+      },
+      VOTableValue::Double(v) => {
+        match self {
+          Schema::Float => serializer.serialize_f32(*v as f32),
+          Schema::Double => serializer.serialize_f64(*v),
+          _ => Err(S::Error::custom(format!("Value of type Double with schema: {:?}", self)))
+        }
+      },
+      VOTableValue::ComplexFloat((l, r)) =>
+        match self {
+          Schema::ComplexFloat => [*l, *r].serialize(serializer),
+          Schema::ComplexDouble => [*l as f64, *r as f64].serialize(serializer),
+          _ => Err(S::Error::custom(format!("Value of type ComplexDouble with schema: {:?}", self)))
+        }
+      VOTableValue::ComplexDouble((l, r)) =>
+        match self {
+          Schema::ComplexFloat => [*l as f32, *r as f32].serialize(serializer),
+          Schema::ComplexDouble => [*l, *r].serialize(serializer),
+          _ => Err(S::Error::custom(format!("Value of type ComplexDouble with schema: {:?}", self)))
+        }
+      VOTableValue::CharASCII(v) => {
+        match self {
+          Schema::CharASCII => serializer.serialize_u8(*v as u8),
+          Schema::CharUnicode => serializer.serialize_char(*v),
+          Schema::FixedLengthStringASCII { n_chars } => serialize_fixed_length_array(serializer, *n_chars, v.to_string().as_str().as_bytes()),
+          Schema::VariableLengthStringASCII => serialize_variable_length_array(serializer, v.to_string().as_str().as_bytes()),
+          Schema::FixedLengthStringUnicode { n_chars } => serialize_fixed_length_array(serializer, *n_chars, &encode_ucs2(v.to_string().as_str()).map_err(S::Error::custom)?),
+          Schema::VariableLengthStringUnicode => serialize_variable_length_array(serializer, &encode_ucs2(v.to_string().as_str()).map_err(S::Error::custom)?),
+          _ => Err(S::Error::custom(format!("Value of type CharASCII with schema: {:?}", self)))
+        }
+      },
+      VOTableValue::CharUnicode(v) => {
+        match self {
+          Schema::CharASCII => serializer.serialize_u8(*v as u8),
+          Schema::CharUnicode => serializer.serialize_char(*v),
+          Schema::FixedLengthStringASCII { n_chars } => serialize_fixed_length_array(serializer, *n_chars, v.to_string().as_str().as_bytes()),
+          Schema::VariableLengthStringASCII => serialize_variable_length_array(serializer, v.to_string().as_str().as_bytes()),
+          Schema::FixedLengthStringUnicode { n_chars } => serialize_fixed_length_array(serializer, *n_chars, &encode_ucs2(v.to_string().as_str()).map_err(S::Error::custom)?),
+          Schema::VariableLengthStringUnicode => serialize_variable_length_array(serializer, &encode_ucs2(v.to_string().as_str()).map_err(S::Error::custom)?),
+          _ => Err(S::Error::custom(format!("Value of type CharUnicode with schema: {:?}", self)))
+        }
+      },
       VOTableValue::String(s) =>
         match &self {
           Schema::FixedLengthStringASCII { n_chars } => serialize_fixed_length_array(serializer, *n_chars, s.as_bytes()),

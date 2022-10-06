@@ -116,9 +116,11 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
     let mut table = Self::new();
     for attr_res in attrs {
       let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
+      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
+      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
       table = match attr.key {
         b"ID" => table.set_id(value),
+        b"name" => table.set_name(value),
         b"ucd" => table.set_ucd(value),
         b"utype" => table.set_ucd(value),
         b"ref" => table.set_ref(value),

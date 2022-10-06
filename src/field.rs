@@ -105,7 +105,7 @@ pub struct Field {
   pub precision: Option<Precision>, // part of the schema
   #[serde(skip_serializing_if = "Option::is_none")]
   pub width: Option<u16>,           // part of the schema
-  #[serde(rename = "ref", skip_serializing_if = "Option::is_none")]
+  #[serde(skip_serializing_if = "Option::is_none")]
   pub xtype: Option<String>,
   #[serde(rename = "ref", skip_serializing_if = "Option::is_none")]
   pub ref_: Option<String>,
@@ -184,7 +184,8 @@ impl QuickXmlReadWrite for Field {
     let mut field = Self::new(NULL, NULL_DT);
     for attr_res in attrs {
       let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
+      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
+      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
       field = match attr.key {
         b"ID" => field.set_id(value),
         b"name" => { field.name = value.to_string(); field },

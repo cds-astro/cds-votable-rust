@@ -93,6 +93,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary<C> {
     writer.write_event(Event::Start(BytesStart::borrowed_name(Self::TAG_BYTES))).map_err(VOTableError::Write)?;
     if self.stream.content.is_some() {
       self.stream.write_start(writer)?;
+      writer.write(b"\n").map_err(VOTableError::Write)?;
       let content = self.stream.content.as_mut().unwrap();
       content.write_in_binary(writer, context)?;
       // self.content.write_in_datatable(&mut writer)?;     

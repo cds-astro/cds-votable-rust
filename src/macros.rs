@@ -283,7 +283,14 @@ macro_rules! push2write_opt_into_attr {
 macro_rules! push2write_extra {
   ($self:ident, $tag:ident) => {
     for (key, val) in &$self.extra {
-       $tag.push_attribute((key.as_str(), val.to_string().as_str()));
+      match val {
+        Value::Null => $tag.push_attribute((key.as_str(), "")),
+        Value::Bool(val) => $tag.push_attribute((key.as_str(), val.to_string().as_str())),
+        Value::Number(val) => $tag.push_attribute((key.as_str(), val.to_string().as_str())),
+        Value::String(val) => $tag.push_attribute((key.as_str(), val.to_string().as_str())),
+        Value::Array(_) => $tag.push_attribute((key.as_str(), val.to_string().as_str())),
+        Value::Object(_) => $tag.push_attribute((key.as_str(), val.to_string().as_str())),
+      }
     }
   }
 }

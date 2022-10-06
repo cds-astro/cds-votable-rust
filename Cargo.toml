@@ -14,13 +14,20 @@ format other than XML, such as JSON, TOML or YAML.
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+members = [
+  "crates/cli",
+]
+exclude = ["crates/wasm"]
+
+
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 byteorder = "1.4"
 paste = "1.0" # To create new identifier in macro
 quick-xml = "0.23"
 # quick-xml = { version = "0.23", features = [ "serialize" ] }
-serde_json = "1.0"
+serde_json = { version = "1.0", features = ["preserve_order", "float_roundtrip"] }
 serde_yaml = "0.9"
 toml = "0.5"
 quick-error = "2.0" # To handke error more easily

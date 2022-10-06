@@ -171,7 +171,7 @@ mod tests {
     assert_eq!(info.value.as_str(), "1.99+ (14-Oct-2013)");
     // Test write
     let mut writer = Writer::new(Cursor::new(Vec::new()));
-    info.write(&mut writer);
+    info.write(&mut writer, &());
     let output = writer.into_inner().into_inner();
     let output_str = unsafe { std::str::from_utf8_unchecked(output.as_slice()) };
     assert_eq!(output_str, xml);
@@ -239,7 +239,7 @@ mod tests {
   "#));
     // Test write
     let mut writer = Writer::new(Cursor::new(Vec::new()));
-    info.write(&mut writer).unwrap();
+    info.write(&mut writer, &()).unwrap();
     let output = writer.into_inner().into_inner();
     let output_str = unsafe { std::str::from_utf8_unchecked(output.as_slice()) };
     assert_eq!(output_str, xml);

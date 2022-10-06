@@ -63,6 +63,18 @@ quick_error! {
     ToUCS2(err: ucs2::Error) {
       display("To UCS2 error: {:?}", err)
     }
+    Json(err: serde_json::Error) {
+      display("Serde JSON error: {:?}", err)
+    }
+    Yaml(err: serde_yaml::Error) {
+      display("Serde Yaml error: {:?}", err)
+    }
+    TomlSer(err: toml::ser::Error) {
+      display("Serde Toml error: {:?}", err)
+    }
+    TomlDe(err: toml::de::Error) {
+      display("Serde Toml error: {:?}", err)
+    }
     Custom(err: std::string::String) {
       display("Custom error: {}", err)
     }
