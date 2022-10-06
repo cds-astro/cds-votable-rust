@@ -19,6 +19,34 @@ To build, c.f. wasm-bindgen [doc](https://rustwasm.github.io/docs/wasm-bindgen/r
 > wasm-pack build --out-name vot --target web --no-typescript --release
 
 
+## Insert in your web page
+
+See example in [index.html](index.html), simply add the following code snippet in your web page
+(plus the `pkg` ou build or retrieve from the github release section):
+```html
+    <script type="module">
+      import init, * as vot from './pkg/vot.js';
+      async function run() {
+        const wasm = await init().catch(console.error);
+	    window.vot = vot;
+      }
+      run();
+    </script>
+```
+
+You should then be able to call the following methods:
+```javascript
+vot.fromXML(string) -> JsObject
+vot.toSML(JsObject) -> String
+vot.fromJSON(string) -> JsObject
+vot.toJSON(JsObject) -> String
+vot.fromTOML(string) -> JsObject
+vot.toTOML(JsObject) -> String
+vot.fromYAML(string) -> JsObject
+vot.toYAML(JsObject) -> String
+```
+
+
 ## License
 
 Like most projects in Rust, this project is licensed under either of

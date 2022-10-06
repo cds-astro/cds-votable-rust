@@ -2,8 +2,8 @@
 
 # `votable-cli` or `VOTCli`
 
-A command-line to create and manipulate HEALPix **M**ulti-**O**rder **C**overage maps (**MOC**s),
-, see [this IVOA standard](https://ivoa.net/documents/MOC).
+A command-line to read and convert [VOTables](https://www.ivoa.net/documents/VOTable/20191021/REC-VOTable-1.4-20191021.html)
+from/to XML, JSON, TOML and YAML.
 
 ```bash
 > time vot xml xml -i VII.vot > xml.1.vot

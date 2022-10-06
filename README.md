@@ -92,7 +92,7 @@ let table = Table::new()
       .set_precision(Precision::new_dec(6))
       .set_description("Right Ascension of the object (ICRS) (ra)".into())
   ).push_field(
-    Field::new("m_SDSS12", Datatype::CharACII)
+    Field::new("m_SDSS12", Datatype::CharASCII)
       .set_ucd("meta.code.multip")
       .set_arraysize("1")
       .set_width(10)
@@ -454,6 +454,8 @@ votable:
 
 ## To-do list
 
+* [ ] Add a check method ensuring that user input VOTAbleValue (using the API to build a VOTable) 
+      matches the table schema (or automatically converting in the right VOTableValue)
 * [ ] Add much more tests!
 * [ ] Add possibility to convert to/from `TABLEDATA`, `BINARY`, `BINARY2`
 * [ ] Enrich `votable::impls::Schema.serialize_seed`
