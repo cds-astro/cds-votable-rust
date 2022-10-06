@@ -329,7 +329,7 @@ mod tests {
       let mut event = reader.read_event(&mut buff).unwrap();
       match &mut event {
         Event::Empty(ref mut e) if e.name() == TimeSys::TAG_BYTES => {
-          let mut timesys = TimeSys::from_attributes(e.attributes()).unwrap();
+          let timesys = TimeSys::from_attributes(e.attributes()).unwrap();
           assert_eq!(timesys.id, "time_frame");
           assert_eq!(timesys.timeorigin, Some(2455197.5));
           assert_eq!(timesys.timescale, TimeScale::TCB);
@@ -342,7 +342,7 @@ mod tests {
     };
     // Test write
     let mut writer = Writer::new(Cursor::new(Vec::new()));
-    timesys.write(&mut writer, &());
+    timesys.write(&mut writer, &()).unwrap();
     let output = writer.into_inner().into_inner();
     let output_str = unsafe { std::str::from_utf8_unchecked(output.as_slice()) };
     assert_eq!(output_str, xml);

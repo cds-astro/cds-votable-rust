@@ -190,7 +190,7 @@ impl QuickXmlReadWrite for Field {
         b"ID" => field.set_id(value),
         b"name" => { field.name = value.to_string(); field },
         b"datatype" =>  { field.datatype = value.parse::<Datatype>().map_err(VOTableError::ParseDatatype)?; field},
-        b"unit" => field.set_utype(value),
+        b"unit" => field.set_unit(value),
         b"precision" => field.set_precision(value.parse::<Precision>().map_err(VOTableError::ParseInt)?),
         b"width" => field.set_width(value.parse().map_err(VOTableError::ParseInt)?),
         b"xtype" => field.set_xtype(value),

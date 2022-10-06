@@ -143,8 +143,7 @@ pub(crate) fn is_empty(text: &BytesText) -> bool {
 
 #[cfg(test)]
 mod tests {
-    
-    use std::io::stdout;
+    use std::str::from_utf8;
     use quick_xml::Writer;
     use serde_json::{Number, Value};
     use crate::data::Data;
@@ -160,29 +159,15 @@ mod tests {
         field::{Field, Precision},
         coosys::{System, CooSys},
         votable::{Version, VOTable},
-        impls::mem::{InMemTableDataStringRows, InMemTableDataRows},
+        impls::mem::InMemTableDataRows,
     };
     
     #[test]
     fn test_create_in_mem() {
-        /*let rows = vec![
-            vec!["ra1".to_owned(), "sdss1".to_owned(), "u1".to_owned()],
-            vec!["ra2".to_owned(), "sdss2".to_owned(), "u2".to_owned()],
-            vec!["ra3".to_owned(), "sdss3".to_owned(), "u3".to_owned()],
-            vec!["ra4".to_owned(), "sdss4".to_owned(), "u4".to_owned()],
-        ];
-        let data_content = InMemTableDataStringRows::new(rows);*/
-
-        /*let rows = vec![
-            vec![Value::Number(Number::from_f64(f64::NAN).unwrap()), Value::String("sdss1".to_owned()), Value::Number(Number::from(u64::MAX))],
-        ];
-        let rows = vec![
-            vec![Value::Number(Number::from_f64(0.65).unwrap()), Value::String("sdss1".to_owned()), Value::Number(Number::from(64))],
-        ];*/
         let rows = vec![
             vec![
                 VOTableValue::Double(f64::NAN), 
-                VOTableValue::String("sdss1".to_owned()),
+                VOTableValue::String("*".to_owned()),
                 VOTableValue::Long(i64::MAX)
             ],
             vec![
@@ -192,7 +177,7 @@ mod tests {
             ],
             vec![
                 VOTableValue::Null,
-                VOTableValue::String("sdss2".to_owned()),
+                VOTableValue::String("*".to_owned()),
                 VOTableValue::Long(0)
             ],
         ];
@@ -211,22 +196,16 @@ mod tests {
                 .set_precision(Precision::new_dec(6))
                 .set_description("Right Ascension of the object (ICRS) (ra)".into())
                 .insert_extra("toto", Number::from_f64(0.5).map(Value::Number).unwrap_or(Value::Null))
-                .insert_extra("tata", Number::from_f64(0.6).map(Value::Number).unwrap_or(Value::Null))
           ).push_field(
-            Field::new("m_SDSS12", Datatype::CharACII)
+            Field::new("m_SDSS12", Datatype::CharASCII)
               .set_ucd("meta.code.multip")
-              .set_arraysize("1")
-              .set_width(10)
-              .set_precision(Precision::new_dec(6))
+              .set_width(1)
               .set_description("[*] The asterisk indicates that 2 different SDSS objects share the same SDSS12 name".into())
               .push_link(Link::new().set_href("http://vizier.u-strasbg.fr/viz-bin/VizieR-4?-info=XML&amp;-out.add=.&amp;-source=V/147&amp;SDSS12=${SDSS12}"))
         ).push_field(
-            Field::new("umag", Datatype::Float)
+            Field::new("umag", Datatype::LongInt)
               .set_unit("mag")
               .set_ucd("phot.mag;em.opt.U")
-              .set_arraysize("1")
-              .set_width(6)
-              .set_precision(Precision::new_dec(3))
               .set_description("[4/38]? Model magnitude in u filter, AB scale (u) (5)".into())
               .set_values(Values::new().set_null("NaN"))
         ).set_data(Data::new_empty().set_tabledata(data_content));
@@ -290,44 +269,67 @@ In this version, NULL integer columns are written as an empty string
 
         match serde_json::to_string_pretty(&votable) {
             Ok(content) => {
-                println!("{}", &content);
+                // println!("{}", &content);
                 let votable2 = serde_json::de::from_str::<VOTable<InMemTableDataRows>>(content.as_str()).unwrap();
-                let content2 = serde_json::to_string_pretty(&votable).unwrap();
+                let content2 = serde_json::to_string_pretty(&votable2).unwrap();
                 assert_eq!(content, content2);
             },
-            Err(error) => println!("{:?}", &error),
+            Err(error) => {
+                println!("{:?}", &error);
+                assert!(false);
+            },
         }
 
         println!("\n\n#### YAML ####\n");
 
         match serde_yaml::to_string(&votable) {
             Ok(content) => {
-                println!("{}", &content);
+                // println!("{}", &content);
                 let votable2 = serde_yaml::from_str::<VOTable<InMemTableDataRows>>(content.as_str()).unwrap();
-                let content2 = serde_yaml::to_string(&votable).unwrap();
+                let content2 = serde_yaml::to_string(&votable2).unwrap();
                 assert_eq!(content, content2);
             },
-            Err(error) => println!("{:?}", &error),
+            Err(error) => {
+                println!("{:?}", &error);
+                assert!(false);
+            },
         }
 
         println!("\n\n#### VOTABLE ####\n");
 
-        let mut write = Writer::new_with_indent(stdout(), b' ', 4);
+        let mut content = Vec::new();
+        let mut write = Writer::new_with_indent(/*stdout()*/ &mut content, b' ', 4);
         match votable.write(&mut write, &()) {
-            Ok(content) => println!("\nOK"),
-            Err(error) => println!("Error: {:?}", &error),
+            Ok(_) => {
+                let mut votable2 = VOTable::<InMemTableDataRows>::from_reader(content.as_slice()).unwrap();
+                let mut content2 =  Vec::new();
+                let mut write2 = Writer::new_with_indent(&mut content2, b' ', 4);
+                votable2.write(&mut write2, &()).unwrap();
+
+                eprintln!("CONTENT1:\n{}", from_utf8(content.as_slice()).unwrap());
+                eprintln!("CONTENT2:\n{}", from_utf8(content2.as_slice()).unwrap());
+
+                assert_eq!(content, content2);
+            },
+            Err(error) => {
+                println!("Error: {:?}", &error);
+                assert!(false);
+            },
         }
 
         println!("\n\n#### TOML ####\n");
 
         match toml::ser::to_string_pretty(&votable) {
             Ok(content) => {
-                println!("{}", &content);
+                // println!("{}", &content);
                 let votable2 = toml::de::from_str::<VOTable<InMemTableDataRows>>(content.as_str()).unwrap();
-                let content2 = toml::ser::to_string_pretty(&votable).unwrap();
+                let content2 = toml::ser::to_string_pretty(&votable2).unwrap();
                 assert_eq!(content, content2);
             },
-            Err(error) => println!("{:?}", &error),
+            Err(error) => {
+                println!("{:?}", &error);
+                assert!(false);
+            },
         }
         
         /*println!("\n\n#### XML ####\n");
@@ -340,6 +342,7 @@ In this version, NULL integer columns are written as an empty string
         // AVRO ?
     }
 
+    /* not a test, used for the README.md
     #[test]
     fn test_create_in_mem_simple() {
         let rows = vec![
@@ -359,7 +362,7 @@ In this version, NULL integer columns are written as an empty string
                 .set_precision(Precision::new_dec(6))
                 .set_description("Right Ascension of the object (ICRS) (ra)".into())
           ).push_field(
-            Field::new("m_SDSS12", Datatype::CharACII)
+            Field::new("m_SDSS12", Datatype::CharASsCII)
               .set_ucd("meta.code.multip")
               .set_arraysize("1")
               .set_width(10)
@@ -370,7 +373,7 @@ In this version, NULL integer columns are written as an empty string
             Field::new("umag", Datatype::Float)
               .set_unit("mag")
               .set_ucd("phot.mag;em.opt.U")
-              .set_width(6)
+              .set_width(2)
               .set_precision(Precision::new_dec(3))
               .set_description("[4/38]? Model magnitude in u filter, AB scale (u) (5)".into())
               .set_values(Values::new().set_null("NaN"))
@@ -435,5 +438,5 @@ In this version, NULL integer columns are written as an empty string
         }*/
 
         // AVRO ?
-    }
+    }*/
 }

@@ -364,7 +364,7 @@ impl<C: TableDataContent> VOTable<C> {
     Self::from_reader(s)
   }*/
   
-  fn from_reader<R: BufRead>(reader: R) -> Result<Self, VOTableError> {
+  pub(crate) fn from_reader<R: BufRead>(reader: R) -> Result<Self, VOTableError> {
     let mut reader = Reader::from_reader(reader);
     let mut buff: Vec<u8> = Vec::with_capacity(1024);
     loop {
@@ -525,15 +525,10 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
 
 #[cfg(test)]
 mod tests {
-  use std::io::{Cursor, stdout};
 
-  use quick_xml::{
-    Reader, Writer,
-    events::Event
-  };
+  use quick_xml::Writer;
   use crate::{
     QuickXmlReadWrite,
-    votable::VOTable,
     impls::mem::{InMemTableDataStringRows, InMemTableDataRows}
   };
   use crate::votable::VOTableWrapper;
@@ -564,14 +559,14 @@ mod tests {
     // let votable =  VOTable::<InMemTableDataStringRows>::from_file("resources/sdss12.vot").unwrap();
     let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/sdss12.vot").unwrap().unwrap();
     match serde_json::ser::to_string_pretty(&votable) {
-      Ok(content) => println!("{}", &content),
+      Ok(_content) => println!("\nOK"), // println!("{}", &content),
       Err(error) => {
         println!("{:?}", &error);
         assert!(false)
       },
     }
     match toml::ser::to_string_pretty(&votable) {
-      Ok(content) => println!("{}", &content),
+      Ok(_content) => println!("\nOK"), // println!("{}", &content),
       Err(error) => {
         println!("{:?}", &error);
         assert!(false)
@@ -590,7 +585,7 @@ mod tests {
   fn test_votable_read_binary_from_file() {
     let votable =  VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/binary.b64").unwrap().unwrap();
     match toml::ser::to_string_pretty(&votable) {
-      Ok(content) => println!("{}", &content),
+      Ok(_content) => println!("\nOK"), // println!("{}", &content),
       Err(error) => {
         println!("{:?}", &error);
         assert!(false);
@@ -601,10 +596,10 @@ mod tests {
   #[test]
   fn test_votable_read_binary2_from_file() {
     
-    let mut votable =  VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/gaia_dr3.b264").unwrap().unwrap();
+    let votable =  VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/gaia_dr3.b264").unwrap().unwrap();
     let mut votable = votable.wrap();
     match serde_json::ser::to_string_pretty(&votable) {
-      Ok(content) => println!("{}", &content),
+      Ok(_content) => println!("\nOK"), //println!("{}", &content),
       Err(error) => {
         println!("{:?}", &error);
         assert!(false);
@@ -614,7 +609,7 @@ mod tests {
     // if true { return; }
     
     match toml::ser::to_string_pretty(&votable) {
-      Ok(content) => println!("{}", &content),
+      Ok(_content) => println!("\nOK"), // println!("{}", &content),
       Err(error) => {
         println!("{:?}", &error);
         assert!(false);
@@ -625,7 +620,7 @@ mod tests {
     let mut votable2: Vec<u8> = Vec::new();
     let mut write = Writer::new_with_indent(/*stdout()*/ &mut votable2, b' ', 4);
     match votable.votable.write(&mut write, &()) {
-      Ok(content) => {
+      Ok(_content) => {
         println!("\nOK")
       },
       Err(error) => println!("Error: {:?}", &error),
@@ -634,9 +629,9 @@ mod tests {
     let votable2 =  String::from_utf8(votable2).unwrap();
     println!("{}", &votable2);
 
-    let mut votable3 = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_str(votable2.as_str()).unwrap();
+    let votable3 = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_str(votable2.as_str()).unwrap();
     match toml::ser::to_string_pretty(&votable3) {
-      Ok(content) => println!("{}", &content),
+      Ok(_content) => println!("\nOK"), // println!("{}", &content),
       Err(error) => {
         println!("{:?}", &error);
         assert!(false);

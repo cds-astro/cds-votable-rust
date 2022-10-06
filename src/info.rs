@@ -152,7 +152,7 @@ mod tests {
           return info;
         }
         Event::Empty(ref mut e) if e.name() == Info::TAG_BYTES => {
-          let mut info = Info::from_attributes(e.attributes()).unwrap();
+          let info = Info::from_attributes(e.attributes()).unwrap();
           return info;
         }
         Event::Text(ref mut e) if e.escaped().is_empty() => (), // First even read
@@ -171,7 +171,7 @@ mod tests {
     assert_eq!(info.value.as_str(), "1.99+ (14-Oct-2013)");
     // Test write
     let mut writer = Writer::new(Cursor::new(Vec::new()));
-    info.write(&mut writer, &());
+    info.write(&mut writer, &()).unwrap();
     let output = writer.into_inner().into_inner();
     let output_str = unsafe { std::str::from_utf8_unchecked(output.as_slice()) };
     assert_eq!(output_str, xml);

@@ -633,15 +633,15 @@ impl From<&Field> for Schema {
           .transpose()
           .unwrap_or_default() // i.e. null = None
       },
-      (Datatype::CharACII, None) => Schema::CharASCII,
+      (Datatype::CharASCII, None) => Schema::CharASCII,
       (Datatype::CharUnicode, None) => Schema::CharUnicode,
       (Datatype::Float, None) => Schema::Float,
       (Datatype::Double, None) => Schema::Double,
       (Datatype::ComplexFloat, None) => Schema::ComplexFloat,
       (Datatype::ComplexDouble, None) => Schema::ComplexDouble,
       // Char/String
-      (Datatype::CharACII, Some("1")) => Schema::CharASCII,
-      (Datatype::CharACII, Some(size)) =>
+      (Datatype::CharASCII, Some("1")) => Schema::CharASCII,
+      (Datatype::CharASCII, Some(size)) =>
         match fixed_length_array(size) {
           Err(e) => {
             eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);

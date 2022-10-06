@@ -461,7 +461,7 @@ mod tests {
       let mut event = reader.read_event(&mut buff).unwrap();
       match &mut event {
         Event::Empty(ref mut e) if e.name() == CooSys::TAG_BYTES => {
-          let mut coosys = CooSys::from_attributes(e.attributes()).unwrap();
+          let coosys = CooSys::from_attributes(e.attributes()).unwrap();
           assert_eq!(coosys.id, "J2000");
           match &coosys.coosys {
             System::EquatorialFK5 { equinox, epoch} => {
@@ -478,7 +478,7 @@ mod tests {
     };
     // Test write
     let mut writer = Writer::new(Cursor::new(Vec::new()));
-    coosys.write(&mut writer, &());
+    coosys.write(&mut writer, &()).unwrap();
     let output = writer.into_inner().into_inner();
     let output_str = unsafe { std::str::from_utf8_unchecked(output.as_slice()) };
     assert_eq!(output_str, xml);

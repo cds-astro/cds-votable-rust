@@ -20,7 +20,7 @@ pub enum Datatype {
   #[serde(rename = "long")]
   LongInt,
   #[serde(rename = "char")]
-  CharACII,
+  CharASCII,
   #[serde(rename = "unicodeChar")]
   CharUnicode,
   #[serde(rename = "float")]
@@ -44,7 +44,7 @@ impl FromStr for Datatype {
       "short" =>  Ok(Datatype::ShortInt),
       "int" =>  Ok(Datatype::Int),
       "long" =>  Ok(Datatype::LongInt),
-      "char" =>  Ok(Datatype::CharACII),
+      "char" =>  Ok(Datatype::CharASCII),
       "unicodeChar" =>  Ok(Datatype::CharUnicode),
       "float" =>  Ok(Datatype::Float),
       "double" =>  Ok(Datatype::Double),
@@ -65,7 +65,7 @@ impl fmt::Display for Datatype {
         Datatype::ShortInt => "short",
         Datatype::Int => "int",
         Datatype::LongInt => "long",
-        Datatype::CharACII => "char",
+        Datatype::CharASCII => "char",
         Datatype::CharUnicode => "unicodeChar",
         Datatype::Float => "float",
         Datatype::Double => "double",

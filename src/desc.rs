@@ -98,7 +98,7 @@ mod tests {
       };
     // Test write
     let mut writer = Writer::new(Cursor::new(Vec::new()));
-    description.write(&mut writer, &());
+    description.write(&mut writer, &()).unwrap();
     let output = writer.into_inner().into_inner();
     let output_str = unsafe { std::str::from_utf8_unchecked(output.as_slice()) };
     assert_eq!(output_str, xml);
