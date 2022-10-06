@@ -1,0 +1,19 @@
+<html>
+  <head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
+  </head>
+  <body>
+    <script type="module">
+      import init, * as vot from './pkg/vot.js';
+      async function run() {
+        const wasm = await init().catch(console.error);
+	    window.vot = vot;
+      }
+      run();
+    </script>
+    <p>
+      <label>Load from file. On must then call <pre>vot.getLastLoaded()</pre>:</label>
+      <button onclick="vot.fromLocalFile();">Load File</button>
+    </p>
+  </body>
+</html>
