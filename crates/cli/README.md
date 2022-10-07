@@ -89,6 +89,7 @@ Install from using `cargo`:
 cargo install --path crates/cli
 ```
 
+
 ## Help message
 
 ```bash
@@ -109,6 +110,7 @@ Options:
   -V, --version        Print version information
 
 ```
+
 
 ## Example
 
