@@ -51,3 +51,17 @@ features = [
     'Url',
     'Window',
 ]
+
+[profile.release]
+opt-level = 'z'
+debug = false
+debug-assertions = false
+overflow-checks = false
+lto = true
+panic = 'unwind'
+incremental = false
+codegen-units = 16
+rpath = false
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = true
