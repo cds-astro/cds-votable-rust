@@ -5,6 +5,12 @@
 Library to read/write [VOTables](https://www.ivoa.net/documents/VOTable/)
 in Rust and to convert them in JSON, YAML, TOML and back to XML.
 
+[![](https://img.shields.io/crates/v/votable.svg)](https://crates.io/crates/votable)
+[![](https://img.shields.io/crates/d/votable.svg)](https://crates.io/crates/votable)
+[![API Documentation on docs.rs](https://docs.rs/votable/badge.svg)](https://docs.rs/votable/)
+[![BenchLib](https://github.com/cds-astro/cds-votable-rust/actions/workflows/libtest.yml/badge.svg)](https://github.com/cds-astro/cds-moc-rust/actions/workflows/libtest.yml)
+
+
 VOT Lib Rust is used in: 
 * [VOTCli](https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli) 
   convert VOTables from the command line;
@@ -22,7 +28,7 @@ We are (reasonably) open to changes in the various format, e.g.:
 * ...
 
 More testing is required, especially the bit type and arrays.
-Please, provide us with VOTable examples!
+Please, provide us with your VOTable examples!
 
 
 ## Why JSON, TOML, YAML in addition to XML
@@ -30,12 +36,22 @@ Please, provide us with VOTable examples!
 VOTable is an XML based format. Why other formats?
 * JSON: to easily manipulate VOTable data in Web Browsers since JSON 
   represent JavaScript objects (and all browsers parse JSON into 
-  JavaScript objects).
+  JavaScript objects natively).
 * TOML: to easily update manually VOTables (especially the metadata part of 
-  VOTables). Moreover, it is the more compact of all four formats.
+  VOTables). Moreover, it is quite compact.
 * YAML: because some people like it, and it was almost free to implement 
   (thanks to serde).
 
+## Motivations
+
+* Support natively the VOTable format in the new CDS internal tool `qat2s`
+  (tool to query and manipulate possibly large catalogues with multi-thread capabilities).
+* Store VizieR (large) catalogues rich metadata in a user friendly format (TOML) while
+  being able to return the same VOTable header as VizieR (without using a database connexion).
+    + for `qat2s`, `ExXmatch`, `progressive catalogue`
+* Add a Rust VOTable parsing and writting library for 
+  [Aladin Lite](https://github.com/cds-astro/aladin-lite) V3
+* ...
 
 ## Design choices and problems
 
@@ -58,6 +74,7 @@ We use *infos* (only for RESOURCE) and *post_infos* arrays.
 Quoting the IVOA document: 
 > The INFO element may occur before the closing tags /TABLE and /RESOURCE and 
 > /VOTABLE (enables post-operational diagnostics)
+> 
 (we wonder if post-operational diagnostics should not have a name different 
 from INFO in VOTables).
 
@@ -74,13 +91,19 @@ GROUP may contain FIELDRef.
 In JSON/TOML/YAML, there is no difference between attribute and sub-elements 
 names (all in camel case).
 
+WARNING: TOML does not supports `null` (we so far convert `null` values by an empty string).
+
 ## Other way to convert from VOTable to JSON
 
-It is also possible to use the following python snippet from 
-[the MIVOT](https://github.com/ivoa-std/ModelInstanceInVot)
-[client code](https://github.com/ivoa/modelinstanceinvot-code)
+The XML2JSON conversion has been exercised
 by [Laurent Michel](https://github.com/lmichel)
-to automatically convert XML (not VOTable specific) to JSON:
+in the context of the processing of model annotations in VOTables 
+([the MIVOT](https://github.com/ivoa-std/ModelInstanceInVot)).
+The use case is to convert model instances, serialized in XML, into JSON messages.  
+The conversion is using standard Python tools ([xmltodic](https://pypi.org/project/xmltodict/) module). 
+The code below is extracted from the [client code](https://github.com/ivoa/modelinstanceinvot-code) project. 
+It is to be noted that the translation rules are not PYTHON (nor VOTable) specific, 
+they are also implemented in e.g. [XSLT](https://github.com/bramstein/xsltjson).
 ```python
 import os
 import xmltodict
@@ -111,12 +134,14 @@ with open(os.path.join(data_path, "votable_to_json.json"), 'w') as file:
   file.write(json.dumps(raw_json, indent=2))
 ```
 
+
 Advantages:
+* standard
 * few lines of python
 
 Inconvenient:
-* the order of elements (especailly INFOs and post processing INFOs) is lost
-* it is a one wau=y conversion (not possible to then convert from JSON to VOTable)
+* the order of elements (especially INFOs and post processing INFOs) is lost
+* it is a one way conversion (not possible to then convert from JSON to VOTable)
 
 
 ## Example
@@ -507,13 +532,16 @@ votable:
 
 ## To-do list
 
+* [ ] Fill the doc for the Rust library (but I so far do not know people interested in such a lib since Rust is not very used in the astronomy community so far, so...)
 * [ ] Add a check method ensuring that user input VOTAbleValue (using the API to build a VOTable) 
       matches the table schema (or automatically converting in the right VOTableValue)
 * [ ] Add much more tests!
 * [ ] Add possibility to convert to/from `TABLEDATA`, `BINARY`, `BINARY2`
-* [ ] Enrich `votable::impls::Schema.serialize_seed`
+* [ ] Enrich `votable::impls::Schema.serialize_seed` (possible bugs when deserializing JSON/TOML/YAML arrays and converting to BINARY or BINARY2)
 * [ ] Write a custom deserializer for `VOTableValue` (look at cargo-expand output for a basis)
 * [ ] Implements `toCSV` (but not `fromCSV`)
+* ...
+
 
 ## License
 

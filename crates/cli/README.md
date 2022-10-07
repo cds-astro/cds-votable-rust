@@ -89,6 +89,26 @@ Install from using `cargo`:
 cargo install --path crates/cli
 ```
 
+## Help message
+
+```bash
+> vot --help
+Command-line to convert IVOA VOTables in XML, JSON, YAML and TOML.
+
+Usage: vot [OPTIONS] <INPUT_FMT> <OUTPUT_FMT>
+
+Arguments:
+  <INPUT_FMT>   Format of the input document ('xml', 'json', 'yaml' or 'toml')
+  <OUTPUT_FMT>  Format of the output document ('xml', 'json', 'yaml' or 'toml')
+
+Options:
+  -i, --input <FILE>   Input file (else read from stdin)
+  -o, --output <FILE>  Output file (else write to stdout)
+  -p, --pretty         Pretty print (for JSON and TOML)
+  -h, --help           Print help information
+  -V, --version        Print version information
+
+```
 
 ## Example
 
@@ -98,7 +118,7 @@ real	0m0,009s
 user	0m0,001s
 sys 0m0,009s
 
-> time vot xml toml --pretty -:i VII.vot | vot toml json | vot json xml > xml.2.vot
+> time vot xml toml --pretty -i VII.vot | vot toml json | vot json xml > xml.2.vot
 real	0m0,022s
 user	0m0,018s
 sys	0m0,012s
