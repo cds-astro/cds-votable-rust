@@ -182,6 +182,7 @@ impl QuickXmlReadWrite for Field {
     const NULL: &str = "@TBD";
     const NULL_DT: Datatype = Datatype::Logical;
     let mut field = Self::new(NULL, NULL_DT);
+    let mut has_datatype = false;
     for attr_res in attrs {
       let attr = attr_res.map_err(VOTableError::Attr)?;
       let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
@@ -189,7 +190,11 @@ impl QuickXmlReadWrite for Field {
       field = match attr.key {
         b"ID" => field.set_id(value),
         b"name" => { field.name = value.to_string(); field },
-        b"datatype" =>  { field.datatype = value.parse::<Datatype>().map_err(VOTableError::ParseDatatype)?; field},
+        b"datatype" =>  { 
+          field.datatype = value.parse::<Datatype>().map_err(VOTableError::ParseDatatype)?;
+          has_datatype = true;
+          field
+        },
         b"unit" => field.set_unit(value),
         b"precision" => field.set_precision(value.parse::<Precision>().map_err(VOTableError::ParseInt)?),
         b"width" => field.set_width(value.parse().map_err(VOTableError::ParseInt)?),
@@ -204,7 +209,7 @@ impl QuickXmlReadWrite for Field {
         ),
       }
     }
-    if field.name.as_str() == NULL || field.datatype == NULL_DT {
+    if field.name.as_str() == NULL || !has_datatype {
       Err(VOTableError::Custom(format!("Attributes 'name' and 'datatype' are mandatory in tag '{}'", Self::TAG)))
     } else {
       Ok(field)

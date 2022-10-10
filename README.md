@@ -50,7 +50,7 @@ VOTable is an XML based format. Why other formats?
   being able to return the same VOTable header as VizieR (without using a database connexion).
     + for `qat2s`, `ExXmatch`, `progressive catalogue`
 * Add a Rust VOTable parsing and writting library for 
-  [Aladin Lite](https://github.com/cds-astro/aladin-lite) V3
+  [Aladin Lite V3](https://github.com/cds-astro/aladin-lite/tree/develop)
 * ...
 
 ## Design choices and problems
@@ -91,7 +91,11 @@ GROUP may contain FIELDRef.
 In JSON/TOML/YAML, there is no difference between attribute and sub-elements 
 names (all in camel case).
 
-WARNING: TOML does not supports `null` (we so far convert `null` values by an empty string).
+### WARNINGS
+
+* TOML does not supports `null` (we so far convert `null` values by an empty string).
+* The default provided implementation loads all data in memory, so it is not
+  adapted for large files!
 
 ## Other way to convert from VOTable to JSON
 

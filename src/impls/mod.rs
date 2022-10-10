@@ -204,7 +204,17 @@ impl Schema {
             if s == "?" {
               VOTableValue::Null
             } else {
-              VOTableValue::Bool(s.parse().map_err(VOTableError::ParseBool)?)
+              VOTableValue::Bool(
+                match s {
+                  "0" | "f" | "F" => false,
+                  "1" | "t" | "T" => true,
+                  _ => {
+                    s.parse().map_err(|_| VOTableError::Custom(
+                      format!("Unable too parse boolean value. Expected: '0', '1', 't', 'f', 'T', 'F' or 'true', 'false'. Actual: '{}'", s))
+                    )?
+                  } 
+                }
+              )
             }
           }
           Schema::Bit => 
@@ -799,6 +809,9 @@ pub fn fixed_length_array(arraysize: &str) -> Result<Result<usize, usize>, Parse
   } else {
     (arraysize, false)
   };
+  if arraysize.is_empty() {
+    return Ok(Err(0));
+  }
   let elems = arraysize.split('x')
     .map(|v| v.parse::<usize>())
     .collect::<Result<Vec<usize>, ParseIntError>>()?;
