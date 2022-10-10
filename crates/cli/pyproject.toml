@@ -1,14 +1,16 @@
-[build-system]
-requires = ["maturin>=0.13,<0.14"]
-build-backend = "maturin"
-
-# See: https://maturin.rs/metadata.html
-
+# Enrich using https://www.maturin.rs/metadata.html
 [project]
 name = "votable-cli"
+classifiers = [
+    "Programming Language :: Rust",
+]
 
 [project.urls]
 repository = "https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli"
+
+[build-system]
+requires = ["maturin>=0.13,<0.14"]
+build-backend = "maturin"
 
 [tool.maturin]
 # Bindings type
