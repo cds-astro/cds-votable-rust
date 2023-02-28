@@ -61,7 +61,7 @@ impl TableDataContent for InMemTableDataStringRows {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) =>
-          match e.name() {
+          match e.local_name() {
             b"TR" => {}
             b"TD" => {
               let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
@@ -72,9 +72,9 @@ impl TableDataContent for InMemTableDataStringRows {
             }
             _ => eprintln!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
           }
-        Event::Empty(e) if e.name() == b"TD" => row.push(String::from("")),
+        Event::Empty(e) if e.local_name() == b"TD" => row.push(String::from("")),
         Event::End(e) =>
-          match e.name() {
+          match e.local_name() {
             b"TD" => {}
             b"TR" => self.rows.push(mem::replace(&mut row, Vec::with_capacity(context.len()))),
             TableData::<Self>::TAG_BYTES => return Ok(reader),
@@ -166,7 +166,7 @@ impl TableDataContent for InMemTableDataRows {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) =>
-          match e.name() {
+          match e.local_name() {
             b"TR" => { }
             b"TD" => {
               let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
@@ -184,11 +184,11 @@ impl TableDataContent for InMemTableDataRows {
             }
             _ => eprintln!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
           }
-        Event::Empty(e) if e.name() == b"TD" => {
+        Event::Empty(e) if e.local_name() == b"TD" => {
           row.push(VOTableValue::Null)
         },
         Event::End(e) =>
-          match e.name() {
+          match e.local_name() {
             b"TD" => {}
             b"TR" => self.rows.push(mem::replace(&mut row, Vec::with_capacity(context.len()))),
             TableData::<Self>::TAG_BYTES => return Ok(reader),

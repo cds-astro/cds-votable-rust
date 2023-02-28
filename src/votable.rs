@@ -382,7 +382,7 @@ impl<C: TableDataContent> VOTable<C> {
               r.map(|r| unsafe { String::from_utf8_unchecked(r.as_ref().to_vec()) }).unwrap_or_else(|e| format!("Error: {:?}", e))
             ).unwrap_or_else(|| String::from("error")),
           ),
-        Event::Start(ref mut e) if e.name() == VOTable::<C>::TAG_BYTES => {
+        Event::Start(ref mut e) if e.local_name() == VOTable::<C>::TAG_BYTES => {
           let mut votable = VOTable::<C>::from_attributes(e.attributes()).unwrap();
           votable.read_sub_elements_and_clean(reader, &mut buff, &())?;
           // ignore the remaining of the reader !
@@ -451,7 +451,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => {
-          match e.name() {
+          match e.local_name() {
             Description::TAG_BYTES => 
               from_event_start_desc!(self, Description, reader, reader_buff, e),
             Info::TAG_BYTES if self.resources.is_empty() => 
@@ -464,21 +464,21 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
               self.resources.push(from_event_start!(Resource, reader, reader_buff, e)),
             Info::TAG_BYTES => 
               self.post_infos.push(from_event_start!(Info, reader, reader_buff, e)),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.name().to_vec(), Self::TAG)),
+            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
           }
         }
         Event::Empty(ref e) => {
-          match e.name() {
+          match e.local_name() {
             Info::TAG_BYTES if self.resources.is_empty() => self.elems.push(VOTableElem::Info(Info::from_event_empty(e)?)),
             CooSys::TAG_BYTES => self.elems.push(VOTableElem::CooSys(CooSys::from_event_empty(e)?)),
             TimeSys::TAG_BYTES => self.elems.push(VOTableElem::TimeSys(TimeSys::from_event_empty(e)?)),
             Group::TAG_BYTES => self.elems.push(VOTableElem::Group(Group::from_event_empty(e)?)),
             Param::TAG_BYTES => self.elems.push(VOTableElem::Param(Param::from_event_empty(e)?)),
             Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.name().to_vec(), Self::TAG)),
+            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
           }
         }
-        Event::End(e) if e.name() == Self::TAG_BYTES => 
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => 
           return if self.resources.is_empty() {
             Err(VOTableError::Custom(String::from("No resource found in the VOTable")))
           } else {

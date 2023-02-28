@@ -147,7 +147,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => {
-          match e.name() {
+          match e.local_name() {
             Description::TAG_BYTES => from_event_start_desc!(self, Description, reader, reader_buff, e),
             Field::TAG_BYTES => self.elems.push(TableElem::Field(from_event_start!(Field, reader, reader_buff, e))),
             Param::TAG_BYTES => self.elems.push(TableElem::Param(from_event_start!(Param, reader, reader_buff, e))),
@@ -155,21 +155,21 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
             Link::TAG_BYTES => self.links.push(from_event_start!(Link, reader, reader_buff, e)),
             Data::<C>::TAG_BYTES => self.data = Some(from_event_start!(Data, reader, reader_buff, e, self.elems)),
             Info::TAG_BYTES => self.infos.push(from_event_start!(Info, reader, reader_buff, e)),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.name().to_vec(), Self::TAG)),
+            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
           }
         }
         Event::Empty(ref e) => {
-          match e.name() {
+          match e.local_name() {
             Field::TAG_BYTES => self.elems.push(TableElem::Field(Field::from_event_empty(e)?)),
             Param::TAG_BYTES => self.elems.push(TableElem::Param(Param::from_event_empty(e)?)),
             TableGroup::TAG_BYTES => self.elems.push(TableElem::TableGroup(TableGroup::from_event_empty(e)?)),
             Link::TAG_BYTES => self.links.push(Link::from_event_empty(e)?),
             Info::TAG_BYTES => self.infos.push(Info::from_event_empty(e)?),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.name().to_vec(), Self::TAG)),
+            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
           }
         }
         Event::Text(e) if is_empty(e) => { },
-        Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(reader),
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }

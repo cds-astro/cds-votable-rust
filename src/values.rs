@@ -332,20 +332,20 @@ impl QuickXmlReadWrite for Values {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => {
-          match e.name() {
+          match e.local_name() {
             Opt::TAG_BYTES => self.opts.push(from_event_start!(Opt, reader, reader_buff, e)),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.name().to_vec(), Self::TAG)),
+            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
           }
         }
         Event::Empty(ref e) => {
-          match e.name() {
+          match e.local_name() {
             Min::TAG_BYTES => self.min = Some(Min::from_event_empty(e)?),
             Max::TAG_BYTES => self.max = Some(Max::from_event_empty(e)?),
             Opt::TAG_BYTES => self.opts.push(Opt::from_event_empty(e)?),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.name().to_vec(), Self::TAG)),
+            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
           }
         }
-        Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(reader),
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }

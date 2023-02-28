@@ -139,7 +139,7 @@ macro_rules! read_content {
       $self.content = Some(link_content);
       let event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
       match &event {
-        Event::End(e) if e.name() == $Self::TAG_BYTES => Ok($reader),
+        Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok($reader),
         _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End. Actual: {:?}.", $Self::TAG, event))),
       }
     }
@@ -154,7 +154,7 @@ macro_rules! read_content {
       $self.$content = link_content;
       let event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
       match &event {
-        Event::End(e) if e.name() == $Self::TAG_BYTES => Ok($reader),
+        Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok($reader),
         _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End. Actual: {:?}.", $Self::TAG, event))),
       }
     }

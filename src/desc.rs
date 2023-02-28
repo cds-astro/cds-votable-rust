@@ -78,7 +78,7 @@ mod tests {
     let mut description = loop {
       let mut event = reader.read_event(&mut buff).unwrap();
       match &mut event {
-        Event::Start(ref mut e) if e.name() == Description::TAG_BYTES => {
+        Event::Start(ref mut e) if e.local_name() == Description::TAG_BYTES => {
           let mut desc = Description::from_attributes(e.attributes()).unwrap();
           desc.read_sub_elements_and_clean(reader, &mut buff, &()).unwrap();
           assert_eq!(

@@ -146,12 +146,12 @@ mod tests {
     loop {
       let mut event = reader.read_event(&mut buff).unwrap();
       match &mut event {
-        Event::Start(ref mut e) if e.name() == Info::TAG_BYTES => {
+        Event::Start(ref mut e) if e.local_name() == Info::TAG_BYTES => {
           let mut info = Info::from_attributes(e.attributes()).unwrap();
           info.read_sub_elements_and_clean(reader, &mut buff, &()).unwrap();
           return info;
         }
-        Event::Empty(ref mut e) if e.name() == Info::TAG_BYTES => {
+        Event::Empty(ref mut e) if e.local_name() == Info::TAG_BYTES => {
           let info = Info::from_attributes(e.attributes()).unwrap();
           return info;
         }

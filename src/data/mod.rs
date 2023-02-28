@@ -119,7 +119,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => {
-          match e.name() {
+          match e.local_name() {
             TableData::<C>::TAG_BYTES => reader = self.data.read_sub_elements(reader, reader_buff, context)?,
             Binary::<C>::TAG_BYTES => {
               self.data = DataElem::Binary(Binary::new());
@@ -134,17 +134,17 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
               reader = self.data.read_sub_elements(reader, reader_buff, context)?
             }
             Info::TAG_BYTES => self.infos.push(from_event_start!(Info, reader, reader_buff, e)),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.name().to_vec(), Self::TAG)),
+            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
           }
         }
         Event::Empty(ref e) => {
-          match e.name() {
+          match e.local_name() {
             Info::TAG_BYTES => self.infos.push(Info::from_event_empty(e)?),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.name().to_vec(), Self::TAG)),
+            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
           }
         }
         Event::Text(e) if is_empty(e) => { },
-        Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(reader),
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }

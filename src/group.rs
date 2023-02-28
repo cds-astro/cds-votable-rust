@@ -113,21 +113,22 @@ impl QuickXmlReadWrite for Group {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => {
-          match e.name() {
+          match e.local_name() {
             Description::TAG_BYTES => { from_event_start_desc!(self, Description, reader, reader_buff, e); }
             ParamRef::TAG_BYTES => self.elems.push(GroupElem::ParamRef(from_event_start!(ParamRef, reader, reader_buff, e))),
+            Param::TAG_BYTES => self.elems.push(GroupElem::Param(from_event_start!(Param, reader, reader_buff, e))),
             Group::TAG_BYTES => self.elems.push(GroupElem::Group(from_event_start!(Group, reader, reader_buff, e))),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.name().to_vec(), Self::TAG)),
+            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
           }
         }
         Event::Empty(ref e) => {
-          match e.name() {
+          match e.local_name() {
             ParamRef::TAG_BYTES => self.elems.push(GroupElem::ParamRef(ParamRef::from_event_empty(e)?)),
             Param::TAG_BYTES => self.elems.push(GroupElem::Param(Param::from_event_empty(e)?)),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.name().to_vec(), Self::TAG)),
+            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
           }
         }
-        Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(reader),
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
@@ -272,23 +273,24 @@ impl QuickXmlReadWrite for TableGroup {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => {
-          match e.name() {
+          match e.local_name() {
             Description::TAG_BYTES => { from_event_start_desc!(self, Description, reader, reader_buff, e); }
             FieldRef::TAG_BYTES => self.elems.push(TableGroupElem::FieldRef(from_event_start!(FieldRef, reader, reader_buff, e))),
             ParamRef::TAG_BYTES => self.elems.push(TableGroupElem::ParamRef(from_event_start!(ParamRef, reader, reader_buff, e))),
+            Param::TAG_BYTES => self.elems.push(TableGroupElem::Param(from_event_start!(Param, reader, reader_buff, e))),
             TableGroup::TAG_BYTES => self.elems.push(TableGroupElem::TableGroup(from_event_start!(TableGroup, reader, reader_buff, e))),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.name().to_vec(), Self::TAG)),
+            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
           }
         }
         Event::Empty(ref e) => {
-          match e.name() {
+          match e.local_name() {
             FieldRef::TAG_BYTES => self.elems.push(TableGroupElem::FieldRef(FieldRef::from_event_empty(e)?)),
             ParamRef::TAG_BYTES => self.elems.push(TableGroupElem::ParamRef(ParamRef::from_event_empty(e)?)),
             Param::TAG_BYTES => self.elems.push(TableGroupElem::Param(Param::from_event_empty(e)?)),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.name().to_vec(), Self::TAG)),
+            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
           }
         }
-        Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(reader),
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }

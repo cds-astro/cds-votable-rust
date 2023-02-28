@@ -460,7 +460,7 @@ mod tests {
     let mut coosys = loop {
       let mut event = reader.read_event(&mut buff).unwrap();
       match &mut event {
-        Event::Empty(ref mut e) if e.name() == CooSys::TAG_BYTES => {
+        Event::Empty(ref mut e) if e.local_name() == CooSys::TAG_BYTES => {
           let coosys = CooSys::from_attributes(e.attributes()).unwrap();
           assert_eq!(coosys.id, "J2000");
           match &coosys.coosys {

@@ -1,6 +1,6 @@
 [package]
 name = "votable"
-version = "0.1.1-alpha"
+version = "0.1.1"
 authors = [
   "F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>",
   "T. Dumortier <thibault.dumortier@astro.unistra.fr>"

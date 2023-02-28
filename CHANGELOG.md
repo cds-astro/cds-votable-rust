@@ -1,5 +1,15 @@
 # `votable` Change Log
 
+## 0.1.1
+
+Released 2023-XX-XX
+
+### Bug correction
+
+* Now works with namespaces (simply ignoring them)
+* Support PARAM containing sub-elements in GROUP
+
+
 ## 0.1.1-alpha
 
 Released 2022-10-10.

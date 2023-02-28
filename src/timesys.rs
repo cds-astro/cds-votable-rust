@@ -328,7 +328,7 @@ mod tests {
     let mut timesys = loop {
       let mut event = reader.read_event(&mut buff).unwrap();
       match &mut event {
-        Event::Empty(ref mut e) if e.name() == TimeSys::TAG_BYTES => {
+        Event::Empty(ref mut e) if e.local_name() == TimeSys::TAG_BYTES => {
           let timesys = TimeSys::from_attributes(e.attributes()).unwrap();
           assert_eq!(timesys.id, "time_frame");
           assert_eq!(timesys.timeorigin, Some(2455197.5));
