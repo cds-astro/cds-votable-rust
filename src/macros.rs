@@ -65,6 +65,10 @@ macro_rules! impl_builder_push_elem {
         self.elems.push($e::$t([<$t:lower>])); 
         self
       }
+      
+      pub fn [<push_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $t) {
+        self.elems.push($e::$t([<$t:lower>])); 
+      }
     }
   }
 }
@@ -80,16 +84,24 @@ macro_rules! impl_builder_push {
   ($t: ident) => {
     paste! {
       pub fn [<push_ $t:lower>](mut self, [<$t:lower>]: $t) -> Self {
-        self.[<$t:lower s>].push([<$t:lower>]); 
+        self.[<$t:lower s>].push([<$t:lower>]);
         self
+      }
+      
+      pub fn [<push_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $t) {
+        self.[<$t:lower s>].push([<$t:lower>]);
       }
     }
   };
     ($t: ident, $c: ident) => {
     paste! {
       pub fn [<push_ $t:lower>](mut self, [<$t:lower>]: $t<$c>) -> Self {
-        self.[<$t:lower s>].push([<$t:lower>]); 
+        self.[<$t:lower s>].push([<$t:lower>]);
         self
+      }
+      
+      pub fn [<push_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $t<$c>) {
+        self.[<$t:lower s>].push([<$t:lower>]);
       }
     }
   }
@@ -155,6 +167,39 @@ macro_rules! read_content {
       let event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
       match &event {
         Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok($reader),
+        _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End. Actual: {:?}.", $Self::TAG, event))),
+      }
+    }
+  };
+}
+
+macro_rules! read_content_by_ref {
+  ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident) => {
+    {
+      let event: Event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
+      let link_content = match &event {
+        Event::Text(e) => e.unescape_and_decode(&$reader).map_err(VOTableError::Read),
+        _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: Text. Actual: {:?}.", $Self::TAG, event))),
+      }?;
+      $self.content = Some(link_content);
+      let event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
+      match &event {
+        Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok(()),
+        _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End. Actual: {:?}.", $Self::TAG, event))),
+      }
+    }
+  };
+  ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident, $content:tt) => {
+    {
+      let event: Event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
+      let link_content = match &event {
+        Event::Text(e) => e.unescape_and_decode(&$reader).map_err(VOTableError::Read),
+        _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: Text. Actual: {:?}.", $Self::TAG, event))),
+      }?;
+      $self.$content = link_content;
+      let event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
+      match &event {
+        Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok(()),
         _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End. Actual: {:?}.", $Self::TAG, event))),
       }
     }
@@ -356,6 +401,7 @@ macro_rules! write_elem_vec_empty_context {
   }
 }
 
+
 macro_rules! from_event_start {
   ($elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {
     {
@@ -373,11 +419,41 @@ macro_rules! from_event_start {
   };
 }
 
+macro_rules! from_event_start_by_ref {
+  ($elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {
+    {
+      let mut elem = $elem::from_attributes($e.attributes())?;
+      elem.read_sub_elements_and_clean_by_ref(&mut $reader, &mut $reader_buff, &())?;
+      elem
+    }
+  };
+  ($elem:ident, $reader:ident, $reader_buff:ident, $e:ident, $context:expr) => {
+    {
+      let mut elem = $elem::from_attributes($e.attributes())?;
+      elem.read_sub_elements_and_clean_by_ref(&mut $reader, &mut $reader_buff, &$context)?;
+      elem
+    }
+  };
+}
+
+
 macro_rules! from_event_start_desc {
   ($self:ident, $elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {
     {
       let mut desc = $elem::from_attributes($e.attributes())?;
       $reader = desc.read_sub_elements_and_clean($reader, &mut $reader_buff, &())?;
+      if $self.description.replace(desc).is_some() {
+        eprintln!("WARNING: multiple occurrence of DESCRIPTION in VOTable. All but the last one are discarded.");
+      }
+    }
+  };
+}
+
+macro_rules! from_event_start_desc_by_ref {
+  ($self:ident, $elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {
+    {
+      let mut desc = $elem::from_attributes($e.attributes())?;
+      desc.read_sub_elements_and_clean_by_ref(&mut $reader, &mut $reader_buff, &())?;
       if $self.description.replace(desc).is_some() {
         eprintln!("WARNING: multiple occurrence of DESCRIPTION in VOTable. All but the last one are discarded.");
       }

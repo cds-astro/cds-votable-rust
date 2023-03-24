@@ -11,11 +11,12 @@ use quick_xml::{
   Reader, Writer,
   events::{
     BytesStart, Event,
-    attributes::Attributes
-  }
+    attributes::Attributes,
+  },
 };
 
 use paste::paste;
+use quick_xml::events::BytesDecl;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -76,7 +77,7 @@ pub enum VOTableElem {
 impl VOTableElem {
   fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
     match self {
-      VOTableElem::CooSys(elem) => elem.write(writer,&()),
+      VOTableElem::CooSys(elem) => elem.write(writer, &()),
       VOTableElem::TimeSys(elem) => elem.write(writer, &()),
       VOTableElem::Group(elem) => elem.write(writer, &()),
       VOTableElem::Param(elem) => elem.write(writer, &()),
@@ -87,15 +88,25 @@ impl VOTableElem {
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct VOTableWrapper<C: TableDataContent> {
-  votable: VOTable<C>
+  votable: VOTable<C>,
 }
-impl <C: TableDataContent> VOTableWrapper<C> {
+
+impl<C: TableDataContent> VOTableWrapper<C> {
   /// Returns the inner `VOTable` element
   pub fn unwrap(self) -> VOTable<C> {
     self.votable
   }
 
-  // XML 
+  // Manual parser
+
+  pub fn manual_from_ivoa_xml_file<P: AsRef<Path>>(path: P, reader_buff: &mut Vec<u8>)
+    -> Result<(VOTable<C>, Resource<C>, Reader<BufReader<File>>), VOTableError> {
+    let file = File::open(path).map_err(VOTableError::Io)?;
+    let reader = BufReader::new(file);
+    VOTable::from_reader_till_next_resource(reader, reader_buff)
+  }
+
+  // XML
 
   pub fn from_ivoa_xml_file<P: AsRef<Path>>(path: P) -> Result<Self, VOTableError> {
     let file = File::open(path).map_err(VOTableError::Io)?;
@@ -139,7 +150,7 @@ impl <C: TableDataContent> VOTableWrapper<C> {
 }
 
 
-impl <C> VOTableWrapper<C> 
+impl<C> VOTableWrapper<C>
   where
     C: TableDataContent + Serialize + for<'a> Deserialize<'a>
 {
@@ -278,7 +289,6 @@ impl <C> VOTableWrapper<C>
     let bytes = self.to_toml_bytes(pretty)?;
     write.write_all(bytes.as_slice()).map_err(VOTableError::Io)
   }
-  
 }
 
 
@@ -311,7 +321,6 @@ xsi:schemaLocation="http://www.ivoa.net/xml/VOTable/v1.3 http://www.ivoa.net/xml
 /// Setters are here to simply the code (not having to create a `String` from a `&str`, to wrap
 /// in an `Option`, ...
 impl<C: TableDataContent> VOTable<C> {
-  
   /// Decorate this VOTable by an object to get the following serialization:
   /// ```bash
   /// {
@@ -321,7 +330,7 @@ impl<C: TableDataContent> VOTable<C> {
   ///   }
   /// }
   /// ```
-  /// Instead of: 
+  /// Instead of:
   /// ```bash
   /// {
   ///   "version": "1.4",
@@ -329,9 +338,9 @@ impl<C: TableDataContent> VOTable<C> {
   /// }
   /// ```
   pub fn wrap(self) -> VOTableWrapper<C> {
-    VOTableWrapper { votable: self } 
+    VOTableWrapper { votable: self }
   }
-  
+
   /// Not public because a VOTable is supposed to contains at least one Resource.
   fn new_empty() -> Self {
     Self {
@@ -363,39 +372,47 @@ impl<C: TableDataContent> VOTable<C> {
   pub fn from_bytes(s: &[u8]) -> Result<Self, VOTableError> {
     Self::from_reader(s)
   }*/
-  
+
   pub(crate) fn from_reader<R: BufRead>(reader: R) -> Result<Self, VOTableError> {
     let mut reader = Reader::from_reader(reader);
     let mut buff: Vec<u8> = Vec::with_capacity(1024);
     loop {
       let mut event = reader.read_event(&mut buff).unwrap();
       match &mut event {
-        Event::Decl(ref e) => 
-          eprintln!("XML declaration. Version: {}; Encoding: {}; Standalone: {}.", 
-            e.version().map(|v| 
-              unsafe { String::from_utf8_unchecked(v.as_ref().to_vec()) }
-            ).unwrap_or_else(|e| format!("Error: {:?}", e)),
-            e.encoding().map(|r| 
-              r.map(|r| unsafe { String::from_utf8_unchecked(r.as_ref().to_vec()) }).unwrap_or_else(|e| format!("Error: {:?}", e))
-            ).unwrap_or_else(|| String::from("error")),
-            e.standalone().map(|r| 
-              r.map(|r| unsafe { String::from_utf8_unchecked(r.as_ref().to_vec()) }).unwrap_or_else(|e| format!("Error: {:?}", e))
-            ).unwrap_or_else(|| String::from("error")),
-          ),
+        Event::Decl(ref e) => check_declaration(e),
         Event::Start(ref mut e) if e.local_name() == VOTable::<C>::TAG_BYTES => {
           let mut votable = VOTable::<C>::from_attributes(e.attributes()).unwrap();
           votable.read_sub_elements_and_clean(reader, &mut buff, &())?;
           // ignore the remaining of the reader !
           return Ok(votable);
         }
-        Event::Text(e) if is_empty(e) => { },
+        Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
-    
   }
-  
+
+  pub(crate) fn from_reader_till_next_resource<R: BufRead>(reader: R, mut reader_buff: &mut Vec<u8>)
+    -> Result<(VOTable<C>, Resource<C>, Reader<R>), VOTableError> {
+    let mut reader = Reader::from_reader(reader);
+    loop {
+      let mut event = reader.read_event(&mut reader_buff).unwrap();
+      match &mut event {
+        Event::Decl(ref e) => check_declaration(e),
+        Event::Start(ref mut e) if e.local_name() == VOTable::<C>::TAG_BYTES => {
+          let mut votable = VOTable::<C>::from_attributes(e.attributes()).unwrap();
+          let (resource, reader) = votable.read_till_next_resource(reader, &mut reader_buff)?;
+          reader_buff.clear();
+          return Ok((votable, resource, reader));
+        }
+        Event::Text(e) if is_empty(e) => {}
+        Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
+        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+      }
+    }
+  }
+
   impl_builder_opt_string_attr!(id);
 
   impl_builder_opt_attr!(version, Version);
@@ -413,10 +430,125 @@ impl<C: TableDataContent> VOTable<C> {
   impl_builder_push!(Resource, C);
 
   impl_builder_push_post_info!();
+
+  pub fn read_till_next_resource_by_ref<R: BufRead>(
+    &mut self,
+    mut reader: &mut Reader<R>,
+    mut reader_buff: &mut Vec<u8>,
+  ) -> Result<Option<Resource<C>>, VOTableError> {
+    // If the full document is in memory, we could have use a Reader<'a [u8]> and then the method
+    // `read_event_unbuffered` to avoid a copy.
+    // But are more generic that this to be able to read in streaming mode
+    loop {
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      match &mut event {
+        Event::Start(ref e) => {
+          match e.local_name() {
+            Description::TAG_BYTES =>
+              from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e),
+            Info::TAG_BYTES if self.resources.is_empty() =>
+              self.elems.push(VOTableElem::Info(from_event_start_by_ref!(Info, reader, reader_buff, e))),
+            Group::TAG_BYTES =>
+              self.elems.push(VOTableElem::Group(from_event_start_by_ref!(Group, reader, reader_buff, e))),
+            Param::TAG_BYTES =>
+              self.elems.push(VOTableElem::Param(from_event_start_by_ref!(Param, reader, reader_buff, e))),
+            Resource::<C>::TAG_BYTES => {
+              let resource = Resource::<C>::from_attributes(e.attributes())?;
+              return Ok(Some(resource));
+            }
+            Info::TAG_BYTES =>
+              self.post_infos.push(from_event_start_by_ref!(Info, reader, reader_buff, e)),
+            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
+          }
+        }
+        Event::Empty(ref e) => {
+          match e.local_name() {
+            Info::TAG_BYTES if self.resources.is_empty() => self.elems.push(VOTableElem::Info(Info::from_event_empty(e)?)),
+            CooSys::TAG_BYTES => self.elems.push(VOTableElem::CooSys(CooSys::from_event_empty(e)?)),
+            TimeSys::TAG_BYTES => self.elems.push(VOTableElem::TimeSys(TimeSys::from_event_empty(e)?)),
+            Group::TAG_BYTES => self.elems.push(VOTableElem::Group(Group::from_event_empty(e)?)),
+            Param::TAG_BYTES => self.elems.push(VOTableElem::Param(Param::from_event_empty(e)?)),
+            Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
+            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
+          }
+        }
+        Event::End(e) if e.local_name() == Self::TAG_BYTES =>
+          return Ok(None),
+        Event::Text(e) if is_empty(e) => {}
+        Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
+        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+      }
+    }
+  }
+  
+  // * The Resource returned has only its attribute sets, not the sub-elements
+  // * The VOTable.push_resource it to be done externally
+  fn read_till_next_resource<R: BufRead>(
+    &mut self,
+    mut reader: Reader<R>,
+    mut reader_buff: &mut Vec<u8>,
+  ) -> Result<(Resource<C>, Reader<R>), VOTableError> {
+    // If the full document is in memory, we could have use a Reader<'a [u8]> and then the method
+    // `read_event_unbuffered` to avoid a copy.
+    // But are more generic that this to be able to read in streaming mode
+    loop {
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      match &mut event {
+        Event::Start(ref e) => {
+          match e.local_name() {
+            Description::TAG_BYTES =>
+              from_event_start_desc!(self, Description, reader, reader_buff, e),
+            Info::TAG_BYTES if self.resources.is_empty() =>
+              self.elems.push(VOTableElem::Info(from_event_start!(Info, reader, reader_buff, e))),
+            Group::TAG_BYTES =>
+              self.elems.push(VOTableElem::Group(from_event_start!(Group, reader, reader_buff, e))),
+            Param::TAG_BYTES =>
+              self.elems.push(VOTableElem::Param(from_event_start!(Param, reader, reader_buff, e))),
+            Resource::<C>::TAG_BYTES => {
+              let resource = Resource::<C>::from_attributes(e.attributes())?;
+              return Ok((resource, reader));
+            }
+            Info::TAG_BYTES =>
+              self.post_infos.push(from_event_start!(Info, reader, reader_buff, e)),
+            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
+          }
+        }
+        Event::Empty(ref e) => {
+          match e.local_name() {
+            Info::TAG_BYTES if self.resources.is_empty() => self.elems.push(VOTableElem::Info(Info::from_event_empty(e)?)),
+            CooSys::TAG_BYTES => self.elems.push(VOTableElem::CooSys(CooSys::from_event_empty(e)?)),
+            TimeSys::TAG_BYTES => self.elems.push(VOTableElem::TimeSys(TimeSys::from_event_empty(e)?)),
+            Group::TAG_BYTES => self.elems.push(VOTableElem::Group(Group::from_event_empty(e)?)),
+            Param::TAG_BYTES => self.elems.push(VOTableElem::Param(Param::from_event_empty(e)?)),
+            Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
+            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
+          }
+        }
+        Event::End(e) if e.local_name() == Self::TAG_BYTES =>
+          return Err(VOTableError::Custom(String::from("No resource found in the VOTable"))),
+        Event::Text(e) if is_empty(e) => {}
+        Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
+        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+      }
+    }
+  }
 }
 
-impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
+fn check_declaration(decl: &BytesDecl) {
+  let version = decl.version().map(|v|
+    unsafe { String::from_utf8_unchecked(v.as_ref().to_vec()) }
+  ).unwrap_or_else(|e| format!("Error: {:?}", e));
+  let encoding = decl.encoding().map(|r|
+    r.map(|r| unsafe { String::from_utf8_unchecked(r.as_ref().to_vec()) }).unwrap_or_else(|e| format!("Error: {:?}", e))
+  ).unwrap_or_else(|| String::from("error"));
+  let standalone = decl.standalone().map(|r|
+    r.map(|r| unsafe { String::from_utf8_unchecked(r.as_ref().to_vec()) }).unwrap_or_else(|e| format!("Error: {:?}", e))
+  ).unwrap_or_else(|| String::from("error"));
+  eprintln!("XML declaration. Version: {}; Encoding: {}; Standalone: {}.", version, encoding, standalone);
+}
 
+
+impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
   const TAG: &'static str = "VOTABLE";
   type Context = ();
 
@@ -444,7 +576,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
     mut reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
   ) -> Result<Reader<R>, VOTableError> {
-    // If the full document is in memory, we could have use a Reader<'a [u8]> and then the method 
+    // If the full document is in memory, we could have use a Reader<'a [u8]> and then the method
     // `read_event_unbuffered` to avoid a copy.
     // But are more generic that this to be able to read in streaming mode
     loop {
@@ -452,17 +584,17 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
       match &mut event {
         Event::Start(ref e) => {
           match e.local_name() {
-            Description::TAG_BYTES => 
+            Description::TAG_BYTES =>
               from_event_start_desc!(self, Description, reader, reader_buff, e),
-            Info::TAG_BYTES if self.resources.is_empty() => 
+            Info::TAG_BYTES if self.resources.is_empty() =>
               self.elems.push(VOTableElem::Info(from_event_start!(Info, reader, reader_buff, e))),
-            Group::TAG_BYTES => 
+            Group::TAG_BYTES =>
               self.elems.push(VOTableElem::Group(from_event_start!(Group, reader, reader_buff, e))),
             Param::TAG_BYTES =>
               self.elems.push(VOTableElem::Param(from_event_start!(Param, reader, reader_buff, e))),
-            Resource::<C>::TAG_BYTES => 
+            Resource::<C>::TAG_BYTES =>
               self.resources.push(from_event_start!(Resource, reader, reader_buff, e)),
-            Info::TAG_BYTES => 
+            Info::TAG_BYTES =>
               self.post_infos.push(from_event_start!(Info, reader, reader_buff, e)),
             _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
           }
@@ -478,7 +610,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
             _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
           }
         }
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => 
+        Event::End(e) if e.local_name() == Self::TAG_BYTES =>
           return if self.resources.is_empty() {
             Err(VOTableError::Custom(String::from("No resource found in the VOTable")))
           } else {
@@ -492,17 +624,26 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
         Event::PI(_) => {}
         Event::DocType(_) => {}
         */
-        Event::Text(e) if is_empty(e) => { },
+        Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }
 
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    _reader: &mut Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    todo!()
+  }
+  
   fn write<W: Write>(
-    &mut self, 
+    &mut self,
     writer: &mut Writer<W>,
-    context: &Self::Context
+    context: &Self::Context,
   ) -> Result<(), VOTableError> {
     writer.write(r#"<?xml version="1.0" encoding="UTF-8"?>
 "#.as_bytes()).map_err(VOTableError::Write)?;
@@ -525,11 +666,10 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
 
 #[cfg(test)]
 mod tests {
-
   use quick_xml::Writer;
   use crate::{
     QuickXmlReadWrite,
-    impls::mem::{InMemTableDataStringRows, InMemTableDataRows}
+    impls::mem::{InMemTableDataStringRows, InMemTableDataRows},
   };
   use crate::votable::VOTableWrapper;
 
@@ -563,14 +703,14 @@ mod tests {
       Err(error) => {
         println!("{:?}", &error);
         assert!(false)
-      },
+      }
     }
     match toml::ser::to_string_pretty(&votable) {
       Ok(_content) => println!("\nOK"), // println!("{}", &content),
       Err(error) => {
         println!("{:?}", &error);
         assert!(false)
-      },
+      }
     }
 
     /*println!("\n\n#### XML ####\n");
@@ -582,51 +722,145 @@ mod tests {
   }
 
   #[test]
+  fn test_votable_read_iter_datatable_from_file() {
+    use crate::iter::TableIterator;
+    /*
+    // let votable =  VOTable::<InMemTableDataStringRows>::from_file("resources/sdss12.vot").unwrap();
+    let mut reader_buff: Vec<u8> = Vec::with_capacity(1024);
+    let (votable, mut resource, mut reader) = VOTableWrapper::<VoidTableDataContent>::manual_from_ivoa_xml_file("resources/sdss12.vot", &mut reader_buff).unwrap();
+    // resource.read_sub_elements_and_clean(reader, &mut reader_buff, &());
+    let opt_res_or_table = resource.read_till_next_resource_or_table_by_ref(&mut reader, &mut reader_buff).unwrap();
+    match opt_res_or_table {
+      Some(ResourceOrTable::<_>::Resource(resource)) => {
+        todo!();
+        assert!(false)
+      },
+      Some(ResourceOrTable::<_>::Table(mut table)) => {
+        let opt_data = table.read_till_data_by_ref(&mut reader, &mut reader_buff).unwrap();
+        if let Some(mut data) = opt_data {
+          let opt_tab_or_bin_or_bin2_or_fits = data.read_till_table_bin_or_bin2_or_fits_by_ref(&mut reader, &mut reader_buff).unwrap();
+          match opt_tab_or_bin_or_bin2_or_fits {
+            Some(TableOrBinOrBin2::TableData) => {
+              let row_it = RowIterator::new(&mut reader, &mut reader_buff, &mut table);
+              let v = row_it.collect::<Result<Vec<Vec<String>>, VOTableError>>();
+              eprintln!("{:?}", v);
+            },
+            Some(TableOrBinOrBin2::Binary) => {
+              todo!()
+            },
+            Some(TableOrBinOrBin2::Binary2) => {
+              todo!()
+            },
+            Some(TableOrBinOrBin2::Fits) =>  {
+              todo!()
+            },
+            None =>  {
+              todo!()
+            },
+          }
+        }
+        let resource = resource.push_table(table);
+        votable.push_resource(resource);
+      },
+      None => {
+        assert!(false);
+      },
+    }*/
+
+    println!();
+    println!("-- next_table_row_string_iter dss12.vot --");
+    println!();
+    
+    let mut table_it = TableIterator::from_file("resources/sdss12.vot").unwrap();
+    while let Some(row_it) = table_it.next_table_row_string_iter().unwrap() {
+      for (i, row) in row_it.enumerate() {
+        println!("Row {}: {:?}", i, row);
+      }
+    }
+
+    
+    println!();
+    println!("-- next_table_row_value_iter dss12.vot --");
+    println!();
+    
+    let mut table_it = TableIterator::from_file("resources/sdss12.vot").unwrap();
+    while let Some(row_it) = table_it.next_table_row_value_iter().unwrap() {
+      for (i, row) in row_it.enumerate() {
+        println!("Row {}: {:?}", i, row);
+      }
+    }
+
+
+    println!();
+    println!("-- next_table_row_value_iter binary.b64 --");
+    println!();
+    
+    let mut table_it = TableIterator::from_file("resources/binary.b64").unwrap();
+    while let Some(row_it) = table_it.next_table_row_value_iter().unwrap() {
+      for (i, row) in row_it.enumerate() {
+        println!("Row {}: {:?}", i, row);
+      }
+    }
+    
+    println!();
+    println!("-- next_table_row_value_iter gaia_dr3.b264 --");
+    println!();
+    
+    let mut table_it = TableIterator::from_file("resources/gaia_dr3.b264").unwrap();
+    while let Some(row_it) = table_it.next_table_row_value_iter().unwrap() {
+      for (i, row) in row_it.enumerate() {
+        println!("Row {}: {:?}", i, row);
+      }
+    }
+
+    assert!(true)
+  }
+
+  #[test]
   fn test_votable_read_binary_from_file() {
-    let votable =  VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/binary.b64").unwrap().unwrap();
+    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/binary.b64").unwrap().unwrap();
     match toml::ser::to_string_pretty(&votable) {
       Ok(_content) => println!("\nOK"), // println!("{}", &content),
       Err(error) => {
         println!("{:?}", &error);
         assert!(false);
-      },
+      }
     }
   }
 
   #[test]
   fn test_votable_read_binary2_from_file() {
-    
-    let votable =  VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/gaia_dr3.b264").unwrap().unwrap();
+    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/gaia_dr3.b264").unwrap().unwrap();
     let mut votable = votable.wrap();
     match serde_json::ser::to_string_pretty(&votable) {
       Ok(_content) => println!("\nOK"), //println!("{}", &content),
       Err(error) => {
         println!("{:?}", &error);
         assert!(false);
-      },
+      }
     }
     // let mut votable = votable.unwrap();
     // if true { return; }
-    
+
     match toml::ser::to_string_pretty(&votable) {
       Ok(_content) => println!("\nOK"), // println!("{}", &content),
       Err(error) => {
         println!("{:?}", &error);
         assert!(false);
-      },
+      }
     }
-    
+
     println!("\n\n#### VOTABLE ####\n");
     let mut votable2: Vec<u8> = Vec::new();
     let mut write = Writer::new_with_indent(/*stdout()*/ &mut votable2, b' ', 4);
     match votable.votable.write(&mut write, &()) {
       Ok(_content) => {
         println!("\nOK")
-      },
+      }
       Err(error) => println!("Error: {:?}", &error),
     }
 
-    let votable2 =  String::from_utf8(votable2).unwrap();
+    let votable2 = String::from_utf8(votable2).unwrap();
     println!("{}", &votable2);
 
     let votable3 = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_str(votable2.as_str()).unwrap();
@@ -635,7 +869,7 @@ mod tests {
       Err(error) => {
         println!("{:?}", &error);
         assert!(false);
-      },
+      }
     }
   }
 }

@@ -44,6 +44,15 @@ impl QuickXmlReadWrite for Description {
     read_content!(Self, self, reader, reader_buff, 0)
   }
 
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    reader: &mut Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    read_content_by_ref!(Self, self, reader, reader_buff, 0)
+  }
+
   fn write<W: Write>(&mut self, writer: &mut Writer<W>, _context: &Self::Context) -> Result<(), VOTableError> {
     let elem_writer = writer.create_element(Self::TAG_BYTES);
     elem_writer.write_text_content(

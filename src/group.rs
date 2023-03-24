@@ -135,6 +135,15 @@ impl QuickXmlReadWrite for Group {
     }
   }
 
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    _reader: &mut Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    todo!()
+  }
+
   fn write<W: Write>(
     &mut self, 
     writer: &mut Writer<W>,
@@ -243,6 +252,7 @@ impl TableGroup {
 }
 
 impl QuickXmlReadWrite for TableGroup {
+  
   const TAG: &'static str = "GROUP";
   type Context = ();
 
@@ -295,6 +305,15 @@ impl QuickXmlReadWrite for TableGroup {
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
+  }
+
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    _reader: &mut Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    todo!()
   }
 
   fn write<W: Write>(

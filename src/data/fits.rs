@@ -6,44 +6,14 @@ use quick_xml::{Reader, Writer, events::{Event, BytesStart, attributes::Attribut
 use serde;
 use paste::paste;
 
+use crate::impls::mem::VoidTableDataContent;
+
 
 use super::{
   stream::Stream,
-  super::{
-    QuickXmlReadWrite, TableDataContent,
-    error::VOTableError,
-    table::TableElem
-  }
+  super::{QuickXmlReadWrite, error::VOTableError}
 };
 
-#[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
-struct Void;
-
-impl TableDataContent for Void {
-  fn read_datatable_content<R: BufRead>(&mut self, _reader: Reader<R>, _reader_buff: &mut Vec<u8>, _context: &[TableElem]) -> Result<Reader<R>, VOTableError> {
-    unreachable!()
-  }
-
-  fn read_binary_content<R: BufRead>(&mut self, _reader: Reader<R>, _reader_buff: &mut Vec<u8>, _context: &[TableElem]) -> Result<Reader<R>, VOTableError> {
-    unreachable!()
-  }
-
-  fn read_binary2_content<R: BufRead>(&mut self, _reader: Reader<R>, _reader_buff: &mut Vec<u8>, _context: &[TableElem]) -> Result<Reader<R>, VOTableError> {
-    unreachable!()
-  }
-
-  fn write_in_datatable<W: Write>(&mut self, _writer: &mut Writer<W>, _context: &[TableElem]) -> Result<(), VOTableError> {
-    unreachable!()
-  }
-
-  fn write_in_binary<W: Write>(&mut self, _writer: &mut Writer<W>, _context: &[TableElem]) -> Result<(), VOTableError> {
-    unreachable!()
-  }
-
-  fn write_in_binary2<W: Write>(&mut self, _writer: &mut Writer<W>, _context: &[TableElem]) -> Result<(), VOTableError> {
-    unreachable!()
-  }
-}
 
 #[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Fits {
@@ -51,7 +21,7 @@ pub struct Fits {
   #[serde(skip_serializing_if = "Option::is_none")]
   extnum: Option<u32>,
   // I assume (so far) that for FITS there is no STREAM content (but a link pointing to the FITS file)
-  stream: Stream<Void>,
+  stream: Stream<VoidTableDataContent>,
 }
 
 impl Fits {
@@ -66,7 +36,7 @@ impl Fits {
 
 impl QuickXmlReadWrite for Fits {
   const TAG: &'static str = "FITS";
-  type Context = Vec<TableElem>;
+  type Context = ();
 
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     let mut fits = Self::default();
@@ -92,13 +62,13 @@ impl QuickXmlReadWrite for Fits {
       match &mut event {
         Event::Start(ref e) => {
           match e.name() {
-            Stream::<Void>::TAG_BYTES => self.stream = from_event_start!(Stream, reader, reader_buff, e),
+            Stream::<VoidTableDataContent>::TAG_BYTES => self.stream = from_event_start!(Stream, reader, reader_buff, e),
             _ => return Err(VOTableError::UnexpectedStartTag(e.name().to_vec(), Self::TAG)),
           }
         }
         Event::Empty(ref e) => {
           match e.name() {
-            Stream::<Void>::TAG_BYTES => self.stream = Stream::from_event_empty(e)?,
+            Stream::<VoidTableDataContent>::TAG_BYTES => self.stream = Stream::from_event_empty(e)?,
             _ => return Err(VOTableError::UnexpectedEmptyTag(e.name().to_vec(), Self::TAG)),
           }
         }
@@ -109,6 +79,15 @@ impl QuickXmlReadWrite for Fits {
     }
   }
 
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    _reader: &mut Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    todo!()
+  }
+  
   fn write<W: Write>(
     &mut self, 
     writer: &mut Writer<W>, 

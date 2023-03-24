@@ -25,8 +25,13 @@ pub struct Binary<C: TableDataContent> {
 }
 
 impl<C: TableDataContent> Binary<C> {
+  
   pub fn new() -> Self {
     Self::default()
+  }
+  
+  pub fn from_stream(stream: Stream<C>) -> Self {
+    Self { stream } 
   }
 }
 
@@ -83,6 +88,15 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary<C> {
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
+  }
+
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    _reader: &mut Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    todo!()
   }
 
   fn write<W: Write>(

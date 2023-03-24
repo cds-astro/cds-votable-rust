@@ -2,7 +2,10 @@
 use std::io::{self, Bytes, Read, BufRead, Error, ErrorKind, BufReader};
 
 use serde::{Deserializer, de::Visitor};
-use base64::read::DecoderReader;
+use base64::{
+  engine::GeneralPurpose,
+  read::DecoderReader,
+};
 use byteorder::{BigEndian, ReadBytesExt};
 
 use crate::error::VOTableError;
@@ -76,12 +79,12 @@ impl<'a, R: BufRead> Read for B64Cleaner<'a, R> {
 }
 
 pub struct BinaryDeserializer<'a, R: BufRead> {
-  reader: BufReader<DecoderReader<'a, B64Cleaner<'a, R>>>
+  reader: BufReader<DecoderReader<'static, GeneralPurpose, B64Cleaner<'a, R>>>
 }
 
 impl<'de, 'a, R: BufRead> BinaryDeserializer<'a, R> {
 
-  pub fn new(reader: DecoderReader<'a, B64Cleaner<'a, R>>) -> Self {
+  pub fn new(reader: DecoderReader<'static, GeneralPurpose, B64Cleaner<'a, R>>) -> Self {
     Self { reader: BufReader::new(reader) }
   }
 

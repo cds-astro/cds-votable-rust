@@ -1,7 +1,10 @@
 
 
 use std::io::Write;
-use base64::write::EncoderWriter;
+use base64::{
+  write::EncoderWriter,
+  engine::GeneralPurpose,
+};
 use byteorder::{BigEndian, WriteBytesExt};
 use serde::{
   Serialize, Serializer, 
@@ -57,11 +60,11 @@ impl<W: Write> Write for B64Formatter<W> {
 }
 
 pub struct BinarySerializer<W: Write> {
-  writer: EncoderWriter<B64Formatter<W>>
+  writer: EncoderWriter<'static, GeneralPurpose, B64Formatter<W>>
 }
 
-impl<W: Write>  BinarySerializer<W> {
-  pub fn new(writer: EncoderWriter<B64Formatter<W>>) -> Self {
+impl<W: Write> BinarySerializer<W> {
+  pub fn new(writer: EncoderWriter<'static, GeneralPurpose, B64Formatter<W>>) -> Self {
     Self { writer }
   }
 }

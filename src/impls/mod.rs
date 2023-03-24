@@ -37,7 +37,7 @@ pub struct BitVec(BV<u8, Msb0>);
 }*/
 
 
-// WARNING: THE ORDER IS IMPORTANT WHEn DESERIALIZING JSON, NOT TO LOSSE SIGNIFICATN DIGITS!!
+// WARNING: THE ORDER IS IMPORTANT WHEn DESERIALIZING JSON, NOT TO LOOSE SIGNIFICANT DIGITS!!
 #[derive(Debug, serde::Deserialize)]
 #[serde(untagged)]
 pub enum VOTableValue {

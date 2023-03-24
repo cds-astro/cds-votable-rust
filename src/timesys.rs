@@ -91,6 +91,15 @@ impl QuickXmlReadWrite for TimeSys {
     unreachable!()
   }
 
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    _reader: &mut Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    todo!()
+  }
+  
   fn write<W: Write>(
     &mut self, 
     writer: &mut Writer<W>, 

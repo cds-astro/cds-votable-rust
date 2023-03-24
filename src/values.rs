@@ -18,6 +18,7 @@ pub struct Min {
 }
 
 impl Min {
+  
   pub fn new<S: Into<String>>(value: S) -> Self {
     Self {
       value: value.into(),
@@ -66,6 +67,15 @@ impl QuickXmlReadWrite for Min {
     unreachable!()
   }
 
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    _reader: &mut Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    unreachable!()
+  }
+  
   fn write<W: Write>(
     &mut self, 
     writer: &mut Writer<W>, 
@@ -90,6 +100,7 @@ pub struct Max {
 }
 
 impl Max {
+  
   pub fn new<S: Into<String>>(value: S) -> Self {
     Self {
       value: value.into(),
@@ -137,6 +148,15 @@ impl QuickXmlReadWrite for Max {
     unreachable!()
   }
 
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    _reader: &mut Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    unreachable!()
+  }
+  
   fn write<W: Write>(
     &mut self, 
     writer: &mut Writer<W>, 
@@ -233,6 +253,15 @@ impl QuickXmlReadWrite for Opt {
     }
   }
 
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    _reader: &mut Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    todo!()
+  }
+  
   fn write<W: Write>(
     &mut self, 
     writer: &mut Writer<W>, 
@@ -350,6 +379,15 @@ impl QuickXmlReadWrite for Values {
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
+  }
+
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    _reader: &mut Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    todo!()
   }
 
   fn write<W: Write>(

@@ -7,17 +7,16 @@ use quick_xml::{
 };
 
 use base64::{
+  engine::general_purpose,
   read::DecoderReader,
   write::EncoderWriter,
 };
-
 
 use serde::{
   Serializer, Deserializer,
   de::DeserializeSeed,
   ser::SerializeTuple
 };
-
 
 use crate::{
   is_empty,
@@ -28,10 +27,96 @@ use crate::{
   impls::{
     Schema, VOTableValue,
     visitors::FixedLengthArrayVisitor,
-    b64::read::{B64Cleaner, BinaryDeserializer}
+    b64::{
+      read::{B64Cleaner, BinaryDeserializer},
+      write::{B64Formatter, BinarySerializer},
+    }
   }
 };
-use crate::impls::b64::write::{B64Formatter, BinarySerializer};
+
+#[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct VoidTableDataContent;
+
+impl TableDataContent for VoidTableDataContent {
+
+  fn read_datatable_content<R: BufRead>(
+    &mut self,
+    _reader: Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &[TableElem]
+  ) -> Result<Reader<R>, VOTableError> {
+    Err(
+      VOTableError::Custom(
+        String::from("Read/write not implemented for VoidTableDataContent")
+      )
+    )
+  }
+
+  fn read_binary_content<R: BufRead>(
+    &mut self,
+    _reader: Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &[TableElem]
+  ) -> Result<Reader<R>, VOTableError> {
+    Err(
+      VOTableError::Custom(
+        String::from("Read/write not implemented for VoidTableDataContent")
+      )
+    )
+  }
+
+  fn read_binary2_content<R: BufRead>(
+    &mut self,
+    _reader: Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &[TableElem]
+  ) -> Result<Reader<R>, VOTableError> {
+    Err(
+      VOTableError::Custom(
+        String::from("Read/write not implemented for VoidTableDataContent")
+      )
+    )
+  }
+
+  fn write_in_datatable<W: Write>(
+    &mut self,
+    _writer: &mut Writer<W>,
+    _context: &[TableElem]
+  ) -> Result<(), VOTableError> {
+    Err(
+      VOTableError::Custom(
+        String::from("Read/write not implemented for VoidTableDataContent")
+      )
+    )
+  }
+
+  fn write_in_binary<W: Write>(
+    &mut self,
+    _writer: &mut Writer<W>,
+    _context: &[TableElem]
+  ) -> Result<(), VOTableError> {
+    Err(
+      VOTableError::Custom(
+        String::from("Read/write not implemented for VoidTableDataContent")
+      )
+    )
+  }
+
+  fn write_in_binary2<W: Write>(
+    &mut self,
+    _writer: &mut Writer<W>,
+    _context: &[TableElem]
+  ) -> Result<(), VOTableError> {
+    Err(
+      VOTableError::Custom(
+        String::from("Read/write not implemented for VoidTableDataContent")
+      )
+    )
+  }
+}
+
+
+
 
 #[derive(Default, Debug, serde::Serialize, serde::Deserialize)]
 pub struct InMemTableDataStringRows {
@@ -204,8 +289,8 @@ impl TableDataContent for InMemTableDataRows {
   fn read_binary_content<R: BufRead>(&mut self, mut reader: Reader<R>, _reader_buff: &mut Vec<u8>, context: &[TableElem]) -> Result<Reader<R>, VOTableError> {
     // Prepare reader
     let mut internal_reader = reader.get_mut();
-    let mut b64_cleaner = B64Cleaner::new(&mut internal_reader);
-    let decoder = DecoderReader::new(&mut b64_cleaner, base64::STANDARD);
+    let b64_cleaner = B64Cleaner::new(&mut internal_reader);
+    let decoder = DecoderReader::new(b64_cleaner, &general_purpose::STANDARD);
     let mut binary_deser =  BinaryDeserializer::new(decoder);
     // Get schema
     let schema: Vec<Schema> = context.iter()
@@ -230,8 +315,8 @@ impl TableDataContent for InMemTableDataRows {
   fn read_binary2_content<R: BufRead>(&mut self, mut reader: Reader<R>, _reader_buff: &mut Vec<u8>, context: &[TableElem]) -> Result<Reader<R>, VOTableError> {
     // Prepare reader
     let mut internal_reader = reader.get_mut();
-    let mut b64_cleaner = B64Cleaner::new(&mut internal_reader);
-    let decoder = DecoderReader::new(&mut b64_cleaner, base64::STANDARD);
+    let b64_cleaner = B64Cleaner::new(&mut internal_reader);
+    let decoder = DecoderReader::new(b64_cleaner, &general_purpose::STANDARD);
     let mut binary_deser =  BinaryDeserializer::new(decoder);
     // Get schema
     let schema: Vec<Schema> = context.iter()
@@ -287,7 +372,7 @@ impl TableDataContent for InMemTableDataRows {
       ).collect();
     // Create serializer
     let mut serializer = BinarySerializer::new(
-      EncoderWriter::new(B64Formatter::new(writer.inner()), base64::STANDARD)
+      EncoderWriter::new(B64Formatter::new(writer.inner()), &general_purpose::STANDARD)
     );
     // Write data
     for row in &self.rows {
@@ -311,7 +396,7 @@ impl TableDataContent for InMemTableDataRows {
     let n_null_flag_bytes = (schema.len() + 7) / 8;
     // Create serializer
     let mut serializer = BinarySerializer::new(
-      EncoderWriter::new(B64Formatter::new(writer.inner()), base64::STANDARD)
+      EncoderWriter::new(B64Formatter::new(writer.inner()), &general_purpose::STANDARD)
     );
     // Write data
     for row in &self.rows {

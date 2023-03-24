@@ -25,9 +25,15 @@ pub struct Binary2<C: TableDataContent> {
 }
 
 impl<C: TableDataContent> Binary2<C> {
+  
   pub fn new() -> Self {
     Self::default()
   }
+
+  pub fn from_stream(stream: Stream<C>) -> Self {
+    Self { stream }
+  }
+  
 }
 
 impl<C: TableDataContent> QuickXmlReadWrite for Binary2<C> {
@@ -85,6 +91,15 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary2<C> {
     }
   }
 
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    _reader: &mut Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    todo!()
+  }
+  
   fn write<W: Write>(&mut self, writer: &mut Writer<W>, context: &Self::Context) -> Result<(), VOTableError> {
     writer.write_event(Event::Start(BytesStart::borrowed_name(Self::TAG_BYTES))).map_err(VOTableError::Write)?;
     if self.stream.content.is_some() {

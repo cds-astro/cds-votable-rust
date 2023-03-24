@@ -67,7 +67,7 @@ pub struct Table<C: TableDataContent> {
   #[serde(skip_serializing_if = "Option::is_none")]
   description: Option<Description>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  elems: Vec<TableElem>,
+  pub elems: Vec<TableElem>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   links: Vec<Link>,
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -103,8 +103,53 @@ impl<C: TableDataContent> Table<C> {
     self.data = Some(data);
     self
   }
+
+  pub fn set_data_by_ref(&mut self, data: Data<C>) {
+    self.data = Some(data);
+  }
   
   impl_builder_push!(Info);
+
+  pub fn read_till_data_by_ref<R: BufRead>(
+    &mut self,
+    mut reader: &mut Reader<R>,
+    mut reader_buff: &mut Vec<u8>,
+  ) -> Result<Option<Data<C>>, VOTableError> {
+    loop {
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      match &mut event {
+        Event::Start(ref e) => {
+          match e.local_name() {
+            Description::TAG_BYTES => from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e),
+            Field::TAG_BYTES => self.elems.push(TableElem::Field(from_event_start_by_ref!(Field, reader, reader_buff, e))),
+            Param::TAG_BYTES => self.elems.push(TableElem::Param(from_event_start_by_ref!(Param, reader, reader_buff, e))),
+            TableGroup::TAG_BYTES => self.elems.push(TableElem::TableGroup(from_event_start_by_ref!(TableGroup, reader, reader_buff, e))),
+            Link::TAG_BYTES => self.links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
+            Data::<C>::TAG_BYTES => {
+              let data = Data::from_attributes(e.attributes())?;
+              return Ok(Some(data))
+            },
+            Info::TAG_BYTES => self.infos.push(from_event_start_by_ref!(Info, reader, reader_buff, e)),
+            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
+          }
+        }
+        Event::Empty(ref e) => {
+          match e.local_name() {
+            Field::TAG_BYTES => self.elems.push(TableElem::Field(Field::from_event_empty(e)?)),
+            Param::TAG_BYTES => self.elems.push(TableElem::Param(Param::from_event_empty(e)?)),
+            TableGroup::TAG_BYTES => self.elems.push(TableElem::TableGroup(TableGroup::from_event_empty(e)?)),
+            Link::TAG_BYTES => self.links.push(Link::from_event_empty(e)?),
+            Info::TAG_BYTES => self.infos.push(Info::from_event_empty(e)?),
+            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
+          }
+        }
+        Event::Text(e) if is_empty(e) => {},
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
+        Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
+        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+      }
+    }
+  }
 }
 
 impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
@@ -176,6 +221,15 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
     }
   }
 
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    _reader: &mut Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    todo!()
+  }
+  
   fn write<W: Write>(
     &mut self, 
     writer: &mut Writer<W>, 

@@ -108,6 +108,15 @@ impl QuickXmlReadWrite for Info {
     read_content!(Self, self, reader, reader_buff)
   }
 
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    reader: &mut Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    read_content_by_ref!(Self, self, reader, reader_buff)
+  }
+  
   fn write<W: Write>(
     &mut self, 
     writer: &mut Writer<W>,

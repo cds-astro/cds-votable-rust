@@ -43,6 +43,8 @@ pub mod timesys;
 pub mod values;
 pub mod votable;
 
+pub mod iter;
+
 use error::VOTableError;
 use table::TableElem;
 
@@ -117,7 +119,28 @@ trait QuickXmlReadWrite: Sized {
         reader_buff: &mut Vec<u8>,
         context: &Self::Context,
     ) -> Result<Reader<R>, VOTableError>;
+    
+    /// Same as `read_sub_elements`, cleaning the `reader_buf` before returning.
+    fn read_sub_elements_and_clean_by_ref<R: BufRead>(
+        &mut self,
+        reader: &mut Reader<R>,
+        reader_buff: &mut Vec<u8>,
+        context: &Self::Context,
+    ) -> Result<(), VOTableError> {
+        let res = self.read_sub_elements_by_ref(reader, reader_buff, context);
+        reader_buff.clear();
+        res
+    }
 
+    /// We assume that the previous event was `Start`, and that the method returns
+    /// when encountering the `End` event matching the last `Start` event before entering the method.
+    fn read_sub_elements_by_ref<R: BufRead>(
+        &mut self,
+        reader: &mut Reader<R>,
+        reader_buff: &mut Vec<u8>,
+        context: &Self::Context,
+    ) -> Result<(), VOTableError>;
+    
     /// `&mut self` in case internals are modified while writing (e.g. if we iterate on rows
     /// and discard them as we iterate).
     /// We could add a context, e.g. to modify the parent (adding infos for example).

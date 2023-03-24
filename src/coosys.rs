@@ -103,6 +103,15 @@ impl QuickXmlReadWrite for CooSys {
     unreachable!()
   }
 
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    _reader: &mut Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    unreachable!()
+  }
+
   fn write<W: Write>(&mut self, writer: &mut Writer<W>,  _context: &Self::Context) -> Result<(), VOTableError> {
     let mut elem_writer = writer.create_element(Self::TAG_BYTES);
     elem_writer = elem_writer.with_attribute(("ID", self.id.as_str()));
