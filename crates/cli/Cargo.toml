@@ -1,6 +1,6 @@
 [package]
 name = "votable-cli"
-version = "0.1.1-alpha"
+version = "0.2.0"
 authors = ["F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>"]
 description = "Command-line to convert IVOA VOTables in XML, JSON, YAML and TOML"
 license = "MIT OR Apache-2.0"
