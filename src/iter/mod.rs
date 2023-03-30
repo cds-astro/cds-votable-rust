@@ -8,22 +8,23 @@ use std::{
 use quick_xml::Reader;
 
 use crate::{
-  table::TableElem,
+  table::{Table, TableElem},
   error::VOTableError,
-  data::{TableOrBinOrBin2, stream::Stream},
+  data::{
+    TableOrBinOrBin2, 
+    stream::Stream, binary::Binary, binary2::Binary2
+  },
   votable::{VOTable, VOTableWrapper},
   resource::{Resource, ResourceOrTable},
   impls::{Schema, VOTableValue, mem::VoidTableDataContent},
+  iter::elems::{Binary2RowValueIterator, BinaryRowValueIterator},
 };
 
 pub mod elems;
 pub mod strings;
 
 use elems::DataTableRowValueIterator;
-use strings::RowStringIterator;
-use crate::data::binary2::Binary2;
-use crate::data::binary::Binary;
-use crate::iter::elems::{Binary2RowValueIterator, BinaryRowValueIterator};
+// use strings::RowStringIterator;
 
 // Idee:
 // Iterator de Tables, iterator give access to
@@ -33,7 +34,11 @@ use crate::iter::elems::{Binary2RowValueIterator, BinaryRowValueIterator};
 // - next table
 //   => iterator on rows (indep of TableData/Binary/Binary2)
 
-pub struct TableIterator<R: BufRead> {
+pub trait TableIter: Iterator<Item=Result<Vec<VOTableValue>, VOTableError>> {
+  fn table(&mut self) -> &mut Table<VoidTableDataContent>; 
+}
+
+pub struct VOTableIterator<R: BufRead> {
   reader: Reader<R>, 
   reader_buff: Vec<u8>,
   // fn next_table -> (&votable, &resource, &table, &rows, Enum) 
@@ -42,14 +47,14 @@ pub struct TableIterator<R: BufRead> {
   resource_stack: Vec<Resource<VoidTableDataContent>>,
 }
 
-impl TableIterator<BufReader<File>> {
+impl VOTableIterator<BufReader<File>> {
   
-  pub fn from_file<P: AsRef<Path>>(path: P) -> Result<TableIterator<BufReader<File>>, VOTableError> {
+  pub fn from_file<P: AsRef<Path>>(path: P) -> Result<VOTableIterator<BufReader<File>>, VOTableError> {
     let mut reader_buff: Vec<u8> = Vec::with_capacity(1024);
     let (votable, resource, reader) = VOTableWrapper::<VoidTableDataContent>::manual_from_ivoa_xml_file(path, &mut reader_buff)?;
     let mut resource_stack = Vec::default();
     resource_stack.push(resource);
-    Ok(TableIterator::<BufReader<File>> {
+    Ok(VOTableIterator::<BufReader<File>> {
       reader,
       reader_buff,
       votable,
@@ -57,11 +62,14 @@ impl TableIterator<BufReader<File>> {
     })
   }
   
+  pub fn end_of_it(self) -> VOTable<VoidTableDataContent> {
+    self.votable
+  }
 }
 
-impl<R: BufRead> TableIterator<R> {
+impl<R: BufRead> VOTableIterator<R> {
   
-  pub fn next_table_row_string_iter<'a>(&'a mut self) -> Result<Option<RowStringIterator<'a, R>>, VOTableError> {
+  /*pub fn next_table_row_string_iter<'a>(&'a mut self) -> Result<Option<RowStringIterator<'a, R>>, VOTableError> {
     loop {
       if let Some(mut resource) = self.resource_stack.pop() {
         match resource.read_till_next_resource_or_table_by_ref(&mut self.reader, &mut self.reader_buff)? {
@@ -112,9 +120,9 @@ impl<R: BufRead> TableIterator<R> {
         }
       }
     }
-  }
+  }*/
   
-  pub fn next_table_row_value_iter<'a>(&'a mut self) -> Result<Option<Box<dyn 'a + Iterator<Item=Result<Vec<VOTableValue>, VOTableError>>>>, VOTableError> {
+  pub fn next_table_row_value_iter<'a>(&'a mut self) -> Result<Option<Box<dyn 'a + TableIter>>, VOTableError> {
     loop {
       if let Some(mut resource) = self.resource_stack.pop() {
         match resource.read_till_next_resource_or_table_by_ref(&mut self.reader, &mut self.reader_buff)? {
@@ -141,7 +149,7 @@ impl<R: BufRead> TableIterator<R> {
                   let row_it = DataTableRowValueIterator::new(
                     &mut self.reader,
                     &mut self.reader_buff,
-                    /*self.resource_stack.last_mut().unwrap().tables.last_mut().unwrap(),*/
+                    self.resource_stack.last_mut().unwrap().tables.last_mut().unwrap(),
                     schema,
                   );
                   return Ok(Some(Box::new(row_it)));
@@ -164,7 +172,7 @@ impl<R: BufRead> TableIterator<R> {
                   self.resource_stack.push(resource);
                   let row_it = BinaryRowValueIterator::new(
                     &mut self.reader,
-                    // self.resource_stack.last_mut().unwrap().tables.last_mut().unwrap(),
+                    self.resource_stack.last_mut().unwrap().tables.last_mut().unwrap(),
                     schema,
                   );
                   return Ok(Some(Box::new(row_it)));
@@ -187,7 +195,7 @@ impl<R: BufRead> TableIterator<R> {
                   self.resource_stack.push(resource);
                   let row_it = Binary2RowValueIterator::new(
                     &mut self.reader,
-                    // self.resource_stack.last_mut().unwrap().tables.last_mut().unwrap(),
+                    self.resource_stack.last_mut().unwrap().tables.last_mut().unwrap(),
                     schema,
                   );
                   return Ok(Some(Box::new(row_it)));

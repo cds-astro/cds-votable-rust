@@ -723,50 +723,9 @@ mod tests {
 
   #[test]
   fn test_votable_read_iter_datatable_from_file() {
-    use crate::iter::TableIterator;
+    use crate::iter::VOTableIterator;
+    
     /*
-    // let votable =  VOTable::<InMemTableDataStringRows>::from_file("resources/sdss12.vot").unwrap();
-    let mut reader_buff: Vec<u8> = Vec::with_capacity(1024);
-    let (votable, mut resource, mut reader) = VOTableWrapper::<VoidTableDataContent>::manual_from_ivoa_xml_file("resources/sdss12.vot", &mut reader_buff).unwrap();
-    // resource.read_sub_elements_and_clean(reader, &mut reader_buff, &());
-    let opt_res_or_table = resource.read_till_next_resource_or_table_by_ref(&mut reader, &mut reader_buff).unwrap();
-    match opt_res_or_table {
-      Some(ResourceOrTable::<_>::Resource(resource)) => {
-        todo!();
-        assert!(false)
-      },
-      Some(ResourceOrTable::<_>::Table(mut table)) => {
-        let opt_data = table.read_till_data_by_ref(&mut reader, &mut reader_buff).unwrap();
-        if let Some(mut data) = opt_data {
-          let opt_tab_or_bin_or_bin2_or_fits = data.read_till_table_bin_or_bin2_or_fits_by_ref(&mut reader, &mut reader_buff).unwrap();
-          match opt_tab_or_bin_or_bin2_or_fits {
-            Some(TableOrBinOrBin2::TableData) => {
-              let row_it = RowIterator::new(&mut reader, &mut reader_buff, &mut table);
-              let v = row_it.collect::<Result<Vec<Vec<String>>, VOTableError>>();
-              eprintln!("{:?}", v);
-            },
-            Some(TableOrBinOrBin2::Binary) => {
-              todo!()
-            },
-            Some(TableOrBinOrBin2::Binary2) => {
-              todo!()
-            },
-            Some(TableOrBinOrBin2::Fits) =>  {
-              todo!()
-            },
-            None =>  {
-              todo!()
-            },
-          }
-        }
-        let resource = resource.push_table(table);
-        votable.push_resource(resource);
-      },
-      None => {
-        assert!(false);
-      },
-    }*/
-
     println!();
     println!("-- next_table_row_string_iter dss12.vot --");
     println!();
@@ -776,26 +735,29 @@ mod tests {
       for (i, row) in row_it.enumerate() {
         println!("Row {}: {:?}", i, row);
       }
-    }
-
+    }*/
     
     println!();
     println!("-- next_table_row_value_iter dss12.vot --");
     println!();
     
-    let mut table_it = TableIterator::from_file("resources/sdss12.vot").unwrap();
-    while let Some(row_it) = table_it.next_table_row_value_iter().unwrap() {
+    let mut votable_it = VOTableIterator::from_file("resources/sdss12.vot").unwrap();
+    while let Some(mut row_it) = votable_it.next_table_row_value_iter().unwrap() {
+      let table_ref_mut = row_it.table();
+      println!("Fields: {:?}", table_ref_mut.elems);
       for (i, row) in row_it.enumerate() {
         println!("Row {}: {:?}", i, row);
       }
     }
+    let votable = votable_it.end_of_it();
+    println!("VOTable: {:?}", votable);
 
-
+    
     println!();
     println!("-- next_table_row_value_iter binary.b64 --");
     println!();
     
-    let mut table_it = TableIterator::from_file("resources/binary.b64").unwrap();
+    let mut table_it = VOTableIterator::from_file("resources/binary.b64").unwrap();
     while let Some(row_it) = table_it.next_table_row_value_iter().unwrap() {
       for (i, row) in row_it.enumerate() {
         println!("Row {}: {:?}", i, row);
@@ -806,7 +768,7 @@ mod tests {
     println!("-- next_table_row_value_iter gaia_dr3.b264 --");
     println!();
     
-    let mut table_it = TableIterator::from_file("resources/gaia_dr3.b264").unwrap();
+    let mut table_it = VOTableIterator::from_file("resources/gaia_dr3.b264").unwrap();
     while let Some(row_it) = table_it.next_table_row_value_iter().unwrap() {
       for (i, row) in row_it.enumerate() {
         println!("Row {}: {:?}", i, row);

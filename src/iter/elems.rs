@@ -19,20 +19,21 @@ use serde::{
 
 use crate::{
   is_empty,
-  // table::Table,
+  table::Table,
   error::VOTableError,
   impls::{
     Schema, VOTableValue, 
-    // mem::VoidTableDataContent,
+    mem::VoidTableDataContent,
     visitors::FixedLengthArrayVisitor,
     b64::read::{B64Cleaner, BinaryDeserializer},
   }
 };
+use crate::iter::TableIter;
 
 pub struct DataTableRowValueIterator<'a, R: BufRead> {
   reader: &'a mut Reader<R>,
   reader_buff: &'a mut Vec<u8>,
-  // table: &'a mut Table<VoidTableDataContent>,
+  table: &'a mut Table<VoidTableDataContent>,
   schema: Vec<Schema>,
 }
 
@@ -41,17 +42,23 @@ impl<'a, R: BufRead> DataTableRowValueIterator<'a, R> {
   pub fn new(
     reader: &'a mut Reader<R>,
     reader_buff: &'a mut Vec<u8>,
-    // table: &'a mut Table<VoidTableDataContent>,
+    table: &'a mut Table<VoidTableDataContent>,
     schema: Vec<Schema>
   ) -> Self {
     Self {
       reader,
       reader_buff,
-      // table,
+      table,
       schema,
     }
   }
 
+}
+
+impl<'a, R: BufRead> TableIter for DataTableRowValueIterator<'a, R> {
+  fn table(&mut self) -> &mut Table<VoidTableDataContent> {
+    self.table
+  }
 }
 
 impl<'a, R: BufRead> Iterator for DataTableRowValueIterator<'a, R> {
@@ -142,7 +149,7 @@ impl<'a, R: BufRead> Iterator for DataTableFieldValueIterator<'a, R> {
 
 
 pub struct BinaryRowValueIterator<'a, R: BufRead> {
-  // table: &'a mut Table<VoidTableDataContent>,
+  table: &'a mut Table<VoidTableDataContent>,
   schema: Vec<Schema>,
   binary_deser: BinaryDeserializer<'a, R>,
 }
@@ -151,7 +158,7 @@ impl<'a, R: BufRead> BinaryRowValueIterator<'a, R> {
 
   pub fn new(
     reader: &'a mut Reader<R>,
-    // table: &'a mut Table<VoidTableDataContent>,
+    table: &'a mut Table<VoidTableDataContent>,
     schema: Vec<Schema>
   ) -> Self {
     let internal_reader = reader.get_mut();
@@ -159,12 +166,18 @@ impl<'a, R: BufRead> BinaryRowValueIterator<'a, R> {
     let decoder = DecoderReader::new(b64_cleaner, &general_purpose::STANDARD);
     let binary_deser =  BinaryDeserializer::new(decoder);
     Self {
-      //table,
+      table,
       schema,
       binary_deser
     }
   }
   
+}
+
+impl<'a, R: BufRead> TableIter for BinaryRowValueIterator<'a, R> {
+  fn table(&mut self) -> &mut Table<VoidTableDataContent> {
+    self.table
+  }
 }
 
 impl<'a, R: BufRead> Iterator for BinaryRowValueIterator<'a, R> {
@@ -189,7 +202,7 @@ impl<'a, R: BufRead> Iterator for BinaryRowValueIterator<'a, R> {
 
 
 pub struct Binary2RowValueIterator<'a, R: BufRead> {
-  //table: &'a mut Table<VoidTableDataContent>,
+  table: &'a mut Table<VoidTableDataContent>,
   schema: Vec<Schema>,
   binary_deser: BinaryDeserializer<'a, R>,
   n_bytes: usize, 
@@ -199,7 +212,7 @@ impl<'a, R: BufRead> Binary2RowValueIterator<'a, R> {
 
   pub fn new(
     reader: &'a mut Reader<R>,
-    // table: &'a mut Table<VoidTableDataContent>,
+    table: &'a mut Table<VoidTableDataContent>,
     schema: Vec<Schema>
   ) -> Self {
     let internal_reader = reader.get_mut();
@@ -208,13 +221,19 @@ impl<'a, R: BufRead> Binary2RowValueIterator<'a, R> {
     let binary_deser =  BinaryDeserializer::new(decoder);
     let n_bytes = (schema.len() + 7) / 8;
     Self {
-      // table,
+      table,
       schema,
       binary_deser,
       n_bytes
     }
   }
 
+}
+
+impl<'a, R: BufRead> TableIter for Binary2RowValueIterator<'a, R> {
+  fn table(&mut self) -> &mut Table<VoidTableDataContent> {
+    self.table
+  }
 }
 
 impl<'a, R: BufRead> Iterator for Binary2RowValueIterator<'a, R> {

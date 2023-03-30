@@ -534,6 +534,22 @@ votable:
       content: truncated result (maxtup=2)
 ```
 
+## Example: Iterate on both Tables and Rows of a VOTable
+
+```rust
+    let mut votable_it = VOTableIterator::from_file("resources/sdss12.vot")?;
+    while let Some(mut row_it) = votable_it.next_table_row_value_iter()? {
+      let table_ref_mut = row_it.table();
+      println!("Fields: {:?}", table_ref_mut.elems);
+      for (i, row) in row_it.enumerate() {
+        println!("Row {}: {:?}", i, row);
+      }
+    }
+    let votable = votable_it.end_of_it();
+    println!("VOTable: {:?}", votable);
+```
+
+
 ## To-do list
 
 * [ ] Fill the doc for the Rust library (but I so far do not know people interested in such a lib since Rust is not very used in the astronomy community so far, so...)

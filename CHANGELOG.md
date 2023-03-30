@@ -1,8 +1,13 @@
 # `votable` Change Log
 
-## 0.1.1
+## 0.2.0
 
-Released 2023-XX-XX
+Released 2023-03-30
+
+### Added
+
+* class `VOTableIterator` to iterate externally on a VOTable
+  tables and table rows
 
 ### Bug correction
 
