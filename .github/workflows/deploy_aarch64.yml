@@ -28,8 +28,8 @@ jobs:
            cd crates/cli && echo "$PWD" && \
            for PYBIN in /opt/python/cp38*/bin; do
              "${PYBIN}/pip" install maturin
-             "${PYBIN}/maturin" publish -b bin -i "${PYBIN}/python" --skip-existing --compatibility manylinux2014 --username "$MATURIN_USERNAME" --config "net.git-fetch-with-cli = true"
-             "${PYBIN}/maturin" publish -b bin -i "${PYBIN}/python" --skip-existing --compatibility musllinux_1_2 --username "$MATURIN_USERNAME" --config "net.git-fetch-with-cli = true"
+             "${PYBIN}/maturin" publish -b bin -i "${PYBIN}/python" --no-sdist --skip-existing --compatibility manylinux2014 --username "$MATURIN_USERNAME" --config "net.git-fetch-with-cli = true"
+             "${PYBIN}/maturin" publish -b bin -i "${PYBIN}/python" --no-sdist --skip-existing --compatibility musllinux_1_2 --username "$MATURIN_USERNAME" --config "net.git-fetch-with-cli = true"
            done'
 
 
