@@ -24,7 +24,7 @@ We are (reasonably) open to changes in the various format, e.g.:
 * we could flag attributes with a '@' prefix
 * we could use upper case elements tag names
 * we could remove the 's' suffix in elements arrays
-* we could change the `pos_infos` name for something else
+* we could change the `post_infos` name for something else
 * ...
 
 More testing is required, especially the bit type and arrays.
