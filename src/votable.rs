@@ -730,6 +730,12 @@ mod tests {
   }
 
   #[test]
+  fn test_votable_read_with_namespace_file() {
+    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/IMCCE.with_namespace.vot");
+    assert!(votable.is_ok())
+  }
+  
+  #[test]
   fn test_votable_read_obscore_file() {
     let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/obscore.vot");
     assert!(votable.is_ok())
