@@ -552,6 +552,7 @@ votable:
 
 ## To-do list
 
+* [ ] Support `CDATA`?
 * [ ] Fill the doc for the Rust library (but I so far do not know people interested in such a lib since Rust is not very used in the astronomy community so far, so...)
 * [ ] Add a check method ensuring that user input VOTAbleValue (using the API to build a VOTable) 
       matches the table schema (or automatically converting in the right VOTableValue)
