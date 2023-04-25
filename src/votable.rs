@@ -736,6 +736,18 @@ mod tests {
   }
 
   #[test]
+  fn test_votable_read_dataLink_003_file() {
+    match VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/dataLink_003.xml") {
+      Ok(_) => { },
+      Err(e) => {
+        eprintln!("Error: {:?}", e);
+        assert!(false);
+      },
+    }
+    // assert!(votable.is_ok())
+  }
+
+  #[test]
   fn test_votable_read_iter_datatable_from_file() {
     use crate::iter::VOTableIterator;
     
