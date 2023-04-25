@@ -1,5 +1,14 @@
 # `votable` Change Log
 
+## 0.2.1
+
+Released 2023-04-25
+
+* Accept VOTables 1.1 and 1.2
+* Fix error while parsing PARAM
+* Fix error with empty fields (?) 
+
+
 ## 0.2.0
 
 Released 2023-03-30
