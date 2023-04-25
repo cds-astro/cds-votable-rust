@@ -37,6 +37,10 @@ use super::{
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub enum Version {
+  #[serde(rename = "1.1")]
+  V1_1,
+  #[serde(rename = "1.2")]
+  V1_2,
   #[serde(rename = "1.3")]
   V1_3,
   #[serde(rename = "1.4")]
@@ -48,9 +52,11 @@ impl FromStr for Version {
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     match s {
+      "1.1" => Ok(Version::V1_1),
+      "1.2" => Ok(Version::V1_2),
       "1.3" => Ok(Version::V1_3),
       "1.4" => Ok(Version::V1_4),
-      _ => Err(format!("Unrecognized version. Actual: '{}'. Expected: '1.3' or '1.4'", s)),
+      _ => Err(format!("Unrecognized version. Actual: '{}'. Expected: '1.1', '1.2', '1.3' or '1.4'", s)),
     }
   }
 }
@@ -58,6 +64,8 @@ impl FromStr for Version {
 impl From<&Version> for &'static str {
   fn from(version: &Version) -> Self {
     match version {
+      Version::V1_1 => "1.1",
+      Version::V1_2 => "1.2",
       Version::V1_3 => "1.3",
       Version::V1_4 => "1.4",
     }
@@ -377,11 +385,11 @@ impl<C: TableDataContent> VOTable<C> {
     let mut reader = Reader::from_reader(reader);
     let mut buff: Vec<u8> = Vec::with_capacity(1024);
     loop {
-      let mut event = reader.read_event(&mut buff).unwrap();
+      let mut event = reader.read_event(&mut buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Decl(ref e) => check_declaration(e),
         Event::Start(ref mut e) if e.local_name() == VOTable::<C>::TAG_BYTES => {
-          let mut votable = VOTable::<C>::from_attributes(e.attributes()).unwrap();
+          let mut votable = VOTable::<C>::from_attributes(e.attributes())?;
           votable.read_sub_elements_and_clean(reader, &mut buff, &())?;
           // ignore the remaining of the reader !
           return Ok(votable);
@@ -397,11 +405,11 @@ impl<C: TableDataContent> VOTable<C> {
     -> Result<(VOTable<C>, Resource<C>, Reader<R>), VOTableError> {
     let mut reader = Reader::from_reader(reader);
     loop {
-      let mut event = reader.read_event(&mut reader_buff).unwrap();
+      let mut event = reader.read_event(&mut reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Decl(ref e) => check_declaration(e),
         Event::Start(ref mut e) if e.local_name() == VOTable::<C>::TAG_BYTES => {
-          let mut votable = VOTable::<C>::from_attributes(e.attributes()).unwrap();
+          let mut votable = VOTable::<C>::from_attributes(e.attributes())?;
           let (resource, reader) = votable.read_till_next_resource(reader, &mut reader_buff)?;
           reader_buff.clear();
           return Ok((votable, resource, reader));
@@ -719,6 +727,30 @@ mod tests {
       Ok(content) => println!("{}", &content),
       Err(error) => println!("{:?}", &error),
     }*/
+  }
+
+  #[test]
+  fn test_votable_read_with_namespace_file() {
+    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/IMCCE.with_namespace.vot");
+    assert!(votable.is_ok())
+  }
+  
+  #[test]
+  fn test_votable_read_obscore_file() {
+    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/obscore.vot");
+    assert!(votable.is_ok())
+  }
+
+  #[test]
+  fn test_votable_read_dataLink_003_file() {
+    match VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/dataLink_003.xml") {
+      Ok(_) => { },
+      Err(e) => {
+        eprintln!("Error: {:?}", e);
+        assert!(false);
+      },
+    }
+    // assert!(votable.is_ok())
   }
 
   #[test]
