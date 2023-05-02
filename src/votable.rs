@@ -6,7 +6,6 @@ use std::{
   collections::HashMap,
 };
 
-
 use quick_xml::{
   Reader, Writer,
   events::{
@@ -27,6 +26,7 @@ use super::{
   error::VOTableError,
   coosys::CooSys,
   desc::Description,
+  definitions::Definitions,
   group::Group,
   info::Info,
   param::Param,
@@ -37,6 +37,8 @@ use super::{
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub enum Version {
+  #[serde(rename = "1.0")]
+  V1_0,
   #[serde(rename = "1.1")]
   V1_1,
   #[serde(rename = "1.2")]
@@ -52,6 +54,7 @@ impl FromStr for Version {
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     match s {
+      "1.0" => Ok(Version::V1_0),
       "1.1" => Ok(Version::V1_1),
       "1.2" => Ok(Version::V1_2),
       "1.3" => Ok(Version::V1_3),
@@ -64,6 +67,7 @@ impl FromStr for Version {
 impl From<&Version> for &'static str {
   fn from(version: &Version) -> Self {
     match version {
+      Version::V1_0 => "1.0",
       Version::V1_1 => "1.1",
       Version::V1_2 => "1.2",
       Version::V1_3 => "1.3",
@@ -80,6 +84,7 @@ pub enum VOTableElem {
   Group(Group),
   Param(Param),
   Info(Info),
+  Definitions(Definitions), // Deprecated since v1.1
 }
 
 impl VOTableElem {
@@ -90,6 +95,7 @@ impl VOTableElem {
       VOTableElem::Group(elem) => elem.write(writer, &()),
       VOTableElem::Param(elem) => elem.write(writer, &()),
       VOTableElem::Info(elem) => elem.write(writer, &()),
+      VOTableElem::Definitions(elem) => elem.write(writer, &()),
     }
   }
 }
@@ -434,6 +440,7 @@ impl<C: TableDataContent> VOTable<C> {
   impl_builder_push_elem!(Group, VOTableElem);
   impl_builder_push_elem!(Param, VOTableElem);
   impl_builder_push_elem!(Info, VOTableElem);
+  impl_builder_push_elem!(Definitions, VOTableElem);
 
   impl_builder_push!(Resource, C);
 
@@ -512,6 +519,8 @@ impl<C: TableDataContent> VOTable<C> {
               self.elems.push(VOTableElem::Group(from_event_start!(Group, reader, reader_buff, e))),
             Param::TAG_BYTES =>
               self.elems.push(VOTableElem::Param(from_event_start!(Param, reader, reader_buff, e))),
+            Definitions::TAG_BYTES =>
+              self.elems.push(VOTableElem::Definitions(from_event_start!(Definitions, reader, reader_buff, e))),
             Resource::<C>::TAG_BYTES => {
               let resource = Resource::<C>::from_attributes(e.attributes())?;
               return Ok((resource, reader));
@@ -528,6 +537,7 @@ impl<C: TableDataContent> VOTable<C> {
             TimeSys::TAG_BYTES => self.elems.push(VOTableElem::TimeSys(TimeSys::from_event_empty(e)?)),
             Group::TAG_BYTES => self.elems.push(VOTableElem::Group(Group::from_event_empty(e)?)),
             Param::TAG_BYTES => self.elems.push(VOTableElem::Param(Param::from_event_empty(e)?)),
+            Definitions::TAG_BYTES => self.elems.push(VOTableElem::Definitions(Definitions::from_event_empty(e)?)),
             Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
             _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
           }
@@ -600,6 +610,8 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
               self.elems.push(VOTableElem::Group(from_event_start!(Group, reader, reader_buff, e))),
             Param::TAG_BYTES =>
               self.elems.push(VOTableElem::Param(from_event_start!(Param, reader, reader_buff, e))),
+            Definitions::TAG_BYTES =>
+              self.elems.push(VOTableElem::Definitions(from_event_start!(Definitions, reader, reader_buff, e))),
             Resource::<C>::TAG_BYTES =>
               self.resources.push(from_event_start!(Resource, reader, reader_buff, e)),
             Info::TAG_BYTES =>
@@ -614,6 +626,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
             TimeSys::TAG_BYTES => self.elems.push(VOTableElem::TimeSys(TimeSys::from_event_empty(e)?)),
             Group::TAG_BYTES => self.elems.push(VOTableElem::Group(Group::from_event_empty(e)?)),
             Param::TAG_BYTES => self.elems.push(VOTableElem::Param(Param::from_event_empty(e)?)),
+            Definitions::TAG_BYTES => self.elems.push(VOTableElem::Definitions(Definitions::from_event_empty(e)?)),
             Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
             _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
           }
@@ -738,6 +751,12 @@ mod tests {
   #[test]
   fn test_votable_read_obscore_file() {
     let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/obscore.vot");
+    assert!(votable.is_ok())
+  }
+
+  #[test]
+  fn test_votable_readwith_definitions_file() {
+    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/vot_with_definitions.vot");
     assert!(votable.is_ok())
   }
 

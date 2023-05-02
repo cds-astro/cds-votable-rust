@@ -30,6 +30,7 @@ pub mod coosys;
 pub mod data;
 pub mod datatype;
 pub mod desc;
+pub mod definitions;
 pub mod field;
 pub mod fieldref;
 pub mod group;

@@ -1,5 +1,13 @@
 # `votable` Change Log
 
+## 0.2.2
+
+Released 2023-05-01
+
+* Accept VOTables 1.0
+* Add the deprecated "DEFINITIONS" tag
+
+
 ## 0.2.1
 
 Released 2023-04-25
