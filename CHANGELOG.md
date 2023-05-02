@@ -1,5 +1,12 @@
 # `votable` Change Log
 
+## 0.2.3
+
+Released 2023-05-01
+
+* Accept CDATA in 'Info', 'Desciption', 'Link', 'ParamRef' and 'FieldRef' content
+* Accepth empty 'precision' and 'width' attributes
+
 ## 0.2.2
 
 Released 2023-05-01
