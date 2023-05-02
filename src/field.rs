@@ -196,8 +196,8 @@ impl QuickXmlReadWrite for Field {
           field
         },
         b"unit" => field.set_unit(value),
-        b"precision" => field.set_precision(value.parse::<Precision>().map_err(VOTableError::ParseInt)?),
-        b"width" => field.set_width(value.parse().map_err(VOTableError::ParseInt)?),
+        b"precision" if !value.is_empty() => field.set_precision(value.parse::<Precision>().map_err(VOTableError::ParseInt)?),
+        b"width" if !value.is_empty() => field.set_width(value.parse().map_err(VOTableError::ParseInt)?),
         b"xtype" => field.set_xtype(value),
         b"ref" => field.set_ref(value),
         b"ucd" => field.set_ucd(value),

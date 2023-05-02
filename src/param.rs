@@ -109,8 +109,8 @@ impl QuickXmlReadWrite for Param {
           param
         }
         b"unit" => param.set_utype(value),
-        b"precision" => param.set_precision(value.parse::<Precision>().map_err(VOTableError::ParseInt)?),
-        b"width" => param.set_width(value.parse().map_err(VOTableError::ParseInt)?),
+        b"precision" if !value.is_empty() => param.set_precision(value.parse::<Precision>().map_err(VOTableError::ParseInt)?),
+        b"width"  if !value.is_empty() => param.set_width(value.parse().map_err(VOTableError::ParseInt)?),
         b"xtype" => param.set_xtype(value),
         b"ref" => param.set_ref(value),
         b"ucd" => param.set_ucd(value),
