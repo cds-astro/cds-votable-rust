@@ -143,31 +143,61 @@ macro_rules! impl_builder_insert_extra {
 macro_rules! read_content {
   ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident) => {
     {
-      let event: Event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
-      let link_content = match &event {
+      /*let event: Event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
+      let content = match &event {
         Event::Text(e) => e.unescape_and_decode(&$reader).map_err(VOTableError::Read),
         _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: Text. Actual: {:?}.", $Self::TAG, event))),
       }?;
-      $self.content = Some(link_content);
+      $self.content = Some(content);
       let event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
       match &event {
         Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok($reader),
         _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End. Actual: {:?}.", $Self::TAG, event))),
+      }*/
+      let mut content = String::new();
+      loop {
+        let mut event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
+        match &mut event {
+          Event::Text(e) => content.push_str(e.unescape_and_decode(&$reader).map_err(VOTableError::Read)?.as_str()),
+          Event::CData(e) => content.push_str(str::from_utf8(e.clone().into_inner().as_ref()).map_err(VOTableError::Utf8)?),
+          Event::End(e) if e.local_name() == $Self::TAG_BYTES => { 
+            $self.content = Some(content);
+            return Ok($reader);
+          },
+          Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
+          _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+          // _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End or Text or CDATA. Actual: {:?}.", $Self::TAG, event))),
+        }
       }
     }
   };
   ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident, $content:tt) => {
     {
-      let event: Event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
-      let link_content = match &event {
+      /*let event: Event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
+      let content = match &event {
         Event::Text(e) => e.unescape_and_decode(&$reader).map_err(VOTableError::Read),
         _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: Text. Actual: {:?}.", $Self::TAG, event))),
       }?;
-      $self.$content = link_content;
+      $self.$content = content;
       let event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
       match &event {
         Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok($reader),
         _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End. Actual: {:?}.", $Self::TAG, event))),
+      }*/
+      let mut content = String::new();
+      loop {
+        let mut event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
+        match &mut event {
+          Event::Text(e) => content.push_str(e.unescape_and_decode(&$reader).map_err(VOTableError::Read)?.as_str()),
+          Event::CData(e) => content.push_str(std::str::from_utf8(e.clone().into_inner().as_ref()).map_err(VOTableError::Utf8)?),
+          Event::End(e) if e.local_name() == $Self::TAG_BYTES => { 
+            $self.$content = content;
+            return Ok($reader);
+          },
+          Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
+          _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+          // _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End or Text or CDATA. Actual: {:?}.", $Self::TAG, event))),
+        }
       }
     }
   };
@@ -177,11 +207,11 @@ macro_rules! read_content_by_ref {
   ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident) => {
     {
       let event: Event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
-      let link_content = match &event {
+      let content = match &event {
         Event::Text(e) => e.unescape_and_decode(&$reader).map_err(VOTableError::Read),
         _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: Text. Actual: {:?}.", $Self::TAG, event))),
       }?;
-      $self.content = Some(link_content);
+      $self.content = Some(content);
       let event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
       match &event {
         Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok(()),
@@ -192,11 +222,11 @@ macro_rules! read_content_by_ref {
   ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident, $content:tt) => {
     {
       let event: Event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
-      let link_content = match &event {
+      let content = match &event {
         Event::Text(e) => e.unescape_and_decode(&$reader).map_err(VOTableError::Read),
         _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: Text. Actual: {:?}.", $Self::TAG, event))),
       }?;
-      $self.$content = link_content;
+      $self.$content = content;
       let event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
       match &event {
         Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok(()),
