@@ -29,87 +29,87 @@ use super::{
 
 #[derive(Debug)]
 pub enum ResourceOrTable<C: TableDataContent> {
-  Resource(Resource<C>),
-  Table(Table<C>),
+    Resource(Resource<C>),
+    Table(Table<C>),
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum ResourceElem {
-  CooSys(CooSys),
-  TimeSys(TimeSys),
-  Group(Group),
-  Param(Param),
+    CooSys(CooSys),
+    TimeSys(TimeSys),
+    Group(Group),
+    Param(Param),
 }
 
 impl ResourceElem {
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
-    match self {
-      ResourceElem::CooSys(elem) => elem.write(writer, &()),
-      ResourceElem::TimeSys(elem) => elem.write(writer, &()),
-      ResourceElem::Group(elem) => elem.write(writer, &()),
-      ResourceElem::Param(elem) => elem.write(writer, &()),
+    fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+        match self {
+            ResourceElem::CooSys(elem) => elem.write(writer, &()),
+            ResourceElem::TimeSys(elem) => elem.write(writer, &()),
+            ResourceElem::Group(elem) => elem.write(writer, &()),
+            ResourceElem::Param(elem) => elem.write(writer, &()),
+        }
     }
-  }
 }
 
 #[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Resource<C: TableDataContent> {
-  // attributes
-  #[serde(rename = "ID", default, skip_serializing_if = "Option::is_none")]
-  pub id: Option<String>,
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub name: Option<String>,
-  #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
-  pub type_: Option<String>,
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub utype: Option<String>,
-  // extra attributes
-  #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-  pub extra: HashMap<String, Value>,
-  // sub elements
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub description: Option<Description>,
-  #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  pub infos: Vec<Info>,
-  #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  pub elems: Vec<ResourceElem>,
-  #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  pub links: Vec<Link>,
-  #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  pub tables: Vec<Table<C>>,
-  #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  pub resources: Vec<Resource<C>>,
-  #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  pub post_infos: Vec<Info>,
+    // attributes
+    #[serde(rename = "ID", default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub type_: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub utype: Option<String>,
+    // extra attributes
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    pub extra: HashMap<String, Value>,
+    // sub elements
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<Description>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub infos: Vec<Info>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub elems: Vec<ResourceElem>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub links: Vec<Link>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tables: Vec<Table<C>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub resources: Vec<Resource<C>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub post_infos: Vec<Info>,
 }
 
 impl<C: TableDataContent> Resource<C> {
-  pub fn new() -> Self {
-    Default::default()
-  }
+    pub fn new() -> Self {
+        Default::default()
+    }
 
-  impl_builder_opt_string_attr!(id);
-  impl_builder_opt_string_attr!(name);
-  impl_builder_opt_string_attr!(type_, type);
-  impl_builder_opt_string_attr!(utype);
+    impl_builder_opt_string_attr!(id);
+    impl_builder_opt_string_attr!(name);
+    impl_builder_opt_string_attr!(type_, type);
+    impl_builder_opt_string_attr!(utype);
 
-  impl_builder_opt_attr!(description, Description);
+    impl_builder_opt_attr!(description, Description);
 
-  impl_builder_insert_extra!();
+    impl_builder_insert_extra!();
 
-  impl_builder_push!(Info);
+    impl_builder_push!(Info);
 
-  impl_builder_push_elem!(CooSys, ResourceElem);
-  impl_builder_push_elem!(TimeSys, ResourceElem);
-  impl_builder_push_elem!(Group, ResourceElem);
-  impl_builder_push_elem!(Param, ResourceElem);
+    impl_builder_push_elem!(CooSys, ResourceElem);
+    impl_builder_push_elem!(TimeSys, ResourceElem);
+    impl_builder_push_elem!(Group, ResourceElem);
+    impl_builder_push_elem!(Param, ResourceElem);
 
-  impl_builder_push!(Link);
-  impl_builder_push!(Table, C);
-  impl_builder_push!(Resource, C);
+    impl_builder_push!(Link);
+    impl_builder_push!(Table, C);
+    impl_builder_push!(Resource, C);
 
-  impl_builder_push_post_info!();
+    impl_builder_push_post_info!();
 
   pub(crate) fn read_till_next_resource_or_table_by_ref<R: BufRead>(
     &mut self,
@@ -223,27 +223,27 @@ impl<C: TableDataContent> Resource<C> {
 }
 
 impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
-  const TAG: &'static str = "RESOURCE";
-  type Context = ();
+    const TAG: &'static str = "RESOURCE";
+    type Context = ();
 
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut resource = Self::new();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
-      resource = match attr.key {
-        b"ID" => resource.set_id(value),
-        b"name" => resource.set_name(value),
-        b"type" => resource.set_type(value),
-        b"utype" => resource.set_utype(value),
-        _ => resource.insert_extra(
-          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
-          Value::String(value.into()),
-        ),
-      }
+    fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
+        let mut resource = Self::new();
+        for attr_res in attrs {
+            let attr = attr_res.map_err(VOTableError::Attr)?;
+            let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
+            resource = match attr.key {
+                b"ID" => resource.set_id(value),
+                b"name" => resource.set_name(value),
+                b"type" => resource.set_type(value),
+                b"utype" => resource.set_utype(value),
+                _ => resource.insert_extra(
+                    str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
+                    Value::String(value.into()),
+                ),
+            }
+        }
+        Ok(resource)
     }
-    Ok(resource)
-  }
 
   fn read_sub_elements<R: BufRead>(
     &mut self,
