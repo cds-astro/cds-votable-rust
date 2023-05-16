@@ -466,3 +466,34 @@ impl QuickXmlReadWrite for Values {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use crate::{
+    tests::{test_read, test_writer},
+    values::Values,
+  };
+
+  #[test]
+  fn test_values_read_write() {
+    let xml = r#"<VALUES ID="RAdomain" null="NaN"><MIN value="0"/><MAX value="360" inclusive="false"/></VALUES>"#; // Test read
+    let value = test_read::<Values>(xml);
+    assert_eq!(value.id.as_ref().map(|s| s.as_str()), Some("RAdomain"));
+    assert_eq!(value.min.as_ref().unwrap().value, "0");
+    assert_eq!(value.max.as_ref().unwrap().value, "360");
+    assert_eq!(value.max.as_ref().unwrap().inclusive, false);
+    assert_eq!(value.null, Some("NaN".to_string()));
+
+    // Test write
+    test_writer(value, xml)
+  }
+
+  #[test]
+  fn test_values_read_write2() {
+    let xml = r#"<VALUES ref="RAdomain"/>"#; // Test read
+    let value = test_read::<Values>(xml);
+    assert_eq!(value.ref_, Some("RAdomain".to_string()));
+    // Test write
+    test_writer(value, xml)
+  }
+}

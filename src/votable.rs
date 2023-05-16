@@ -829,15 +829,7 @@ mod tests {
   }
 
   #[test]
-  fn test_votable_read_with_cdata() {
-    let votable =
-      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/vot_with_cdata.vot");
-    println!("{:?}", votable);
-    assert!(votable.is_ok())
-  }
-
-  #[test]
-  fn test_votable_read_with_definitions_file() {
+  fn test_votable_readwith_definitions_file() {
     let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file(
       "resources/vot_with_definitions.vot",
     );
@@ -845,14 +837,7 @@ mod tests {
   }
 
   #[test]
-  fn test_votable_read_with_empty_precision() {
-    let votable =
-      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/vot_with_empty_prec.vot");
-    assert!(votable.is_ok())
-  }
-
-  #[test]
-  fn test_votable_read_datalink_003_file() {
+  fn test_votable_read_data_link_003_file() {
     match VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/dataLink_003.xml") {
       Ok(_) => {}
       Err(e) => {

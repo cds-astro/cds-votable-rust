@@ -505,7 +505,12 @@ impl QuickXmlReadWrite for Field {
 
 #[cfg(test)]
 mod tests {
-  use crate::field::ArraySize;
+  use crate::{
+    datatype::Datatype,
+    field::ArraySize,
+    field::Field,
+    tests::{test_read, test_writer},
+  };
   use std::str::FromStr;
 
   #[test]
@@ -558,5 +563,57 @@ mod tests {
     for elem in elems {
       assert_eq!(ArraySize::from_str(elem).unwrap().to_string(), elem);
     }
+  }
+
+  #[test]
+  fn test_field_read_write() {
+    let xml = r#"<FIELD ID="id" name="nomo" datatype="float" unit="unit" precision="1" width="5" xtype="xt" ucd="UCD" utype="ut" arraysize="5"></FIELD>"#; // Test read
+    let field = test_read::<Field>(xml);
+    // Test read
+    assert_eq!(field.id, Some("id".to_string()));
+    assert_eq!(field.name, "nomo".to_string());
+    assert_eq!(field.datatype, Datatype::Float);
+    assert_eq!(field.unit, Some("unit".to_string()));
+    let prec = format!("{}", field.precision.as_ref().unwrap());
+    assert_eq!(prec, "1");
+    assert_eq!(field.width, Some(5));
+    assert_eq!(field.xtype, Some("xt".to_string()));
+    assert_eq!(field.utype, Some("ut".to_string()));
+    assert_eq!(field.ucd, Some("UCD".to_string()));
+    // Test write
+    test_writer(field, xml)
+  }
+
+  #[test]
+  fn test_field_read_write_w_desc() {
+    let xml = r#"<FIELD name="band" datatype="char" ucd="instr.bandpass" utype="ssa:DataID.Bandpass" arraysize="*"><DESCRIPTION>Description</DESCRIPTION></FIELD>"#;
+    let field = test_read::<Field>(xml);
+    assert_eq!(
+      field.description.as_ref().unwrap().0,
+      "Description".to_string()
+    );
+    // Test write
+    test_writer(field, xml)
+  }
+
+  #[test]
+  fn test_field_read_write_w_link() {
+    let xml = r#"<FIELD name="band" datatype="char" ucd="instr.bandpass" utype="ssa:DataID.Bandpass" arraysize="*"><LINK href="http://127.0.0.1/"/></FIELD>"#;
+    let field = test_read::<Field>(xml);
+    assert_eq!(
+      field.links.get(0).as_ref().unwrap().href,
+      Some("http://127.0.0.1/".to_string())
+    );
+    // Test write
+    test_writer(field, xml)
+  }
+
+  #[test]
+  fn test_field_read_write_w_val() {
+    let xml = r#"<FIELD name="gmag" datatype="float" unit="mag" precision="3" width="6" ucd="phot.mag;em.opt.B"><VALUES null="NaN"/></FIELD>"#;
+    let field = test_read::<Field>(xml);
+    assert_eq!(field.values.as_ref().unwrap().null, Some("NaN".to_string()));
+    // Test write
+    test_writer(field, xml)
   }
 }

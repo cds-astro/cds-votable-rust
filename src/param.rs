@@ -272,3 +272,22 @@ impl QuickXmlReadWrite for Param {
       .map_err(VOTableError::Write)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use crate::{
+    param::Param,
+    tests::{test_read, test_writer},
+  };
+
+  #[test]
+  fn test_params_read_write() {
+    let xml =
+      r#"<PARAM name="Freq" datatype="float" value="352" ucd="em.freq" utype="MHz"></PARAM>"#; // Test read
+    let param = test_read::<Param>(xml);
+    //Other parameters like name datatype etc... depend on Field reading, see Field read_write_test
+    assert_eq!(param.value.as_str(), "352");
+    // Test write
+    test_writer(param, xml)
+  }
+}

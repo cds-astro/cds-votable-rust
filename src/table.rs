@@ -342,3 +342,23 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
       .map_err(VOTableError::Write)
   }
 }
+
+#[cfg(test)]
+mod tests {
+use crate::{
+    impls::mem::InMemTableDataRows,
+    tests::{test_read, test_writer}, table::Table,
+  };
+
+  #[test]
+  fn test_table_read_write() {
+    let xml = r#"<TABLE ID="V_147_sdss12" name="V/147/sdss12" nrows="2"><FIELD name="RA_ICRS" datatype="char" ucd="pos.eq.ra;meta.main"></FIELD><FIELD name="RA_ICRS" datatype="char" ucd="pos.eq.ra;meta.main"></FIELD><DATA><TABLEDATA><TR><TD>a</TD><TD>b</TD></TR><TR><TD>a</TD><TD>b</TD></TR></TABLEDATA></DATA></TABLE>"#; // Test read
+    let table = test_read::<Table<InMemTableDataRows>>(xml);
+    assert_eq!(table.id.as_ref().unwrap().as_str(), "V_147_sdss12");
+    assert_eq!(table.name.as_ref().unwrap().as_str(), "V/147/sdss12");
+    assert_eq!(table.nrows, Some(2));
+    assert_eq!(table.elems.len(), 2);
+    // Test write
+    test_writer(table, xml);
+  }
+}
