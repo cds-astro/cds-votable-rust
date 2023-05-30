@@ -5,13 +5,13 @@ use quick_xml::{
 
 use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
 
-use super::{collection::Collection, instance::Instance};
+use super::{collection::Collection, instance::GlobOrTempInstance};
 use std::{io::Write, str};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum GlobalsElem {
-    Instance(Instance),
+    Instance(GlobOrTempInstance),
     Collection(Collection),
 }
 impl GlobalsElem {
@@ -51,8 +51,8 @@ impl QuickXmlReadWrite for Globals {
             let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
             match &mut event {
                 Event::Start(ref e) => match e.local_name() {
-                    Instance::TAG_BYTES => self.elems.push(GlobalsElem::Instance(
-                        from_event_start!(Instance, reader, reader_buff, e),
+                    GlobOrTempInstance::TAG_BYTES => self.elems.push(GlobalsElem::Instance(
+                        from_event_start!(GlobOrTempInstance, reader, reader_buff, e),
                     )),
                     Collection::TAG_BYTES => self.elems.push(GlobalsElem::Collection(
                         from_event_start!(Collection, reader, reader_buff, e),
@@ -69,7 +69,7 @@ impl QuickXmlReadWrite for Globals {
                         return Err(VOTableError::UnexpectedEmptyTag(
                             e.local_name().to_vec(),
                             Self::TAG,
-                        ))
+                        ));
                     }
                 },
                 Event::Text(e) if is_empty(e) => {}

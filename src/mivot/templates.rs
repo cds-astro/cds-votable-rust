@@ -3,7 +3,7 @@ use paste::paste;
 use quick_xml::events::{BytesStart, Event};
 use std::str;
 
-use super::r#where::Where;
+use super::{instance::GlobOrTempInstance, r#where::Where};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Templates {
@@ -11,12 +11,15 @@ pub struct Templates {
     tableref: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     wheres: Vec<Where>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    instances: Vec<GlobOrTempInstance>,
 }
 impl Templates {
     fn new() -> Self {
         Self {
             tableref: None,
             wheres: vec![],
+            instances: vec![],
         }
     }
     impl_builder_opt_string_attr!(tableref);
@@ -46,13 +49,19 @@ impl QuickXmlReadWrite for Templates {
     fn read_sub_elements<R: std::io::BufRead>(
         &mut self,
         mut reader: quick_xml::Reader<R>,
-        reader_buff: &mut Vec<u8>,
+        mut reader_buff: &mut Vec<u8>,
         _context: &Self::Context,
     ) -> Result<quick_xml::Reader<R>, crate::error::VOTableError> {
         loop {
             let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
             match &mut event {
                 Event::Start(ref e) => match e.local_name() {
+                    GlobOrTempInstance::TAG_BYTES => self.instances.push(from_event_start!(
+                        GlobOrTempInstance,
+                        reader,
+                        reader_buff,
+                        e
+                    )),
                     _ => {
                         return Err(VOTableError::UnexpectedStartTag(
                             e.local_name().to_vec(),

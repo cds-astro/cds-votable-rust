@@ -37,9 +37,13 @@ https://ivoa.net/documents/Meas/20211019/index.html
 // }
 // Get system associated to error: error.pos.sys
 
+use std::collections::HashMap;
+use std::str;
+
 use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
 use paste::paste;
 use quick_xml::events::{BytesStart, Event};
+use serde_json::Value;
 
 use super::{globals::Globals, model::Model, report::Report, templates::Templates};
 
@@ -53,9 +57,13 @@ pub struct Vodml {
     globals: Vec<Globals>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     templates: Vec<Templates>,
+    // extra attributes
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    pub extra: HashMap<String, Value>,
 }
 impl Vodml {
     impl_builder_opt_attr!(report, Report);
+    impl_builder_insert_extra!();
 }
 impl QuickXmlReadWrite for Vodml {
     const TAG: &'static str = "VODML";
@@ -64,10 +72,19 @@ impl QuickXmlReadWrite for Vodml {
     fn from_attributes(
         attrs: quick_xml::events::attributes::Attributes,
     ) -> Result<Self, crate::error::VOTableError> {
-        if attrs.count() > 0 {
-            eprintln!("Unexpected attributes in VODML (not serialized!)");
+        let mut vodml = Self::default();
+        for attr_res in attrs {
+            let attr = attr_res.map_err(VOTableError::Attr)?;
+            let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
+            let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
+            vodml = match attr.key {
+                _ => vodml.insert_extra(
+                    str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
+                    Value::String(value.into()),
+                ),
+            }
         }
-        Ok(Self::default())
+        Ok(vodml)
     }
 
     fn read_sub_elements<R: std::io::BufRead>(
@@ -78,16 +95,13 @@ impl QuickXmlReadWrite for Vodml {
     ) -> Result<quick_xml::Reader<R>, crate::error::VOTableError> {
         loop {
             let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+            println!("{:?}", event);
             match &mut event {
                 Event::Start(ref e) => match e.local_name() {
                     Report::TAG_BYTES => {
                         if self.report.is_none() {
                             self.report = Some(from_event_start!(Report, reader, reader_buff, e))
                         }
-                    }
-                    Model::TAG_BYTES => {
-                        self.models
-                            .push(from_event_start!(Model, reader, reader_buff, e))
                     }
                     Globals::TAG_BYTES => {
                         self.globals
@@ -105,6 +119,7 @@ impl QuickXmlReadWrite for Vodml {
                     }
                 },
                 Event::Empty(ref e) => match e.local_name() {
+                    Model::TAG_BYTES => self.models.push(Model::from_event_empty(e)?),
                     _ => {
                         return Err(VOTableError::UnexpectedEmptyTag(
                             e.local_name().to_vec(),
@@ -148,15 +163,17 @@ impl QuickXmlReadWrite for Vodml {
     }
 }
 
-//DOC example VODML
-/*
-    <VODML xmlns:dm-mapping="http://www.ivoa.net/xml/merged-syntax">
-        <REPORT status="OK">hand-made mapping</REPORT>
+#[cfg(test)]
+mod tests {
+    use crate::{mivot::vodml::Vodml, tests::test_read};
 
+    #[test]
+    fn test_vodml_read_write() {
+        let xml = r#"<VODML xmlns:dm-mapping="http://www.ivoa.net/xml/merged-syntax">
+        <REPORT status="OK">hand-made mapping</REPORT>
         <MODEL name="meas" url="https://www.ivoa.net/xml/Meas/20200908/Meas-v1.0.vo-dml.xml" />
         <MODEL name="coords" url="https://www.ivoa.net/xml/STC/20200908/Coords-v1.0.vo-dml.xml" />
         <MODEL name="ivoa" url="https://www.ivoa.net/xml/VODML/IVOA-v1.vo-dml.xml" />
-
         <GLOBALS>
           <INSTANCE dmid="SpaceFrame_ICRS" dmtype="coords:SpaceSys">
             <INSTANCE dmrole="coords:PhysicalCoordSys.frame" dmtype="coords:SpaceFrame">
@@ -167,9 +184,7 @@ impl QuickXmlReadWrite for Vodml {
             </INSTANCE>
           </INSTANCE>
         </GLOBALS>
-
         <TEMPLATES tableref="Results">
-
           <INSTANCE dmrole="" dmtype="meas:Position">
             <ATTRIBUTE dmrole="meas:Measure.ucd" dmtype="ivoa:string" value="pos" />
             <INSTANCE dmrole="meas:Measure.coord" dmtype="coords:LonLatPoint">
@@ -178,16 +193,14 @@ impl QuickXmlReadWrite for Vodml {
               <ATTRIBUTE dmtype="ivoa:RealQuantity" dmrole="coords:LonLatPoint.dist" ref="parallax" unit="parsec"/>
               <REFERENCE dmrole="coords:Coordinate.coordSys" dmref="SpaceFrame_ICRS" />
             </INSTANCE>
-
             <INSTANCE dmrole="meas:Measure.error" dmtype="meas:Ellipse">
-              <ATTRIBUTE dmrole="meas:Ellipse.posAngle" value="0"/>
+              <ATTRIBUTE dmrole="meas:Ellipse.posAngle" dmtype="meas:Ellipse" value="0"/>
               <COLLECTION dmrole="meas:Ellipse.semiAxis">
                 <ATTRIBUTE dmtype="ivoa:RealQuantity" ref="ra_error" unit="mas"/>
                 <ATTRIBUTE dmtype="ivoa:RealQuantity" ref="dec_error" unit="mas"/>
               </COLLECTION>
             </INSTANCE>
           </INSTANCE>
-
           <INSTANCE dmrole="" dmtype="meas:Velocity">
             <ATTRIBUTE dmrole="meas:Measure.ucd" dmtype="ivoa:string" value="spect.dopplerVeloc.opt" />
             <INSTANCE dmrole="meas:Measure.coord" dmtype="coords:LonLatPoint">
@@ -197,7 +210,6 @@ impl QuickXmlReadWrite for Vodml {
             <ATTRIBUTE dmrole="meas:Measure.error" dmtype="meas:Symmetrical"
                        ref="radial_velocity_error" unit="km/s"/>
            </INSTANCE>
-
           <INSTANCE dmrole="" dmtype="meas:GenericMeasure">
             <ATTRIBUTE dmrole="meas:Measure.ucd" dmtype="ivoa:string" value="pos.parallax" />
             <INSTANCE dmrole="meas:Measure.coord" dmtype="coords:PhysicalCoordinate">
@@ -205,7 +217,6 @@ impl QuickXmlReadWrite for Vodml {
             </INSTANCE>
             <ATTRIBUTE dmrole="meas:Measure.error" dmtype="meas:Symmetrical" ref="parallax_error" unit="mas"/>
           </INSTANCE>
-
           <INSTANCE dmrole="" dmtype="meas:ProperMotion">
             <ATTRIBUTE dmrole="meas:Measure.ucd" dmtype="ivoa:string" value="pos.pm" />
             <INSTANCE dmrole="meas:Measure.coord" dmtype="coords:LonLatPoint">
@@ -213,16 +224,16 @@ impl QuickXmlReadWrite for Vodml {
               <ATTRIBUTE dmrole="coords:LonLatPoint.lat" dmtype="ivoa:RealQuantity" ref="pmdec" unit="mas/year"/>
               <ATTRIBUTE dmrole="meas:ProperMotion.cosLat_applied" dmtype="ivoa:bool" value="true" />
             </INSTANCE>
-
             <INSTANCE dmrole="meas:Measure.error" dmtype="meas:Ellipse">
-              <ATTRIBUTE dmrole="meas:Ellipse.posAngle" value="0"/>
+              <ATTRIBUTE dmrole="meas:Ellipse.posAngle" dmtype="meas:Ellipse" value="0"/>
               <COLLECTION dmrole="meas:Ellipse.semiAxis">
                 <ATTRIBUTE dmtype="ivoa:RealQuantity" ref="pmra_error" unit="mas/year"/>
                 <ATTRIBUTE dmtype="ivoa:RealQuantity" ref="pmdec_error" unit="mas/year"/>
               </COLLECTION>
             </INSTANCE>
-
           </INSTANCE>
         </TEMPLATES>
-      </VODML>
-*/
+      </VODML>"#; // Test read
+        let _vodml = test_read::<Vodml>(xml);
+    }
+}
