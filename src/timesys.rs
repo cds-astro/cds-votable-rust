@@ -1,21 +1,17 @@
+use std::fmt::Debug;
 use std::{
   fmt,
   io::{BufRead, Write},
   str::{self, FromStr},
 };
-use std::fmt::Debug;
 
-use quick_xml::{Reader, Writer, events::{attributes::Attributes}};
+use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
 use paste::paste;
 
 use serde;
 
-use super::{
-  QuickXmlReadWrite,
-  error::VOTableError,
-};
-
+use super::{error::VOTableError, QuickXmlReadWrite};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct TimeSys {
@@ -24,7 +20,7 @@ pub struct TimeSys {
   /// Julian Date in MJD.
   /// * `MJD-origin` = 2400000.5
   /// *  `JD-origin` = 0.0
-  /// Not clear to me so far: "The timeorigin attribute MUST be given unless the time's 
+  /// Not clear to me so far: "The timeorigin attribute MUST be given unless the time's
   /// representation contains a year of a calendar era, in which case it MUST NOT be present"
   #[serde(skip_serializing_if = "Option::is_none")]
   pub timeorigin: Option<f64>,
@@ -33,11 +29,7 @@ pub struct TimeSys {
 }
 
 impl TimeSys {
-  pub fn new<S: Into<String>>(
-    id: S,
-    timescale: TimeScale,
-    refposition: RefPosition,
-  ) -> Self {
+  pub fn new<S: Into<String>>(id: S, timescale: TimeScale, refposition: RefPosition) -> Self {
     Self {
       id: id.into(),
       timeorigin: None,
@@ -61,13 +53,20 @@ impl QuickXmlReadWrite for TimeSys {
     // Look for attributes
     for attr_res in attrs {
       let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = String::from_utf8(attr.value.as_ref().to_vec()).map_err(VOTableError::FromUtf8)?;
+      let value =
+        String::from_utf8(attr.value.as_ref().to_vec()).map_err(VOTableError::FromUtf8)?;
       match attr.key {
         b"ID" => id = Some(value),
         b"timeorigin" => timeorigin = Some(value.parse().map_err(VOTableError::ParseFloat)?),
         b"timescale" => timescale = Some(value.parse().map_err(VOTableError::Variant)?),
         b"refposition" => refposition = Some(value.parse().map_err(VOTableError::Variant)?),
-        _ => { eprintln!("WARNING: attribute {:?} in {} is ignored", std::str::from_utf8(attr.key), Self::TAG); }
+        _ => {
+          eprintln!(
+            "WARNING: attribute {:?} in {} is ignored",
+            std::str::from_utf8(attr.key),
+            Self::TAG
+          );
+        }
       }
     }
     // Set from found attributes
@@ -78,7 +77,10 @@ impl QuickXmlReadWrite for TimeSys {
       }
       Ok(timesys)
     } else {
-      Err(VOTableError::Custom(format!("Attributes 'ID', 'timescale' and 'refposition' are mandatory in tag '{}'", Self::TAG)))
+      Err(VOTableError::Custom(format!(
+        "Attributes 'ID', 'timescale' and 'refposition' are mandatory in tag '{}'",
+        Self::TAG
+      )))
     }
   }
 
@@ -99,11 +101,11 @@ impl QuickXmlReadWrite for TimeSys {
   ) -> Result<(), VOTableError> {
     todo!()
   }
-  
+
   fn write<W: Write>(
-    &mut self, 
-    writer: &mut Writer<W>, 
-    _context: &Self::Context
+    &mut self,
+    writer: &mut Writer<W>,
+    _context: &Self::Context,
   ) -> Result<(), VOTableError> {
     let mut elem_writer = writer.create_element(Self::TAG_BYTES);
     elem_writer = elem_writer.with_attribute(("ID", self.id.as_str()));
@@ -111,12 +113,12 @@ impl QuickXmlReadWrite for TimeSys {
       elem_writer = elem_writer.with_attribute(("timeorigin", timeorigin.to_string().as_str()));
     }
     elem_writer = elem_writer.with_attribute(("timescale", self.timescale.to_string().as_str()));
-    elem_writer = elem_writer.with_attribute(("refposition", self.refposition.to_string().as_str()));
+    elem_writer =
+      elem_writer.with_attribute(("refposition", self.refposition.to_string().as_str()));
     elem_writer.write_empty().map_err(VOTableError::Write)?;
     Ok(())
   }
 }
-
 
 pub struct Info {
   pub label: &'static str,
@@ -128,7 +130,6 @@ impl Info {
     Info { label, description }
   }
 }
-
 
 const TAI_INFO: Info = Info::new(
   "International Atomic Time TAI",
@@ -191,7 +192,7 @@ impl TimeScale {
       TimeScale::TCG => TCG_INFO,
       TimeScale::TCB => TCB_INFO,
       TimeScale::TDB => TDB_INFO,
-      TimeScale::UNKNOWN => UNKNOWN_TIMESCALE_INFO
+      TimeScale::UNKNOWN => UNKNOWN_TIMESCALE_INFO,
     }
   }
 }
@@ -202,15 +203,15 @@ impl FromStr for TimeScale {
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     match s {
       "tai" | "TAI" => Ok(TimeScale::TAI),
-      "tt" | "TT"  => Ok(TimeScale::TT),
-      "ut" | "UT"  => Ok(TimeScale::UT),
-      "utc" | "UTC"  => Ok(TimeScale::UTC),
-      "gps" | "GPS"  => Ok(TimeScale::GPS),
-      "tcg" | "TCG"  => Ok(TimeScale::TCG),
-      "tcb" | "TCB"  => Ok(TimeScale::TCB),
-      "tdb" | "TDB"  => Ok(TimeScale::TDB),
-      "unknown" | "UNKNOWN"  => Ok(TimeScale::UNKNOWN),
-      _ => Err(format!("Unknown timescale variant. Actual: '{}'.", s))
+      "tt" | "TT" => Ok(TimeScale::TT),
+      "ut" | "UT" => Ok(TimeScale::UT),
+      "utc" | "UTC" => Ok(TimeScale::UTC),
+      "gps" | "GPS" => Ok(TimeScale::GPS),
+      "tcg" | "TCG" => Ok(TimeScale::TCG),
+      "tcb" | "TCB" => Ok(TimeScale::TCB),
+      "tdb" | "TDB" => Ok(TimeScale::TDB),
+      "unknown" | "UNKNOWN" => Ok(TimeScale::UNKNOWN),
+      _ => Err(format!("Unknown timescale variant. Actual: '{}'.", s)),
     }
   }
 }
@@ -234,23 +235,16 @@ impl fmt::Display for TimeScale {
   }
 }
 
-
 const TOPOCENTER_INFO: Info = Info::new(
   "Topocenter",
   "The location of the instrument that made the observation",
 );
-const GEOCENTER_INFO: Info = Info::new(
-  "Geocenter",
-  "The center of the earth",
-);
+const GEOCENTER_INFO: Info = Info::new("Geocenter", "The center of the earth");
 const BARYCENTER_INFO: Info = Info::new(
   "Solar System Barycenter",
   "The barycenter of the solar system",
 );
-const HELIOCENTER_INFO: Info = Info::new(
-  "Heliocenter",
-  "The center of the sun",
-);
+const HELIOCENTER_INFO: Info = Info::new("Heliocenter", "The center of the sun");
 const EMBARYCENTER_INFO: Info = Info::new(
   "Earth-Moon Barycenter",
   "The barycenter of the Earth-Moon system",
@@ -262,7 +256,7 @@ const UNKNOWN_REFPOS_INFO: Info = Info::new(
 
 /// See the [IVOA refposition vocabulary](https://www.ivoa.net/rdf/refposition/2019-03-15/refposition.html)
 // #[serde(tag = "refposition")]
-#[derive(Clone,  PartialEq, Eq, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum RefPosition {
   TOPOCENTER,
   GEOCENTER,
@@ -296,7 +290,7 @@ impl FromStr for RefPosition {
       "heliocenter" | "HELIOCENTER" => Ok(RefPosition::HELIOCENTER),
       "embarycenter" | "EMBARYCENTER" => Ok(RefPosition::EMBARYCENTER),
       "unknown" | "UNKNOWN" => Ok(RefPosition::UNKNOWN),
-      _ => Err(format!("Unknown 'refposition' variant. Actual: '{}'.", s))
+      _ => Err(format!("Unknown 'refposition' variant. Actual: '{}'.", s)),
     }
   }
 }
@@ -321,11 +315,11 @@ impl fmt::Display for RefPosition {
 mod tests {
   use std::io::Cursor;
 
-  use quick_xml::{Reader, events::Event, Writer};
-  
+  use quick_xml::{events::Event, Reader, Writer};
+
   use crate::{
+    timesys::{RefPosition, TimeScale, TimeSys},
     QuickXmlReadWrite,
-    timesys::{TimeSys, RefPosition, TimeScale}
   };
 
   #[test]

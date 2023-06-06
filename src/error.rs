@@ -1,7 +1,6 @@
-
 use std::{
+  num::{ParseFloatError, ParseIntError},
   str::ParseBoolError,
-  num::{ParseIntError, ParseFloatError},
 };
 
 use quick_error::quick_error;

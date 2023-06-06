@@ -64,9 +64,7 @@ VOT Lib resort heavily on [serde](https://serde.rs/).
 
 This library has been design to preserve the order of VOTable TAGs when 
 converting back on forth in XML, JSON, ...  
-But, so far:
-* XML comments are ignored and lost ;
-* *CDATA* block are ignored and lost.
+But, so far XML comments are ignored and lost.
 
 In JSON/TOML/YAML, for the VOTABLE and RESOURCE elements, we make a difference
 between INFO blocks located before and after the RESOURCE element(s).
@@ -552,7 +550,7 @@ votable:
 
 ## To-do list
 
-* [ ] Support `CDATA`?
+* [X] Support `CDATA`?
 * [ ] Fill the doc for the Rust library (but I so far do not know people interested in such a lib since Rust is not very used in the astronomy community so far, so...)
 * [ ] Add a check method ensuring that user input VOTAbleValue (using the API to build a VOTable) 
       matches the table schema (or automatically converting in the right VOTableValue)

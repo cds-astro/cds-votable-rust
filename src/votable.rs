@@ -1,17 +1,14 @@
 use std::{
+  collections::HashMap,
   fs::File,
+  io::{BufRead, BufReader, BufWriter, Write},
   path::Path,
   str::{self, FromStr},
-  io::{BufRead, Write, BufReader, BufWriter},
-  collections::HashMap,
 };
 
 use quick_xml::{
+  events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
-  events::{
-    BytesStart, Event,
-    attributes::Attributes,
-  },
 };
 
 use paste::paste;
@@ -22,18 +19,10 @@ use serde_json::Value;
 use crate::is_empty;
 
 use super::{
-  QuickXmlReadWrite, TableDataContent,
-  error::VOTableError,
-  coosys::CooSys,
-  desc::Description,
-  definitions::Definitions,
-  group::Group,
-  info::Info,
-  param::Param,
-  resource::Resource,
-  timesys::TimeSys,
+  coosys::CooSys, definitions::Definitions, desc::Description, error::VOTableError, group::Group,
+  info::Info, param::Param, resource::Resource, timesys::TimeSys, QuickXmlReadWrite,
+  TableDataContent,
 };
-
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub enum Version {
@@ -59,7 +48,10 @@ impl FromStr for Version {
       "1.2" => Ok(Version::V1_2),
       "1.3" => Ok(Version::V1_3),
       "1.4" => Ok(Version::V1_4),
-      _ => Err(format!("Unrecognized version. Actual: '{}'. Expected: '1.1', '1.2', '1.3' or '1.4'", s)),
+      _ => Err(format!(
+        "Unrecognized version. Actual: '{}'. Expected: '1.1', '1.2', '1.3' or '1.4'",
+        s
+      )),
     }
   }
 }
@@ -113,8 +105,10 @@ impl<C: TableDataContent> VOTableWrapper<C> {
 
   // Manual parser
 
-  pub fn manual_from_ivoa_xml_file<P: AsRef<Path>>(path: P, reader_buff: &mut Vec<u8>)
-    -> Result<(VOTable<C>, Resource<C>, Reader<BufReader<File>>), VOTableError> {
+  pub fn manual_from_ivoa_xml_file<P: AsRef<Path>>(
+    path: P,
+    reader_buff: &mut Vec<u8>,
+  ) -> Result<(VOTable<C>, Resource<C>, Reader<BufReader<File>>), VOTableError> {
     let file = File::open(path).map_err(VOTableError::Io)?;
     let reader = BufReader::new(file);
     VOTable::from_reader_till_next_resource(reader, reader_buff)
@@ -163,10 +157,9 @@ impl<C: TableDataContent> VOTableWrapper<C> {
   }
 }
 
-
 impl<C> VOTableWrapper<C>
-  where
-    C: TableDataContent + Serialize + for<'a> Deserialize<'a>
+where
+  C: TableDataContent + Serialize + for<'a> Deserialize<'a>,
 {
   // JSON
 
@@ -188,7 +181,11 @@ impl<C> VOTableWrapper<C>
     serde_json::from_reader(reader).map_err(VOTableError::Json)
   }
 
-  pub fn to_json_file<P: AsRef<Path>>(&mut self, path: P, pretty: bool) -> Result<(), VOTableError> {
+  pub fn to_json_file<P: AsRef<Path>>(
+    &mut self,
+    path: P,
+    pretty: bool,
+  ) -> Result<(), VOTableError> {
     let file = File::create(path).map_err(VOTableError::Io)?;
     let write = BufWriter::new(file);
     self.to_json_writer(write, pretty)
@@ -199,7 +196,8 @@ impl<C> VOTableWrapper<C>
       serde_json::ser::to_string_pretty(&self)
     } else {
       serde_json::ser::to_string(&self)
-    }.map_err(VOTableError::Json)
+    }
+    .map_err(VOTableError::Json)
   }
 
   pub fn to_json_bytes(&mut self, pretty: bool) -> Result<Vec<u8>, VOTableError> {
@@ -207,7 +205,8 @@ impl<C> VOTableWrapper<C>
       serde_json::ser::to_vec_pretty(&self)
     } else {
       serde_json::ser::to_vec(&self)
-    }.map_err(VOTableError::Json)
+    }
+    .map_err(VOTableError::Json)
   }
 
   pub fn to_json_writer<W: Write>(&mut self, write: W, pretty: bool) -> Result<(), VOTableError> {
@@ -215,7 +214,8 @@ impl<C> VOTableWrapper<C>
       serde_json::ser::to_writer_pretty(write, &self)
     } else {
       serde_json::ser::to_writer(write, &self)
-    }.map_err(VOTableError::Json)
+    }
+    .map_err(VOTableError::Json)
   }
 
   // YAML
@@ -249,7 +249,9 @@ impl<C> VOTableWrapper<C>
   }
 
   pub fn to_yaml_bytes(&mut self) -> Result<Vec<u8>, VOTableError> {
-    serde_yaml::to_string(&self).map(|s| s.into()).map_err(VOTableError::Yaml)
+    serde_yaml::to_string(&self)
+      .map(|s| s.into())
+      .map_err(VOTableError::Yaml)
   }
 
   pub fn to_yaml_writer<W: Write>(&mut self, write: W) -> Result<(), VOTableError> {
@@ -278,7 +280,11 @@ impl<C> VOTableWrapper<C>
     Self::from_toml_bytes(data.as_slice())
   }
 
-  pub fn to_toml_file<P: AsRef<Path>>(&mut self, path: P, pretty: bool) -> Result<(), VOTableError> {
+  pub fn to_toml_file<P: AsRef<Path>>(
+    &mut self,
+    path: P,
+    pretty: bool,
+  ) -> Result<(), VOTableError> {
     let content = self.to_toml_string(pretty)?;
     std::fs::write(path, content).map_err(VOTableError::Io)
     /*let file = File::create(path).map_err(VOTableError::Io)?;
@@ -291,7 +297,8 @@ impl<C> VOTableWrapper<C>
       toml::ser::to_string_pretty(&self)
     } else {
       toml::ser::to_string(&self)
-    }.map_err(VOTableError::TomlSer)
+    }
+    .map_err(VOTableError::TomlSer)
   }
 
   pub fn to_toml_bytes(&mut self, pretty: bool) -> Result<Vec<u8>, VOTableError> {
@@ -299,12 +306,15 @@ impl<C> VOTableWrapper<C>
     self.to_toml_string(pretty).map(|s| s.into_bytes())
   }
 
-  pub fn to_toml_writer<W: Write>(&mut self, mut write: W, pretty: bool) -> Result<(), VOTableError> {
+  pub fn to_toml_writer<W: Write>(
+    &mut self,
+    mut write: W,
+    pretty: bool,
+  ) -> Result<(), VOTableError> {
     let bytes = self.to_toml_bytes(pretty)?;
     write.write_all(bytes.as_slice()).map_err(VOTableError::Io)
   }
 }
-
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct VOTable<C: TableDataContent> {
@@ -407,11 +417,15 @@ impl<C: TableDataContent> VOTable<C> {
     }
   }
 
-  pub(crate) fn from_reader_till_next_resource<R: BufRead>(reader: R, mut reader_buff: &mut Vec<u8>)
-    -> Result<(VOTable<C>, Resource<C>, Reader<R>), VOTableError> {
+  pub(crate) fn from_reader_till_next_resource<R: BufRead>(
+    reader: R,
+    mut reader_buff: &mut Vec<u8>,
+  ) -> Result<(VOTable<C>, Resource<C>, Reader<R>), VOTableError> {
     let mut reader = Reader::from_reader(reader);
     loop {
-      let mut event = reader.read_event(&mut reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader
+        .read_event(&mut reader_buff)
+        .map_err(VOTableError::Read)?;
       match &mut event {
         Event::Decl(ref e) => check_declaration(e),
         Event::Start(ref mut e) if e.local_name() == VOTable::<C>::TAG_BYTES => {
@@ -457,45 +471,73 @@ impl<C: TableDataContent> VOTable<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => {
-          match e.local_name() {
-            Description::TAG_BYTES =>
-              from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e),
-            Info::TAG_BYTES if self.resources.is_empty() =>
-              self.elems.push(VOTableElem::Info(from_event_start_by_ref!(Info, reader, reader_buff, e))),
-            Group::TAG_BYTES =>
-              self.elems.push(VOTableElem::Group(from_event_start_by_ref!(Group, reader, reader_buff, e))),
-            Param::TAG_BYTES =>
-              self.elems.push(VOTableElem::Param(from_event_start_by_ref!(Param, reader, reader_buff, e))),
-            Resource::<C>::TAG_BYTES => {
-              let resource = Resource::<C>::from_attributes(e.attributes())?;
-              return Ok(Some(resource));
-            }
-            Info::TAG_BYTES =>
-              self.post_infos.push(from_event_start_by_ref!(Info, reader, reader_buff, e)),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
+        Event::Start(ref e) => match e.local_name() {
+          Description::TAG_BYTES => {
+            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
           }
-        }
-        Event::Empty(ref e) => {
-          match e.local_name() {
-            Info::TAG_BYTES if self.resources.is_empty() => self.elems.push(VOTableElem::Info(Info::from_event_empty(e)?)),
-            CooSys::TAG_BYTES => self.elems.push(VOTableElem::CooSys(CooSys::from_event_empty(e)?)),
-            TimeSys::TAG_BYTES => self.elems.push(VOTableElem::TimeSys(TimeSys::from_event_empty(e)?)),
-            Group::TAG_BYTES => self.elems.push(VOTableElem::Group(Group::from_event_empty(e)?)),
-            Param::TAG_BYTES => self.elems.push(VOTableElem::Param(Param::from_event_empty(e)?)),
-            Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
+          Info::TAG_BYTES if self.resources.is_empty() => self.elems.push(VOTableElem::Info(
+            from_event_start_by_ref!(Info, reader, reader_buff, e),
+          )),
+          Group::TAG_BYTES => self.elems.push(VOTableElem::Group(from_event_start_by_ref!(
+            Group,
+            reader,
+            reader_buff,
+            e
+          ))),
+          Param::TAG_BYTES => self.elems.push(VOTableElem::Param(from_event_start_by_ref!(
+            Param,
+            reader,
+            reader_buff,
+            e
+          ))),
+          Resource::<C>::TAG_BYTES => {
+            let resource = Resource::<C>::from_attributes(e.attributes())?;
+            return Ok(Some(resource));
           }
-        }
-        Event::End(e) if e.local_name() == Self::TAG_BYTES =>
-          return Ok(None),
+          Info::TAG_BYTES => {
+            self
+              .post_infos
+              .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
+          }
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Empty(ref e) => match e.local_name() {
+          Info::TAG_BYTES if self.resources.is_empty() => self
+            .elems
+            .push(VOTableElem::Info(Info::from_event_empty(e)?)),
+          CooSys::TAG_BYTES => self
+            .elems
+            .push(VOTableElem::CooSys(CooSys::from_event_empty(e)?)),
+          TimeSys::TAG_BYTES => self
+            .elems
+            .push(VOTableElem::TimeSys(TimeSys::from_event_empty(e)?)),
+          Group::TAG_BYTES => self
+            .elems
+            .push(VOTableElem::Group(Group::from_event_empty(e)?)),
+          Param::TAG_BYTES => self
+            .elems
+            .push(VOTableElem::Param(Param::from_event_empty(e)?)),
+          Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }
-  
+
   // * The Resource returned has only its attribute sets, not the sub-elements
   // * The VOTable.push_resource it to be done externally
   fn read_till_next_resource<R: BufRead>(
@@ -509,41 +551,77 @@ impl<C: TableDataContent> VOTable<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => {
-          match e.local_name() {
-            Description::TAG_BYTES =>
-              from_event_start_desc!(self, Description, reader, reader_buff, e),
-            Info::TAG_BYTES if self.resources.is_empty() =>
-              self.elems.push(VOTableElem::Info(from_event_start!(Info, reader, reader_buff, e))),
-            Group::TAG_BYTES =>
-              self.elems.push(VOTableElem::Group(from_event_start!(Group, reader, reader_buff, e))),
-            Param::TAG_BYTES =>
-              self.elems.push(VOTableElem::Param(from_event_start!(Param, reader, reader_buff, e))),
-            Definitions::TAG_BYTES =>
-              self.elems.push(VOTableElem::Definitions(from_event_start!(Definitions, reader, reader_buff, e))),
-            Resource::<C>::TAG_BYTES => {
-              let resource = Resource::<C>::from_attributes(e.attributes())?;
-              return Ok((resource, reader));
-            }
-            Info::TAG_BYTES =>
-              self.post_infos.push(from_event_start!(Info, reader, reader_buff, e)),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
+        Event::Start(ref e) => match e.local_name() {
+          Description::TAG_BYTES => {
+            from_event_start_desc!(self, Description, reader, reader_buff, e)
           }
-        }
-        Event::Empty(ref e) => {
-          match e.local_name() {
-            Info::TAG_BYTES if self.resources.is_empty() => self.elems.push(VOTableElem::Info(Info::from_event_empty(e)?)),
-            CooSys::TAG_BYTES => self.elems.push(VOTableElem::CooSys(CooSys::from_event_empty(e)?)),
-            TimeSys::TAG_BYTES => self.elems.push(VOTableElem::TimeSys(TimeSys::from_event_empty(e)?)),
-            Group::TAG_BYTES => self.elems.push(VOTableElem::Group(Group::from_event_empty(e)?)),
-            Param::TAG_BYTES => self.elems.push(VOTableElem::Param(Param::from_event_empty(e)?)),
-            Definitions::TAG_BYTES => self.elems.push(VOTableElem::Definitions(Definitions::from_event_empty(e)?)),
-            Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
+          Info::TAG_BYTES if self.resources.is_empty() => self.elems.push(VOTableElem::Info(
+            from_event_start!(Info, reader, reader_buff, e),
+          )),
+          Group::TAG_BYTES => self.elems.push(VOTableElem::Group(from_event_start!(
+            Group,
+            reader,
+            reader_buff,
+            e
+          ))),
+          Param::TAG_BYTES => self.elems.push(VOTableElem::Param(from_event_start!(
+            Param,
+            reader,
+            reader_buff,
+            e
+          ))),
+          Definitions::TAG_BYTES => self.elems.push(VOTableElem::Definitions(from_event_start!(
+            Definitions,
+            reader,
+            reader_buff,
+            e
+          ))),
+          Resource::<C>::TAG_BYTES => {
+            let resource = Resource::<C>::from_attributes(e.attributes())?;
+            return Ok((resource, reader));
           }
+          Info::TAG_BYTES => self
+            .post_infos
+            .push(from_event_start!(Info, reader, reader_buff, e)),
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Empty(ref e) => match e.local_name() {
+          Info::TAG_BYTES if self.resources.is_empty() => self
+            .elems
+            .push(VOTableElem::Info(Info::from_event_empty(e)?)),
+          CooSys::TAG_BYTES => self
+            .elems
+            .push(VOTableElem::CooSys(CooSys::from_event_empty(e)?)),
+          TimeSys::TAG_BYTES => self
+            .elems
+            .push(VOTableElem::TimeSys(TimeSys::from_event_empty(e)?)),
+          Group::TAG_BYTES => self
+            .elems
+            .push(VOTableElem::Group(Group::from_event_empty(e)?)),
+          Param::TAG_BYTES => self
+            .elems
+            .push(VOTableElem::Param(Param::from_event_empty(e)?)),
+          Definitions::TAG_BYTES => self
+            .elems
+            .push(VOTableElem::Definitions(Definitions::from_event_empty(e)?)),
+          Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => {
+          return Err(VOTableError::Custom(String::from(
+            "No resource found in the VOTable",
+          )))
         }
-        Event::End(e) if e.local_name() == Self::TAG_BYTES =>
-          return Err(VOTableError::Custom(String::from("No resource found in the VOTable"))),
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
@@ -553,18 +631,29 @@ impl<C: TableDataContent> VOTable<C> {
 }
 
 fn check_declaration(decl: &BytesDecl) {
-  let version = decl.version().map(|v|
-    unsafe { String::from_utf8_unchecked(v.as_ref().to_vec()) }
-  ).unwrap_or_else(|e| format!("Error: {:?}", e));
-  let encoding = decl.encoding().map(|r|
-    r.map(|r| unsafe { String::from_utf8_unchecked(r.as_ref().to_vec()) }).unwrap_or_else(|e| format!("Error: {:?}", e))
-  ).unwrap_or_else(|| String::from("error"));
-  let standalone = decl.standalone().map(|r|
-    r.map(|r| unsafe { String::from_utf8_unchecked(r.as_ref().to_vec()) }).unwrap_or_else(|e| format!("Error: {:?}", e))
-  ).unwrap_or_else(|| String::from("error"));
-  eprintln!("XML declaration. Version: {}; Encoding: {}; Standalone: {}.", version, encoding, standalone);
+  let version = decl
+    .version()
+    .map(|v| unsafe { String::from_utf8_unchecked(v.as_ref().to_vec()) })
+    .unwrap_or_else(|e| format!("Error: {:?}", e));
+  let encoding = decl
+    .encoding()
+    .map(|r| {
+      r.map(|r| unsafe { String::from_utf8_unchecked(r.as_ref().to_vec()) })
+        .unwrap_or_else(|e| format!("Error: {:?}", e))
+    })
+    .unwrap_or_else(|| String::from("error"));
+  let standalone = decl
+    .standalone()
+    .map(|r| {
+      r.map(|r| unsafe { String::from_utf8_unchecked(r.as_ref().to_vec()) })
+        .unwrap_or_else(|e| format!("Error: {:?}", e))
+    })
+    .unwrap_or_else(|| String::from("error"));
+  eprintln!(
+    "XML declaration. Version: {}; Encoding: {}; Standalone: {}.",
+    version, encoding, standalone
+  );
 }
-
 
 impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
   const TAG: &'static str = "VOTABLE";
@@ -600,43 +689,82 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => {
-          match e.local_name() {
-            Description::TAG_BYTES =>
-              from_event_start_desc!(self, Description, reader, reader_buff, e),
-            Info::TAG_BYTES if self.resources.is_empty() =>
-              self.elems.push(VOTableElem::Info(from_event_start!(Info, reader, reader_buff, e))),
-            Group::TAG_BYTES =>
-              self.elems.push(VOTableElem::Group(from_event_start!(Group, reader, reader_buff, e))),
-            Param::TAG_BYTES =>
-              self.elems.push(VOTableElem::Param(from_event_start!(Param, reader, reader_buff, e))),
-            Definitions::TAG_BYTES =>
-              self.elems.push(VOTableElem::Definitions(from_event_start!(Definitions, reader, reader_buff, e))),
-            Resource::<C>::TAG_BYTES =>
-              self.resources.push(from_event_start!(Resource, reader, reader_buff, e)),
-            Info::TAG_BYTES =>
-              self.post_infos.push(from_event_start!(Info, reader, reader_buff, e)),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
+        Event::Start(ref e) => match e.local_name() {
+          Description::TAG_BYTES => {
+            from_event_start_desc!(self, Description, reader, reader_buff, e)
           }
-        }
-        Event::Empty(ref e) => {
-          match e.local_name() {
-            Info::TAG_BYTES if self.resources.is_empty() => self.elems.push(VOTableElem::Info(Info::from_event_empty(e)?)),
-            CooSys::TAG_BYTES => self.elems.push(VOTableElem::CooSys(CooSys::from_event_empty(e)?)),
-            TimeSys::TAG_BYTES => self.elems.push(VOTableElem::TimeSys(TimeSys::from_event_empty(e)?)),
-            Group::TAG_BYTES => self.elems.push(VOTableElem::Group(Group::from_event_empty(e)?)),
-            Param::TAG_BYTES => self.elems.push(VOTableElem::Param(Param::from_event_empty(e)?)),
-            Definitions::TAG_BYTES => self.elems.push(VOTableElem::Definitions(Definitions::from_event_empty(e)?)),
-            Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
+          Info::TAG_BYTES if self.resources.is_empty() => self.elems.push(VOTableElem::Info(
+            from_event_start!(Info, reader, reader_buff, e),
+          )),
+          Group::TAG_BYTES => self.elems.push(VOTableElem::Group(from_event_start!(
+            Group,
+            reader,
+            reader_buff,
+            e
+          ))),
+          Param::TAG_BYTES => self.elems.push(VOTableElem::Param(from_event_start!(
+            Param,
+            reader,
+            reader_buff,
+            e
+          ))),
+          Definitions::TAG_BYTES => self.elems.push(VOTableElem::Definitions(from_event_start!(
+            Definitions,
+            reader,
+            reader_buff,
+            e
+          ))),
+          Resource::<C>::TAG_BYTES => {
+            self
+              .resources
+              .push(from_event_start!(Resource, reader, reader_buff, e))
           }
-        }
-        Event::End(e) if e.local_name() == Self::TAG_BYTES =>
+          Info::TAG_BYTES => self
+            .post_infos
+            .push(from_event_start!(Info, reader, reader_buff, e)),
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Empty(ref e) => match e.local_name() {
+          Info::TAG_BYTES if self.resources.is_empty() => self
+            .elems
+            .push(VOTableElem::Info(Info::from_event_empty(e)?)),
+          CooSys::TAG_BYTES => self
+            .elems
+            .push(VOTableElem::CooSys(CooSys::from_event_empty(e)?)),
+          TimeSys::TAG_BYTES => self
+            .elems
+            .push(VOTableElem::TimeSys(TimeSys::from_event_empty(e)?)),
+          Group::TAG_BYTES => self
+            .elems
+            .push(VOTableElem::Group(Group::from_event_empty(e)?)),
+          Param::TAG_BYTES => self
+            .elems
+            .push(VOTableElem::Param(Param::from_event_empty(e)?)),
+          Definitions::TAG_BYTES => self
+            .elems
+            .push(VOTableElem::Definitions(Definitions::from_event_empty(e)?)),
+          Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => {
           return if self.resources.is_empty() {
-            Err(VOTableError::Custom(String::from("No resource found in the VOTable")))
+            Err(VOTableError::Custom(String::from(
+              "No resource found in the VOTable",
+            )))
           } else {
             Ok(reader)
-          },
+          }
+        }
         /*
         Event::Text(_) => {}
         Event::Comment(_) => {}
@@ -660,39 +788,47 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
   ) -> Result<(), VOTableError> {
     todo!()
   }
-  
+
   fn write<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    writer.write(r#"<?xml version="1.0" encoding="UTF-8"?>
-"#.as_bytes()).map_err(VOTableError::Write)?;
+    writer
+      .write(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+"#
+        .as_bytes(),
+      )
+      .map_err(VOTableError::Write)?;
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     // Write tag + attributes
     push2write_opt_string_attr!(self, tag, ID);
     push2write_opt_into_attr!(self, tag, version);
     push2write_extra!(self, tag);
-    writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
+    writer
+      .write_event(Event::Start(tag.to_borrowed()))
+      .map_err(VOTableError::Write)?;
     // Write sub-elems
     write_elem!(self, description, writer, context);
     write_elem_vec_no_context!(self, elems, writer);
     write_elem_vec!(self, resources, writer, context);
     write_elem_vec!(self, post_infos, writer, context);
     // Close tag
-    writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
+    writer
+      .write_event(Event::End(tag.to_end()))
+      .map_err(VOTableError::Write)
   }
 }
 
-
 #[cfg(test)]
 mod tests {
-  use quick_xml::Writer;
-  use crate::{
-    QuickXmlReadWrite,
-    impls::mem::{InMemTableDataStringRows, InMemTableDataRows},
-  };
   use crate::votable::VOTableWrapper;
+  use crate::{
+    impls::mem::{InMemTableDataRows, InMemTableDataStringRows},
+    QuickXmlReadWrite,
+  };
+  use quick_xml::Writer;
 
   #[test]
   fn test_votable_read_from_str() {
@@ -711,14 +847,18 @@ mod tests {
     <RESOURCE>
     </RESOURCE>
 </VOTABLE>"#;
-    let votable = VOTableWrapper::<InMemTableDataStringRows>::from_ivoa_xml_str(xml).unwrap().unwrap();
+    let votable = VOTableWrapper::<InMemTableDataStringRows>::from_ivoa_xml_str(xml)
+      .unwrap()
+      .unwrap();
     assert!(votable.description.is_some())
   }
 
   #[test]
   fn test_votable_read_datatable_from_file() {
     // let votable =  VOTable::<InMemTableDataStringRows>::from_file("resources/sdss12.vot").unwrap();
-    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/sdss12.vot").unwrap().unwrap();
+    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/sdss12.vot")
+      .unwrap()
+      .unwrap();
     match serde_json::ser::to_string_pretty(&votable) {
       Ok(_content) => println!("\nOK"), // println!("{}", &content),
       Err(error) => {
@@ -744,10 +884,12 @@ mod tests {
 
   #[test]
   fn test_votable_read_with_namespace_file() {
-    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/IMCCE.with_namespace.vot");
+    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file(
+      "resources/IMCCE.with_namespace.vot",
+    );
     assert!(votable.is_ok())
   }
-  
+
   #[test]
   fn test_votable_read_obscore_file() {
     let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/obscore.vot");
@@ -756,31 +898,34 @@ mod tests {
 
   #[test]
   fn test_votable_read_with_cdata() {
-    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/vot_with_cdata.vot");
-    assert!(votable.is_ok())
-  }
-  
-  #[test]
-  fn test_votable_read_with_definitions_file() {
-    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/vot_with_definitions.vot");
+    let votable =
+      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/vot_with_cdata.vot");
     assert!(votable.is_ok())
   }
 
+  #[test]
+  fn test_votable_read_with_definitions_file() {
+    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file(
+      "resources/vot_with_definitions.vot",
+    );
+    assert!(votable.is_ok())
+  }
 
   #[test]
   fn test_votable_read_with_empty_precision() {
-    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/vot_with_empty_prec.vot");
+    let votable =
+      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/vot_with_empty_prec.vot");
     assert!(votable.is_ok())
   }
-  
+
   #[test]
   fn test_votable_read_dataLink_003_file() {
     match VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/dataLink_003.xml") {
-      Ok(_) => { },
+      Ok(_) => {}
       Err(e) => {
         eprintln!("Error: {:?}", e);
         assert!(false);
-      },
+      }
     }
     // assert!(votable.is_ok())
   }
@@ -788,23 +933,23 @@ mod tests {
   #[test]
   fn test_votable_read_iter_datatable_from_file() {
     use crate::iter::VOTableIterator;
-    
+
     /*
     println!();
     println!("-- next_table_row_string_iter dss12.vot --");
     println!();
-    
+
     let mut table_it = TableIterator::from_file("resources/sdss12.vot").unwrap();
     while let Some(row_it) = table_it.next_table_row_string_iter().unwrap() {
       for (i, row) in row_it.enumerate() {
         println!("Row {}: {:?}", i, row);
       }
     }*/
-    
+
     println!();
     println!("-- next_table_row_value_iter dss12.vot --");
     println!();
-    
+
     let mut votable_it = VOTableIterator::from_file("resources/sdss12.vot").unwrap();
     while let Some(mut row_it) = votable_it.next_table_row_value_iter().unwrap() {
       let table_ref_mut = row_it.table();
@@ -816,22 +961,21 @@ mod tests {
     let votable = votable_it.end_of_it();
     println!("VOTable: {:?}", votable);
 
-    
     println!();
     println!("-- next_table_row_value_iter binary.b64 --");
     println!();
-    
+
     let mut table_it = VOTableIterator::from_file("resources/binary.b64").unwrap();
     while let Some(row_it) = table_it.next_table_row_value_iter().unwrap() {
       for (i, row) in row_it.enumerate() {
         println!("Row {}: {:?}", i, row);
       }
     }
-    
+
     println!();
     println!("-- next_table_row_value_iter gaia_dr3.b264 --");
     println!();
-    
+
     let mut table_it = VOTableIterator::from_file("resources/gaia_dr3.b264").unwrap();
     while let Some(row_it) = table_it.next_table_row_value_iter().unwrap() {
       for (i, row) in row_it.enumerate() {
@@ -844,7 +988,9 @@ mod tests {
 
   #[test]
   fn test_votable_read_binary_from_file() {
-    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/binary.b64").unwrap().unwrap();
+    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/binary.b64")
+      .unwrap()
+      .unwrap();
     match toml::ser::to_string_pretty(&votable) {
       Ok(_content) => println!("\nOK"), // println!("{}", &content),
       Err(error) => {
@@ -856,7 +1002,10 @@ mod tests {
 
   #[test]
   fn test_votable_read_binary2_from_file() {
-    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/gaia_dr3.b264").unwrap().unwrap();
+    let votable =
+      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/gaia_dr3.b264")
+        .unwrap()
+        .unwrap();
     let mut votable = votable.wrap();
     match serde_json::ser::to_string_pretty(&votable) {
       Ok(_content) => println!("\nOK"), //println!("{}", &content),
@@ -889,7 +1038,8 @@ mod tests {
     let votable2 = String::from_utf8(votable2).unwrap();
     println!("{}", &votable2);
 
-    let votable3 = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_str(votable2.as_str()).unwrap();
+    let votable3 =
+      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_str(votable2.as_str()).unwrap();
     match toml::ser::to_string_pretty(&votable3) {
       Ok(_content) => println!("\nOK"), // println!("{}", &content),
       Err(error) => {

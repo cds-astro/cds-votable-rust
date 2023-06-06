@@ -1,14 +1,13 @@
-
 use std::{
   fmt::{self, Formatter},
-  str::from_utf8,
   marker::PhantomData,
+  str::from_utf8,
 };
 
 use serde::{
-  Deserialize,
   de::{Error, SeqAccess, Unexpected, Visitor},
-  __private::{from_utf8_lossy, size_hint}
+  Deserialize,
+  __private::{from_utf8_lossy, size_hint},
 };
 
 use crate::error::VOTableError;
@@ -16,7 +15,7 @@ use crate::error::VOTableError;
 /// Structure made to visit a primitive or an optional primitive.
 /// Attempts to visit a primitive different from the one it as been made for will fail.
 pub struct VisitorPrim<E> {
-  _marker: PhantomData<E>
+  _marker: PhantomData<E>,
 }
 
 /*
@@ -30,11 +29,11 @@ macro_rules! primitive_visitor {
   ($ty:ty, $doc:tt, $method:ident) => {
     impl<'de> Visitor<'de> for VisitorPrim<$ty> {
       type Value = $ty;
-      
+
       fn expecting(&self, formatter: & mut fmt::Formatter) -> fmt::Result {
         write!(formatter, $doc)
       }
-      
+
       fn $method<E> (self, v: $ty) -> Result<Self::Value, E>
         where E: Error {
         Ok(v)
@@ -64,22 +63,22 @@ impl<'de> Visitor<'de> for StringVisitor {
   }
 
   fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-      E: Error,
+  where
+    E: Error,
   {
     Ok(v.to_owned())
   }
 
   fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-    where
-      E: Error,
+  where
+    E: Error,
   {
     Ok(v)
   }
 
   fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-    where
-      E: Error,
+  where
+    E: Error,
   {
     match from_utf8(v) {
       Ok(s) => Ok(s.to_owned()),
@@ -88,8 +87,8 @@ impl<'de> Visitor<'de> for StringVisitor {
   }
 
   fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
-    where
-      E: Error,
+  where
+    E: Error,
   {
     match String::from_utf8(v) {
       Ok(s) => Ok(s),
@@ -112,18 +111,18 @@ impl<'de> Visitor<'de> for CharVisitor {
 
   #[inline]
   fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E>
-    where
-      E: Error,
+  where
+    E: Error,
   {
     Ok(v as char)
   }
 
   #[inline]
   fn visit_u16<E>(self, v: u16) -> Result<Self::Value, E>
-    where
-      E: Error,
+  where
+    E: Error,
   {
-    // In VOTable, unicode chars are encoded in UCS-2, 
+    // In VOTable, unicode chars are encoded in UCS-2,
     // see: https://stackoverflow.com/questions/36236364/why-java-char-uses-utf-16
     let mut buf = vec![0_u8; 3];
     let n_bytes = ucs2::decode(&[v], &mut buf)
@@ -133,22 +132,24 @@ impl<'de> Visitor<'de> for CharVisitor {
     let mut iter = s.chars();
     match (iter.next(), iter.next()) {
       (Some(c), None) => Ok(c),
-      _ => Err(Error::custom("Error transforming Unicode UCS-2 to UTF-16 char")),
+      _ => Err(Error::custom(
+        "Error transforming Unicode UCS-2 to UTF-16 char",
+      )),
     }
   }
-  
+
   #[inline]
   fn visit_char<E>(self, v: char) -> Result<Self::Value, E>
-    where
-      E: Error,
+  where
+    E: Error,
   {
     Ok(v)
   }
 
   #[inline]
   fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-      E: Error,
+  where
+    E: Error,
   {
     let mut iter = v.chars();
     match (iter.next(), iter.next()) {
@@ -168,20 +169,19 @@ impl<'a> Visitor<'a> for BytesVisitor {
   }
 
   fn visit_borrowed_str<E>(self, v: &'a str) -> Result<Self::Value, E>
-    where
-      E: Error,
+  where
+    E: Error,
   {
     Ok(v.as_bytes().to_vec())
   }
 
   fn visit_borrowed_bytes<E>(self, v: &'a [u8]) -> Result<Self::Value, E>
-    where
-      E: Error,
+  where
+    E: Error,
   {
     Ok(v.to_vec())
   }
 }
-
 
 /*
 pub struct ComplexFloatVisitor;
@@ -198,31 +198,31 @@ impl<'a> Visitor<'a> for BytesVisitor {
       A: SeqAccess<'de>,
   {
     let seq = seq;
-    
+
     seed: DeserializeSeed<'de>;
-    
+
     seq.next_element_seed()
-    seq.next_element_seed()  
+    seq.next_element_seed()
     Err(Error::invalid_type(Unexpected::Seq, &self))
   }
 }
 */
 
-
-
 pub struct FixedLengthArrayVisitor<'de, T: Deserialize<'de>> {
   len: usize,
-  _marker: &'de PhantomData<T>
+  _marker: &'de PhantomData<T>,
 }
 
 impl<'de, T: Deserialize<'de>> FixedLengthArrayVisitor<'de, T> {
   pub fn new(len: usize) -> Self {
-    Self { len, _marker: &PhantomData }
+    Self {
+      len,
+      _marker: &PhantomData,
+    }
   }
 }
 
 impl<'de, T: Deserialize<'de>> Visitor<'de> for FixedLengthArrayVisitor<'de, T> {
-  
   type Value = Vec<T>;
 
   fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
@@ -230,36 +230,40 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for FixedLengthArrayVisitor<'de, T> 
   }
 
   fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-    where 
-      A: SeqAccess<'de>
+  where
+    A: SeqAccess<'de>,
   {
     let mut v: Vec<T> = Vec::with_capacity(self.len);
     for _ in 0..self.len {
-      v.push(seq.next_element()?.ok_or_else(|| Error::custom(String::from("Premature end of stream")))?); 
+      v.push(
+        seq
+          .next_element()?
+          .ok_or_else(|| Error::custom(String::from("Premature end of stream")))?,
+      );
     }
     Ok(v)
   }
 }
 
-
 pub struct VariableLengthArrayVisitor<'de, T: Deserialize<'de>> {
-  _marker: &'de PhantomData<T>
+  _marker: &'de PhantomData<T>,
 }
 
 impl<'de, T: Deserialize<'de>> Default for VariableLengthArrayVisitor<'de, T> {
-    fn default() -> Self {
-         Self::new()
-    }
+  fn default() -> Self {
+    Self::new()
+  }
 }
 
 impl<'de, T: Deserialize<'de>> VariableLengthArrayVisitor<'de, T> {
   pub fn new() -> Self {
-    Self { _marker: &PhantomData }
+    Self {
+      _marker: &PhantomData,
+    }
   }
 }
 
 impl<'de, T: Deserialize<'de>> Visitor<'de> for VariableLengthArrayVisitor<'de, T> {
-
   type Value = Vec<T>;
 
   fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
@@ -267,8 +271,8 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for VariableLengthArrayVisitor<'de, 
   }
 
   fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-    where
-      A: SeqAccess<'de>
+  where
+    A: SeqAccess<'de>,
   {
     let mut v: Vec<T> = Vec::with_capacity(size_hint::cautious(seq.size_hint()));
     while let Some(value) = seq.next_element()? {
@@ -277,5 +281,3 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for VariableLengthArrayVisitor<'de, 
     Ok(v)
   }
 }
-
- 

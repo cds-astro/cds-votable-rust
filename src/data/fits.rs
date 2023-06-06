@@ -1,19 +1,22 @@
+use std::{
+  io::{BufRead, Write},
+  str,
+};
 
-use std::{str, io::{BufRead, Write}};
+use quick_xml::{
+  events::{attributes::Attributes, BytesStart, Event},
+  Reader, Writer,
+};
 
-use quick_xml::{Reader, Writer, events::{Event, BytesStart, attributes::Attributes}};
-
-use serde;
 use paste::paste;
+use serde;
 
 use crate::impls::mem::VoidTableDataContent;
 
-
 use super::{
+  super::{error::VOTableError, QuickXmlReadWrite},
   stream::Stream,
-  super::{QuickXmlReadWrite, error::VOTableError}
 };
-
 
 #[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Fits {
@@ -30,9 +33,7 @@ impl Fits {
   }
 
   impl_builder_opt_attr!(extnum, u32);
-
 }
-
 
 impl QuickXmlReadWrite for Fits {
   const TAG: &'static str = "FITS";
@@ -45,7 +46,9 @@ impl QuickXmlReadWrite for Fits {
       let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
       fits = match attr.key {
         b"extnum" => fits.set_extnum(value.parse().map_err(VOTableError::ParseInt)?),
-        _ => { return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG)); },
+        _ => {
+          return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
+        }
       }
     }
     Ok(fits)
@@ -60,18 +63,26 @@ impl QuickXmlReadWrite for Fits {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => {
-          match e.name() {
-            Stream::<VoidTableDataContent>::TAG_BYTES => self.stream = from_event_start!(Stream, reader, reader_buff, e),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.name().to_vec(), Self::TAG)),
+        Event::Start(ref e) => match e.name() {
+          Stream::<VoidTableDataContent>::TAG_BYTES => {
+            self.stream = from_event_start!(Stream, reader, reader_buff, e)
           }
-        }
-        Event::Empty(ref e) => {
-          match e.name() {
-            Stream::<VoidTableDataContent>::TAG_BYTES => self.stream = Stream::from_event_empty(e)?,
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.name().to_vec(), Self::TAG)),
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.name().to_vec(),
+              Self::TAG,
+            ))
           }
-        }
+        },
+        Event::Empty(ref e) => match e.name() {
+          Stream::<VoidTableDataContent>::TAG_BYTES => self.stream = Stream::from_event_empty(e)?,
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
         Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(reader),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
@@ -87,19 +98,23 @@ impl QuickXmlReadWrite for Fits {
   ) -> Result<(), VOTableError> {
     todo!()
   }
-  
+
   fn write<W: Write>(
-    &mut self, 
-    writer: &mut Writer<W>, 
-    _context: &Self::Context
+    &mut self,
+    writer: &mut Writer<W>,
+    _context: &Self::Context,
   ) -> Result<(), VOTableError> {
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     // Write tag + attributes
     push2write_opt_tostring_attr!(self, tag, extnum);
-    writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
+    writer
+      .write_event(Event::Start(tag.to_borrowed()))
+      .map_err(VOTableError::Write)?;
     // Write sub-elements
     self.stream.write(writer, &())?;
     // Close tag
-    writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
+    writer
+      .write_event(Event::End(tag.to_end()))
+      .map_err(VOTableError::Write)
   }
 }

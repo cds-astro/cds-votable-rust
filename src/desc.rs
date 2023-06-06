@@ -1,11 +1,11 @@
 use std::io::{BufRead, Write};
 
-use quick_xml::{Reader, Writer, events::{BytesText, Event, attributes::Attributes}};
-
-use super::{
-  QuickXmlReadWrite,
-  error::VOTableError
+use quick_xml::{
+  events::{attributes::Attributes, BytesText, Event},
+  Reader, Writer,
 };
+
+use super::{error::VOTableError, QuickXmlReadWrite};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Description(pub String);
@@ -23,22 +23,21 @@ impl From<String> for Description {
 }
 
 impl QuickXmlReadWrite for Description {
-
   const TAG: &'static str = "DESCRIPTION";
   type Context = ();
 
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     if attrs.count() > 0 {
-     eprintln!("Unexpected attributes in DESCRIPTION (not serialized!)");
+      eprintln!("Unexpected attributes in DESCRIPTION (not serialized!)");
     }
     Ok(Description(Default::default()))
   }
 
   fn read_sub_elements<R: BufRead>(
-    &mut self, 
+    &mut self,
     mut reader: Reader<R>,
     reader_buff: &mut Vec<u8>,
-    _context: &Self::Context
+    _context: &Self::Context,
   ) -> Result<Reader<R>, VOTableError> {
     // I dot not like the fact that we first create an empty String that we replace here... :o/
     read_content!(Self, self, reader, reader_buff, 0)
@@ -53,11 +52,15 @@ impl QuickXmlReadWrite for Description {
     read_content_by_ref!(Self, self, reader, reader_buff, 0)
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>, _context: &Self::Context) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
     let elem_writer = writer.create_element(Self::TAG_BYTES);
-    elem_writer.write_text_content(
-      BytesText::from_plain_str(self.0.as_str())
-    ).map_err(VOTableError::Write)?;
+    elem_writer
+      .write_text_content(BytesText::from_plain_str(self.0.as_str()))
+      .map_err(VOTableError::Write)?;
     Ok(())
   }
 }
@@ -66,11 +69,8 @@ impl QuickXmlReadWrite for Description {
 mod tests {
   use std::io::Cursor;
 
-  use quick_xml::{Reader, events::Event, Writer};
-  use crate::{
-    QuickXmlReadWrite,
-    desc::Description
-  };
+  use crate::{desc::Description, QuickXmlReadWrite};
+  use quick_xml::{events::Event, Reader, Writer};
 
   #[test]
   fn test_description_readwrite() {
@@ -89,7 +89,9 @@ mod tests {
       match &mut event {
         Event::Start(ref mut e) if e.local_name() == Description::TAG_BYTES => {
           let mut desc = Description::from_attributes(e.attributes()).unwrap();
-          desc.read_sub_elements_and_clean(reader, &mut buff, &()).unwrap();
+          desc
+            .read_sub_elements_and_clean(reader, &mut buff, &())
+            .unwrap();
           assert_eq!(
             desc.0,
             r#"
@@ -98,13 +100,14 @@ mod tests {
    Explanations and Statistics of UCDs:			See LINK below
    In case of problem, please report to:	cds-question@unistra.fr
    In this version, NULL integer columns are written as an empty string
-   <TD></TD>, explicitely possible from VOTable-1.3"#);
-            break desc;
-          }
-          Event::Text(ref mut e) if e.escaped().is_empty() => (), // First even read
-          _ => unreachable!(),
+   <TD></TD>, explicitely possible from VOTable-1.3"#
+          );
+          break desc;
         }
-      };
+        Event::Text(ref mut e) if e.escaped().is_empty() => (), // First even read
+        _ => unreachable!(),
+      }
+    };
     // Test write
     let mut writer = Writer::new(Cursor::new(Vec::new()));
     description.write(&mut writer, &()).unwrap();

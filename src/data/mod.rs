@@ -1,37 +1,31 @@
+use std::{
+  io::{BufRead, Write},
+  str,
+};
 
-use std::{str, io::{BufRead, Write}};
-
-use quick_xml::{Reader, Writer, events::{Event, BytesStart, attributes::Attributes}};
+use quick_xml::{
+  events::{attributes::Attributes, BytesStart, Event},
+  Reader, Writer,
+};
 
 use paste::paste;
 
 use serde;
 
 use super::{
-  QuickXmlReadWrite, TableDataContent,
-  error::VOTableError,
-  info::Info,
-  table::TableElem,
+  error::VOTableError, info::Info, table::TableElem, QuickXmlReadWrite, TableDataContent,
 };
 
 // Sub modules
-pub mod tabledata;
 pub mod binary;
 pub mod binary2;
 pub mod fits;
 pub mod stream;
+pub mod tabledata;
 
-use crate::{
-  is_empty,
-  impls::mem::VoidTableDataContent
-};
+use crate::{impls::mem::VoidTableDataContent, is_empty};
 
-use self::{
-  tabledata::TableData,
-  binary::Binary,
-  binary2::Binary2,
-  fits::Fits,
-};
+use self::{binary::Binary, binary2::Binary2, fits::Fits, tabledata::TableData};
 
 pub enum TableOrBinOrBin2 {
   TableData,
@@ -47,11 +41,10 @@ pub enum DataElem<C: TableDataContent> {
   TableData(TableData<C>),
   Binary(Binary<C>),
   Binary2(Binary2<C>),
-  Fits(Fits)
+  Fits(Fits),
 }
 
 impl<C: TableDataContent> DataElem<C> {
-  
   fn read_sub_elements<R: BufRead>(
     &mut self,
     reader: Reader<R>,
@@ -67,7 +60,7 @@ impl<C: TableDataContent> DataElem<C> {
   }
 
   fn write<W: Write>(
-    &mut self, 
+    &mut self,
     writer: &mut Writer<W>,
     context: &Vec<TableElem>,
   ) -> Result<(), VOTableError> {
@@ -78,27 +71,24 @@ impl<C: TableDataContent> DataElem<C> {
       DataElem::Fits(elem) => elem.write(writer, &()),
     }
   }
-  
 }
-
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Data<C: TableDataContent> {
   #[serde(flatten)]
   data: DataElem<C>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  infos: Vec<Info>
+  infos: Vec<Info>,
 }
 
 impl<C: TableDataContent> Data<C> {
-
   pub fn new_empty() -> Self {
-    Self { 
+    Self {
       data: DataElem::TableData(TableData::default()),
-      infos: vec![]
+      infos: vec![],
     }
   }
-  
+
   pub fn set_tabledata(mut self, content: C) -> Self {
     self.data = DataElem::TableData(TableData::new(content));
     self
@@ -117,11 +107,9 @@ impl<C: TableDataContent> Data<C> {
   }
 
   impl_builder_push!(Info);
-
 }
 
 impl Data<VoidTableDataContent> {
-
   pub(crate) fn read_till_table_bin_or_bin2_or_fits_by_ref<R: BufRead>(
     &mut self,
     mut reader: &mut Reader<R>,
@@ -130,30 +118,49 @@ impl Data<VoidTableDataContent> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => {
-          match e.local_name() {
-            TableData::<VoidTableDataContent>::TAG_BYTES => return Ok(Some(TableOrBinOrBin2::TableData)),
-            Binary::<VoidTableDataContent>::TAG_BYTES => return Ok(Some(TableOrBinOrBin2::Binary)),
-            Binary2::<VoidTableDataContent>::TAG_BYTES => return Ok(Some(TableOrBinOrBin2::Binary2)),
-            Fits::TAG_BYTES => return Ok(Some(TableOrBinOrBin2::Fits(from_event_start_by_ref!(Fits, reader, reader_buff, e)))),
-            Info::TAG_BYTES => self.infos.push(from_event_start_by_ref!(Info, reader, reader_buff, e)),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
+        Event::Start(ref e) => match e.local_name() {
+          TableData::<VoidTableDataContent>::TAG_BYTES => {
+            return Ok(Some(TableOrBinOrBin2::TableData))
           }
-        }
-        Event::Empty(ref e) => {
-          match e.local_name() {
-            Info::TAG_BYTES => self.infos.push(Info::from_event_empty(e)?),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
+          Binary::<VoidTableDataContent>::TAG_BYTES => return Ok(Some(TableOrBinOrBin2::Binary)),
+          Binary2::<VoidTableDataContent>::TAG_BYTES => return Ok(Some(TableOrBinOrBin2::Binary2)),
+          Fits::TAG_BYTES => {
+            return Ok(Some(TableOrBinOrBin2::Fits(from_event_start_by_ref!(
+              Fits,
+              reader,
+              reader_buff,
+              e
+            ))))
           }
-        }
-        Event::Text(e) if is_empty(e) => { },
+          Info::TAG_BYTES => {
+            self
+              .infos
+              .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
+          }
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Empty(ref e) => match e.local_name() {
+          Info::TAG_BYTES => self.infos.push(Info::from_event_empty(e)?),
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Text(e) if is_empty(e) => {}
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }
-  
+
   /*pub(crate) fn read_till_table_bin_or_bin2_or_fits<R: BufRead>(
     &mut self,
     mut reader: Reader<R>,
@@ -185,7 +192,6 @@ impl Data<VoidTableDataContent> {
       }
     }
   }*/
-
 }
 
 impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
@@ -195,7 +201,10 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     let data = Self::new_empty();
     if attrs.count() > 0 {
-      eprintln!("No attribute expected in {}: attribute(s) ignored.", Self::TAG);
+      eprintln!(
+        "No attribute expected in {}: attribute(s) ignored.",
+        Self::TAG
+      );
     }
     Ok(data)
   }
@@ -209,31 +218,41 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => {
-          match e.local_name() {
-            TableData::<C>::TAG_BYTES => reader = self.data.read_sub_elements(reader, reader_buff, context)?,
-            Binary::<C>::TAG_BYTES => {
-              self.data = DataElem::Binary(Binary::new());
-              reader = self.data.read_sub_elements(reader, reader_buff, context)?
-            }
-            Binary2::<C>::TAG_BYTES => {
-              self.data = DataElem::Binary2(Binary2::new());
-              reader = self.data.read_sub_elements(reader, reader_buff, context)?
-            } 
-            Fits::TAG_BYTES => {
-              self.data = DataElem::Fits(from_event_start!(Fits, reader, reader_buff, e))
-            }
-            Info::TAG_BYTES => self.infos.push(from_event_start!(Info, reader, reader_buff, e)),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
+        Event::Start(ref e) => match e.local_name() {
+          TableData::<C>::TAG_BYTES => {
+            reader = self.data.read_sub_elements(reader, reader_buff, context)?
           }
-        }
-        Event::Empty(ref e) => {
-          match e.local_name() {
-            Info::TAG_BYTES => self.infos.push(Info::from_event_empty(e)?),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
+          Binary::<C>::TAG_BYTES => {
+            self.data = DataElem::Binary(Binary::new());
+            reader = self.data.read_sub_elements(reader, reader_buff, context)?
           }
-        }
-        Event::Text(e) if is_empty(e) => { },
+          Binary2::<C>::TAG_BYTES => {
+            self.data = DataElem::Binary2(Binary2::new());
+            reader = self.data.read_sub_elements(reader, reader_buff, context)?
+          }
+          Fits::TAG_BYTES => {
+            self.data = DataElem::Fits(from_event_start!(Fits, reader, reader_buff, e))
+          }
+          Info::TAG_BYTES => self
+            .infos
+            .push(from_event_start!(Info, reader, reader_buff, e)),
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Empty(ref e) => match e.local_name() {
+          Info::TAG_BYTES => self.infos.push(Info::from_event_empty(e)?),
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Text(e) if is_empty(e) => {}
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
@@ -250,13 +269,21 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
     todo!()
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>, context: &Self::Context) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+    context: &Self::Context,
+  ) -> Result<(), VOTableError> {
     let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-    writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
+    writer
+      .write_event(Event::Start(tag.to_borrowed()))
+      .map_err(VOTableError::Write)?;
     // Write sub-element
     self.data.write(writer, context)?;
     write_elem_vec_empty_context!(self, infos, writer);
     // Close tag
-    writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
+    writer
+      .write_event(Event::End(tag.to_end()))
+      .map_err(VOTableError::Write)
   }
 }

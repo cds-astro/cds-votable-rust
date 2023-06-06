@@ -1,20 +1,19 @@
-
 use std::{
-  str,
   collections::HashMap,
   io::{BufRead, Write},
+  str,
 };
 
-use quick_xml::{Reader, Writer, events::{Event, BytesText, attributes::Attributes}};
+use quick_xml::{
+  events::{attributes::Attributes, BytesText, Event},
+  Reader, Writer,
+};
 
 use paste::paste;
 
 use serde_json::Value;
 
-use super::{
-  QuickXmlReadWrite,
-  error::VOTableError,
-};
+use super::{error::VOTableError, QuickXmlReadWrite};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct FieldRef {
@@ -33,14 +32,13 @@ pub struct FieldRef {
 }
 
 impl FieldRef {
-
   pub fn new<S: Into<String>>(ref_: S) -> Self {
     Self {
       ref_: ref_.into(),
       ucd: None,
       utype: None,
       extra: Default::default(),
-      content: None
+      content: None,
     }
   }
 
@@ -63,7 +61,10 @@ impl QuickXmlReadWrite for FieldRef {
       let attr = attr_res.map_err(VOTableError::Attr)?;
       let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
       paramref = match attr.key {
-        b"ref" => { paramref.ref_ = value.to_string(); paramref },
+        b"ref" => {
+          paramref.ref_ = value.to_string();
+          paramref
+        }
         b"ucd" => paramref.set_ucd(value),
         b"utype" => paramref.set_utype(value),
         _ => paramref.insert_extra(
@@ -73,7 +74,10 @@ impl QuickXmlReadWrite for FieldRef {
       }
     }
     if paramref.ref_.as_str() == NULL {
-      Err(VOTableError::Custom(format!("Attributes 'ref' is mandatory in tag '{}'", Self::TAG)))
+      Err(VOTableError::Custom(format!(
+        "Attributes 'ref' is mandatory in tag '{}'",
+        Self::TAG
+      )))
     } else {
       Ok(paramref)
     }
@@ -96,8 +100,12 @@ impl QuickXmlReadWrite for FieldRef {
   ) -> Result<(), VOTableError> {
     read_content_by_ref!(Self, self, reader, reader_buff)
   }
-  
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>, _context: &Self::Context) -> Result<(), VOTableError> {
+
+  fn write<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
     let mut elem_writer = writer.create_element(Self::TAG_BYTES);
     elem_writer = elem_writer.with_attribute(("ref", self.ref_.as_str()));
     write_opt_string_attr!(self, elem_writer, ucd);

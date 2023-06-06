@@ -1,12 +1,14 @@
-
 use std::{
-  fmt::{self, Debug},
   collections::HashMap,
+  fmt::{self, Debug},
   io::{BufRead, Write},
   str::{self, FromStr},
 };
 
-use quick_xml::{Reader, Writer, events::{Event, BytesText, attributes::Attributes}};
+use quick_xml::{
+  events::{attributes::Attributes, BytesText, Event},
+  Reader, Writer,
+};
 
 use paste::paste;
 
@@ -104,7 +106,9 @@ impl QuickXmlReadWrite for Link {
       let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
       link = match attr.key {
         b"ID" => link.set_id(value),
-        b"content-role" => link.set_content_role(ContentRole::from_str(value).map_err(VOTableError::Custom)?),
+        b"content-role" => {
+          link.set_content_role(ContentRole::from_str(value).map_err(VOTableError::Custom)?)
+        }
         b"content-type" => link.set_content_type(value),
         b"title" => link.set_title(value),
         b"value" => link.set_value(value),
@@ -135,10 +139,10 @@ impl QuickXmlReadWrite for Link {
   ) -> Result<(), VOTableError> {
     read_content_by_ref!(Self, self, reader, reader_buff)
   }
-  
+
   fn write<W: Write>(
-    &mut self, 
-    writer: &mut Writer<W>, 
+    &mut self,
+    writer: &mut Writer<W>,
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
     let mut elem_writer = writer.create_element(Self::TAG_BYTES);

@@ -1,17 +1,18 @@
+use std::{
+  io::{BufRead, Write},
+  str,
+};
 
-use std::{str, io::{BufRead, Write}};
-
-use quick_xml::{Reader, Writer, events::{Event, BytesStart, attributes::Attributes}};
+use quick_xml::{
+  events::{attributes::Attributes, BytesStart, Event},
+  Reader, Writer,
+};
 
 use paste::paste;
 
 use super::{
+  desc::Description, error::VOTableError, fieldref::FieldRef, param::Param, paramref::ParamRef,
   QuickXmlReadWrite,
-  desc::Description,
-  param::Param,
-  fieldref::FieldRef,
-  paramref::ParamRef,
-  error::VOTableError,
 };
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -97,7 +98,9 @@ impl QuickXmlReadWrite for Group {
         b"ref" => group.set_ref(value),
         b"ucd" => group.set_ucd(value),
         b"utype" => group.set_utype(value),
-        _ => { return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG)); }
+        _ => {
+          return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
+        }
       }
     }
     Ok(group)
@@ -112,22 +115,49 @@ impl QuickXmlReadWrite for Group {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => {
-          match e.local_name() {
-            Description::TAG_BYTES => { from_event_start_desc!(self, Description, reader, reader_buff, e); }
-            ParamRef::TAG_BYTES => self.elems.push(GroupElem::ParamRef(from_event_start!(ParamRef, reader, reader_buff, e))),
-            Param::TAG_BYTES => self.elems.push(GroupElem::Param(from_event_start!(Param, reader, reader_buff, e))),
-            Group::TAG_BYTES => self.elems.push(GroupElem::Group(from_event_start!(Group, reader, reader_buff, e))),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
+        Event::Start(ref e) => match e.local_name() {
+          Description::TAG_BYTES => {
+            from_event_start_desc!(self, Description, reader, reader_buff, e);
           }
-        }
-        Event::Empty(ref e) => {
-          match e.local_name() {
-            ParamRef::TAG_BYTES => self.elems.push(GroupElem::ParamRef(ParamRef::from_event_empty(e)?)),
-            Param::TAG_BYTES => self.elems.push(GroupElem::Param(Param::from_event_empty(e)?)),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
+          ParamRef::TAG_BYTES => self.elems.push(GroupElem::ParamRef(from_event_start!(
+            ParamRef,
+            reader,
+            reader_buff,
+            e
+          ))),
+          Param::TAG_BYTES => self.elems.push(GroupElem::Param(from_event_start!(
+            Param,
+            reader,
+            reader_buff,
+            e
+          ))),
+          Group::TAG_BYTES => self.elems.push(GroupElem::Group(from_event_start!(
+            Group,
+            reader,
+            reader_buff,
+            e
+          ))),
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
           }
-        }
+        },
+        Event::Empty(ref e) => match e.local_name() {
+          ParamRef::TAG_BYTES => self
+            .elems
+            .push(GroupElem::ParamRef(ParamRef::from_event_empty(e)?)),
+          Param::TAG_BYTES => self
+            .elems
+            .push(GroupElem::Param(Param::from_event_empty(e)?)),
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
@@ -145,9 +175,9 @@ impl QuickXmlReadWrite for Group {
   }
 
   fn write<W: Write>(
-    &mut self, 
+    &mut self,
     writer: &mut Writer<W>,
-    context: &Self::Context
+    context: &Self::Context,
   ) -> Result<(), VOTableError> {
     if self.description.is_none() && self.elems.is_empty() {
       let mut elem_writer = writer.create_element(Self::TAG_BYTES);
@@ -166,16 +196,19 @@ impl QuickXmlReadWrite for Group {
       push2write_opt_string_attr!(self, tag, ref_, ref);
       push2write_opt_string_attr!(self, tag, ucd);
       push2write_opt_string_attr!(self, tag, utype);
-      writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
+      writer
+        .write_event(Event::Start(tag.to_borrowed()))
+        .map_err(VOTableError::Write)?;
       // Write sub-elems
       write_elem!(self, description, writer, context);
       write_elem_vec_no_context!(self, elems, writer);
       // Close tag
-      writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
+      writer
+        .write_event(Event::End(tag.to_end()))
+        .map_err(VOTableError::Write)
     }
   }
 }
-
 
 /// The only difference with the Group than can be in a VOTable or in a Resource
 /// is that the TableGroup can contain FieldRef!
@@ -252,7 +285,6 @@ impl TableGroup {
 }
 
 impl QuickXmlReadWrite for TableGroup {
-  
   const TAG: &'static str = "GROUP";
   type Context = ();
 
@@ -267,7 +299,9 @@ impl QuickXmlReadWrite for TableGroup {
         b"ref" => group.set_ref(value),
         b"ucd" => group.set_ucd(value),
         b"utype" => group.set_utype(value),
-        _ => { return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG)); }
+        _ => {
+          return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
+        }
       }
     }
     Ok(group)
@@ -282,24 +316,60 @@ impl QuickXmlReadWrite for TableGroup {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => {
-          match e.local_name() {
-            Description::TAG_BYTES => { from_event_start_desc!(self, Description, reader, reader_buff, e); }
-            FieldRef::TAG_BYTES => self.elems.push(TableGroupElem::FieldRef(from_event_start!(FieldRef, reader, reader_buff, e))),
-            ParamRef::TAG_BYTES => self.elems.push(TableGroupElem::ParamRef(from_event_start!(ParamRef, reader, reader_buff, e))),
-            Param::TAG_BYTES => self.elems.push(TableGroupElem::Param(from_event_start!(Param, reader, reader_buff, e))),
-            TableGroup::TAG_BYTES => self.elems.push(TableGroupElem::TableGroup(from_event_start!(TableGroup, reader, reader_buff, e))),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
+        Event::Start(ref e) => match e.local_name() {
+          Description::TAG_BYTES => {
+            from_event_start_desc!(self, Description, reader, reader_buff, e);
           }
-        }
-        Event::Empty(ref e) => {
-          match e.local_name() {
-            FieldRef::TAG_BYTES => self.elems.push(TableGroupElem::FieldRef(FieldRef::from_event_empty(e)?)),
-            ParamRef::TAG_BYTES => self.elems.push(TableGroupElem::ParamRef(ParamRef::from_event_empty(e)?)),
-            Param::TAG_BYTES => self.elems.push(TableGroupElem::Param(Param::from_event_empty(e)?)),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
+          FieldRef::TAG_BYTES => self.elems.push(TableGroupElem::FieldRef(from_event_start!(
+            FieldRef,
+            reader,
+            reader_buff,
+            e
+          ))),
+          ParamRef::TAG_BYTES => self.elems.push(TableGroupElem::ParamRef(from_event_start!(
+            ParamRef,
+            reader,
+            reader_buff,
+            e
+          ))),
+          Param::TAG_BYTES => self.elems.push(TableGroupElem::Param(from_event_start!(
+            Param,
+            reader,
+            reader_buff,
+            e
+          ))),
+          TableGroup::TAG_BYTES => self
+            .elems
+            .push(TableGroupElem::TableGroup(from_event_start!(
+              TableGroup,
+              reader,
+              reader_buff,
+              e
+            ))),
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
           }
-        }
+        },
+        Event::Empty(ref e) => match e.local_name() {
+          FieldRef::TAG_BYTES => self
+            .elems
+            .push(TableGroupElem::FieldRef(FieldRef::from_event_empty(e)?)),
+          ParamRef::TAG_BYTES => self
+            .elems
+            .push(TableGroupElem::ParamRef(ParamRef::from_event_empty(e)?)),
+          Param::TAG_BYTES => self
+            .elems
+            .push(TableGroupElem::Param(Param::from_event_empty(e)?)),
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
@@ -317,9 +387,9 @@ impl QuickXmlReadWrite for TableGroup {
   }
 
   fn write<W: Write>(
-    &mut self, 
+    &mut self,
     writer: &mut Writer<W>,
-    context: &Self::Context
+    context: &Self::Context,
   ) -> Result<(), VOTableError> {
     if self.description.is_none() && self.elems.is_empty() {
       let mut elem_writer = writer.create_element(Self::TAG_BYTES);
@@ -338,12 +408,16 @@ impl QuickXmlReadWrite for TableGroup {
       push2write_opt_string_attr!(self, tag, ref_, ref);
       push2write_opt_string_attr!(self, tag, ucd);
       push2write_opt_string_attr!(self, tag, utype);
-      writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
+      writer
+        .write_event(Event::Start(tag.to_borrowed()))
+        .map_err(VOTableError::Write)?;
       // Write sub-elems
       write_elem!(self, description, writer, context);
       write_elem_vec_no_context!(self, elems, writer);
       // Close tag
-      writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
+      writer
+        .write_event(Event::End(tag.to_end()))
+        .map_err(VOTableError::Write)
     }
   }
 }

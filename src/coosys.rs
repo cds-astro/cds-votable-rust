@@ -1,21 +1,14 @@
-
 use std::{
   io::{BufRead, Write},
-  str::{self, FromStr},
   num::ParseFloatError,
+  str::{self, FromStr},
 };
 
-use quick_xml::{
-  ElementWriter, Reader, Writer,
-  events::attributes::Attributes
-};
+use quick_xml::{events::attributes::Attributes, ElementWriter, Reader, Writer};
 
 use serde;
 
-use super::{
-  QuickXmlReadWrite,
-  error::VOTableError, 
-};
+use super::{error::VOTableError, QuickXmlReadWrite};
 
 // https://ned.ipac.caltech.edu/Documents/Guides/Calculations/calcdoc
 
@@ -24,14 +17,14 @@ pub struct CooSys {
   #[serde(rename = "ID")]
   pub id: String,
   #[serde(flatten)]
-  pub coosys: System
+  pub coosys: System,
 }
 
 impl CooSys {
   pub fn new<S: Into<String>>(id: S, coosys: System) -> Self {
-    Self { 
-      id: id.into(), 
-      coosys
+    Self {
+      id: id.into(),
+      coosys,
     }
   }
 }
@@ -48,49 +41,95 @@ impl QuickXmlReadWrite for CooSys {
     // Look for attributes
     for attr_res in attrs {
       let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = String::from_utf8(attr.value.as_ref().to_vec()).map_err(VOTableError::FromUtf8)?;
+      let value =
+        String::from_utf8(attr.value.as_ref().to_vec()).map_err(VOTableError::FromUtf8)?;
       match attr.key {
         b"ID" => id = Some(value),
         b"system" => system = Some(value),
         b"equinox" => equinox = Some(value),
         b"epoch" => epoch = Some(value),
-        _ => { eprintln!("WARNING: attribute {:?} in {} is ignored", std::str::from_utf8(attr.key), Self::TAG); }
+        _ => {
+          eprintln!(
+            "WARNING: attribute {:?} in {} is ignored",
+            std::str::from_utf8(attr.key),
+            Self::TAG
+          );
+        }
       }
     }
     // Set from found attributes
     if let (Some(id), Some(system)) = (id, system) {
-     let mut system = match system.as_str() {
-       "eq_FK4" => if let Some(equinox) = equinox {
-         System::new_eq_fk4(equinox.parse::<BesselianYear>().map_err(VOTableError::ParseYear)?.0)
-       } else {
-         System::new_default_eq_fk4()
-       },
-       "eq_FK5" => if let Some(equinox) = equinox {
-         System::new_eq_fk5(equinox.parse::<JulianYear>().map_err(VOTableError::ParseYear)?.0)
-       } else {
-         System::new_default_eq_fk5()
-       },
-       "ICRS" => System::new_icrs(),
-       "ecl_FK4" => if let Some(equinox) = equinox {
-         System::new_ecl_fk4(equinox.parse::<BesselianYear>().map_err(VOTableError::ParseYear)?.0)
-       } else {
-         System::new_default_ecl_fk4()
-       },
-       "ecl_FK5" => if let Some(equinox) = equinox {
-         System::new_ecl_fk5(equinox.parse::<JulianYear>().map_err(VOTableError::ParseYear)?.0)
-       } else {
-         System::new_default_ecl_fk5()
-       },
-       "galactic" => System::new_galactic(),
-       "supergalactic" => System::new_supergalactic(),
-       _ => { return Err(VOTableError::Custom(format!("System '{}' not recognized in tag '{}'", system, Self::TAG))); }
-     };
+      let mut system = match system.as_str() {
+        "eq_FK4" => {
+          if let Some(equinox) = equinox {
+            System::new_eq_fk4(
+              equinox
+                .parse::<BesselianYear>()
+                .map_err(VOTableError::ParseYear)?
+                .0,
+            )
+          } else {
+            System::new_default_eq_fk4()
+          }
+        }
+        "eq_FK5" => {
+          if let Some(equinox) = equinox {
+            System::new_eq_fk5(
+              equinox
+                .parse::<JulianYear>()
+                .map_err(VOTableError::ParseYear)?
+                .0,
+            )
+          } else {
+            System::new_default_eq_fk5()
+          }
+        }
+        "ICRS" => System::new_icrs(),
+        "ecl_FK4" => {
+          if let Some(equinox) = equinox {
+            System::new_ecl_fk4(
+              equinox
+                .parse::<BesselianYear>()
+                .map_err(VOTableError::ParseYear)?
+                .0,
+            )
+          } else {
+            System::new_default_ecl_fk4()
+          }
+        }
+        "ecl_FK5" => {
+          if let Some(equinox) = equinox {
+            System::new_ecl_fk5(
+              equinox
+                .parse::<JulianYear>()
+                .map_err(VOTableError::ParseYear)?
+                .0,
+            )
+          } else {
+            System::new_default_ecl_fk5()
+          }
+        }
+        "galactic" => System::new_galactic(),
+        "supergalactic" => System::new_supergalactic(),
+        _ => {
+          return Err(VOTableError::Custom(format!(
+            "System '{}' not recognized in tag '{}'",
+            system,
+            Self::TAG
+          )));
+        }
+      };
       if let Some(epoch) = epoch {
-        system = system.set_epoch_from_str(epoch.as_str()).map_err(VOTableError::ParseYear)?;
+        system = system
+          .set_epoch_from_str(epoch.as_str())
+          .map_err(VOTableError::ParseYear)?;
       }
       Ok(CooSys::new(id, system))
     } else {
-      Err(VOTableError::Custom(format!("Attributes 'ID' and 'system' are mandatory in tag '{}'", Self::TAG)))
+      Err(VOTableError::Custom(format!(
+        "Attributes 'ID' and 'system' are mandatory in tag '{}'",
+        Self::TAG
+      )))
     }
   }
 
@@ -112,14 +151,17 @@ impl QuickXmlReadWrite for CooSys {
     unreachable!()
   }
 
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>,  _context: &Self::Context) -> Result<(), VOTableError> {
+  fn write<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
     let mut elem_writer = writer.create_element(Self::TAG_BYTES);
     elem_writer = elem_writer.with_attribute(("ID", self.id.as_str()));
     elem_writer = self.coosys.with_attributes(elem_writer);
     elem_writer.write_empty().map_err(VOTableError::Write)?;
     Ok(())
   }
-  
 }
 
 /*
@@ -129,7 +171,7 @@ impl QuickXmlReadWrite for CooSys {
 #[serde(tag = "astro_year")]
 enum JulianOrBesselianYear{
   Julian(f64),
-  Besselian(f64) 
+  Besselian(f64)
 }*/
 
 /// Besselian (= tropical) year, e.g. B1950
@@ -139,7 +181,7 @@ impl FromStr for BesselianYear {
   type Err = ParseFloatError;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
-    let decimal_year_str= if let Some(stripped) = s.strip_prefix('B') {
+    let decimal_year_str = if let Some(stripped) = s.strip_prefix('B') {
       stripped
     } else {
       s
@@ -155,7 +197,7 @@ impl FromStr for JulianYear {
   type Err = ParseFloatError;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
-    let decimal_year_str= if let Some(stripped) = s.strip_prefix('J') {
+    let decimal_year_str = if let Some(stripped) = s.strip_prefix('J') {
       stripped
     } else {
       s
@@ -176,7 +218,7 @@ pub enum Epoch {
   }, // in years
   Var {
     #[serde(rename = "epoch_ref")]
-    ref_: String 
+    ref_: String
   },
 }*/
 
@@ -250,15 +292,14 @@ pub enum System {
 }
 
 impl System {
-  
   pub fn new_default_eq_fk4() -> System {
     System::new_eq_fk4(1950.0)
   }
 
   pub fn new_eq_fk4(equinox_in_besselian_year: f64) -> System {
-    System::EquatorialFK4 { 
+    System::EquatorialFK4 {
       equinox: BesselianYear(equinox_in_besselian_year),
-      epoch: None
+      epoch: None,
     }
   }
 
@@ -269,7 +310,7 @@ impl System {
   pub fn new_ecl_fk4(equinox_in_besselian_year: f64) -> System {
     System::EcliptiqueFK4 {
       equinox: BesselianYear(equinox_in_besselian_year),
-      epoch: None
+      epoch: None,
     }
   }
 
@@ -280,7 +321,7 @@ impl System {
   pub fn new_eq_fk5(equinox_in_julian_year: f64) -> System {
     System::EquatorialFK5 {
       equinox: JulianYear(equinox_in_julian_year),
-      epoch: None
+      epoch: None,
     }
   }
 
@@ -291,153 +332,125 @@ impl System {
   pub fn new_ecl_fk5(equinox_in_julian_year: f64) -> System {
     System::EcliptiqueFK5 {
       equinox: JulianYear(equinox_in_julian_year),
-      epoch: None
+      epoch: None,
     }
   }
 
   pub fn new_icrs() -> System {
-    System::ICRS {
-      epoch: None
-    }
+    System::ICRS { epoch: None }
   }
 
   pub fn new_galactic() -> System {
-    System::Galactic {
-      epoch: None
-    }
+    System::Galactic { epoch: None }
   }
 
   pub fn new_supergalactic() -> System {
-    System::SuperGalactic {
-      epoch: None
-    }
+    System::SuperGalactic { epoch: None }
   }
-  
+
   /// For FK4 systems, the epoch must be provided in Besselian years
   /// For FK5 systems, the epoch must be provided in Julian years
   pub fn set_epoch(mut self, epoch_in_years: f64) -> Self {
     match &mut self {
-      System::EquatorialFK4 {
-        equinox: _,
-        epoch
-      } => { let _prev = epoch.insert(BesselianYear(epoch_in_years)); }
-      System::EcliptiqueFK4 {
-        equinox: _,
-        epoch
-      } => { let _prev = epoch.insert(BesselianYear(epoch_in_years)); }
-      System::EquatorialFK5 {
-        equinox: _,
-        epoch
-      } => { let _prev = epoch.insert(JulianYear(epoch_in_years)); }
-      System::EcliptiqueFK5 {
-        equinox: _,
-        epoch
-      } => { let _prev = epoch.insert(JulianYear(epoch_in_years)); }
-      System::ICRS {
-        epoch
-      } => { let _prev = epoch.insert(JulianYear(epoch_in_years)); }
-      System::Galactic {
-        epoch
-      } => { let _prev = epoch.insert(JulianYear(epoch_in_years)); }
-      System::SuperGalactic {
-        epoch
-      } => { let _prev = epoch.insert(JulianYear(epoch_in_years)); }
+      System::EquatorialFK4 { equinox: _, epoch } => {
+        let _prev = epoch.insert(BesselianYear(epoch_in_years));
+      }
+      System::EcliptiqueFK4 { equinox: _, epoch } => {
+        let _prev = epoch.insert(BesselianYear(epoch_in_years));
+      }
+      System::EquatorialFK5 { equinox: _, epoch } => {
+        let _prev = epoch.insert(JulianYear(epoch_in_years));
+      }
+      System::EcliptiqueFK5 { equinox: _, epoch } => {
+        let _prev = epoch.insert(JulianYear(epoch_in_years));
+      }
+      System::ICRS { epoch } => {
+        let _prev = epoch.insert(JulianYear(epoch_in_years));
+      }
+      System::Galactic { epoch } => {
+        let _prev = epoch.insert(JulianYear(epoch_in_years));
+      }
+      System::SuperGalactic { epoch } => {
+        let _prev = epoch.insert(JulianYear(epoch_in_years));
+      }
     };
     self
   }
 
   pub fn set_epoch_from_str(mut self, epoch_in_years: &str) -> Result<Self, ParseFloatError> {
     match &mut self {
-      System::EquatorialFK4 {
-        equinox: _,
-        epoch
-      } => { let _prev = epoch.insert(epoch_in_years.parse()?); }
-      System::EcliptiqueFK4 {
-        equinox: _,
-        epoch
-      } => { let _prev = epoch.insert(epoch_in_years.parse()?); }
-      System::EquatorialFK5 {
-        equinox: _,
-        epoch
-      } => { let _prev = epoch.insert(epoch_in_years.parse()?); }
-      System::EcliptiqueFK5 {
-        equinox: _,
-        epoch
-      } => { let _prev = epoch.insert(epoch_in_years.parse()?); }
-      System::ICRS {
-        epoch
-      } => { let _prev = epoch.insert(epoch_in_years.parse()?); }
-      System::Galactic {
-        epoch
-      } => { let _prev = epoch.insert(epoch_in_years.parse()?); }
-      System::SuperGalactic {
-        epoch
-      } => { let _prev = epoch.insert(epoch_in_years.parse()?); }
+      System::EquatorialFK4 { equinox: _, epoch } => {
+        let _prev = epoch.insert(epoch_in_years.parse()?);
+      }
+      System::EcliptiqueFK4 { equinox: _, epoch } => {
+        let _prev = epoch.insert(epoch_in_years.parse()?);
+      }
+      System::EquatorialFK5 { equinox: _, epoch } => {
+        let _prev = epoch.insert(epoch_in_years.parse()?);
+      }
+      System::EcliptiqueFK5 { equinox: _, epoch } => {
+        let _prev = epoch.insert(epoch_in_years.parse()?);
+      }
+      System::ICRS { epoch } => {
+        let _prev = epoch.insert(epoch_in_years.parse()?);
+      }
+      System::Galactic { epoch } => {
+        let _prev = epoch.insert(epoch_in_years.parse()?);
+      }
+      System::SuperGalactic { epoch } => {
+        let _prev = epoch.insert(epoch_in_years.parse()?);
+      }
     }
     Ok(self)
   }
-  
-  pub fn with_attributes<'a, W: Write>(&self, mut writer: ElementWriter<'a, W>) -> ElementWriter<'a, W> {
+
+  pub fn with_attributes<'a, W: Write>(
+    &self,
+    mut writer: ElementWriter<'a, W>,
+  ) -> ElementWriter<'a, W> {
     // let mut writer = writer;
     match self {
-      System::EquatorialFK4 {
-        equinox,
-        epoch } => {
+      System::EquatorialFK4 { equinox, epoch } => {
         writer = writer.with_attribute(("system", "eq_FK4"));
         writer = writer.with_attribute(("equinox", format!("B{:}", equinox.0).as_str()));
         if let Some(epoch) = epoch {
           writer = writer.with_attribute(("epoch", format!("B{:}", epoch.0).as_str()));
         }
       }
-      System::EcliptiqueFK4 {
-        equinox,
-        epoch
-      } => {        
+      System::EcliptiqueFK4 { equinox, epoch } => {
         writer = writer.with_attribute(("system", "ecl_FK4"));
         writer = writer.with_attribute(("equinox", format!("B{:}", equinox.0).as_str()));
         if let Some(epoch) = epoch {
           writer = writer.with_attribute(("epoch", format!("B{:}", epoch.0).as_str()));
-        } 
+        }
       }
-      System::EquatorialFK5 {
-        equinox,
-        epoch
-      } => {
+      System::EquatorialFK5 { equinox, epoch } => {
         writer = writer.with_attribute(("system", "eq_FK5"));
         writer = writer.with_attribute(("equinox", format!("J{:}", equinox.0).as_str()));
         if let Some(epoch) = epoch {
           writer = writer.with_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
         }
       }
-      System::EcliptiqueFK5 {
-        equinox,
-        epoch
-      } => {
+      System::EcliptiqueFK5 { equinox, epoch } => {
         writer = writer.with_attribute(("system", "ecl_FK5"));
         writer = writer.with_attribute(("equinox", format!("J{:}", equinox.0).as_str()));
         if let Some(epoch) = epoch {
           writer = writer.with_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
         }
       }
-      System::ICRS {
-        epoch
-      } => {
+      System::ICRS { epoch } => {
         writer = writer.with_attribute(("system", "ICRS"));
         if let Some(epoch) = epoch {
           writer = writer.with_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
         }
       }
-      System::Galactic {
-        epoch
-      } => {
+      System::Galactic { epoch } => {
         writer = writer.with_attribute(("system", "galactic"));
         if let Some(epoch) = epoch {
           writer = writer.with_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
         }
       }
-      System::SuperGalactic {
-        epoch
-      } => {
+      System::SuperGalactic { epoch } => {
         writer = writer.with_attribute(("system", "supergalactic"));
         if let Some(epoch) = epoch {
           writer = writer.with_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
@@ -448,16 +461,15 @@ impl System {
   }
 }
 
-
 #[cfg(test)]
 mod tests {
   use std::io::Cursor;
 
-  use quick_xml::{Reader, events::Event, Writer};
-  
+  use quick_xml::{events::Event, Reader, Writer};
+
   use crate::{
+    coosys::{CooSys, System},
     QuickXmlReadWrite,
-    coosys::{CooSys, System}
   };
 
   #[test]
@@ -473,11 +485,11 @@ mod tests {
           let coosys = CooSys::from_attributes(e.attributes()).unwrap();
           assert_eq!(coosys.id, "J2000");
           match &coosys.coosys {
-            System::EquatorialFK5 { equinox, epoch} => {
+            System::EquatorialFK5 { equinox, epoch } => {
               assert_eq!(equinox.0, 2000.0);
               assert!(epoch.is_none());
             }
-            _ => unreachable!()
+            _ => unreachable!(),
           }
           break coosys;
         }

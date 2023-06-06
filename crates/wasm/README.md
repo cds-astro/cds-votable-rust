@@ -51,7 +51,7 @@ And add this in your HTML body (see example in [index.html](index.html)):
 You should then be able to call the following methods:
 ```javascript
 vot.fromXML(string) -> JsObject
-vot.toSML(JsObject) -> String
+vot.toXML(JsObject) -> String
 vot.fromJSON(string) -> JsObject
 vot.toJSON(JsObject) -> String
 vot.fromTOML(string) -> JsObject

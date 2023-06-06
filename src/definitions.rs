@@ -1,16 +1,16 @@
+use std::{
+  io::{BufRead, Write},
+  str,
+};
 
-use std::{str, io::{BufRead, Write}};
-
-use quick_xml::{Reader, Writer, events::{Event, BytesStart, attributes::Attributes}};
+use quick_xml::{
+  events::{attributes::Attributes, BytesStart, Event},
+  Reader, Writer,
+};
 
 use paste::paste;
 
-use super::{
-  QuickXmlReadWrite,
-  coosys::CooSys,
-  param::Param,
-  error::VOTableError,
-};
+use super::{coosys::CooSys, error::VOTableError, param::Param, QuickXmlReadWrite};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "def_type")]
@@ -20,7 +20,6 @@ pub enum DefinitionsElem {
 }
 
 impl DefinitionsElem {
-  
   fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
     match self {
       DefinitionsElem::CooSys(elem) => elem.write(writer, &()),
@@ -29,7 +28,7 @@ impl DefinitionsElem {
   }
 }
 
-/// Deprecated since VOTable 1.1, see 
+/// Deprecated since VOTable 1.1, see
 /// [IVOA doc](https://www.ivoa.net/documents/VOTable/20040811/REC-VOTable-1.1-20040811.html#ToC19)
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Definitions {
@@ -40,27 +39,21 @@ pub struct Definitions {
 }
 
 impl Default for Definitions {
-  
   fn default() -> Self {
     Definitions::new()
   }
-  
 }
 
 impl Definitions {
-
   pub fn new() -> Self {
     Self {
-      elems: Default::default()
+      elems: Default::default(),
     }
   }
 
   impl_builder_push_elem!(Param, DefinitionsElem);
   impl_builder_push_elem!(CooSys, DefinitionsElem);
-  
 }
-
-
 
 impl QuickXmlReadWrite for Definitions {
   const TAG: &'static str = "DEFINITIONS";
@@ -89,20 +82,40 @@ impl QuickXmlReadWrite for Definitions {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => {
-          match e.local_name() {
-            CooSys::TAG_BYTES => self.elems.push(DefinitionsElem::CooSys(from_event_start!(CooSys, reader, reader_buff, e))),
-            Param::TAG_BYTES => self.elems.push(DefinitionsElem::Param(from_event_start!(Param, reader, reader_buff, e))),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
+        Event::Start(ref e) => match e.local_name() {
+          CooSys::TAG_BYTES => self.elems.push(DefinitionsElem::CooSys(from_event_start!(
+            CooSys,
+            reader,
+            reader_buff,
+            e
+          ))),
+          Param::TAG_BYTES => self.elems.push(DefinitionsElem::Param(from_event_start!(
+            Param,
+            reader,
+            reader_buff,
+            e
+          ))),
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
           }
-        }
-        Event::Empty(ref e) => {
-          match e.local_name() {
-            CooSys::TAG_BYTES => self.elems.push(DefinitionsElem::CooSys(CooSys::from_event_empty(e)?)),
-            Param::TAG_BYTES => self.elems.push(DefinitionsElem::Param(Param::from_event_empty(e)?)),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
+        },
+        Event::Empty(ref e) => match e.local_name() {
+          CooSys::TAG_BYTES => self
+            .elems
+            .push(DefinitionsElem::CooSys(CooSys::from_event_empty(e)?)),
+          Param::TAG_BYTES => self
+            .elems
+            .push(DefinitionsElem::Param(Param::from_event_empty(e)?)),
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
           }
-        }
+        },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
@@ -122,7 +135,7 @@ impl QuickXmlReadWrite for Definitions {
   fn write<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
-    _context: &Self::Context
+    _context: &Self::Context,
   ) -> Result<(), VOTableError> {
     if self.elems.is_empty() {
       let elem_writer = writer.create_element(Self::TAG_BYTES);
@@ -131,11 +144,15 @@ impl QuickXmlReadWrite for Definitions {
     } else {
       let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
       // Write tag
-      writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
+      writer
+        .write_event(Event::Start(tag.to_borrowed()))
+        .map_err(VOTableError::Write)?;
       // Write sub-elems
       write_elem_vec_no_context!(self, elems, writer);
       // Close tag
-      writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
+      writer
+        .write_event(Event::End(tag.to_end()))
+        .map_err(VOTableError::Write)
     }
   }
 }

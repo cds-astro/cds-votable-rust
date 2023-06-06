@@ -1,17 +1,19 @@
-
 use std::{
-  str, 
   collections::HashMap,
   io::{BufRead, Write},
+  str,
 };
 
-use quick_xml::{Reader, Writer, events::{Event, BytesText, attributes::Attributes}};
+use quick_xml::{
+  events::{attributes::Attributes, BytesText, Event},
+  Reader, Writer,
+};
 
 use paste::paste;
 
 use serde_json::Value;
 
-use super::{QuickXmlReadWrite, error::VOTableError};
+use super::{error::VOTableError, QuickXmlReadWrite};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Info {
@@ -79,8 +81,14 @@ impl QuickXmlReadWrite for Info {
       let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
       info = match attr.key {
         b"ID" => info.set_id(value),
-        b"name" => { info.name = value.to_string(); info },
-        b"value" => { info.value = value.to_string(); info },
+        b"name" => {
+          info.name = value.to_string();
+          info
+        }
+        b"value" => {
+          info.value = value.to_string();
+          info
+        }
         b"xtype" => info.set_xtype(value),
         b"ref" => info.set_ref(value),
         b"unit" => info.set_unit(value),
@@ -93,7 +101,10 @@ impl QuickXmlReadWrite for Info {
       }
     }
     if info.name.as_str() == NULL || info.value.as_str() == NULL {
-      Err(VOTableError::Custom(format!("Attributes 'name' and 'value' are mandatory in tag '{}'", Self::TAG))) 
+      Err(VOTableError::Custom(format!(
+        "Attributes 'name' and 'value' are mandatory in tag '{}'",
+        Self::TAG
+      )))
     } else {
       Ok(info)
     }
@@ -116,11 +127,11 @@ impl QuickXmlReadWrite for Info {
   ) -> Result<(), VOTableError> {
     read_content_by_ref!(Self, self, reader, reader_buff)
   }
-  
+
   fn write<W: Write>(
-    &mut self, 
+    &mut self,
     writer: &mut Writer<W>,
-    _context: &Self::Context
+    _context: &Self::Context,
   ) -> Result<(), VOTableError> {
     let mut elem_writer = writer.create_element(Self::TAG_BYTES);
     write_opt_string_attr!(self, elem_writer, ID);
@@ -137,18 +148,13 @@ impl QuickXmlReadWrite for Info {
   }
 }
 
-
-
 #[cfg(test)]
 mod tests {
   use std::io::Cursor;
 
-  use quick_xml::{Reader, events::Event, Writer};
-  use crate::{
-    QuickXmlReadWrite,
-    info::Info,
-  };
-  
+  use crate::{info::Info, QuickXmlReadWrite};
+  use quick_xml::{events::Event, Reader, Writer};
+
   fn test_info_read(xml: &str) -> Info {
     let mut reader = Reader::from_reader(Cursor::new(xml.as_bytes()));
     let mut buff: Vec<u8> = Vec::with_capacity(xml.len());
@@ -157,7 +163,9 @@ mod tests {
       match &mut event {
         Event::Start(ref mut e) if e.local_name() == Info::TAG_BYTES => {
           let mut info = Info::from_attributes(e.attributes()).unwrap();
-          info.read_sub_elements_and_clean(reader, &mut buff, &()).unwrap();
+          info
+            .read_sub_elements_and_clean(reader, &mut buff, &())
+            .unwrap();
           return info;
         }
         Event::Empty(ref mut e) if e.local_name() == Info::TAG_BYTES => {
@@ -169,7 +177,7 @@ mod tests {
       }
     }
   }
-  
+
   #[test]
   fn test_info_readwrite_1() {
     let xml = r#"<INFO ID="VERSION" name="votable-version" value="1.99+ (14-Oct-2013)"/>"#;
@@ -219,7 +227,10 @@ mod tests {
     let mut info = test_info_read(xml);
     assert_eq!(info.name.as_str(), "queryParameters");
     assert_eq!(info.value.as_str(), "25");
-    assert_eq!(info.content.as_ref().map(|s| s.as_str()), Some(r#"
+    assert_eq!(
+      info.content.as_ref().map(|s| s.as_str()),
+      Some(
+        r#"
   -oc.form=dec
   -out.max=50
   -out.all=2
@@ -245,7 +256,9 @@ mod tests {
   -out=Type
   -out=RMag
   -out.all=2
-  "#));
+  "#
+      )
+    );
     // Test write
     let mut writer = Writer::new(Cursor::new(Vec::new()));
     info.write(&mut writer, &()).unwrap();
@@ -253,5 +266,4 @@ mod tests {
     let output_str = unsafe { std::str::from_utf8_unchecked(output.as_slice()) };
     assert_eq!(output_str, xml);
   }
-  
 }

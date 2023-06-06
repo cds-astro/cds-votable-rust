@@ -1,15 +1,16 @@
+use std::{
+  io::{BufRead, Write},
+  str,
+};
 
-use std::{str, io::{BufRead, Write}};
-
-use quick_xml::{Reader, Writer, events::{Event, BytesStart,BytesEnd, attributes::Attributes}};
+use quick_xml::{
+  events::{attributes::Attributes, BytesEnd, BytesStart, Event},
+  Reader, Writer,
+};
 
 use serde;
 
-use crate::{
-  QuickXmlReadWrite, TableDataContent,
-  error::VOTableError,
-  table::TableElem
-};
+use crate::{error::VOTableError, table::TableElem, QuickXmlReadWrite, TableDataContent};
 
 #[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct TableData<C: TableDataContent> {
@@ -23,8 +24,6 @@ impl<C: TableDataContent> TableData<C> {
   }
 }
 
-
-
 impl<C: TableDataContent> QuickXmlReadWrite for TableData<C> {
   const TAG: &'static str = "TABLEDATA";
   type Context = Vec<TableElem>;
@@ -32,7 +31,10 @@ impl<C: TableDataContent> QuickXmlReadWrite for TableData<C> {
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     let table_data = Self::default();
     if attrs.count() > 0 {
-      eprintln!("No attribute expected in {}: attribute(s) ignored.", Self::TAG);
+      eprintln!(
+        "No attribute expected in {}: attribute(s) ignored.",
+        Self::TAG
+      );
     }
     Ok(table_data)
   }
@@ -43,9 +45,10 @@ impl<C: TableDataContent> QuickXmlReadWrite for TableData<C> {
     reader_buff: &mut Vec<u8>,
     context: &Self::Context,
   ) -> Result<Reader<R>, VOTableError> {
-    self.content.read_datatable_content(reader, reader_buff, context)
+    self
+      .content
+      .read_datatable_content(reader, reader_buff, context)
   }
-
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -57,12 +60,16 @@ impl<C: TableDataContent> QuickXmlReadWrite for TableData<C> {
   }
 
   fn write<W: Write>(
-    &mut self, 
-    writer: &mut Writer<W>, 
-    context: &Self::Context
+    &mut self,
+    writer: &mut Writer<W>,
+    context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    writer.write_event(Event::Start(BytesStart::borrowed_name(Self::TAG_BYTES))).map_err(VOTableError::Write)?;
+    writer
+      .write_event(Event::Start(BytesStart::borrowed_name(Self::TAG_BYTES)))
+      .map_err(VOTableError::Write)?;
     self.content.write_in_datatable(writer, context)?;
-    writer.write_event(Event::End(BytesEnd::borrowed(Self::TAG_BYTES))).map_err(VOTableError::Write)
+    writer
+      .write_event(Event::End(BytesEnd::borrowed(Self::TAG_BYTES)))
+      .map_err(VOTableError::Write)
   }
 }

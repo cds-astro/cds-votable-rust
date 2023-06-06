@@ -1,11 +1,10 @@
-
 /// E.g. `impl_builder_opt_string_attr(id)` leads to
 /// ```ignore
 /// pub fn set_id<I: Into<String>>(mut self, id: I) -> Self {
 ///    self.id.insert(id.into());
 ///    self
 /// }
-/// ``` 
+/// ```
 macro_rules! impl_builder_opt_string_attr {
   ($arg:ident) => {
     paste! {
@@ -31,7 +30,7 @@ macro_rules! impl_builder_opt_string_attr {
 ///    self.description.insert(description);
 ///    self
 /// }
-/// ``` 
+/// ```
 macro_rules! impl_builder_opt_attr {
   ($arg: ident, $t: ident) => {
     paste! {
@@ -48,13 +47,13 @@ macro_rules! impl_builder_opt_attr {
         self
       }
     }
-  }
+  };
 }
 
-/// E.g. `impl_builder_push_elem(CooSys, ResourceElem)` leads to 
+/// E.g. `impl_builder_push_elem(CooSys, ResourceElem)` leads to
 /// ```ignore
 /// pub fn push_coosys(mut self, coosys: CooSys) -> Self {
-///   self.elems.push(ResourceElem::CooSyst(coosys)); 
+///   self.elems.push(ResourceElem::CooSyst(coosys));
 ///   self
 /// }
 /// ```
@@ -62,21 +61,21 @@ macro_rules! impl_builder_push_elem {
   ($t: ident, $e: expr) => {
     paste! {
       pub fn [<push_ $t:lower>](mut self, [<$t:lower>]: $t) -> Self {
-        self.elems.push($e::$t([<$t:lower>])); 
+        self.elems.push($e::$t([<$t:lower>]));
         self
       }
-      
+
       pub fn [<push_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $t) {
-        self.elems.push($e::$t([<$t:lower>])); 
+        self.elems.push($e::$t([<$t:lower>]));
       }
     }
-  }
+  };
 }
 
-/// E.g. `impl_builder_push(Info)` leads to 
+/// E.g. `impl_builder_push(Info)` leads to
 /// ```ignore
 /// pub fn push_info(mut self, info: Info) -> Self {
-///   self.infos.push(info); 
+///   self.infos.push(info);
 ///   self
 /// }
 /// ```
@@ -87,26 +86,25 @@ macro_rules! impl_builder_push {
         self.[<$t:lower s>].push([<$t:lower>]);
         self
       }
-      
+
       pub fn [<push_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $t) {
         self.[<$t:lower s>].push([<$t:lower>]);
       }
     }
   };
-    ($t: ident, $c: ident) => {
+  ($t: ident, $c: ident) => {
     paste! {
       pub fn [<push_ $t:lower>](mut self, [<$t:lower>]: $t<$c>) -> Self {
         self.[<$t:lower s>].push([<$t:lower>]);
         self
       }
-      
+
       pub fn [<push_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $t<$c>) {
         self.[<$t:lower s>].push([<$t:lower>]);
       }
     }
-  }
+  };
 }
-
 
 /// Simply append the following method:
 /// ```ignore
@@ -121,7 +119,7 @@ macro_rules! impl_builder_push_post_info {
       self.post_infos.push(info);
       self
     }
-  }
+  };
 }
 
 /// Simply append the following method:
@@ -137,7 +135,7 @@ macro_rules! impl_builder_insert_extra {
       self.extra.insert(key.into(), value);
       self
     }
-  }
+  };
 }
 
 macro_rules! read_content {
@@ -160,7 +158,7 @@ macro_rules! read_content {
         match &mut event {
           Event::Text(e) => content.push_str(e.unescape_and_decode(&$reader).map_err(VOTableError::Read)?.as_str()),
           Event::CData(e) => content.push_str(str::from_utf8(e.clone().into_inner().as_ref()).map_err(VOTableError::Utf8)?),
-          Event::End(e) if e.local_name() == $Self::TAG_BYTES => { 
+          Event::End(e) if e.local_name() == $Self::TAG_BYTES => {
             $self.content = Some(content);
             return Ok($reader);
           },
@@ -190,7 +188,7 @@ macro_rules! read_content {
         match &mut event {
           Event::Text(e) => content.push_str(e.unescape_and_decode(&$reader).map_err(VOTableError::Read)?.as_str()),
           Event::CData(e) => content.push_str(std::str::from_utf8(e.clone().into_inner().as_ref()).map_err(VOTableError::Utf8)?),
-          Event::End(e) if e.local_name() == $Self::TAG_BYTES => { 
+          Event::End(e) if e.local_name() == $Self::TAG_BYTES => {
             $self.$content = content;
             return Ok($reader);
           },
@@ -204,39 +202,57 @@ macro_rules! read_content {
 }
 
 macro_rules! read_content_by_ref {
-  ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident) => {
-    {
-      let event: Event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
-      let content = match &event {
-        Event::Text(e) => e.unescape_and_decode(&$reader).map_err(VOTableError::Read),
-        _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: Text. Actual: {:?}.", $Self::TAG, event))),
-      }?;
-      $self.content = Some(content);
-      let event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
-      match &event {
-        Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok(()),
-        _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End. Actual: {:?}.", $Self::TAG, event))),
-      }
+  ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident) => {{
+    let event: Event = $reader
+      .read_event($reader_buff)
+      .map_err(VOTableError::Read)?;
+    let content = match &event {
+      Event::Text(e) => e.unescape_and_decode(&$reader).map_err(VOTableError::Read),
+      _ => Err(VOTableError::Custom(format!(
+        "Unexpected {} event. Expected: Text. Actual: {:?}.",
+        $Self::TAG,
+        event
+      ))),
+    }?;
+    $self.content = Some(content);
+    let event = $reader
+      .read_event($reader_buff)
+      .map_err(VOTableError::Read)?;
+    match &event {
+      Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok(()),
+      _ => Err(VOTableError::Custom(format!(
+        "Unexpected {} event. Expected: End. Actual: {:?}.",
+        $Self::TAG,
+        event
+      ))),
     }
-  };
-  ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident, $content:tt) => {
-    {
-      let event: Event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
-      let content = match &event {
-        Event::Text(e) => e.unescape_and_decode(&$reader).map_err(VOTableError::Read),
-        _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: Text. Actual: {:?}.", $Self::TAG, event))),
-      }?;
-      $self.$content = content;
-      let event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
-      match &event {
-        Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok(()),
-        _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End. Actual: {:?}.", $Self::TAG, event))),
-      }
+  }};
+  ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident, $content:tt) => {{
+    let event: Event = $reader
+      .read_event($reader_buff)
+      .map_err(VOTableError::Read)?;
+    let content = match &event {
+      Event::Text(e) => e.unescape_and_decode(&$reader).map_err(VOTableError::Read),
+      _ => Err(VOTableError::Custom(format!(
+        "Unexpected {} event. Expected: Text. Actual: {:?}.",
+        $Self::TAG,
+        event
+      ))),
+    }?;
+    $self.$content = content;
+    let event = $reader
+      .read_event($reader_buff)
+      .map_err(VOTableError::Read)?;
+    match &event {
+      Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok(()),
+      _ => Err(VOTableError::Custom(format!(
+        "Unexpected {} event. Expected: End. Actual: {:?}.",
+        $Self::TAG,
+        event
+      ))),
     }
-  };
+  }};
 }
-
-
 
 /// E.g. `write_opt_string_attr(self, elem_writer, ID)` leads to
 /// ```ignore
@@ -298,11 +314,10 @@ macro_rules! write_opt_into_attr {
 macro_rules! write_extra {
   ($self:ident, $elem_writer:ident) => {
     for (key, val) in &$self.extra {
-       $elem_writer = $elem_writer.with_attribute((key.as_str(), val.to_string().as_str()));
+      $elem_writer = $elem_writer.with_attribute((key.as_str(), val.to_string().as_str()));
     }
-  }
+  };
 }
-
 
 macro_rules! push2write_opt_string_attr {
   ($self:ident, $tag:ident, $arg:ident) => {
@@ -367,20 +382,18 @@ macro_rules! push2write_extra {
         Value::Object(_) => $tag.push_attribute((key.as_str(), val.to_string().as_str())),
       }
     }
-  }
+  };
 }
-
 
 macro_rules! write_content {
   ($self:ident, $elem_writer:ident) => {
     if let Some(content) = &$self.content {
-      $elem_writer.write_text_content(
-        BytesText::from_plain_str(content.as_str())
-      )
+      $elem_writer.write_text_content(BytesText::from_plain_str(content.as_str()))
     } else {
       $elem_writer.write_empty()
-    }.map_err(VOTableError::Write)?;
-  }
+    }
+    .map_err(VOTableError::Write)?;
+  };
 }
 
 macro_rules! write_elem {
@@ -388,7 +401,7 @@ macro_rules! write_elem {
     if let Some(elem) = &mut $self.$elem {
       elem.write($writer, $context)?;
     }
-  }
+  };
 }
 
 macro_rules! write_elem_vec {
@@ -396,7 +409,7 @@ macro_rules! write_elem_vec {
     for elem in &mut $self.$elems {
       elem.write($writer, $context)?;
     }
-  }
+  };
 }
 
 /*macro_rules! write_elem_no_context {
@@ -412,7 +425,7 @@ macro_rules! write_elem_vec_no_context {
     for elem in &mut $self.$elems {
       elem.write($writer)?;
     }
-  }
+  };
 }
 
 /*macro_rules! write_elem_empty_context {
@@ -428,44 +441,34 @@ macro_rules! write_elem_vec_empty_context {
     for elem in &mut $self.$elems {
       elem.write($writer, &())?;
     }
-  }
+  };
 }
 
-
 macro_rules! from_event_start {
-  ($elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {
-    {
-      let mut elem = $elem::from_attributes($e.attributes())?;
-      $reader = elem.read_sub_elements_and_clean($reader, &mut $reader_buff, &())?;
-      elem
-    }
-  };
-  ($elem:ident, $reader:ident, $reader_buff:ident, $e:ident, $context:expr) => {
-    {
-      let mut elem = $elem::from_attributes($e.attributes())?;
-      $reader = elem.read_sub_elements_and_clean($reader, &mut $reader_buff, &$context)?;
-      elem
-    }
-  };
+  ($elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {{
+    let mut elem = $elem::from_attributes($e.attributes())?;
+    $reader = elem.read_sub_elements_and_clean($reader, &mut $reader_buff, &())?;
+    elem
+  }};
+  ($elem:ident, $reader:ident, $reader_buff:ident, $e:ident, $context:expr) => {{
+    let mut elem = $elem::from_attributes($e.attributes())?;
+    $reader = elem.read_sub_elements_and_clean($reader, &mut $reader_buff, &$context)?;
+    elem
+  }};
 }
 
 macro_rules! from_event_start_by_ref {
-  ($elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {
-    {
-      let mut elem = $elem::from_attributes($e.attributes())?;
-      elem.read_sub_elements_and_clean_by_ref(&mut $reader, &mut $reader_buff, &())?;
-      elem
-    }
-  };
-  ($elem:ident, $reader:ident, $reader_buff:ident, $e:ident, $context:expr) => {
-    {
-      let mut elem = $elem::from_attributes($e.attributes())?;
-      elem.read_sub_elements_and_clean_by_ref(&mut $reader, &mut $reader_buff, &$context)?;
-      elem
-    }
-  };
+  ($elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {{
+    let mut elem = $elem::from_attributes($e.attributes())?;
+    elem.read_sub_elements_and_clean_by_ref(&mut $reader, &mut $reader_buff, &())?;
+    elem
+  }};
+  ($elem:ident, $reader:ident, $reader_buff:ident, $e:ident, $context:expr) => {{
+    let mut elem = $elem::from_attributes($e.attributes())?;
+    elem.read_sub_elements_and_clean_by_ref(&mut $reader, &mut $reader_buff, &$context)?;
+    elem
+  }};
 }
-
 
 macro_rules! from_event_start_desc {
   ($self:ident, $elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {

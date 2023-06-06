@@ -1,19 +1,13 @@
-
 use std::{
   fs::File,
-  str::FromStr,
+  io::{stdin, stdout, BufRead, BufReader, BufWriter, Write},
   path::PathBuf,
-  io::{stdin, stdout, BufRead, BufReader, Write, BufWriter}
+  str::FromStr,
 };
 
 use clap::Parser;
 
-use votable::{
-  error::VOTableError,
-  votable::VOTableWrapper,
-  impls::mem::InMemTableDataRows
-};
-
+use votable::{error::VOTableError, impls::mem::InMemTableDataRows, votable::VOTableWrapper};
 
 #[derive(Debug, Copy, Clone)]
 pub enum Format {
@@ -31,12 +25,14 @@ impl FromStr for Format {
       "json" => Ok(Format::JSON),
       "yaml" => Ok(Format::YAML),
       "toml" => Ok(Format::TOML),
-      _ => Err(format!("Unrecognized format. Actual: '{}'. Expected: 'xml', 'json', 'yaml' or 'toml'", s)),
+      _ => Err(format!(
+        "Unrecognized format. Actual: '{}'. Expected: 'xml', 'json', 'yaml' or 'toml'",
+        s
+      )),
     }
   }
 }
 impl Format {
-
   fn get<R: BufRead>(self, reader: R) -> Result<VOTableWrapper<InMemTableDataRows>, VOTableError> {
     match self {
       Format::XML => VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_reader(reader),
@@ -46,7 +42,12 @@ impl Format {
     }
   }
 
-  fn put<W: Write>(self, mut vot: VOTableWrapper<InMemTableDataRows>, writer: W, pretty: bool) -> Result<(), VOTableError> {
+  fn put<W: Write>(
+    self,
+    mut vot: VOTableWrapper<InMemTableDataRows>,
+    writer: W,
+    pretty: bool,
+  ) -> Result<(), VOTableError> {
     match self {
       Format::XML => vot.to_ivoa_xml_writer(writer),
       Format::JSON => vot.to_json_writer(writer, pretty),
@@ -73,7 +74,7 @@ struct Args {
   output: Option<PathBuf>,
   /// Pretty print (for JSON and TOML)
   #[clap(short, long)]
-  pretty: bool
+  pretty: bool,
 }
 
 fn main() -> Result<(), VOTableError> {
@@ -83,12 +84,12 @@ fn main() -> Result<(), VOTableError> {
       let file = File::open(path).map_err(VOTableError::Io)?;
       let reader = BufReader::new(file);
       args.input_fmt.get(reader)
-    },
+    }
     None => {
       let stdin = stdin();
       let handle = stdin.lock();
       args.input_fmt.get(handle)
-    },
+    }
   }?;
   match args.output {
     Some(path) => {

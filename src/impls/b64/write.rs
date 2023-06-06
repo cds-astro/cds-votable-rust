@@ -1,16 +1,14 @@
-
-
-use std::io::Write;
-use base64::{
-  write::EncoderWriter,
-  engine::GeneralPurpose,
-};
+use base64::{engine::GeneralPurpose, write::EncoderWriter};
 use byteorder::{BigEndian, WriteBytesExt};
-use serde::{
-  Serialize, Serializer, 
-  ser::{SerializeSeq, SerializeTuple}
+use serde::ser::{
+  SerializeMap, SerializeStruct, SerializeStructVariant, SerializeTupleStruct,
+  SerializeTupleVariant,
 };
-use serde::ser::{SerializeMap, SerializeStruct, SerializeStructVariant, SerializeTupleStruct, SerializeTupleVariant};
+use serde::{
+  ser::{SerializeSeq, SerializeTuple},
+  Serialize, Serializer,
+};
+use std::io::Write;
 
 use crate::error::VOTableError;
 
@@ -22,18 +20,12 @@ pub struct B64Formatter<W: Write> {
 }
 
 impl<W: Write> B64Formatter<W> {
-  
   pub fn new(writer: W) -> Self {
-    Self {
-      n_curr: 0,
-      writer
-    }
+    Self { n_curr: 0, writer }
   }
-  
 }
 
 impl<W: Write> Write for B64Formatter<W> {
-  
   fn write(&mut self, mut buf: &[u8]) -> std::io::Result<usize> {
     let buf_size = buf.len();
     while !buf.is_empty() {
@@ -60,7 +52,7 @@ impl<W: Write> Write for B64Formatter<W> {
 }
 
 pub struct BinarySerializer<W: Write> {
-  writer: EncoderWriter<'static, GeneralPurpose, B64Formatter<W>>
+  writer: EncoderWriter<'static, GeneralPurpose, B64Formatter<W>>,
 }
 
 impl<W: Write> BinarySerializer<W> {
@@ -70,7 +62,6 @@ impl<W: Write> BinarySerializer<W> {
 }
 
 impl<'a, W: Write> Serializer for &'a mut BinarySerializer<W> {
-  
   type Ok = ();
   type Error = VOTableError;
   type SerializeSeq = SerializeSeqOrTuple<'a, W>;
@@ -90,15 +81,24 @@ impl<'a, W: Write> Serializer for &'a mut BinarySerializer<W> {
   }
 
   fn serialize_i16(self, v: i16) -> Result<Self::Ok, Self::Error> {
-    self.writer.write_i16::<BigEndian>(v).map_err(VOTableError::Io)
+    self
+      .writer
+      .write_i16::<BigEndian>(v)
+      .map_err(VOTableError::Io)
   }
 
   fn serialize_i32(self, v: i32) -> Result<Self::Ok, Self::Error> {
-    self.writer.write_i32::<BigEndian>(v).map_err(VOTableError::Io)
+    self
+      .writer
+      .write_i32::<BigEndian>(v)
+      .map_err(VOTableError::Io)
   }
 
   fn serialize_i64(self, v: i64) -> Result<Self::Ok, Self::Error> {
-    self.writer.write_i64::<BigEndian>(v).map_err(VOTableError::Io)
+    self
+      .writer
+      .write_i64::<BigEndian>(v)
+      .map_err(VOTableError::Io)
   }
 
   fn serialize_u8(self, v: u8) -> Result<Self::Ok, Self::Error> {
@@ -106,7 +106,10 @@ impl<'a, W: Write> Serializer for &'a mut BinarySerializer<W> {
   }
 
   fn serialize_u16(self, v: u16) -> Result<Self::Ok, Self::Error> {
-    self.writer.write_u16::<BigEndian>(v).map_err(VOTableError::Io)
+    self
+      .writer
+      .write_u16::<BigEndian>(v)
+      .map_err(VOTableError::Io)
   }
 
   fn serialize_u32(self, _v: u32) -> Result<Self::Ok, Self::Error> {
@@ -118,21 +121,26 @@ impl<'a, W: Write> Serializer for &'a mut BinarySerializer<W> {
   }
 
   fn serialize_f32(self, v: f32) -> Result<Self::Ok, Self::Error> {
-    self.writer.write_f32::<BigEndian>(v).map_err(VOTableError::Io)
+    self
+      .writer
+      .write_f32::<BigEndian>(v)
+      .map_err(VOTableError::Io)
   }
 
   fn serialize_f64(self, v: f64) -> Result<Self::Ok, Self::Error> {
-    self.writer.write_f64::<BigEndian>(v).map_err(VOTableError::Io)
+    self
+      .writer
+      .write_f64::<BigEndian>(v)
+      .map_err(VOTableError::Io)
   }
 
   fn serialize_char(self, v: char) -> Result<Self::Ok, Self::Error> {
     // Dedicated to unicode char (ASCII char serialized using u8)
 
-    // In VOTable, unicode chars are encoded in UCS-2, 
+    // In VOTable, unicode chars are encoded in UCS-2,
     // see: https://stackoverflow.com/questions/36236364/why-java-char-uses-utf-16
     let mut buf = vec![0_u16; 3];
-    let n_bytes = ucs2::encode(v.to_string().as_str(), &mut buf)
-      .map_err(VOTableError::ToUCS2)?;
+    let n_bytes = ucs2::encode(v.to_string().as_str(), &mut buf).map_err(VOTableError::ToUCS2)?;
     debug_assert_eq!(n_bytes, 2);
     self.serialize_u16(buf[0])
   }
@@ -149,7 +157,10 @@ impl<'a, W: Write> Serializer for &'a mut BinarySerializer<W> {
     unreachable!("No none in VOTable")
   }
 
-  fn serialize_some<T: ?Sized>(self, _value: &T) -> Result<Self::Ok, Self::Error> where T: Serialize {
+  fn serialize_some<T: ?Sized>(self, _value: &T) -> Result<Self::Ok, Self::Error>
+  where
+    T: Serialize,
+  {
     unreachable!("No some in VOTable")
   }
 
@@ -161,15 +172,36 @@ impl<'a, W: Write> Serializer for &'a mut BinarySerializer<W> {
     unreachable!("No unit struct in VOTable")
   }
 
-  fn serialize_unit_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str) -> Result<Self::Ok, Self::Error> {
+  fn serialize_unit_variant(
+    self,
+    _name: &'static str,
+    _variant_index: u32,
+    _variant: &'static str,
+  ) -> Result<Self::Ok, Self::Error> {
     unreachable!("No unit variant in VOTable")
   }
 
-  fn serialize_newtype_struct<T: ?Sized>(self, _name: &'static str, _value: &T) -> Result<Self::Ok, Self::Error> where T: Serialize {
+  fn serialize_newtype_struct<T: ?Sized>(
+    self,
+    _name: &'static str,
+    _value: &T,
+  ) -> Result<Self::Ok, Self::Error>
+  where
+    T: Serialize,
+  {
     unreachable!("No newtpe struct in VOTable")
   }
 
-  fn serialize_newtype_variant<T: ?Sized>(self, _name: &'static str, _variant_index: u32, _variant: &'static str, _value: &T) -> Result<Self::Ok, Self::Error> where T: Serialize {
+  fn serialize_newtype_variant<T: ?Sized>(
+    self,
+    _name: &'static str,
+    _variant_index: u32,
+    _variant: &'static str,
+    _value: &T,
+  ) -> Result<Self::Ok, Self::Error>
+  where
+    T: Serialize,
+  {
     unreachable!("No newtype variant in VOTable")
   }
 
@@ -187,11 +219,21 @@ impl<'a, W: Write> Serializer for &'a mut BinarySerializer<W> {
     Ok(SerializeSeqOrTuple { ser: self })
   }
 
-  fn serialize_tuple_struct(self, _name: &'static str, _len: usize) -> Result<Self::SerializeTupleStruct, Self::Error> {
+  fn serialize_tuple_struct(
+    self,
+    _name: &'static str,
+    _len: usize,
+  ) -> Result<Self::SerializeTupleStruct, Self::Error> {
     unreachable!("No tuple struct in VOTable")
   }
 
-  fn serialize_tuple_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str, _len: usize) -> Result<Self::SerializeTupleVariant, Self::Error> {
+  fn serialize_tuple_variant(
+    self,
+    _name: &'static str,
+    _variant_index: u32,
+    _variant: &'static str,
+    _len: usize,
+  ) -> Result<Self::SerializeTupleVariant, Self::Error> {
     unreachable!("No tuple variant in VOTable")
   }
 
@@ -199,24 +241,37 @@ impl<'a, W: Write> Serializer for &'a mut BinarySerializer<W> {
     unreachable!("No map in VOTable")
   }
 
-  fn serialize_struct(self, _name: &'static str, _len: usize) -> Result<Self::SerializeStruct, Self::Error> {
+  fn serialize_struct(
+    self,
+    _name: &'static str,
+    _len: usize,
+  ) -> Result<Self::SerializeStruct, Self::Error> {
     unreachable!("No struct in VOTable")
   }
 
-  fn serialize_struct_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str, _len: usize) -> Result<Self::SerializeStructVariant, Self::Error> {
+  fn serialize_struct_variant(
+    self,
+    _name: &'static str,
+    _variant_index: u32,
+    _variant: &'static str,
+    _len: usize,
+  ) -> Result<Self::SerializeStructVariant, Self::Error> {
     unreachable!("No struct variant in VOTable")
   }
 }
 
 pub struct SerializeSeqOrTuple<'a, W: Write> {
-  ser: &'a mut BinarySerializer<W>
+  ser: &'a mut BinarySerializer<W>,
 }
 
 impl<'a, W: Write> SerializeSeq for SerializeSeqOrTuple<'a, W> {
   type Ok = ();
   type Error = VOTableError;
 
-  fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error> where T: Serialize {
+  fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+  where
+    T: Serialize,
+  {
     value.serialize(&mut *self.ser)
   }
 
@@ -229,7 +284,10 @@ impl<'a, W: Write> SerializeTuple for SerializeSeqOrTuple<'a, W> {
   type Ok = ();
   type Error = VOTableError;
 
-  fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error> where T: Serialize {
+  fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+  where
+    T: Serialize,
+  {
     value.serialize(&mut *self.ser)
   }
 
@@ -244,7 +302,10 @@ impl SerializeTupleStruct for DummySerialize {
   type Ok = ();
   type Error = VOTableError;
 
-  fn serialize_field<T: ?Sized>(&mut self, _value: &T) -> Result<(), Self::Error> where T: Serialize {
+  fn serialize_field<T: ?Sized>(&mut self, _value: &T) -> Result<(), Self::Error>
+  where
+    T: Serialize,
+  {
     unreachable!()
   }
 
@@ -257,7 +318,10 @@ impl SerializeTupleVariant for DummySerialize {
   type Ok = ();
   type Error = VOTableError;
 
-  fn serialize_field<T: ?Sized>(&mut self, _value: &T) -> Result<(), Self::Error> where T: Serialize {
+  fn serialize_field<T: ?Sized>(&mut self, _value: &T) -> Result<(), Self::Error>
+  where
+    T: Serialize,
+  {
     unreachable!()
   }
 
@@ -270,11 +334,17 @@ impl SerializeMap for DummySerialize {
   type Ok = ();
   type Error = VOTableError;
 
-  fn serialize_key<T: ?Sized>(&mut self, _key: &T) -> Result<(), Self::Error> where T: Serialize {
+  fn serialize_key<T: ?Sized>(&mut self, _key: &T) -> Result<(), Self::Error>
+  where
+    T: Serialize,
+  {
     unreachable!()
   }
 
-  fn serialize_value<T: ?Sized>(&mut self, _value: &T) -> Result<(), Self::Error> where T: Serialize {
+  fn serialize_value<T: ?Sized>(&mut self, _value: &T) -> Result<(), Self::Error>
+  where
+    T: Serialize,
+  {
     unreachable!()
   }
 
@@ -287,7 +357,14 @@ impl SerializeStruct for DummySerialize {
   type Ok = ();
   type Error = VOTableError;
 
-  fn serialize_field<T: ?Sized>(&mut self, _key: &'static str, _value: &T) -> Result<(), Self::Error> where T: Serialize {
+  fn serialize_field<T: ?Sized>(
+    &mut self,
+    _key: &'static str,
+    _value: &T,
+  ) -> Result<(), Self::Error>
+  where
+    T: Serialize,
+  {
     unreachable!()
   }
 
@@ -300,7 +377,14 @@ impl SerializeStructVariant for DummySerialize {
   type Ok = ();
   type Error = VOTableError;
 
-  fn serialize_field<T: ?Sized>(&mut self, _key: &'static str, _value: &T) -> Result<(), Self::Error> where T: Serialize {
+  fn serialize_field<T: ?Sized>(
+    &mut self,
+    _key: &'static str,
+    _value: &T,
+  ) -> Result<(), Self::Error>
+  where
+    T: Serialize,
+  {
     unreachable!()
   }
 

@@ -1,8 +1,4 @@
-
-use std::{
-  fmt,
-  str::FromStr
-};
+use std::{fmt, str::FromStr};
 
 /// See [IVOA spec](https://www.ivoa.net/documents/VOTable/20191021/REC-VOTable-1.4-20191021.html#primitives)
 #[derive(PartialEq, Eq, Copy, Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -39,25 +35,27 @@ impl FromStr for Datatype {
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     match s {
       "boolean" => Ok(Datatype::Logical),
-      "bit" =>  Ok(Datatype::Bit),
-      "unsignedByte" =>  Ok(Datatype::Byte),
-      "short" =>  Ok(Datatype::ShortInt),
-      "int" =>  Ok(Datatype::Int),
-      "long" =>  Ok(Datatype::LongInt),
-      "char" =>  Ok(Datatype::CharASCII),
-      "unicodeChar" =>  Ok(Datatype::CharUnicode),
-      "float" =>  Ok(Datatype::Float),
-      "double" =>  Ok(Datatype::Double),
-      "floatComplex" =>  Ok(Datatype::ComplexFloat),
-      "doubleComplex" =>  Ok(Datatype::ComplexDouble),
-      _ => Err(format!("Unknown 'datatype' variant. Actual: '{}'.", s))
+      "bit" => Ok(Datatype::Bit),
+      "unsignedByte" => Ok(Datatype::Byte),
+      "short" => Ok(Datatype::ShortInt),
+      "int" => Ok(Datatype::Int),
+      "long" => Ok(Datatype::LongInt),
+      "char" => Ok(Datatype::CharASCII),
+      "unicodeChar" => Ok(Datatype::CharUnicode),
+      "float" => Ok(Datatype::Float),
+      "double" => Ok(Datatype::Double),
+      "floatComplex" => Ok(Datatype::ComplexFloat),
+      "doubleComplex" => Ok(Datatype::ComplexDouble),
+      _ => Err(format!("Unknown 'datatype' variant. Actual: '{}'.", s)),
     }
   }
 }
 
 impl fmt::Display for Datatype {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}",
+    write!(
+      f,
+      "{}",
       match self {
         Datatype::Logical => "boolean",
         Datatype::Bit => "bit",
