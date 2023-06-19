@@ -7,14 +7,23 @@ use quick_xml::{
 use std::{io::Write, str};
 
 use super::{
-    attribute::CollectionAttribute, instance::Instance, join::Join, primarykey::PrimaryKey,
-    reference::Reference, ElemImpl, ElemType,
+    attribute_c::AttributePatC,
+    instance::{Instance, InstanceContexts},
+    join::Join,
+    primarykey::PrimaryKey,
+    reference::Reference,
+    ElemImpl, ElemType,
 };
 
+/*
+    enum Collection Elem
+    Description
+    *    Enum of the elements that can be children of the mivot <COLLECTION> tag in any order.
+*/
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum CollectionElem {
-    Attribute(CollectionAttribute),
+    Attribute(AttributePatC),
     Instance(Instance),
     Reference(Reference),
     Collection(Collection),
@@ -24,7 +33,7 @@ impl ElemType for CollectionElem {
     fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
         match self {
             CollectionElem::Attribute(elem) => elem.write(writer, &()),
-            CollectionElem::Instance(elem) => elem.write(writer, &()),
+            CollectionElem::Instance(elem) => elem.write(writer, &InstanceContexts::Writing),
             CollectionElem::Reference(elem) => elem.write(writer, &()),
             CollectionElem::Collection(elem) => elem.write(writer, &()),
             CollectionElem::Join(elem) => elem.write(writer, &()),
@@ -32,11 +41,20 @@ impl ElemType for CollectionElem {
     }
 }
 
+/*
+    struct Collection => pattern a
+    @elem dmtype String: Modeled node related => MAND
+    @elem dmid Option<String>: Mapping element identification => OPT
+    @elem primary_keys: identification key to an INSTANCE (at least one)
+    @elem elems: different elems defined in enum InstanceElem that can appear in any order
+*/
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Collection {
+    // MANDATORY
+    dmrole: String,
+    // OPTIONAL
     #[serde(skip_serializing_if = "Option::is_none")]
     dmid: Option<String>,
-    dmrole: String,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     primary_keys: Vec<PrimaryKey>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -45,8 +63,10 @@ pub struct Collection {
 impl Collection {
     fn new<N: Into<String>>(dmrole: N) -> Self {
         Self {
-            dmid: None,
+            // MANDATORY
             dmrole: dmrole.into(),
+            // OPTIONAL
+            dmid: None,
             primary_keys: vec![],
             elems: vec![],
         }
@@ -113,17 +133,18 @@ impl QuickXmlReadWrite for Collection {
     fn write<W: std::io::Write>(
         &mut self,
         writer: &mut quick_xml::Writer<W>,
-        context: &Self::Context,
+        _context: &Self::Context,
     ) -> Result<(), crate::error::VOTableError> {
         let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
         //MANDATORY
         tag.push_attribute(("dmrole", self.dmrole.as_str()));
-        //OPTIONAL
-        push2write_opt_string_attr!(self, tag, dmid);
+        write_non_empty_mandatory_attributes!(tag, self, dmrole);
+        //OPTIONAL4
+        write_non_empty_optional_attributes!(tag, self, dmid);
         writer
             .write_event(Event::Start(tag.to_borrowed()))
             .map_err(VOTableError::Write)?;
-        write_elem_vec!(self, primary_keys, writer, context);
+        write_elem_vec_empty_context!(self, primary_keys, writer);
         write_elem_vec_no_context!(self, elems, writer);
         writer
             .write_event(Event::End(tag.to_end()))
@@ -143,16 +164,11 @@ fn read_collection_sub_elem<
         let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
         match &mut event {
             Event::Start(ref e) => match e.local_name() {
-                CollectionAttribute::TAG_BYTES => {
-                    collection.push_to_elems(CollectionElem::Attribute(from_event_start!(
-                        CollectionAttribute,
-                        reader,
-                        reader_buff,
-                        e
-                    )))
-                }
+                AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
+                    from_event_start!(AttributePatC, reader, reader_buff, e),
+                )),
                 Instance::TAG_BYTES => collection.push_to_elems(CollectionElem::Instance(
-                    from_event_start!(Instance, reader, reader_buff, e),
+                    from_event_start!(Instance, reader, reader_buff, e, InstanceContexts::C),
                 )),
                 Reference::TAG_BYTES => collection.push_to_elems(CollectionElem::Reference(
                     from_event_start!(Reference, reader, reader_buff, e),
@@ -171,9 +187,9 @@ fn read_collection_sub_elem<
                 }
             },
             Event::Empty(ref e) => match e.local_name() {
-                CollectionAttribute::TAG_BYTES => collection.push_to_elems(
-                    CollectionElem::Attribute(CollectionAttribute::from_event_empty(e)?),
-                ),
+                AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
+                    AttributePatC::from_event_empty(e)?,
+                )),
                 Reference::TAG_BYTES => collection
                     .push_to_elems(CollectionElem::Reference(Reference::from_event_empty(e)?)),
                 _ => {

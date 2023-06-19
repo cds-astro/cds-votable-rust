@@ -3,7 +3,10 @@ use paste::paste;
 use quick_xml::events::{BytesStart, Event};
 use std::str;
 
-use super::{instance::GlobOrTempInstance, r#where::Where};
+use super::{
+    instance::{GlobOrTempInstance, InstanceContexts},
+    r#where::Where,
+};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Templates {
@@ -60,7 +63,8 @@ impl QuickXmlReadWrite for Templates {
                         GlobOrTempInstance,
                         reader,
                         reader_buff,
-                        e
+                        e,
+                        InstanceContexts::A
                     )),
                     _ => {
                         return Err(VOTableError::UnexpectedStartTag(

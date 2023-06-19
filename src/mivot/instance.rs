@@ -7,62 +7,136 @@ use quick_xml::{
 use std::{io::Write, str};
 
 use super::{
-    attribute::Attribute, collection::Collection, primarykey::PrimaryKey, reference::Reference,
-    ElemImpl, ElemType,
+    attribute_a::AttributePatA, attribute_b::AttributePatB, attribute_c::AttributePatC,
+    collection::Collection, primarykey::PrimaryKey, reference::Reference, ElemImpl, ElemType,
 };
 
+/*
+    enum Instance context
+    Description
+    *   Enum of contexts available for Instance, these will influence the children attributes of said Instance
+*/
+#[derive(Clone, Debug)]
+pub enum InstanceContexts {
+    A,       // for Templates
+    B,       // for Globals
+    C,       // for Collection
+    Writing, // for Writing which does not require a context
+}
+
+/*
+    enum Instance Elem
+    Description
+    *    Enum of the elements that can be children of the mivot <INSTANCE> tag in any order.
+*/
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum InstanceElem {
-    Attribute(Attribute),
+    AttributePatA(AttributePatA),
+    AttributePatB(AttributePatB),
+    AttributePatC(AttributePatC),
     Instance(Instance),
     Reference(Reference),
     Collection(Collection),
 }
 impl ElemType for InstanceElem {
+    /*
+        function Write
+        Description:
+        *   function that writes the elements as mivot TAGS
+        @generic W: Write; a struct that implements the std::io::Write trait.
+        @param self &mut: function is used like : self."function"
+        @param writer &mut Writer<W>: the writer used to write the elements
+        #returns Result<(), VOTableError>: returns an error if writing doesn't work
+    */
     fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
         match self {
-            InstanceElem::Attribute(elem) => elem.write(writer, &()),
-            InstanceElem::Instance(elem) => elem.write(writer, &()),
+            InstanceElem::AttributePatA(elem) => elem.write(writer, &()),
+            InstanceElem::AttributePatB(elem) => elem.write(writer, &()),
+            InstanceElem::AttributePatC(elem) => elem.write(writer, &()),
+            InstanceElem::Instance(elem) => elem.write(writer, &InstanceContexts::Writing),
             InstanceElem::Reference(elem) => elem.write(writer, &()),
             InstanceElem::Collection(elem) => elem.write(writer, &()),
         }
     }
 }
 
+/////////////////////////
+/////// PATTERN A ///////
+/////////////////////////
+
+/*
+    struct Globals or templates instance => pattern a
+    @elem dmtype String: Modeled node related => MAND
+    @elem dmid Option<String>: Mapping element identification => OPT
+    @elem primary_keys: identification key to an INSTANCE (at least one)
+    @elem elems: different elems defined in enum InstanceElem that can appear in any order
+*/
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct GlobOrTempInstance {
+    // MANDATORY
+    dmtype: String,
+    // OPTIONAL
     #[serde(skip_serializing_if = "Option::is_none")]
     dmid: Option<String>,
-    dmtype: String,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     primary_keys: Vec<PrimaryKey>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     elems: Vec<InstanceElem>,
 }
 impl GlobOrTempInstance {
+    /*
+        function New
+        Description:
+        *   creates a new Instance
+        @generic N: Into<String>; a struct implementing the Into<String> trait
+        @param dmtype N: a placeholder for the MANDATORY dmtype
+        #returns Self: returns an instance of the GlobOrTempInstance struct
+    */
     fn new<N: Into<String>>(dmtype: N) -> Self {
         Self {
-            dmid: None,
+            // MANDATORY
             dmtype: dmtype.into(),
+            // OPTIONAL
+            dmid: None,
             primary_keys: vec![],
             elems: vec![],
         }
     }
+    /*
+        function setters, enable the setting of an optional through self.set_"var"
+    */
     impl_builder_opt_string_attr!(dmid);
 }
 impl ElemImpl<InstanceElem> for GlobOrTempInstance {
+    /*
+        function push_to_elems
+        Description:
+        *   pushes an InstanceElem to the elems contained in struct
+        @param self &mut: function is used like : self."function"
+        @param dmid InstanceElem: the elem that needs to be pushed
+        #returns ()
+    */
     fn push_to_elems(&mut self, elem: InstanceElem) {
         self.elems.push(elem)
     }
 }
 impl QuickXmlReadWrite for GlobOrTempInstance {
+    // The TAG name here : <INSTANCE>
     const TAG: &'static str = "INSTANCE";
-    type Context = ();
+    // Potential context, here : InstanceContexts
+    type Context = InstanceContexts;
 
+    /*
+        function from_attributes
+        Description:
+        *   creates Self from deserialized attributes contained inside the passed XML
+        @param attrs quick_xml::events::attributes::Attributes: attributes from the quick_xml reader
+        #returns Result<Self, VOTableError>: returns an instance of GlobOrTempInstance built using attributes or an error if reading doesn't work
+    */
     fn from_attributes(
         attrs: quick_xml::events::attributes::Attributes,
-    ) -> Result<Self, crate::error::VOTableError> {
+    ) -> Result<Self, VOTableError> {
         const NULL: &str = "@TBD";
         let mut instance = Self::new(NULL);
         for attr_res in attrs {
@@ -91,15 +165,24 @@ impl QuickXmlReadWrite for GlobOrTempInstance {
         }
     }
 
+    /*
+        function read_sub_elements
+        Description:
+        *   see function read_instance_sub_elem
+    */
     fn read_sub_elements<R: std::io::BufRead>(
         &mut self,
         reader: quick_xml::Reader<R>,
         reader_buff: &mut Vec<u8>,
-        _context: &Self::Context,
+        context: &Self::Context,
     ) -> Result<quick_xml::Reader<R>, crate::error::VOTableError> {
-        read_instance_sub_elem(self, reader, reader_buff)
+        read_instance_sub_elem(self, context, reader, reader_buff)
     }
 
+    /*
+        function read_sub_elements
+        todo UNIMPLEMENTED
+    */
     fn read_sub_elements_by_ref<R: std::io::BufRead>(
         &mut self,
         _reader: &mut quick_xml::Reader<R>,
@@ -109,7 +192,17 @@ impl QuickXmlReadWrite for GlobOrTempInstance {
         todo!()
     }
 
-    fn write<W: std::io::Write>(
+    /*
+        function Write
+        Description:
+        *   function that writes the TAG
+        @generic W: Write; a struct that implements the std::io::Write trait.
+        @param self &mut: function is used like : self."function"
+        @param writer &mut Writer<W>: the writer used to write the elements
+        @param context &Self::Context: the context used for writing UNUSED
+        #returns Result<(), VOTableError>: returns an error if writing doesn't work
+    */
+    fn write<W: Write>(
         &mut self,
         writer: &mut quick_xml::Writer<W>,
         _context: &Self::Context,
@@ -130,14 +223,24 @@ impl QuickXmlReadWrite for GlobOrTempInstance {
     }
 }
 
-//////////////////////////////////////
+/////////////////////////
+/////// PATTERN B ///////
+/////////////////////////
 
+/*
+    struct Instance => pattern b
+    @elem dmrole String: Modeled node related => MAND
+    @elem dmtype String: Modeled node related => MAND
+    @elem dmid Option<String>: Mapping element identification => OPT
+    @elem primary_keys: identification key to an INSTANCE (at least one)
+    @elem elems: different elems defined in enum InstanceElem that can appear in any order
+*/
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Instance {
-    //Mandatory
-    dmtype: String,
+    // MANDATORY
     dmrole: String,
-    //Optional
+    dmtype: String,
+    // OPTIONAL
     #[serde(skip_serializing_if = "Option::is_none")]
     dmid: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -146,12 +249,21 @@ pub struct Instance {
     elems: Vec<InstanceElem>,
 }
 impl Instance {
+    /*
+        function New
+        Description:
+        *   creates a new Instance
+        @generic N: Into<String>; a struct implementing the Into<String> trait
+        @param dmtype N: a placeholder for the MANDATORY dmtype
+        @param dmrole N: a placeholder for the MANDATORY dmrole
+        #returns Self: returns an instance of the Instance struct
+    */
     fn new<N: Into<String>>(dmtype: N, dmrole: N) -> Self {
         Self {
-            //Mandatory
-            dmtype: dmtype.into(),
+            // MANDATORY
             dmrole: dmrole.into(),
-            //Optional
+            dmtype: dmtype.into(),
+            // OPTIONAL
             dmid: None,
             primary_keys: vec![],
             elems: vec![],
@@ -160,14 +272,31 @@ impl Instance {
     impl_builder_opt_string_attr!(dmid);
 }
 impl ElemImpl<InstanceElem> for Instance {
+    /*
+        function push_to_elems
+        Description:
+        *   pushes an InstanceElem to the elems contained in struct
+        @param self &mut: function is used like : self."function"
+        @param dmid InstanceElem: the elem that needs to be pushed
+        #returns ()
+    */
     fn push_to_elems(&mut self, elem: InstanceElem) {
         self.elems.push(elem)
     }
 }
 impl QuickXmlReadWrite for Instance {
+    // The TAG name here : <INSTANCE>
     const TAG: &'static str = "INSTANCE";
-    type Context = ();
+    // Potential context, here : InstanceContexts
+    type Context = InstanceContexts;
 
+    /*
+        function from_attributes
+        Description:
+        *   creates Self from deserialized attributes contained inside the passed XML
+        @param attrs quick_xml::events::attributes::Attributes: attributes from the quick_xml reader
+        #returns Result<Self, VOTableError>: returns an instance of Instance built using attributes or an error if reading doesn't work
+    */
     fn from_attributes(
         attrs: quick_xml::events::attributes::Attributes,
     ) -> Result<Self, crate::error::VOTableError> {
@@ -202,15 +331,24 @@ impl QuickXmlReadWrite for Instance {
         }
     }
 
+    /*
+        function read_sub_elements
+        Description:
+        *   see function read_instance_sub_elem
+    */
     fn read_sub_elements<R: std::io::BufRead>(
         &mut self,
         reader: quick_xml::Reader<R>,
         reader_buff: &mut Vec<u8>,
-        _context: &Self::Context,
+        context: &Self::Context,
     ) -> Result<quick_xml::Reader<R>, crate::error::VOTableError> {
-        read_instance_sub_elem(self, reader, reader_buff)
+        read_instance_sub_elem(self, context, reader, reader_buff)
     }
 
+    /*
+        function read_sub_elements
+        todo UNIMPLEMENTED
+    */
     fn read_sub_elements_by_ref<R: std::io::BufRead>(
         &mut self,
         _reader: &mut quick_xml::Reader<R>,
@@ -220,17 +358,26 @@ impl QuickXmlReadWrite for Instance {
         todo!()
     }
 
-    fn write<W: std::io::Write>(
+    /*
+        function Write
+        Description:
+        *   function that writes the TAG
+        @generic W: Write; a struct that implements the std::io::Write trait.
+        @param self &mut: function is used like : self."function"
+        @param writer &mut Writer<W>: the writer used to write the elements
+        @param context &Self::Context: the context used for writing UNUSED
+        #returns Result<(), VOTableError>: returns an error if writing doesn't work
+    */
+    fn write<W: Write>(
         &mut self,
         writer: &mut quick_xml::Writer<W>,
         _context: &Self::Context,
     ) -> Result<(), crate::error::VOTableError> {
         let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
         //MANDATORY
-        tag.push_attribute(("dmtype", self.dmtype.as_str()));
-        tag.push_attribute(("dmrole", self.dmrole.as_str()));
+        write_non_empty_mandatory_attributes!(tag, self, dmtype, dmrole);
         //OPTIONAL
-        push2write_opt_string_attr!(self, tag, dmid);
+        write_non_empty_optional_attributes!(tag, self, dmid);
         writer
             .write_event(Event::Start(tag.to_borrowed()))
             .map_err(VOTableError::Write)?;
@@ -242,25 +389,49 @@ impl QuickXmlReadWrite for Instance {
     }
 }
 
+///////////////////////
+// UTILITY FUNCTIONS //
+
+/*
+    function read_instance_sub_elem
+    Description:
+    *   reads the children of Instance
+    @generic R: BufRead; a struct that implements the std::io::BufRead trait.
+    @generic T: QuickXMLReadWrite + ElemImpl<InstanceElem>; a struct that implements the quickXMLReadWrite and ElemImpl for InstanceElem traits.
+    @param instance &mut T: an instance of T (here either GlobOrTempInstance or Instance)
+    @param reader &mut quick_xml::Reader<R>: the reader used to read the elements
+    @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
+    #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
+*/
 fn read_instance_sub_elem<R: std::io::BufRead, T: QuickXmlReadWrite + ElemImpl<InstanceElem>>(
-    collection: &mut T,
+    instance: &mut T,
+    context: &InstanceContexts,
     mut reader: quick_xml::Reader<R>,
     mut reader_buff: &mut Vec<u8>,
-) -> Result<quick_xml::Reader<R>, crate::error::VOTableError> {
+) -> Result<quick_xml::Reader<R>, VOTableError> {
     loop {
         let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
         match &mut event {
             Event::Start(ref e) => match e.local_name() {
-                Attribute::TAG_BYTES => collection.push_to_elems(InstanceElem::Attribute(
-                    from_event_start!(Attribute, reader, reader_buff, e),
+                AttributePatB::TAG_BYTES => match context {
+                    InstanceContexts::A => instance.push_to_elems(InstanceElem::AttributePatA(
+                        from_event_start!(AttributePatA, reader, reader_buff, e),
+                    )),
+                    InstanceContexts::B => instance.push_to_elems(InstanceElem::AttributePatB(
+                        from_event_start!(AttributePatB, reader, reader_buff, e),
+                    )),
+                    InstanceContexts::C => instance.push_to_elems(InstanceElem::AttributePatC(
+                        from_event_start!(AttributePatC, reader, reader_buff, e),
+                    )),
+                    InstanceContexts::Writing => unreachable!(),
+                },
+                Instance::TAG_BYTES => instance.push_to_elems(InstanceElem::Instance(
+                    from_event_start!(Instance, reader, reader_buff, e, context),
                 )),
-                Instance::TAG_BYTES => collection.push_to_elems(InstanceElem::Instance(
-                    from_event_start!(Instance, reader, reader_buff, e),
-                )),
-                Reference::TAG_BYTES => collection.push_to_elems(InstanceElem::Reference(
+                Reference::TAG_BYTES => instance.push_to_elems(InstanceElem::Reference(
                     from_event_start!(Reference, reader, reader_buff, e),
                 )),
-                Collection::TAG_BYTES => collection.push_to_elems(InstanceElem::Collection(
+                Collection::TAG_BYTES => instance.push_to_elems(InstanceElem::Collection(
                     from_event_start!(Collection, reader, reader_buff, e),
                 )),
                 _ => {
@@ -271,10 +442,21 @@ fn read_instance_sub_elem<R: std::io::BufRead, T: QuickXmlReadWrite + ElemImpl<I
                 }
             },
             Event::Empty(ref e) => match e.local_name() {
-                Attribute::TAG_BYTES => collection
-                    .push_to_elems(InstanceElem::Attribute(Attribute::from_event_empty(e)?)),
-                Reference::TAG_BYTES => collection
-                    .push_to_elems(InstanceElem::Reference(Reference::from_event_empty(e)?)),
+                AttributePatB::TAG_BYTES => match context {
+                    InstanceContexts::A => instance.push_to_elems(InstanceElem::AttributePatA(
+                        AttributePatA::from_event_empty(e)?,
+                    )),
+                    InstanceContexts::B => instance.push_to_elems(InstanceElem::AttributePatB(
+                        AttributePatB::from_event_empty(e)?,
+                    )),
+                    InstanceContexts::C => instance.push_to_elems(InstanceElem::AttributePatC(
+                        AttributePatC::from_event_empty(e)?,
+                    )),
+                    InstanceContexts::Writing => unreachable!(),
+                },
+                Reference::TAG_BYTES => {
+                    instance.push_to_elems(InstanceElem::Reference(Reference::from_event_empty(e)?))
+                }
                 _ => {
                     return Err(VOTableError::UnexpectedEmptyTag(
                         e.local_name().to_vec(),

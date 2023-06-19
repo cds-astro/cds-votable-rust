@@ -5,7 +5,10 @@ use quick_xml::{
 
 use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
 
-use super::{collection::Collection, instance::GlobOrTempInstance};
+use super::{
+    collection::Collection,
+    instance::{GlobOrTempInstance, InstanceContexts},
+};
 use std::{io::Write, str};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -17,7 +20,7 @@ pub enum GlobalsElem {
 impl GlobalsElem {
     fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
         match self {
-            GlobalsElem::Instance(elem) => elem.write(writer, &()),
+            GlobalsElem::Instance(elem) => elem.write(writer, &InstanceContexts::Writing),
             GlobalsElem::Collection(elem) => elem.write(writer, &()),
         }
     }
@@ -51,9 +54,15 @@ impl QuickXmlReadWrite for Globals {
             let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
             match &mut event {
                 Event::Start(ref e) => match e.local_name() {
-                    GlobOrTempInstance::TAG_BYTES => self.elems.push(GlobalsElem::Instance(
-                        from_event_start!(GlobOrTempInstance, reader, reader_buff, e),
-                    )),
+                    GlobOrTempInstance::TAG_BYTES => {
+                        self.elems.push(GlobalsElem::Instance(from_event_start!(
+                            GlobOrTempInstance,
+                            reader,
+                            reader_buff,
+                            e,
+                            InstanceContexts::B
+                        )))
+                    }
                     Collection::TAG_BYTES => self.elems.push(GlobalsElem::Collection(
                         from_event_start!(Collection, reader, reader_buff, e),
                     )),
