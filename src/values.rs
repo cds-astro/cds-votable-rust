@@ -14,8 +14,8 @@ use super::{error::VOTableError, QuickXmlReadWrite};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Min {
-    pub value: String,
-    pub inclusive: bool, // true by default
+  pub value: String,
+  pub inclusive: bool, // true by default
 }
 
 impl Min {
@@ -26,15 +26,15 @@ impl Min {
     }
   }
 
-    pub fn set_inclusive(mut self, inclusive: bool) -> Self {
-        self.inclusive = inclusive;
-        self
-    }
+  pub fn set_inclusive(mut self, inclusive: bool) -> Self {
+    self.inclusive = inclusive;
+    self
+  }
 }
 
 impl QuickXmlReadWrite for Min {
-    const TAG: &'static str = "MIN";
-    type Context = ();
+  const TAG: &'static str = "MIN";
+  type Context = ();
 
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     let mut value: Option<String> = None;
@@ -67,14 +67,14 @@ impl QuickXmlReadWrite for Min {
     }
   }
 
-    fn read_sub_elements<R: BufRead>(
-        &mut self,
-        _reader: Reader<R>,
-        _reader_buff: &mut Vec<u8>,
-        _context: &Self::Context,
-    ) -> Result<Reader<R>, VOTableError> {
-        unreachable!()
-    }
+  fn read_sub_elements<R: BufRead>(
+    &mut self,
+    _reader: Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<Reader<R>, VOTableError> {
+    unreachable!()
+  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -102,8 +102,8 @@ impl QuickXmlReadWrite for Min {
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Max {
-    pub value: String,
-    pub inclusive: bool, // true by default
+  pub value: String,
+  pub inclusive: bool, // true by default
 }
 
 impl Max {
@@ -114,15 +114,15 @@ impl Max {
     }
   }
 
-    pub fn set_inclusive(mut self, inclusive: bool) -> Self {
-        self.inclusive = inclusive;
-        self
-    }
+  pub fn set_inclusive(mut self, inclusive: bool) -> Self {
+    self.inclusive = inclusive;
+    self
+  }
 }
 
 impl QuickXmlReadWrite for Max {
-    const TAG: &'static str = "MAX";
-    type Context = ();
+  const TAG: &'static str = "MAX";
+  type Context = ();
 
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     let mut value: Option<String> = None;
@@ -154,14 +154,14 @@ impl QuickXmlReadWrite for Max {
     }
   }
 
-    fn read_sub_elements<R: BufRead>(
-        &mut self,
-        _reader: Reader<R>,
-        _reader_buff: &mut Vec<u8>,
-        _context: &Self::Context,
-    ) -> Result<Reader<R>, VOTableError> {
-        unreachable!()
-    }
+  fn read_sub_elements<R: BufRead>(
+    &mut self,
+    _reader: Reader<R>,
+    _reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<Reader<R>, VOTableError> {
+    unreachable!()
+  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -211,8 +211,8 @@ impl Opt {
 }
 
 impl QuickXmlReadWrite for Opt {
-    const TAG: &'static str = "OPTION";
-    type Context = ();
+  const TAG: &'static str = "OPTION";
+  type Context = ();
 
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     let mut name: Option<String> = None;
@@ -345,20 +345,20 @@ impl Values {
     Default::default()
   }
 
-    impl_builder_opt_string_attr!(id);
-    impl_builder_opt_string_attr!(type_, type);
-    impl_builder_opt_string_attr!(null);
-    impl_builder_opt_string_attr!(ref_, ref);
+  impl_builder_opt_string_attr!(id);
+  impl_builder_opt_string_attr!(type_, type);
+  impl_builder_opt_string_attr!(null);
+  impl_builder_opt_string_attr!(ref_, ref);
 
-    impl_builder_opt_attr!(min, Min);
-    impl_builder_opt_attr!(max, Max);
+  impl_builder_opt_attr!(min, Min);
+  impl_builder_opt_attr!(max, Max);
 
   impl_builder_push!(Opt);
 }
 
 impl QuickXmlReadWrite for Values {
-    const TAG: &'static str = "VALUES";
-    type Context = ();
+  const TAG: &'static str = "VALUES";
+  type Context = ();
 
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     let mut values = Self::new();
@@ -449,9 +449,9 @@ impl QuickXmlReadWrite for Values {
       let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
       // Write tag + attributes
       push2write_opt_string_attr!(self, tag, ID);
-      push2write_opt_string_attr!(self, tag, type_, type);
+      push2write_opt_string_attr!(self, tag, type_, "type");
       push2write_opt_string_attr!(self, tag, null);
-      push2write_opt_string_attr!(self, tag, ref_, ref);
+      push2write_opt_string_attr!(self, tag, ref_, "ref");
       writer
         .write_event(Event::Start(tag.to_borrowed()))
         .map_err(VOTableError::Write)?;

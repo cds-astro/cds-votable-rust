@@ -194,7 +194,7 @@ mod tests {
   };
   use crate::data::Data;
   use crate::impls::VOTableValue;
-  use quick_xml::{Writer, Reader, events::Event};
+  use quick_xml::{events::Event, Reader, Writer};
   use serde_json::{Number, Value};
   use std::str::from_utf8;
 

@@ -6,22 +6,22 @@
 /// }
 /// ```
 macro_rules! impl_builder_opt_string_attr {
-    ($arg:ident) => {
-        paste! {
-          pub fn [<set_ $arg>]<I: Into<String>>(mut self, $arg: I) -> Self {
-            self.$arg = Some($arg.into());
-            self
-          }
-        }
-    };
-    ($arg:ident, $alt:ident) => {
-        paste! {
-          pub fn [<set_ $alt>]<I: Into<String>>(mut self, $arg: I) -> Self {
-            self.$arg = Some($arg.into());
-            self
-          }
-        }
-    };
+  ($arg:ident) => {
+    paste! {
+      pub fn [<set_ $arg>]<I: Into<String>>(mut self, $arg: I) -> Self {
+        self.$arg = Some($arg.into());
+        self
+      }
+    }
+  };
+  ($arg:ident, $alt:ident) => {
+    paste! {
+      pub fn [<set_ $alt>]<I: Into<String>>(mut self, $arg: I) -> Self {
+        self.$arg = Some($arg.into());
+        self
+      }
+    }
+  };
 }
 
 /// E.g. `impl_builder_opt_attr(description, Description)` leads to
@@ -227,20 +227,20 @@ macro_rules! read_content_by_ref {
 /// }
 /// ```
 macro_rules! write_opt_string_attr {
-    ($self:ident, $elem_writer:ident, $arg:ident) => {
-        paste! {
-          if let Some([<$arg:lower>]) = $self.[<$arg:lower>].as_ref() {
-            $elem_writer = $elem_writer.with_attribute((stringify!($arg), [<$arg:lower>].as_str()));
-          }
-        }
-    };
-    ($self:ident, $elem_writer:ident, $arg:ident, $arg_str:literal) => {
-        paste! {
-          if let Some([<$arg:lower>]) = $self.[<$arg:lower>].as_ref() {
-            $elem_writer = $elem_writer.with_attribute(($arg_str, [<$arg:lower>].as_str()));
-          }
-        }
-    };
+  ($self:ident, $elem_writer:ident, $arg:ident) => {
+    paste! {
+      if let Some([<$arg:lower>]) = $self.[<$arg:lower>].as_ref() {
+        $elem_writer = $elem_writer.with_attribute((stringify!($arg), [<$arg:lower>].as_str()));
+      }
+    }
+  };
+  ($self:ident, $elem_writer:ident, $arg:ident, $arg_str:literal) => {
+    paste! {
+      if let Some([<$arg:lower>]) = $self.[<$arg:lower>].as_ref() {
+        $elem_writer = $elem_writer.with_attribute(($arg_str, [<$arg:lower>].as_str()));
+      }
+    }
+  };
 }
 
 macro_rules! write_opt_tostring_attr {
@@ -261,20 +261,20 @@ macro_rules! write_opt_tostring_attr {
 }
 
 macro_rules! write_opt_into_attr {
-    ($self:ident, $elem_writer:ident, $arg:ident) => {
-        paste! {
-          if let Some([<$arg:lower>]) = $self.[<$arg:lower>].as_ref() {
-            $elem_writer = $elem_writer.with_attribute((stringify!($arg), [<$arg:lower>].into()));
-          }
-        }
-    };
-    ($self:ident, $elem_writer:ident, $arg:ident, $arg_str:literal) => {
-        paste! {
-          if let Some([<$arg:lower>]) = $self.[<$arg:lower>].as_ref() {
-            $elem_writer = $elem_writer.with_attribute(($arg_str, [<$arg:lower>].into()));
-          }
-        }
-    };
+  ($self:ident, $elem_writer:ident, $arg:ident) => {
+    paste! {
+      if let Some([<$arg:lower>]) = $self.[<$arg:lower>].as_ref() {
+        $elem_writer = $elem_writer.with_attribute((stringify!($arg), [<$arg:lower>].into()));
+      }
+    }
+  };
+  ($self:ident, $elem_writer:ident, $arg:ident, $arg_str:literal) => {
+    paste! {
+      if let Some([<$arg:lower>]) = $self.[<$arg:lower>].as_ref() {
+        $elem_writer = $elem_writer.with_attribute(($arg_str, [<$arg:lower>].into()));
+      }
+    }
+  };
 }
 
 macro_rules! write_extra {
@@ -286,54 +286,54 @@ macro_rules! write_extra {
 }
 
 macro_rules! push2write_opt_string_attr {
-    ($self:ident, $tag:ident, $arg:ident) => {
-        paste! {
-          if let Some([<$arg:lower>]) = &$self.[<$arg:lower>] {
-            $tag.push_attribute((stringify!($arg), [<$arg:lower>].as_str()));
-          }
-        }
-    };
-    ($self:ident, $tag:ident, $arg:ident, $arg_str:ident) => {
-        paste! {
-          if let Some([<$arg:lower>]) = &$self.[<$arg:lower>] {
-            $tag.push_attribute((stringify!($arg_str), [<$arg:lower>].as_str()));
-          }
-        }
-    };
+  ($self:ident, $tag:ident, $arg:ident) => {
+    paste! {
+      if let Some([<$arg:lower>]) = &$self.[<$arg:lower>] {
+        $tag.push_attribute((stringify!($arg), [<$arg:lower>].as_str()));
+      }
+    }
+  };
+  ($self:ident, $tag:ident, $arg:ident, $arg_str:literal) => {
+    paste! {
+      if let Some([<$arg:lower>]) = &$self.[<$arg:lower>] {
+        $tag.push_attribute((stringify!($arg_str), [<$arg:lower>].as_str()));
+      }
+    }
+  };
 }
 
 macro_rules! push2write_opt_tostring_attr {
-    ($self:ident, $tag:ident, $arg:ident) => {
-        paste! {
-          if let Some([<$arg:lower>]) = &$self.[<$arg:lower>] {
-            $tag.push_attribute((stringify!($arg), [<$arg:lower>].to_string().as_str()));
-          }
-        }
-    };
-    ($self:ident, $tag:ident, $arg:ident, $arg_str:ident) => {
-        paste! {
-          if let Some([<$arg:lower>]) = &$self.[<$arg:lower>] {
-            $tag.push_attribute((stringify!($arg_str), [<$arg:lower>].to_string().as_str()));
-          }
-        }
-    };
+  ($self:ident, $tag:ident, $arg:ident) => {
+    paste! {
+      if let Some([<$arg:lower>]) = &$self.[<$arg:lower>] {
+        $tag.push_attribute((stringify!($arg), [<$arg:lower>].to_string().as_str()));
+      }
+    }
+  };
+  ($self:ident, $tag:ident, $arg:ident, $arg_str:ident) => {
+    paste! {
+      if let Some([<$arg:lower>]) = &$self.[<$arg:lower>] {
+        $tag.push_attribute((stringify!($arg_str), [<$arg:lower>].to_string().as_str()));
+      }
+    }
+  };
 }
 
 macro_rules! push2write_opt_into_attr {
-    ($self:ident, $tag:ident, $arg:ident) => {
-        paste! {
-          if let Some([<$arg:lower>]) = &$self.[<$arg:lower>] {
-            $tag.push_attribute((stringify!($arg), [<$arg:lower>].into()));
-          }
-        }
-    };
-    ($self:ident, $tag:ident, $arg:ident, $arg_str:ident) => {
-        paste! {
-          if let Some([<$arg:lower>]) = &$self.[<$arg:lower>] {
-            $tag.push_attribute((stringify!($arg_str), [<$arg:lower>].into()));
-          }
-        }
-    };
+  ($self:ident, $tag:ident, $arg:ident) => {
+    paste! {
+      if let Some([<$arg:lower>]) = &$self.[<$arg:lower>] {
+        $tag.push_attribute((stringify!($arg), [<$arg:lower>].into()));
+      }
+    }
+  };
+  ($self:ident, $tag:ident, $arg:ident, $arg_str:ident) => {
+    paste! {
+      if let Some([<$arg:lower>]) = &$self.[<$arg:lower>] {
+        $tag.push_attribute((stringify!($arg_str), [<$arg:lower>].into()));
+      }
+    }
+  };
 }
 
 macro_rules! push2write_extra {

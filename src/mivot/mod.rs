@@ -24,8 +24,8 @@ pub mod vodml;
 pub mod r#where;
 
 pub trait ElemType {
-    fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError>;
+  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError>;
 }
 pub trait ElemImpl<T: ElemType> {
-    fn push_to_elems(&mut self, elem: T);
+  fn push_to_elems(&mut self, elem: T);
 }

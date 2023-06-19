@@ -42,17 +42,17 @@ impl FieldRef {
     }
   }
 
-    impl_builder_opt_string_attr!(ucd);
-    impl_builder_opt_string_attr!(utype);
+  impl_builder_opt_string_attr!(ucd);
+  impl_builder_opt_string_attr!(utype);
 
-    impl_builder_insert_extra!();
+  impl_builder_insert_extra!();
 
-    impl_builder_opt_string_attr!(content);
+  impl_builder_opt_string_attr!(content);
 }
 
 impl QuickXmlReadWrite for FieldRef {
-    const TAG: &'static str = "FIELDref";
-    type Context = ();
+  const TAG: &'static str = "FIELDref";
+  type Context = ();
 
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     const NULL: &str = "@TBD";
@@ -83,14 +83,14 @@ impl QuickXmlReadWrite for FieldRef {
     }
   }
 
-    fn read_sub_elements<R: BufRead>(
-        &mut self,
-        mut reader: Reader<R>,
-        reader_buff: &mut Vec<u8>,
-        _context: &Self::Context,
-    ) -> Result<Reader<R>, VOTableError> {
-        read_content!(Self, self, reader, reader_buff)
-    }
+  fn read_sub_elements<R: BufRead>(
+    &mut self,
+    mut reader: Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<Reader<R>, VOTableError> {
+    read_content!(Self, self, reader, reader_buff)
+  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,

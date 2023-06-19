@@ -1,19 +1,25 @@
-use std::{str, io::{BufRead, Write}};
+use std::{
+  io::{BufRead, Write},
+  str,
+};
 
-use quick_xml::{Reader, Writer, events::{Event, BytesStart, attributes::Attributes}};
+use quick_xml::{
+  events::{attributes::Attributes, BytesStart, Event},
+  Reader, Writer,
+};
 
 use serde_json::Value;
 
 use crate::field::ArraySize;
 
 use super::{
-  QuickXmlReadWrite,
-  field::{Precision, Field},
-  desc::Description,
-  values::Values,
-  link::Link,
   datatype::Datatype,
+  desc::Description,
   error::VOTableError,
+  field::{Field, Precision},
+  link::Link,
+  values::Values,
+  QuickXmlReadWrite,
 };
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -24,14 +30,14 @@ pub struct Param {
 }
 
 impl Param {
-    pub fn new<N: Into<String>, V: Into<String>>(name: N, datatype: Datatype, value: V) -> Self {
-        Param {
-            field: Field::new(name, datatype),
-            value: value.into(),
-        }
+  pub fn new<N: Into<String>, V: Into<String>>(name: N, datatype: Datatype, value: V) -> Self {
+    Param {
+      field: Field::new(name, datatype),
+      value: value.into(),
     }
+  }
 
-    // copy/paste + modified from `cargo expand field`
+  // copy/paste + modified from `cargo expand field`
 
   pub fn set_id<I: Into<String>>(mut self, id: I) -> Self {
     self.field.id = Some(id.into());
@@ -88,8 +94,8 @@ impl Param {
 }
 
 impl QuickXmlReadWrite for Param {
-    const TAG: &'static str = "PARAM";
-    type Context = ();
+  const TAG: &'static str = "PARAM";
+  type Context = ();
 
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     const NULL: &str = "@TBD";
@@ -106,11 +112,15 @@ impl QuickXmlReadWrite for Param {
           param
         }
         b"datatype" => {
-          param.field.datatype = value.parse::<Datatype>().map_err(VOTableError::ParseDatatype)?;
+          param.field.datatype = value
+            .parse::<Datatype>()
+            .map_err(VOTableError::ParseDatatype)?;
           param
         }
         b"unit" => param.set_utype(value),
-        b"precision" => param.set_precision(value.parse::<Precision>().map_err(VOTableError::ParseInt)?),
+        b"precision" => {
+          param.set_precision(value.parse::<Precision>().map_err(VOTableError::ParseInt)?)
+        }
         b"width" => param.set_width(value.parse().map_err(VOTableError::ParseInt)?),
         b"xtype" => param.set_xtype(value),
         b"ref" => param.set_ref(value),
@@ -129,8 +139,14 @@ impl QuickXmlReadWrite for Param {
         ),
       }
     }
-    if param.field.name.as_str() == NULL || param.field.datatype == NULL_DT || param.value.as_str() == NULL {
-      Err(VOTableError::Custom(format!("Attributes 'name', 'datatype' and 'value' are mandatory in tag '{}'", Self::TAG)))
+    if param.field.name.as_str() == NULL
+      || param.field.datatype == NULL_DT
+      || param.value.as_str() == NULL
+    {
+      Err(VOTableError::Custom(format!(
+        "Attributes 'name', 'datatype' and 'value' are mandatory in tag '{}'",
+        Self::TAG
+      )))
     } else {
       Ok(param)
     }
@@ -145,21 +161,34 @@ impl QuickXmlReadWrite for Param {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => {
-          match e.local_name() {
-            Description::TAG_BYTES => self.field.description = Some(from_event_start!(Description, reader, reader_buff, e)),
-            Values::TAG_BYTES => self.field.values = Some(from_event_start!(Values, reader, reader_buff, e)),
-            Link::TAG_BYTES => self.field.links.push(from_event_start!(Link, reader, reader_buff, e)),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
+        Event::Start(ref e) => match e.local_name() {
+          Description::TAG_BYTES => {
+            self.field.description = Some(from_event_start!(Description, reader, reader_buff, e))
           }
-        }
-        Event::Empty(ref e) => {
-          match e.local_name() {
-            Values::TAG_BYTES => self.field.values = Some(Values::from_event_empty(e)?),
-            Link::TAG_BYTES => self.field.links.push(Link::from_event_empty(e)?),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
+          Values::TAG_BYTES => {
+            self.field.values = Some(from_event_start!(Values, reader, reader_buff, e))
           }
-        }
+          Link::TAG_BYTES => self
+            .field
+            .links
+            .push(from_event_start!(Link, reader, reader_buff, e)),
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Empty(ref e) => match e.local_name() {
+          Values::TAG_BYTES => self.field.values = Some(Values::from_event_empty(e)?),
+          Link::TAG_BYTES => self.field.links.push(Link::from_event_empty(e)?),
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
@@ -177,12 +206,12 @@ impl QuickXmlReadWrite for Param {
   }
 
   fn write<W: Write>(
-    &mut self, 
-    writer: &mut Writer<W>, 
-    _context: &Self::Context
+    &mut self,
+    writer: &mut Writer<W>,
+    _context: &Self::Context,
   ) -> Result<(), VOTableError> {
     // copy/paste + modified from `cargo expand field`
-    
+
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     if let Some(id) = &self.field.id {
       tag.push_attribute(("ID", id.as_str()));
@@ -217,7 +246,9 @@ impl QuickXmlReadWrite for Param {
     for (key, val) in &self.field.extra {
       tag.push_attribute((key.as_str(), val.to_string().as_str()));
     }
-    writer.write_event(Event::Start(tag.to_borrowed())).map_err(VOTableError::Write)?;
+    writer
+      .write_event(Event::Start(tag.to_borrowed()))
+      .map_err(VOTableError::Write)?;
     if let Some(elem) = &mut self.field.description {
       elem.write(writer, &())?;
     };
@@ -227,6 +258,8 @@ impl QuickXmlReadWrite for Param {
     for elem in &mut self.field.links {
       elem.write(writer, &())?;
     }
-    writer.write_event(Event::End(tag.to_end())).map_err(VOTableError::Write)
+    writer
+      .write_event(Event::End(tag.to_end()))
+      .map_err(VOTableError::Write)
   }
 }
