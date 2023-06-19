@@ -151,7 +151,7 @@ macro_rules! impl_write_e {
 /// }
 /// ```
 macro_rules! impl_write_not_e {
-    ([$($mandatory:ident),*], [$($optional:ident $(, $name:literal)?),*] $(,$elems:ident)? ,[$($orderelem:ident),*]) => {
+    ([$($mandatory:ident),*], [$($optional:ident $(, $name:literal)?),*], [$($orderelem:ident),*] $(,[$($elems:ident),*])?) => {
         paste! {
           fn write<W: std::io::Write>(
             &mut self,
@@ -167,7 +167,7 @@ macro_rules! impl_write_not_e {
                 .write_event(Event::Start(tag.to_borrowed()))
                 .map_err(VOTableError::Write)?;
               $(write_elem_vec_empty_context!(self, $orderelem, writer);)*
-              $(write_elem_vec_no_context!(self, $elems, writer);)?
+              $($(write_elem_vec_no_context!(self, $elems, writer);)*)?
             writer
                 .write_event(Event::End(tag.to_end()))
                 .map_err(VOTableError::Write)
@@ -176,9 +176,6 @@ macro_rules! impl_write_not_e {
     };
 }
 
-///  E.g. `` leads to
-///  ```ignore
-/// ```
 macro_rules! impl_quickrw_e {
     ([$($mandatory:ident),*], [$($optional:ident $(, $name:literal)?),*], $tag:literal, $struct:ident, $context:tt) => {
         paste! {
@@ -213,7 +210,6 @@ macro_rules! impl_quickrw_e {
             /*
                 function read_sub_elements_by_ref
                 ! NO SUBELEMENTS SHOULD BE PRESENT
-                todo UNIMPLEMENTED
             */
             fn read_sub_elements_by_ref<R: std::io::BufRead>(
                 &mut self,
@@ -240,11 +236,8 @@ macro_rules! impl_quickrw_e {
     };
 }
 
-///  E.g. `` leads to
-///  ```ignore
-/// ```
 macro_rules! impl_quickrw_not_e {
-  ([$($mandatory:ident),*], [$($optional:ident $(, $name:literal)?),*], $tag:literal, $struct:ident, $context:tt $(,$elems:ident)? , [$($orderelem:ident),*], $readfn:ident) => {
+  ([$($mandatory:ident),*], [$($optional:ident $(, $name:literal)?),*], $tag:literal, $struct:ident, $context:tt, [$($orderelem:ident),*], $readfn:ident $(,[$($elems:ident),*])?) => {
     paste! {
       impl QuickXmlReadWrite for $struct {
         // The TAG name here: e.g "ATTRIBUTE"
@@ -277,7 +270,6 @@ macro_rules! impl_quickrw_not_e {
 
         /*
             function read_sub_elements_by_ref
-            ! NO SUBELEMENTS SHOULD BE PRESENT
             todo UNIMPLEMENTED
         */
         fn read_sub_elements_by_ref<R: std::io::BufRead>(
@@ -299,7 +291,7 @@ macro_rules! impl_quickrw_not_e {
             @param context &Self::Context: the context used for writing UNUSED
             #returns Result<(), VOTableError>: returns an error if writing doesn't work
         */
-        impl_write_not_e!([$($mandatory),*], [$($optional $(, $name)?),*] $(,$elems)? ,[$($orderelem),*]);
+        impl_write_not_e!([$($mandatory),*], [$($optional $(, $name)?),*] ,[$($orderelem),*] $(,[$($elems),*])?);
       }
     }
   };
