@@ -1,7 +1,7 @@
 use super::foreignkey::ForeignKey;
-
 use crate::{error::VOTableError, QuickXmlReadWrite};
-
+use bstringify::bstringify;
+use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
@@ -16,83 +16,16 @@ pub struct Reference {
   foreign_keys: Vec<ForeignKey>,
 }
 impl Reference {
-  fn new<N: Into<String>>(dmrole: N, dmref: N) -> Self {
-    Self {
-      dmrole: dmrole.into(),
-      dmref: dmref.into(),
-      foreign_keys: vec![],
-    }
-  }
+    impl_non_empty_new!([dmrole, dmref], [], [foreign_keys]);
 }
 
 impl QuickXmlReadWrite for Reference {
   const TAG: &'static str = "REFERENCE";
   type Context = ();
 
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    const NULL: &str = "@TBD";
-    let mut foreign_key = Self::new(NULL, NULL);
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      foreign_key = match attr.key {
-        b"dmrole" => {
-          foreign_key.dmrole = value.to_string();
-          foreign_key
-        }
-        b"dmref" => {
-          foreign_key.dmref = value.to_string();
-          foreign_key
-        }
-        _ => {
-          return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
-        }
-      }
-    }
-    if foreign_key.dmrole.as_str() == NULL || foreign_key.dmref.as_str() == NULL {
-      Err(VOTableError::Custom(format!(
-        "Attributes 'dmrole' and 'dmref' are mandatory in tag '{}'",
-        Self::TAG
-      )))
-    } else {
-      Ok(foreign_key)
-    }
-  }
+    impl_builder_from_attr!([dmrole, dmref], []);
 
-  fn read_sub_elements<R: std::io::BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, crate::error::VOTableError> {
-    loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
-      match &mut event {
-        Event::Empty(ref e) => match e.local_name() {
-          ForeignKey::TAG_BYTES => self.foreign_keys.push(ForeignKey::from_event_empty(e)?),
-          _ => {
-            return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
-              Self::TAG,
-            ))
-          }
-        },
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
-        Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
-      }
-    }
-  }
-
-  fn read_sub_elements_by_ref<R: std::io::BufRead>(
-    &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), crate::error::VOTableError> {
-    todo!()
-  }
+    non_empty_read_sub!(read_ref_sub_elem);
 
   fn write<W: std::io::Write>(
     &mut self,
@@ -121,4 +54,45 @@ impl QuickXmlReadWrite for Reference {
         .map_err(VOTableError::Write)
     }
   }
+}
+
+///////////////////////
+// UTILITY FUNCTIONS //
+
+/*
+    function read_instance_sub_elem
+    Description:
+    *   reads the children of Instance
+    @generic R: BufRead; a struct that implements the std::io::BufRead trait.
+    @generic T: QuickXMLReadWrite + ElemImpl<InstanceElem>; a struct that implements the quickXMLReadWrite and ElemImpl for InstanceElem traits.
+    @param instance &mut T: an instance of T (here either GlobOrTempInstance or Instance)
+    @param reader &mut quick_xml::Reader<R>: the reader used to read the elements
+    @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
+    #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
+*/
+fn read_ref_sub_elem<R: std::io::BufRead>(
+    reference: &mut Reference,
+    _context: &(),
+    mut reader: quick_xml::Reader<R>,
+    reader_buff: &mut Vec<u8>,
+) -> Result<quick_xml::Reader<R>, VOTableError> {
+    loop {
+        let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+        match &mut event {
+            Event::Empty(ref e) => match e.local_name() {
+                ForeignKey::TAG_BYTES => reference
+                    .foreign_keys
+                    .push(ForeignKey::from_event_empty(e)?),
+                _ => {
+                    return Err(VOTableError::UnexpectedEmptyTag(
+                        e.local_name().to_vec(),
+                        Reference::TAG,
+                    ))
+                }
+            },
+            Event::End(e) if e.local_name() == Reference::TAG_BYTES => return Ok(reader),
+            Event::Eof => return Err(VOTableError::PrematureEOF(Reference::TAG)),
+            _ => eprintln!("Discarded event in {}: {:?}", Reference::TAG, event),
+        }
+    }
 }

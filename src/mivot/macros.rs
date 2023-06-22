@@ -2,6 +2,9 @@ macro_rules! write_non_empty_mandatory_attributes {
   ($tag:ident, $self:ident, $($mandatory:ident),*) => {
     $($tag.push_attribute((stringify!($mandatory), $self.$mandatory.as_str())));*
   };
+  ($elem_writer:ident, $self:ident, $($mandatory:ident, $name:literal),*) => {
+    $($elem_writer = $elem_writer.with_attribute((stringify!($name), $self.$mandatory.as_str())));*
+  };
 }
 
 macro_rules! write_non_empty_optional_attributes {
@@ -14,12 +17,61 @@ macro_rules! write_empty_mandatory_attributes {
   ($elem_writer:ident, $self:ident, $($mandatory:ident),*) => {
     $($elem_writer = $elem_writer.with_attribute((stringify!($mandatory), $self.$mandatory.as_str())));*
   };
+  ($elem_writer:ident, $self:ident, $($mandatory:ident, $name:literal),*) => {
+    $($elem_writer = $elem_writer.with_attribute((stringify!($name), $self.$mandatory.as_str())));*
+  };
 }
 
 macro_rules! write_empty_optional_attributes {
   ($elem_writer:ident, $self:ident, $($optional:ident $(, $name:literal)?),*) => {
     $(write_opt_string_attr!($self, $elem_writer, $optional $(, $name)?));*
   };
+}
+
+macro_rules! impl_empty_new {
+  ([$($mandatory:ident),*], [$($optional:ident),*]) => {
+    paste! {
+      /*
+        function New
+        Description:
+        *   creates a new instance of the struct
+        #returns Self: returns an instance of the struct
+      */
+      fn new() -> Self {
+        const NULL: &str = "@TBD";
+        Self {
+            // MANDATORY
+            $($mandatory: NULL.into(),)*
+            // OPTIONAL
+            $($optional: None),*
+        }
+      }
+    }
+  }
+}
+
+macro_rules! impl_non_empty_new {
+  ([$($mandatory:ident),*], [$($optional:ident),*], [$($vec:ident),*]) => {
+    paste! {
+      /*
+        function New
+        Description:
+        *   creates a new instance of the struct
+        #returns Self: returns an instance of the struct
+      */
+      fn new() -> Self {
+        const NULL: &str = "@TBD";
+        Self {
+            // MANDATORY
+            $($mandatory: NULL.into(),)*
+            // OPTIONAL
+            $($optional: None,)*
+            // ELEMS
+            $($vec: vec![]),*
+        }
+      }
+    }
+  }
 }
 
 ///  E.g. `impl_builder_from_attr` leads to
@@ -68,17 +120,17 @@ macro_rules! write_empty_optional_attributes {
 /// }
 /// ```
 macro_rules! impl_builder_from_attr {
-    ([$($mandatory:ident),*], [$($optional:ident $(, $name:literal)?),*]) => {
+    ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*]) => {
         paste! {
           fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
             const NULL: &str = "@TBD";
-            let mut attribute = Self::new(NULL, NULL);
+            let mut attribute = Self::new();
             for attr_res in attrs {
                 let attr = attr_res.map_err(VOTableError::Attr)?;
                 let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
                 let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
                 attribute = match attr.key {
-                  $(bstringify!($mandatory) => {
+                  $(opt_bstringify!($mandatory $(, [<$mandname>])?) => {
                     attribute.$mandatory = value.to_string();
                     attribute
                   }),*
@@ -109,7 +161,7 @@ macro_rules! impl_builder_from_attr {
 ///  ```ignore
 /// ```
 macro_rules! impl_write_e {
-    ([$($mandatory:ident),*], [$($optional:ident $(, $name:literal)?),*]) => {
+    ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*]) => {
       paste! {
         fn write<W: std::io::Write>(
           &mut self,
@@ -117,7 +169,7 @@ macro_rules! impl_write_e {
           _context: &Self::Context,
         ) -> Result<(), crate::error::VOTableError> {
           let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-          write_empty_mandatory_attributes!(elem_writer, self, $($mandatory),*);
+          write_empty_mandatory_attributes!(elem_writer, self, $($mandatory $(, $mandname)?),*);
           write_empty_optional_attributes!(elem_writer, self, $($optional $(, $name)?),*);
           elem_writer.write_empty().map_err(VOTableError::Write)?;
           Ok(())
@@ -151,7 +203,7 @@ macro_rules! impl_write_e {
 /// }
 /// ```
 macro_rules! impl_write_not_e {
-    ([$($mandatory:ident),*], [$($optional:ident $(, $name:literal)?),*], [$($orderelem:ident),*] $(,[$($elems:ident),*])?) => {
+    ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*], [$($orderelem:ident),*] $(,[$($elems:ident),*])?) => {
         paste! {
           fn write<W: std::io::Write>(
             &mut self,
@@ -160,7 +212,7 @@ macro_rules! impl_write_not_e {
           ) -> Result<(), crate::error::VOTableError> {
             let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
             //MANDATORY
-            write_non_empty_mandatory_attributes!(tag, self, $($mandatory),*);
+            write_non_empty_mandatory_attributes!(tag, self, $($mandatory $(, $mandname)?),*);
             //OPTIONAL
             write_non_empty_optional_attributes!(tag, self, $($optional $(, $name)?),*);
             writer
@@ -176,12 +228,77 @@ macro_rules! impl_write_not_e {
     };
 }
 
+macro_rules! non_empty_read_sub {
+    ($readfn:ident) => {
+        paste! {
+          /*
+              function read_sub_elements
+              Description:
+              *   see function read_sub_elem from caller
+            */
+            fn read_sub_elements<R: std::io::BufRead>(
+              &mut self,
+              reader: Reader<R>,
+              reader_buff: &mut Vec<u8>,
+              context: &Self::Context,
+          ) -> Result<Reader<R>, crate::error::VOTableError> {
+              $readfn(self, context, reader, reader_buff)
+          }
+
+          /*
+              function read_sub_elements_by_ref
+              todo UNIMPLEMENTED
+          */
+          fn read_sub_elements_by_ref<R: std::io::BufRead>(
+              &mut self,
+              __reader: &mut Reader<R>,
+              __reader_buff: &mut Vec<u8>,
+              __context: &Self::Context,
+          ) -> Result<(), crate::error::VOTableError> {
+              todo!()
+          }
+        }
+    };
+}
+
+macro_rules! empty_read_sub {
+    () => {
+        paste! {
+          /*
+              function read_sub_elements
+              ! NO SUBELEMENTS SHOULD BE PRESENT
+          */
+          fn read_sub_elements<R: std::io::BufRead>(
+              &mut self,
+              mut _reader: Reader<R>,
+              _reader_buff: &mut Vec<u8>,
+              _context: &Self::Context,
+          ) -> Result<Reader<R>, crate::error::VOTableError> {
+              todo!()
+          }
+
+          /*
+              function read_sub_elements_by_ref
+              ! NO SUBELEMENTS SHOULD BE PRESENT
+          */
+          fn read_sub_elements_by_ref<R: std::io::BufRead>(
+              &mut self,
+              _reader: &mut Reader<R>,
+              _reader_buff: &mut Vec<u8>,
+              _context: &Self::Context,
+          ) -> Result<(), crate::error::VOTableError> {
+              todo!()
+          }
+        }
+    };
+}
+
 macro_rules! impl_quickrw_e {
-    ([$($mandatory:ident),*], [$($optional:ident $(, $name:literal)?),*], $tag:literal, $struct:ident, $context:tt) => {
+    ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*], $tag:literal, $struct:ident, $context:tt) => {
         paste! {
           impl QuickXmlReadWrite for $struct {
             // The TAG name here: e.g "ATTRIBUTE"
-            const TAG: &'static str = $tag;
+            const TAG: &'static str = stringify!([<$tag>]);
             // Potential context e.g : ()
             type Context = $context;
 
@@ -192,33 +309,9 @@ macro_rules! impl_quickrw_e {
                 @param attrs quick_xml::events::attributes::Attributes: attributes from the quick_xml reader
                 #returns Result<Self, VOTableError>: returns an instance of AttributePatA built using attributes or an error if reading doesn't work
             */
-            impl_builder_from_attr!([$($mandatory),*], [$($optional $(, $name)?),*]);
+            impl_builder_from_attr!([$($mandatory $(, $mandname)?),*], [$($optional $(, $name)?),*]);
 
-            /*
-                function read_sub_elements
-                ! NO SUBELEMENTS SHOULD BE PRESENT
-            */
-            fn read_sub_elements<R: std::io::BufRead>(
-                &mut self,
-                mut _reader: Reader<R>,
-                _reader_buff: &mut Vec<u8>,
-                _context: &Self::Context,
-            ) -> Result<Reader<R>, crate::error::VOTableError> {
-                todo!()
-            }
-
-            /*
-                function read_sub_elements_by_ref
-                ! NO SUBELEMENTS SHOULD BE PRESENT
-            */
-            fn read_sub_elements_by_ref<R: std::io::BufRead>(
-                &mut self,
-                _reader: &mut Reader<R>,
-                _reader_buff: &mut Vec<u8>,
-                _context: &Self::Context,
-            ) -> Result<(), crate::error::VOTableError> {
-                todo!()
-            }
+            empty_read_sub!();
 
             /*
                 function Write
@@ -230,18 +323,18 @@ macro_rules! impl_quickrw_e {
                 @param context &Self::Context: the context used for writing UNUSED
                 #returns Result<(), VOTableError>: returns an error if writing doesn't work
             */
-            impl_write_e!([$($mandatory),*], [$($optional $(, $name)?),*]);
+            impl_write_e!([$($mandatory $(, $mandname)?),*], [$($optional $(, $name)?),*]);
           }
         }
     };
 }
 
-macro_rules! impl_quickrw_not_e {
-  ([$($mandatory:ident),*], [$($optional:ident $(, $name:literal)?),*], $tag:literal, $struct:ident, $context:tt, [$($orderelem:ident),*], $readfn:ident $(,[$($elems:ident),*])?) => {
+macro_rules! impl_quickrw_not_e_no_a {
+  ($tag:literal, $struct:ident, $context:tt, [$($orderelem:ident),*], $readfn:ident $(,[$($elems:ident),*])?) => {
     paste! {
       impl QuickXmlReadWrite for $struct {
         // The TAG name here: e.g "ATTRIBUTE"
-        const TAG: &'static str = $tag;
+        const TAG: &'static str = stringify!([<$tag>]);
         // Potential context e.g : ()
         type Context = $context;
 
@@ -250,36 +343,18 @@ macro_rules! impl_quickrw_not_e {
             Description:
             *   creates Self from deserialized attributes contained inside the passed XML
             @param attrs quick_xml::events::attributes::Attributes: attributes from the quick_xml reader
-            #returns Result<Self, VOTableError>: returns an instance of AttributePatA built using attributes or an error if reading doesn't work
+            #returns Result<Self, VOTableError>: returns an instance of Self built using attributes or an error if reading doesn't work
         */
-        impl_builder_from_attr!([$($mandatory),*], [$($optional $(, $name)?),*]);
+        fn from_attributes(
+          attrs: quick_xml::events::attributes::Attributes,
+      ) -> Result<Self, crate::error::VOTableError> {
+          if attrs.count() > 0 {
+              eprintln!("Unexpected attributes in {} (not serialized!)", $tag);
+          }
+          Ok(Self::default())
+      }
 
-        /*
-          function read_sub_elements
-          Description:
-          *   see function read_sub_elem from caller
-        */
-        fn read_sub_elements<R: std::io::BufRead>(
-            &mut self,
-            reader: Reader<R>,
-            reader_buff: &mut Vec<u8>,
-            context: &Self::Context,
-        ) -> Result<Reader<R>, crate::error::VOTableError> {
-            $readfn(self, context, reader, reader_buff)
-        }
-
-        /*
-            function read_sub_elements_by_ref
-            todo UNIMPLEMENTED
-        */
-        fn read_sub_elements_by_ref<R: std::io::BufRead>(
-            &mut self,
-            __reader: &mut Reader<R>,
-            __reader_buff: &mut Vec<u8>,
-            __context: &Self::Context,
-        ) -> Result<(), crate::error::VOTableError> {
-            todo!()
-        }
+        non_empty_read_sub!($readfn);
 
         /*
             function Write
@@ -291,7 +366,43 @@ macro_rules! impl_quickrw_not_e {
             @param context &Self::Context: the context used for writing UNUSED
             #returns Result<(), VOTableError>: returns an error if writing doesn't work
         */
-        impl_write_not_e!([$($mandatory),*], [$($optional $(, $name)?),*] ,[$($orderelem),*] $(,[$($elems),*])?);
+        impl_write_not_e!([], [] ,[$($orderelem),*] $(,[$($elems),*])?);
+      }
+    }
+  };
+}
+
+macro_rules! impl_quickrw_not_e {
+  ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*], $tag:literal, $struct:ident, $context:tt, [$($orderelem:ident),*], $readfn:ident $(,[$($elems:ident),*])?) => {
+    paste! {
+      impl QuickXmlReadWrite for $struct {
+        // The TAG name here: e.g "ATTRIBUTE"
+        const TAG: &'static str = stringify!([<$tag>]);
+        // Potential context e.g : ()
+        type Context = $context;
+
+        /*
+            function from_attributes
+            Description:
+            *   creates Self from deserialized attributes contained inside the passed XML
+            @param attrs quick_xml::events::attributes::Attributes: attributes from the quick_xml reader
+            #returns Result<Self, VOTableError>: returns an instance of Self built using attributes or an error if reading doesn't work
+        */
+        impl_builder_from_attr!([$($mandatory $(, $mandname)?),*], [$($optional $(, $name)?),*]);
+
+        non_empty_read_sub!($readfn);
+
+        /*
+            function Write
+            Description:
+            *   function that writes the TAG
+            @generic W: Write; a struct that implements the std::io::Write trait.
+            @param self &mut: function is used like : self."function"
+            @param writer &mut Writer<W>: the writer used to write the elements
+            @param context &Self::Context: the context used for writing UNUSED
+            #returns Result<(), VOTableError>: returns an error if writing doesn't work
+        */
+        impl_write_not_e!([$($mandatory $(, $mandname)?),*], [$($optional $(, $name)?),*] ,[$($orderelem),*] $(,[$($elems),*])?);
       }
     }
   };

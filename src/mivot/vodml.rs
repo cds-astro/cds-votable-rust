@@ -182,12 +182,13 @@ mod tests {
               <ATTRIBUTE dmrole="coords:SpaceFrame.spaceRefFrame" dmtype="ivoa:string" value="ICRS" />
               <INSTANCE dmrole="coords:SpaceFrame.refPosition" dmtype="coords:CustomRefLocation">
                 <ATTRIBUTE dmrole="coords:CustomRefLocation.epoch" dmtype="coords:Epoch" value="2015.0"/>
+                <REFERENCE dmrole="coords:Coordinate.coordSys" dmref="\_timesys"/>
               </INSTANCE>
             </INSTANCE>
           </INSTANCE>
         </GLOBALS>
         <TEMPLATES tableref="Results">
-          <INSTANCE dmrole="" dmtype="meas:Position">
+          <INSTANCE dmtype="meas:Position">
             <ATTRIBUTE dmrole="meas:Measure.ucd" dmtype="ivoa:string" value="pos" />
             <INSTANCE dmrole="meas:Measure.coord" dmtype="coords:LonLatPoint">
               <ATTRIBUTE dmtype="ivoa:RealQuantity" dmrole="coords:LonLatPoint.lon" ref="ra" unit="deg"/>
@@ -203,7 +204,7 @@ mod tests {
               </COLLECTION>
             </INSTANCE>
           </INSTANCE>
-          <INSTANCE dmrole="" dmtype="meas:Velocity">
+          <INSTANCE dmtype="meas:Velocity">
             <ATTRIBUTE dmrole="meas:Measure.ucd" dmtype="ivoa:string" value="spect.dopplerVeloc.opt" />
             <INSTANCE dmrole="meas:Measure.coord" dmtype="coords:LonLatPoint">
               <ATTRIBUTE dmtype="ivoa:RealQuantity" dmrole="coords:LonLatPoint.dist"
@@ -212,14 +213,14 @@ mod tests {
             <ATTRIBUTE dmrole="meas:Measure.error" dmtype="meas:Symmetrical"
                        ref="radial_velocity_error" unit="km/s"/>
            </INSTANCE>
-          <INSTANCE dmrole="" dmtype="meas:GenericMeasure">
+          <INSTANCE dmtype="meas:GenericMeasure">
             <ATTRIBUTE dmrole="meas:Measure.ucd" dmtype="ivoa:string" value="pos.parallax" />
             <INSTANCE dmrole="meas:Measure.coord" dmtype="coords:PhysicalCoordinate">
               <ATTRIBUTE dmrole="coords:PhysicalCoordinate.cval" dmtype="ivoa:RealQuantity" ref="parallax" unit="mas"/>
             </INSTANCE>
             <ATTRIBUTE dmrole="meas:Measure.error" dmtype="meas:Symmetrical" ref="parallax_error" unit="mas"/>
           </INSTANCE>
-          <INSTANCE dmrole="" dmtype="meas:ProperMotion">
+          <INSTANCE dmtype="meas:ProperMotion">
             <ATTRIBUTE dmrole="meas:Measure.ucd" dmtype="ivoa:string" value="pos.pm" />
             <INSTANCE dmrole="meas:Measure.coord" dmtype="coords:LonLatPoint">
               <ATTRIBUTE dmrole="coords:LonLatPoint.lon" dmtype="ivoa:RealQuantity" ref="pmra" unit="mas/year"/>
