@@ -124,25 +124,25 @@ macro_rules! impl_builder_from_attr {
         paste! {
           fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
             const NULL: &str = "@TBD";
-            let mut attribute = Self::new();
+            let mut tag = Self::new();
             for attr_res in attrs {
                 let attr = attr_res.map_err(VOTableError::Attr)?;
                 let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
                 let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-                attribute = match attr.key {
+                tag = match attr.key {
                   $(opt_bstringify!($mandatory $(, [<$mandname>])?) => {
-                    attribute.$mandatory = value.to_string();
-                    attribute
+                    tag.$mandatory = value.to_string();
+                    tag
                   }),*
                   $(opt_bstringify!($optional $(, [<$name>])?) => {
-                    attribute.[<set_ $optional>](value)
+                    tag.[<set_ $optional>](value)
                   }),*
                     _ => {
                         return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
                     }
                 }
             }
-            if $(attribute.$mandatory.as_str() == NULL)||* {
+            if $(tag.$mandatory.as_str() == NULL)||* {
                 Err(VOTableError::Custom(
                   format!("Attributes {} are mandatory in tag {}",
                     concat!($(
@@ -150,7 +150,7 @@ macro_rules! impl_builder_from_attr {
                     ),*),
                   Self::TAG)))
             } else {
-                Ok(attribute)
+                Ok(tag)
             }
           }
         }

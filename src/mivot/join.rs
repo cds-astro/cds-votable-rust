@@ -31,6 +31,9 @@ impl_quickrw_not_e!(
     []                  // Empty context writables
 );
 
+///////////////////////
+// UTILITY FUNCTIONS //
+
 fn read_join_sub_elem<R: std::io::BufRead>(
     join: &mut Join,
     _context: &(),

@@ -60,12 +60,12 @@ impl QuickXmlReadWrite for Reference {
 // UTILITY FUNCTIONS //
 
 /*
-    function read_instance_sub_elem
+    function read_ref_sub_elem
     Description:
-    *   reads the children of Instance
+    *   reads the children of Reference
     @generic R: BufRead; a struct that implements the std::io::BufRead trait.
     @generic T: QuickXMLReadWrite + ElemImpl<InstanceElem>; a struct that implements the quickXMLReadWrite and ElemImpl for InstanceElem traits.
-    @param instance &mut T: an instance of T (here either GlobOrTempInstance or Instance)
+    @param instance &mut T: an instance of T (here either GlobOrTempInstance or Reference)
     @param reader &mut quick_xml::Reader<R>: the reader used to read the elements
     @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
