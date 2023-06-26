@@ -10,51 +10,56 @@ use std::str;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Reference {
-  dmrole: String,
-  dmref: String,
-  #[serde(skip_serializing_if = "Vec::is_empty")]
-  foreign_keys: Vec<ForeignKey>,
+    dmrole: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dmref: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sourceref: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    foreign_keys: Vec<ForeignKey>,
 }
 impl Reference {
-    impl_non_empty_new!([dmrole, dmref], [], [foreign_keys]);
+    impl_non_empty_new!([dmrole], [sourceref, dmref], [foreign_keys]);
+    impl_builder_opt_string_attr!(sourceref);
+    impl_builder_opt_string_attr!(dmref);
 }
 
 impl QuickXmlReadWrite for Reference {
   const TAG: &'static str = "REFERENCE";
   type Context = ();
 
-    impl_builder_from_attr!([dmrole, dmref], []);
+    impl_builder_from_attr!([dmrole], [sourceref, dmref]);
 
     non_empty_read_sub!(read_ref_sub_elem);
 
-  fn write<W: std::io::Write>(
-    &mut self,
-    writer: &mut Writer<W>,
-    context: &Self::Context,
-  ) -> Result<(), crate::error::VOTableError> {
-    if self.foreign_keys.is_empty() {
-      let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-      elem_writer = elem_writer.with_attribute(("dmrole", self.dmrole.as_str()));
-      elem_writer = elem_writer.with_attribute(("dmref", self.dmref.as_str()));
-      elem_writer.write_empty().map_err(VOTableError::Write)?;
-      Ok(())
-    } else {
-      let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-      // Write tag + attributes
-      tag.push_attribute(("dmrole", self.dmrole.as_str()));
-      tag.push_attribute(("dmref", self.dmref.as_str()));
-      writer
-        .write_event(Event::Start(tag.to_borrowed()))
-        .map_err(VOTableError::Write)?;
-      // Write sub-elems
-      write_elem_vec!(self, foreign_keys, writer, context);
-      // Close tag
-      writer
-        .write_event(Event::End(tag.to_end()))
-        .map_err(VOTableError::Write)
+    fn write<W: std::io::Write>(
+        &mut self,
+        writer: &mut Writer<W>,
+        context: &Self::Context,
+    ) -> Result<(), crate::error::VOTableError> {
+        if self.foreign_keys.is_empty() {
+            let mut elem_writer = writer.create_element(Self::TAG_BYTES);
+            elem_writer = elem_writer.with_attribute(("dmrole", self.dmrole.as_str()));
+            write_empty_optional_attributes!(elem_writer, self, sourceref, dmref);
+            elem_writer.write_empty().map_err(VOTableError::Write)?;
+            Ok(())
+        } else {
+            let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+            // Write tag + attributes
+            tag.push_attribute(("dmrole", self.dmrole.as_str()));
+            write_non_empty_optional_attributes!(tag, self, sourceref, dmref);
+            writer
+                .write_event(Event::Start(tag.to_borrowed()))
+                .map_err(VOTableError::Write)?;
+            // Write sub-elems
+            write_elem_vec!(self, foreign_keys, writer, context);
+            // Close tag
+            writer
+                .write_event(Event::End(tag.to_end()))
+                .map_err(VOTableError::Write)
+        }
     }
   }
-}
 
 ///////////////////////
 // UTILITY FUNCTIONS //

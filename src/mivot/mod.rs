@@ -4,6 +4,8 @@ use crate::error::VOTableError;
 use quick_xml::Writer;
 use std::io::Write;
 
+use self::primarykey::PrimaryKey;
+
 #[macro_use]
 pub mod macros;
 
@@ -28,4 +30,8 @@ pub trait ElemType {
 }
 pub trait ElemImpl<T: ElemType> {
   fn push_to_elems(&mut self, elem: T);
+}
+
+pub trait InstanceType {
+    fn push2_pk(&mut self, pk: PrimaryKey);
 }

@@ -15,7 +15,7 @@ impl PrimaryKey {
 impl_quickrw_e!(
     [dmtype, value], // MANDATORY ATTRIBUTES
     [],              // OPTIONAL ATTRIBUTES
-    "PRIMARY_KEY",   // TAG, here : <ATTRIBUTE>
+    "PRIMARY\\_KEY",   // TAG, here : <ATTRIBUTE>
     PrimaryKey,      // Struct on which to impl
     ()               // Context type
 );

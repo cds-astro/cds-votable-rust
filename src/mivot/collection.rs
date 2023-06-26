@@ -9,13 +9,10 @@ use quick_xml::{
 };
 use std::{io::Write, str};
 
+use super::instance::NoRoleInstance;
 use super::{
-  attribute_c::AttributePatC,
-  instance::{Instance, InstanceContexts},
-  join::Join,
-  primarykey::PrimaryKey,
-  reference::Reference,
-  ElemImpl, ElemType,
+    attribute_c::AttributePatC, join::Join, primarykey::PrimaryKey,
+    reference::Reference, ElemImpl, ElemType,
 };
 
 /*
@@ -26,23 +23,23 @@ use super::{
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum CollectionElem {
-  Attribute(AttributePatC),
-  Instance(Instance),
-  Reference(Reference),
-  Collection(Collection),
-  Join(Join),
+    Attribute(AttributePatC),
+    Instance(NoRoleInstance),
+    Reference(Reference),
+    Collection(Collection),
+    Join(Join),
 }
 impl ElemType for CollectionElem {
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
-    match self {
-      CollectionElem::Attribute(elem) => elem.write(writer, &()),
-      CollectionElem::Instance(elem) => elem.write(writer, &InstanceContexts::Writing),
-      CollectionElem::Reference(elem) => elem.write(writer, &()),
-      CollectionElem::Collection(elem) => elem.write(writer, &()),
-      CollectionElem::Join(elem) => elem.write(writer, &()),
+    fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+        match self {
+            CollectionElem::Attribute(elem) => elem.write(writer, &()),
+            CollectionElem::Instance(elem) => elem.write(writer, &()),
+            CollectionElem::Reference(elem) => elem.write(writer, &()),
+            CollectionElem::Collection(elem) => elem.write(writer, &()),
+            CollectionElem::Join(elem) => elem.write(writer, &()),
+        }
     }
   }
-}
 
 /*
     struct Collection => pattern a
@@ -95,53 +92,49 @@ fn read_collection_sub_elem<
     mut reader: quick_xml::Reader<R>,
     mut reader_buff: &mut Vec<u8>,
 ) -> Result<quick_xml::Reader<R>, crate::error::VOTableError> {
-  loop {
-    let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
-    match &mut event {
-      Event::Start(ref e) => match e.local_name() {
-        AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
-          from_event_start!(AttributePatC, reader, reader_buff, e),
-        )),
-        Instance::TAG_BYTES => collection.push_to_elems(CollectionElem::Instance(
-          from_event_start!(Instance, reader, reader_buff, e, InstanceContexts::C),
-        )),
-        Reference::TAG_BYTES => collection.push_to_elems(CollectionElem::Reference(
-          from_event_start!(Reference, reader, reader_buff, e),
-        )),
-        Collection::TAG_BYTES => collection.push_to_elems(CollectionElem::Collection(
-          from_event_start!(Collection, reader, reader_buff, e),
-        )),
-        Join::TAG_BYTES => collection.push_to_elems(CollectionElem::Join(from_event_start!(
-          Join,
-          reader,
-          reader_buff,
-          e
-        ))),
-        _ => {
-          return Err(VOTableError::UnexpectedStartTag(
-            e.local_name().to_vec(),
-            Collection::TAG,
-          ))
+    loop {
+        let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+        match &mut event {
+            Event::Start(ref e) => match e.local_name() {
+                AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
+                    from_event_start!(AttributePatC, reader, reader_buff, e),
+                )),
+                NoRoleInstance::TAG_BYTES => collection.push_to_elems(CollectionElem::Instance(
+                    from_event_start!(NoRoleInstance, reader, reader_buff, e),
+                )),
+                Reference::TAG_BYTES => collection.push_to_elems(CollectionElem::Reference(
+                    from_event_start!(Reference, reader, reader_buff, e),
+                )),
+                Collection::TAG_BYTES => collection.push_to_elems(CollectionElem::Collection(
+                    from_event_start!(Collection, reader, reader_buff, e),
+                )),
+                Join::TAG_BYTES => collection.push_to_elems(CollectionElem::Join(
+                    from_event_start!(Join, reader, reader_buff, e),
+                )),
+                _ => {
+                    return Err(VOTableError::UnexpectedStartTag(
+                        e.local_name().to_vec(),
+                        Collection::TAG,
+                    ))
+                }
+            },
+            Event::Empty(ref e) => match e.local_name() {
+                AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
+                    AttributePatC::from_event_empty(e)?,
+                )),
+                Reference::TAG_BYTES => collection
+                    .push_to_elems(CollectionElem::Reference(Reference::from_event_empty(e)?)),
+                _ => {
+                    return Err(VOTableError::UnexpectedEmptyTag(
+                        e.local_name().to_vec(),
+                        T::TAG,
+                    ))
+                }
+            },
+            Event::Text(e) if is_empty(e) => {}
+            Event::End(e) if e.local_name() == T::TAG_BYTES => return Ok(reader),
+            Event::Eof => return Err(VOTableError::PrematureEOF(T::TAG)),
+            _ => eprintln!("Discarded event in {}: {:?}", T::TAG, event),
         }
-      },
-      Event::Empty(ref e) => match e.local_name() {
-        AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
-          AttributePatC::from_event_empty(e)?,
-        )),
-        Reference::TAG_BYTES => {
-          collection.push_to_elems(CollectionElem::Reference(Reference::from_event_empty(e)?))
-        }
-        _ => {
-          return Err(VOTableError::UnexpectedEmptyTag(
-            e.local_name().to_vec(),
-            T::TAG,
-          ))
-        }
-      },
-      Event::Text(e) if is_empty(e) => {}
-      Event::End(e) if e.local_name() == T::TAG_BYTES => return Ok(reader),
-      Event::Eof => return Err(VOTableError::PrematureEOF(T::TAG)),
-      _ => eprintln!("Discarded event in {}: {:?}", T::TAG, event),
+      }
     }
-  }
-}

@@ -7,23 +7,19 @@ use quick_xml::{
 
 use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
 
-use super::{
-    collection::Collection,
-    instance::{GlobOrTempInstance, InstanceContexts},
-    ElemImpl, ElemType,
-};
+use super::{collection::Collection, instance::NoRoleInstance, ElemImpl, ElemType};
 use std::{io::Write, str};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum GlobalsElem {
-    Instance(GlobOrTempInstance),
+    Instance(NoRoleInstance),
     Collection(Collection),
 }
 impl ElemType for GlobalsElem {
     fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
         match self {
-            GlobalsElem::Instance(elem) => elem.write(writer, &InstanceContexts::Writing),
+            GlobalsElem::Instance(elem) => elem.write(writer, &()),
             GlobalsElem::Collection(elem) => elem.write(writer, &()),
         }
     }
@@ -54,15 +50,9 @@ fn read_globals_sub_elem<R: std::io::BufRead, T: QuickXmlReadWrite + ElemImpl<Gl
         let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
         match &mut event {
             Event::Start(ref e) => match e.local_name() {
-                GlobOrTempInstance::TAG_BYTES => {
-                    globals.push_to_elems(GlobalsElem::Instance(from_event_start!(
-                        GlobOrTempInstance,
-                        reader,
-                        reader_buff,
-                        e,
-                        InstanceContexts::B
-                    )))
-                }
+                NoRoleInstance::TAG_BYTES => globals.push_to_elems(GlobalsElem::Instance(
+                    from_event_start!(NoRoleInstance, reader, reader_buff, e),
+                )),
                 Collection::TAG_BYTES => globals.push_to_elems(GlobalsElem::Collection(
                     from_event_start!(Collection, reader, reader_buff, e),
                 )),

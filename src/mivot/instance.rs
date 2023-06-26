@@ -8,24 +8,12 @@ use quick_xml::{
 };
 use std::{io::Write, str};
 
+use super::InstanceType;
 use super::{
-  attribute_a::AttributePatA, attribute_b::AttributePatB, attribute_c::AttributePatC,
-  collection::Collection, primarykey::PrimaryKey, reference::Reference, ElemImpl, ElemType,
+    attribute_a::AttributePatA, collection::Collection, primarykey::PrimaryKey,
+    reference::Reference, ElemImpl, ElemType,
 };
 use quick_xml::events::attributes::Attributes;
-
-/*
-    enum Instance context
-    Description
-    *   Enum of contexts available for Instance, these will influence the children attributes of said Instance
-*/
-#[derive(Clone, Debug)]
-pub enum InstanceContexts {
-  A,       // for Templates
-  B,       // for Globals
-  C,       // for Collection
-  Writing, // for Writing which does not require a context
-}
 
 /*
     enum Instance Elem
@@ -35,34 +23,30 @@ pub enum InstanceContexts {
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum InstanceElem {
-  AttributePatA(AttributePatA),
-  AttributePatB(AttributePatB),
-  AttributePatC(AttributePatC),
-  Instance(Instance),
-  Reference(Reference),
-  Collection(Collection),
+    AttributePatA(AttributePatA),
+    Instance(Instance),
+    Reference(Reference),
+    Collection(Collection),
 }
 impl ElemType for InstanceElem {
-  /*
-      function Write
-      Description:
-      *   function that writes the elements as mivot TAGS
-      @generic W: Write; a struct that implements the std::io::Write trait.
-      @param self &mut: function is used like : self."function"
-      @param writer &mut Writer<W>: the writer used to write the elements
-      #returns Result<(), VOTableError>: returns an error if writing doesn't work
-  */
-  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
-    match self {
-      InstanceElem::AttributePatA(elem) => elem.write(writer, &()),
-      InstanceElem::AttributePatB(elem) => elem.write(writer, &()),
-      InstanceElem::AttributePatC(elem) => elem.write(writer, &()),
-      InstanceElem::Instance(elem) => elem.write(writer, &InstanceContexts::Writing),
-      InstanceElem::Reference(elem) => elem.write(writer, &()),
-      InstanceElem::Collection(elem) => elem.write(writer, &()),
+    /*
+        function Write
+        Description:
+        *   function that writes the elements as mivot TAGS
+        @generic W: Write; a struct that implements the std::io::Write trait.
+        @param self &mut: function is used like : self."function"
+        @param writer &mut Writer<W>: the writer used to write the elements
+        #returns Result<(), VOTableError>: returns an error if writing doesn't work
+    */
+    fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+        match self {
+            InstanceElem::AttributePatA(elem) => elem.write(writer, &()),
+            InstanceElem::Instance(elem) => elem.write(writer, &()),
+            InstanceElem::Reference(elem) => elem.write(writer, &()),
+            InstanceElem::Collection(elem) => elem.write(writer, &()),
+        }
     }
   }
-}
 
 /////////////////////////
 /////// PATTERN A ///////
@@ -76,43 +60,49 @@ impl ElemType for InstanceElem {
     @elem elems: different elems defined in enum InstanceElem that can appear in any order
 */
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub struct GlobOrTempInstance {
-  // MANDATORY
-  dmtype: String,
-  // OPTIONAL
-  #[serde(skip_serializing_if = "Option::is_none")]
-  dmid: Option<String>,
-  #[serde(skip_serializing_if = "Vec::is_empty")]
-  primary_keys: Vec<PrimaryKey>,
-  #[serde(skip_serializing_if = "Vec::is_empty")]
-  elems: Vec<InstanceElem>,
+pub struct NoRoleInstance {
+    // MANDATORY
+    dmtype: String,
+    // OPTIONAL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dmid: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    primary_keys: Vec<PrimaryKey>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    elems: Vec<InstanceElem>,
 }
-impl GlobOrTempInstance {
+impl NoRoleInstance {
     impl_non_empty_new!([dmtype], [dmid], [primary_keys, elems]);
     /*
         function setters, enable the setting of an optional through self.set_"var"
     */
     impl_builder_opt_string_attr!(dmid);
 }
-impl ElemImpl<InstanceElem> for GlobOrTempInstance {
-  /*
-      function push_to_elems
-      Description:
-      *   pushes an InstanceElem to the elems contained in struct
-      @param self &mut: function is used like : self."function"
-      @param dmid InstanceElem: the elem that needs to be pushed
-      #returns ()
-  */
-  fn push_to_elems(&mut self, elem: InstanceElem) {
-    self.elems.push(elem)
-  }
+impl InstanceType for NoRoleInstance {
+    fn push2_pk(&mut self, pk: PrimaryKey) {
+        self.primary_keys.push(pk);
+    }
+}
+impl ElemImpl<InstanceElem> for NoRoleInstance {
+    /*
+        function push_to_elems
+        Description:
+        *   pushes an InstanceElem to the elems contained in struct
+        @param self &mut: function is used like : self."function"
+        @param dmid InstanceElem: the elem that needs to be pushed
+        #returns ()
+    */
+    fn push_to_elems(&mut self, elem: InstanceElem) {
+        self.elems.push(elem)
+    }
 }
 impl_quickrw_not_e!(
     [dmtype],               // MANDATORY ATTRIBUTES
     [dmid],                 // OPTIONAL ATTRIBUTES
+    [dmrole],               // potential empty tag
     "INSTANCE",             // TAG, here : <INSTANCE>
-    GlobOrTempInstance,     // Struct on which to impl
-    InstanceContexts,       // Context type
+    NoRoleInstance,         // Struct on which to impl
+    (),                     // Context type
     [primary_keys],         // Ordered elements
     read_instance_sub_elem, // Sub elements reader
     [elems]                 // Empty context writables
@@ -147,6 +137,11 @@ impl Instance {
     impl_non_empty_new!([dmrole, dmtype], [dmid], [primary_keys, elems]);
     impl_builder_opt_string_attr!(dmid);
 }
+impl InstanceType for Instance {
+    fn push2_pk(&mut self, pk: PrimaryKey) {
+        self.primary_keys.push(pk);
+    }
+}
 impl ElemImpl<InstanceElem> for Instance {
   /*
       function push_to_elems
@@ -165,7 +160,7 @@ impl_quickrw_not_e!(
     [dmid],           // OPTIONAL ATTRIBUTES
     "INSTANCE",       // TAG, here : <INSTANCE>
     Instance,         // Struct on which to impl
-    InstanceContexts, // Context type
+    (),               // Context type
     [primary_keys],
     read_instance_sub_elem,
     [elems]
@@ -180,82 +175,67 @@ impl_quickrw_not_e!(
     *   reads the children of Instance
     @generic R: BufRead; a struct that implements the std::io::BufRead trait.
     @generic T: QuickXMLReadWrite + ElemImpl<InstanceElem>; a struct that implements the quickXMLReadWrite and ElemImpl for InstanceElem traits.
-    @param instance &mut T: an instance of T (here either GlobOrTempInstance or Instance)
+    @param instance &mut T: an instance of T (here either NoRoleInstance or Instance)
     @param reader &mut quick_xml::Reader<R>: the reader used to read the elements
     @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
 */
-fn read_instance_sub_elem<R: std::io::BufRead, T: QuickXmlReadWrite + ElemImpl<InstanceElem>>(
+fn read_instance_sub_elem<
+    R: std::io::BufRead,
+    T: QuickXmlReadWrite + ElemImpl<InstanceElem> + InstanceType,
+>(
     instance: &mut T,
-    context: &InstanceContexts,
+    _context: &(),
     mut reader: quick_xml::Reader<R>,
     mut reader_buff: &mut Vec<u8>,
 ) -> Result<quick_xml::Reader<R>, VOTableError> {
-  loop {
-    let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
-    match &mut event {
-      Event::Start(ref e) => {
-        match e.local_name() {
-          AttributePatB::TAG_BYTES => match context {
-            InstanceContexts::A => instance.push_to_elems(InstanceElem::AttributePatA(
-              from_event_start!(AttributePatA, reader, reader_buff, e),
-            )),
-            InstanceContexts::B => instance.push_to_elems(InstanceElem::AttributePatB(
-              from_event_start!(AttributePatB, reader, reader_buff, e),
-            )),
-            InstanceContexts::C => instance.push_to_elems(InstanceElem::AttributePatC(
-              from_event_start!(AttributePatC, reader, reader_buff, e),
-            )),
-            InstanceContexts::Writing => unreachable!(),
-          },
-          Instance::TAG_BYTES => instance.push_to_elems(InstanceElem::Instance(from_event_start!(
-            Instance,
-            reader,
-            reader_buff,
-            e,
-            context
-          ))),
-          Reference::TAG_BYTES => instance.push_to_elems(InstanceElem::Reference(
-            from_event_start!(Reference, reader, reader_buff, e),
-          )),
-          Collection::TAG_BYTES => instance.push_to_elems(InstanceElem::Collection(
-            from_event_start!(Collection, reader, reader_buff, e),
-          )),
-          _ => {
-            return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
-              Collection::TAG,
-            ))
-          }
+    loop {
+        let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+        match &mut event {
+            Event::Start(ref e) => match e.local_name() {
+                AttributePatA::TAG_BYTES => instance.push_to_elems(InstanceElem::AttributePatA(
+                    from_event_start!(AttributePatA, reader, reader_buff, e),
+                )),
+                Instance::TAG_BYTES => {
+                    instance.push_to_elems(InstanceElem::Instance(from_event_start!(
+                        Instance,
+                        reader,
+                        reader_buff,
+                        e
+                    )))
+                }
+                Reference::TAG_BYTES => instance.push_to_elems(InstanceElem::Reference(
+                    from_event_start!(Reference, reader, reader_buff, e),
+                )),
+                Collection::TAG_BYTES => instance.push_to_elems(InstanceElem::Collection(
+                    from_event_start!(Collection, reader, reader_buff, e),
+                )),
+                _ => {
+                    return Err(VOTableError::UnexpectedStartTag(
+                        e.local_name().to_vec(),
+                        Collection::TAG,
+                    ))
+                }
+              },
+            Event::Empty(ref e) => match e.local_name() {
+                AttributePatA::TAG_BYTES => instance.push_to_elems(InstanceElem::AttributePatA(
+                    AttributePatA::from_event_empty(e)?,
+                )),
+                Reference::TAG_BYTES => {
+                    instance.push_to_elems(InstanceElem::Reference(Reference::from_event_empty(e)?))
+                }
+                PrimaryKey::TAG_BYTES => instance.push2_pk(PrimaryKey::from_event_empty(e)?),
+                _ => {
+                    return Err(VOTableError::UnexpectedEmptyTag(
+                        e.local_name().to_vec(),
+                        T::TAG,
+                    ))
+                }
+            },
+            Event::Text(e) if is_empty(e) => {}
+            Event::End(e) if e.local_name() == T::TAG_BYTES => return Ok(reader),
+            Event::Eof => return Err(VOTableError::PrematureEOF(T::TAG)),
+            _ => eprintln!("Discarded event in {}: {:?}", T::TAG, event),
         }
-      }
-      Event::Empty(ref e) => match e.local_name() {
-        AttributePatB::TAG_BYTES => match context {
-          InstanceContexts::A => instance.push_to_elems(InstanceElem::AttributePatA(
-            AttributePatA::from_event_empty(e)?,
-          )),
-          InstanceContexts::B => instance.push_to_elems(InstanceElem::AttributePatB(
-            AttributePatB::from_event_empty(e)?,
-          )),
-          InstanceContexts::C => instance.push_to_elems(InstanceElem::AttributePatC(
-            AttributePatC::from_event_empty(e)?,
-          )),
-          InstanceContexts::Writing => unreachable!(),
-        },
-        Reference::TAG_BYTES => {
-          instance.push_to_elems(InstanceElem::Reference(Reference::from_event_empty(e)?))
-        }
-        _ => {
-          return Err(VOTableError::UnexpectedEmptyTag(
-            e.local_name().to_vec(),
-            T::TAG,
-          ))
-        }
-      },
-      Event::Text(e) if is_empty(e) => {}
-      Event::End(e) if e.local_name() == T::TAG_BYTES => return Ok(reader),
-      Event::Eof => return Err(VOTableError::PrematureEOF(T::TAG)),
-      _ => eprintln!("Discarded event in {}: {:?}", T::TAG, event),
     }
   }
-}

@@ -13,4 +13,4 @@ pub struct Where {
 impl Where {
   impl_empty_new!([primary_key, foreign_key], []);
 }
-impl_quickrw_e!([primary_key, foreign_key], [], "WHERE", Where, ());
+impl_quickrw_e!([primary_key, "primarykey", foreign_key, "foreignkey"], [], "WHERE", Where, ());

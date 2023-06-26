@@ -4,19 +4,16 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 use std::str;
 
-use super::{
-  instance::{GlobOrTempInstance, InstanceContexts},
-  r#where::Where,
-};
+use super::{instance::NoRoleInstance, r#where::Where};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Templates {
-  #[serde(skip_serializing_if = "Option::is_none")]
-  tableref: Option<String>,
-  #[serde(skip_serializing_if = "Vec::is_empty")]
-  wheres: Vec<Where>,
-  #[serde(skip_serializing_if = "Vec::is_empty")]
-  instances: Vec<GlobOrTempInstance>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tableref: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    wheres: Vec<Where>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    instances: Vec<NoRoleInstance>,
 }
 impl Templates {
   fn new() -> Self {
@@ -64,7 +61,7 @@ impl QuickXmlReadWrite for Templates {
             .write_event(Event::Start(tag.to_borrowed()))
             .map_err(VOTableError::Write)?;
         write_elem_vec_empty_context!(self, wheres, writer);
-        let ctx = &InstanceContexts::Writing;
+        let ctx = &();
         write_elem_vec!(self, instances, writer, ctx);
         writer
             .write_event(Event::End(tag.to_end()))
@@ -96,12 +93,11 @@ fn read_template_sub_elem<R: std::io::BufRead>(
         let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
         match &mut event {
             Event::Start(ref e) => match e.local_name() {
-                GlobOrTempInstance::TAG_BYTES => template.instances.push(from_event_start!(
-                    GlobOrTempInstance,
+                NoRoleInstance::TAG_BYTES => template.instances.push(from_event_start!(
+                    NoRoleInstance,
                     reader,
                     reader_buff,
-                    e,
-                    InstanceContexts::A
+                    e
                 )),
                 _ => {
                     return Err(VOTableError::UnexpectedStartTag(

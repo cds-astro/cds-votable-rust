@@ -120,7 +120,7 @@ macro_rules! impl_non_empty_new {
 /// }
 /// ```
 macro_rules! impl_builder_from_attr {
-    ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*]) => {
+    ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*] $(,[$($empty:ident $(, $empname:literal)?),*],)?) => {
         paste! {
           fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
             const NULL: &str = "@TBD";
@@ -137,6 +137,7 @@ macro_rules! impl_builder_from_attr {
                   $(opt_bstringify!($optional $(, [<$name>])?) => {
                     tag.[<set_ $optional>](value)
                   }),*
+                  $($(opt_bstringify!($empty $(, [<$empname>])?) => {tag}),*)?
                     _ => {
                         return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
                     }
@@ -294,11 +295,11 @@ macro_rules! empty_read_sub {
 }
 
 macro_rules! impl_quickrw_e {
-    ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*], $tag:literal, $struct:ident, $context:tt) => {
+    ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*], $([$($empty:ident $(, $empname:literal)?),*],)? $tag:literal, $struct:ident, $context:tt) => {
         paste! {
           impl QuickXmlReadWrite for $struct {
             // The TAG name here: e.g "ATTRIBUTE"
-            const TAG: &'static str = stringify!([<$tag>]);
+            const TAG: &'static str = $tag;
             // Potential context e.g : ()
             type Context = $context;
 
@@ -309,7 +310,7 @@ macro_rules! impl_quickrw_e {
                 @param attrs quick_xml::events::attributes::Attributes: attributes from the quick_xml reader
                 #returns Result<Self, VOTableError>: returns an instance of AttributePatA built using attributes or an error if reading doesn't work
             */
-            impl_builder_from_attr!([$($mandatory $(, $mandname)?),*], [$($optional $(, $name)?),*]);
+            impl_builder_from_attr!([$($mandatory $(, $mandname)?),*], [$($optional $(, $name)?),*] $(,[$($empty $(, $empname)?),*],)?);
 
             empty_read_sub!();
 
@@ -373,7 +374,7 @@ macro_rules! impl_quickrw_not_e_no_a {
 }
 
 macro_rules! impl_quickrw_not_e {
-  ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*], $tag:literal, $struct:ident, $context:tt, [$($orderelem:ident),*], $readfn:ident $(,[$($elems:ident),*])?) => {
+  ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*], $([$($empty:ident $(, $empname:literal)?),*],)? $tag:literal, $struct:ident, $context:tt, [$($orderelem:ident),*], $readfn:ident $(,[$($elems:ident),*])?) => {
     paste! {
       impl QuickXmlReadWrite for $struct {
         // The TAG name here: e.g "ATTRIBUTE"
@@ -388,7 +389,7 @@ macro_rules! impl_quickrw_not_e {
             @param attrs quick_xml::events::attributes::Attributes: attributes from the quick_xml reader
             #returns Result<Self, VOTableError>: returns an instance of Self built using attributes or an error if reading doesn't work
         */
-        impl_builder_from_attr!([$($mandatory $(, $mandname)?),*], [$($optional $(, $name)?),*]);
+        impl_builder_from_attr!([$($mandatory $(, $mandname)?),*], [$($optional $(, $name)?),*] $(,[$($empty $(, $empname)?),*],)?);
 
         non_empty_read_sub!($readfn);
 

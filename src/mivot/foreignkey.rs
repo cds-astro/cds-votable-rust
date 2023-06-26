@@ -14,9 +14,9 @@ impl ForeignKey {
 }
 
 impl_quickrw_e!(
-    [ref_, "ref"], // MANDATORY ATTRIBUTES
-    [],            // OPTIONAL ATTRIBUTES
-    "FOREIGN_KEY", // TAG, here : <ATTRIBUTE>
-    ForeignKey,    // Struct on which to impl
-    ()             // Context type
+    [ref_, "ref"],   // MANDATORY ATTRIBUTES
+    [],              // OPTIONAL ATTRIBUTES
+    "FOREIGN\\_KEY", // TAG, here : <FOREIGN\_KEY>
+    ForeignKey,      // Struct on which to impl
+    ()               // Context type
 );
