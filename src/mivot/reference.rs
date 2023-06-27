@@ -8,6 +8,13 @@ use quick_xml::{
 };
 use std::str;
 
+/*
+    struct Reference
+    @elem dmrole String: role of the referenced INSTANCE or COLLECTION in the DM => MAND
+    @elem dmref Option<String>: @dmid of the referenced INSTANCE or COLLECTION => NO or MAND mutually exclusive with sourceref
+    @elem sourceref Option<String>: @dmid of the COLLECTION or TEMPLATES to be searched in dynamic reference case => NO or MAND mutually exclusive with dmref
+    @elem foreign_keys: Foreign key to be used to resolve a dynamic reference => MAND
+*/
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Reference {
     dmrole: String,
@@ -69,8 +76,7 @@ impl QuickXmlReadWrite for Reference {
     Description:
     *   reads the children of Reference
     @generic R: BufRead; a struct that implements the std::io::BufRead trait.
-    @generic T: QuickXMLReadWrite + ElemImpl<InstanceElem>; a struct that implements the quickXMLReadWrite and ElemImpl for InstanceElem traits.
-    @param instance &mut T: an instance of T (here either GlobOrTempInstance or Reference)
+    @param instance &mut Reference: an instance of Reference
     @param reader &mut quick_xml::Reader<R>: the reader used to read the elements
     @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work

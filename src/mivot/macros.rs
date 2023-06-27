@@ -51,6 +51,24 @@ macro_rules! impl_empty_new {
 }
 
 macro_rules! impl_non_empty_new {
+  ([], [$($optional:ident),*], [$($vec:ident),*]) => {
+    paste! {
+      /*
+        function New
+        Description:
+        *   creates a new instance of the struct
+        #returns Self: returns an instance of the struct
+      */
+      fn new() -> Self {
+        Self {
+            // OPTIONAL
+            $($optional: None,)*
+            // ELEMS
+            $($vec: vec![]),*
+        }
+      }
+    }
+  };
   ([$($mandatory:ident),*], [$($optional:ident),*], [$($vec:ident),*]) => {
     paste! {
       /*
@@ -120,42 +138,64 @@ macro_rules! impl_non_empty_new {
 /// }
 /// ```
 macro_rules! impl_builder_from_attr {
-    ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*] $(,[$($empty:ident $(, $empname:literal)?),*],)?) => {
-        paste! {
-          fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-            const NULL: &str = "@TBD";
-            let mut tag = Self::new();
-            for attr_res in attrs {
-                let attr = attr_res.map_err(VOTableError::Attr)?;
-                let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-                let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-                tag = match attr.key {
-                  $(opt_bstringify!($mandatory $(, [<$mandname>])?) => {
-                    tag.$mandatory = value.to_string();
-                    tag
-                  }),*
-                  $(opt_bstringify!($optional $(, [<$name>])?) => {
-                    tag.[<set_ $optional>](value)
-                  }),*
-                  $($(opt_bstringify!($empty $(, [<$empname>])?) => {tag}),*)?
-                    _ => {
-                        return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
-                    }
+  ([], [$($optional:ident $(, $name:literal)?),*] $(,[$($empty:ident $(, $empname:literal)?),*],)?) => {
+    paste! {
+      fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
+        let mut tag = Self::new();
+        for attr_res in attrs {
+            let attr = attr_res.map_err(VOTableError::Attr)?;
+            let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
+            let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
+            tag = match attr.key {
+              $(opt_bstringify!($optional $(, [<$name>])?) => {
+                tag.[<set_ $optional>](value)
+              }),*
+              $($(opt_bstringify!($empty $(, [<$empname>])?) => {tag}),*)?
+                _ => {
+                    return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
                 }
             }
-            if $(tag.$mandatory.as_str() == NULL)||* {
-                Err(VOTableError::Custom(
-                  format!("Attributes {} are mandatory in tag {}",
-                    concat!($(
-                      concat!("'",stringify!($mandatory),"' ")
-                    ),*),
-                  Self::TAG)))
-            } else {
-                Ok(tag)
-            }
+        }
+        Ok(tag)
+      }
+    }
+  };
+  ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*] $(,[$($empty:ident $(, $empname:literal)?),*],)?) => {
+      paste! {
+        fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
+          const NULL: &str = "@TBD";
+          let mut tag = Self::new();
+          for attr_res in attrs {
+              let attr = attr_res.map_err(VOTableError::Attr)?;
+              let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
+              let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
+              tag = match attr.key {
+                $(opt_bstringify!($mandatory $(, [<$mandname>])?) => {
+                  tag.$mandatory = value.to_string();
+                  tag
+                }),*
+                $(opt_bstringify!($optional $(, [<$name>])?) => {
+                  tag.[<set_ $optional>](value)
+                }),*
+                $($(opt_bstringify!($empty $(, [<$empname>])?) => {tag}),*)?
+                  _ => {
+                      return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
+                  }
+              }
+          }
+          if $(tag.$mandatory.as_str() == NULL)||* {
+              Err(VOTableError::Custom(
+                format!("Attributes {} are mandatory in tag {}",
+                  concat!($(
+                    concat!("'",stringify!($mandatory),"' ")
+                  ),*),
+                Self::TAG)))
+          } else {
+              Ok(tag)
           }
         }
-    };
+      }
+  };
 }
 
 ///  E.g. `` leads to
@@ -230,36 +270,36 @@ macro_rules! impl_write_not_e {
 }
 
 macro_rules! non_empty_read_sub {
-    ($readfn:ident) => {
-        paste! {
-          /*
-              function read_sub_elements
-              Description:
-              *   see function read_sub_elem from caller
-            */
-            fn read_sub_elements<R: std::io::BufRead>(
-              &mut self,
-              reader: Reader<R>,
-              reader_buff: &mut Vec<u8>,
-              context: &Self::Context,
-          ) -> Result<Reader<R>, crate::error::VOTableError> {
-              $readfn(self, context, reader, reader_buff)
-          }
+  ($readfn:ident) => {
+    paste! {
+      /*
+          function read_sub_elements
+          Description:
+          *   see function read_sub_elem from caller
+        */
+        fn read_sub_elements<R: std::io::BufRead>(
+          &mut self,
+          reader: Reader<R>,
+          reader_buff: &mut Vec<u8>,
+          context: &Self::Context,
+      ) -> Result<Reader<R>, crate::error::VOTableError> {
+          $readfn(self, context, reader, reader_buff)
+      }
 
-          /*
-              function read_sub_elements_by_ref
-              todo UNIMPLEMENTED
-          */
-          fn read_sub_elements_by_ref<R: std::io::BufRead>(
-              &mut self,
-              __reader: &mut Reader<R>,
-              __reader_buff: &mut Vec<u8>,
-              __context: &Self::Context,
-          ) -> Result<(), crate::error::VOTableError> {
-              todo!()
-          }
-        }
-    };
+      /*
+          function read_sub_elements_by_ref
+          todo UNIMPLEMENTED
+      */
+      fn read_sub_elements_by_ref<R: std::io::BufRead>(
+          &mut self,
+          __reader: &mut Reader<R>,
+          __reader_buff: &mut Vec<u8>,
+          __context: &Self::Context,
+      ) -> Result<(), crate::error::VOTableError> {
+          todo!()
+      }
+    }
+  };
 }
 
 macro_rules! empty_read_sub {

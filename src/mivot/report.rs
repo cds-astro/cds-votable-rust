@@ -5,6 +5,11 @@ use quick_xml::{
 };
 use std::str;
 
+/*
+    enum Status
+    Description
+    *    Enum of the status that can be applied to the <REPORT>.
+*/
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Status {
   OK,
@@ -30,6 +35,11 @@ impl ToString for Status {
   }
 }
 
+/*
+    struct Report
+    @elem status Status: Status of the annotation process; must be either OK or FAILED, NULL is an error => MAND
+    @elem content Option<String>: Other annotations => OPT
+*/
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Report {
   pub status: Status,

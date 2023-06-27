@@ -8,21 +8,29 @@ use std::str;
 
 use super::r#where::Where;
 
+/*
+    struct Join => pattern A & B (cannot be determined from context)
+    @elem dmref Option<String>: Modeled node related => OPT
+    @elem sourceref Option<String>: Reference of the TEMPLATES or COLLECTION to be joined with. => OPT
+    @elem wheres: Join conditions
+*/
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Join {
-  #[serde(skip_serializing_if = "Option::is_none")]
-  sourceref: Option<String>,
-  dmref: String,
-  #[serde(skip_serializing_if = "Vec::is_empty")]
-  wheres: Vec<Where>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dmref: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sourceref: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    wheres: Vec<Where>,
 }
 impl Join {
-    impl_non_empty_new!([dmref], [sourceref], [wheres]);
+    impl_non_empty_new!([], [sourceref, dmref], [wheres]);
     impl_builder_opt_string_attr!(sourceref);
+    impl_builder_opt_string_attr!(dmref);
 }
 impl_quickrw_not_e!(
-    [dmref],            // MANDATORY ATTRIBUTES
-    [sourceref],        // OPTIONAL ATTRIBUTES
+    [],                 // MANDATORY ATTRIBUTES
+    [sourceref, dmref], // OPTIONAL ATTRIBUTES
     "JOIN",             // TAG, here : <INSTANCE>
     Join,               // Struct on which to impl
     (),                 // Context type
@@ -34,6 +42,16 @@ impl_quickrw_not_e!(
 ///////////////////////
 // UTILITY FUNCTIONS //
 
+/*
+    function read_join_sub_elem
+    Description:
+    *   reads the children of Join
+    @generic R: BufRead; a struct that implements the std::io::BufRead trait.
+    @param instance &mut Join: an instance of Join
+    @param reader &mut quick_xml::Reader<R>: the reader used to read the elements
+    @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
+    #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
+*/
 fn read_join_sub_elem<R: std::io::BufRead>(
     join: &mut Join,
     _context: &(),

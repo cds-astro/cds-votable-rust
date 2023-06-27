@@ -8,7 +8,7 @@ use std::str;
     struct Attribute => pattern b generic attribute
     @elem dmrole String: Modeled node related => MAND
     @elem dmtype String: Modeled node related => MAND
-    @elem value Option<String>: attribute default value => MAND
+    @elem value String: attribute default value => MAND
     @elem array_index Option<String>: attribute size of array, only present if the attribute is an array (example: String = char array) => OPT
     @elem unit Option<String>: the unit used for the value (example: km/s) => OPT
 */

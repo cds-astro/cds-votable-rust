@@ -10,6 +10,11 @@ use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
 use super::{collection::Collection, instance::NoRoleInstance, ElemImpl, ElemType};
 use std::{io::Write, str};
 
+/*
+    enum GlobalsElem
+    Description
+    *    Enum of the elements that can be children of the mivot <GLOBALS> tag in any order.
+*/
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum GlobalsElem {
@@ -25,6 +30,10 @@ impl ElemType for GlobalsElem {
     }
 }
 
+/*
+    struct Globals
+    @elem elems: different elems defined in enum InstanceElem that can appear in any order
+*/
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct Globals {
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -40,6 +49,17 @@ impl_quickrw_not_e_no_a!("GLOBALS", Globals, (), [], read_globals_sub_elem, [ele
 ///////////////////////
 // UTILITY FUNCTIONS //
 
+/*
+    function read_globals_sub_elem
+    Description:
+    *   reads the children of Globals
+    @generic R: BufRead; a struct that implements the std::io::BufRead trait.
+    @generic T: QuickXMLReadWrite + ElemImpl<GlobalsElem>; a struct that implements the quickXMLReadWrite and ElemImpl for GlobalsElem traits.
+    @param instance &mut T: an instance of T (here Globals)
+    @param reader &mut quick_xml::Reader<R>: the reader used to read the elements
+    @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
+    #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
+*/
 fn read_globals_sub_elem<R: std::io::BufRead, T: QuickXmlReadWrite + ElemImpl<GlobalsElem>>(
     globals: &mut T,
     _context: &(),

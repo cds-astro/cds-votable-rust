@@ -4,6 +4,10 @@ use paste::paste;
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 use std::str;
 
+/*
+    struct ForeignKey
+    @elem ref_ String: Identifier of the FIELD that must match the primary key of the referenced collection => MAND
+*/
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ForeignKey {
   #[serde(rename = "ref")]

@@ -23,20 +23,7 @@ Meas
 https://ivoa.net/documents/Meas/20211019/index.html
 */
 
-// pos {
-//   id: String (ex: pos.eq.main)
-//   sys: Option<eq>,
-//   ra:  FIELDRef
-//   dec: FIELDRef
-// }
-
-// pos.err {
-//   pos: Option<MODELRef>
-//   type:
-//   params (depends on type)
-// }
-// Get system associated to error: error.pos.sys
-
+use super::{globals::Globals, model::Model, report::Report, templates::Templates};
 use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
 use paste::paste;
 use quick_xml::events::{BytesStart, Event};
@@ -45,44 +32,52 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::str;
 
-use super::{globals::Globals, model::Model, report::Report, templates::Templates};
-
+/*
+    struct Vodml
+    @elem report: Tells the client whether the annotation process succeeded or not.
+    @elem models: Declares which models are represented in the file.
+    @elem globals: Holds model instances or collections of model instances that are not connected with any table column.
+    @elem templates: Defines a template for deriving multiple data model instances, one for each row of the associated VOTable TABLE.
+    @elem extra: extra attributes that may be present while reading like "xlmns".
+*/
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct Vodml {
-  #[serde(skip_serializing_if = "Option::is_none")]
-  report: Option<Report>,
-  #[serde(skip_serializing_if = "Vec::is_empty")]
-  models: Vec<Model>,
-  #[serde(skip_serializing_if = "Vec::is_empty")]
-  globals: Vec<Globals>,
-  #[serde(skip_serializing_if = "Vec::is_empty")]
-  templates: Vec<Templates>,
-  // extra attributes
-  #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-  pub extra: HashMap<String, Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    report: Option<Report>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    models: Vec<Model>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    globals: Vec<Globals>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    templates: Vec<Templates>,
+    // extra attributes
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+    pub extra: HashMap<String, Value>,
 }
 impl Vodml {
-  impl_builder_opt_attr!(report, Report);
-  impl_builder_insert_extra!();
+    impl_builder_opt_attr!(report, Report);
+    impl_builder_insert_extra!();
 }
 impl QuickXmlReadWrite for Vodml {
-  const TAG: &'static str = "VODML";
-  type Context = ();
+    const TAG: &'static str = "VODML";
+    type Context = ();
 
-  fn from_attributes(
-    attrs: quick_xml::events::attributes::Attributes,
-  ) -> Result<Self, crate::error::VOTableError> {
-    let mut vodml = Self::default();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      vodml = match attr.key {
-        _ => vodml.insert_extra(
-          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
-          Value::String(value.into()),
-        ),
-      }
+    fn from_attributes(
+        attrs: quick_xml::events::attributes::Attributes,
+    ) -> Result<Self, crate::error::VOTableError> {
+        let mut vodml = Self::default();
+        for attr_res in attrs {
+            let attr = attr_res.map_err(VOTableError::Attr)?;
+            let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
+            let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
+            vodml = match attr.key {
+                _ => vodml.insert_extra(
+                    str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
+                    Value::String(value.into()),
+                ),
+            }
+        }
+        Ok(vodml)
     }
 
     non_empty_read_sub!(read_vodml_sub_elem);
@@ -105,34 +100,6 @@ impl QuickXmlReadWrite for Vodml {
             .write_event(Event::End(tag.to_end()))
             .map_err(VOTableError::Write)
     }
-  }
-
-  fn read_sub_elements_by_ref<R: std::io::BufRead>(
-    &mut self,
-    _reader: &mut quick_xml::Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), crate::error::VOTableError> {
-    todo!()
-  }
-
-  fn write<W: std::io::Write>(
-    &mut self,
-    writer: &mut quick_xml::Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), crate::error::VOTableError> {
-    let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-    writer
-      .write_event(Event::Start(tag.to_borrowed()))
-      .map_err(VOTableError::Write)?;
-    write_elem_vec_empty_context!(self, report, writer);
-    write_elem_vec_empty_context!(self, models, writer);
-    write_elem_vec_empty_context!(self, globals, writer);
-    write_elem_vec_empty_context!(self, templates, writer);
-    writer
-      .write_event(Event::End(tag.to_end()))
-      .map_err(VOTableError::Write)
-  }
 }
 
 ///////////////////////
@@ -143,8 +110,7 @@ impl QuickXmlReadWrite for Vodml {
     Description:
     *   reads the children of Vodml
     @generic R: BufRead; a struct that implements the std::io::BufRead trait.
-    @generic T: QuickXMLReadWrite + ElemImpl<InstanceElem>; a struct that implements the quickXMLReadWrite and ElemImpl for InstanceElem traits.
-    @param vodml &mut T: an instance of T (here either GlobOrTempInstance or Vodml)
+    @param vodml &mut Vodml: an instance of Vodml
     @param reader &mut quick_xml::Reader<R>: the reader used to read the elements
     @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
@@ -201,10 +167,9 @@ fn read_vodml_sub_elem<R: std::io::BufRead>(
 
 #[cfg(test)]
 mod tests {
-    use std::str::from_utf8;
-
+    //use std::str::from_utf8;
     use crate::{
-        mivot::{vodml::Vodml},
+        mivot::vodml::Vodml,
         tests::{test_read, test_writer},
     };
 

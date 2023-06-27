@@ -16,7 +16,7 @@ use super::{
 };
 
 /*
-    enum Collection Elem
+    enum CollectionElem
     Description
     *    Enum of the elements that can be children of the mivot <COLLECTION> tag in any order.
 */
@@ -82,6 +82,18 @@ impl_quickrw_not_e!(
 
 ///////////////////////
 // UTILITY FUNCTIONS //
+
+/*
+    function read_collection_sub_elem
+    Description:
+    *   reads the children of Collection
+    @generic R: BufRead; a struct that implements the std::io::BufRead trait.
+    @generic T: QuickXMLReadWrite + ElemImpl<CollectionElem>; a struct that implements the quickXMLReadWrite and ElemImpl for CollectionElem traits.
+    @param instance &mut T: an instance of T (here CollectionPatA, CollectionPatB or CollectionPatC)
+    @param reader &mut quick_xml::Reader<R>: the reader used to read the elements
+    @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
+    #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
+*/
 
 fn read_collection_sub_elem<
   R: std::io::BufRead,

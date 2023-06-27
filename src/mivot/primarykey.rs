@@ -4,6 +4,11 @@ use paste::paste;
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 use std::str;
 
+/*
+    struct PrimaryKey
+    @elem value String: attribute default value => MAND
+    @elem dmtype String: Modeled node related => MAND
+*/
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct PrimaryKey {
   dmtype: String,

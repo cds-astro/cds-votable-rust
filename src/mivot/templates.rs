@@ -1,11 +1,19 @@
 use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
+use bstringify::bstringify;
 use paste::paste;
+use quick_xml::events::attributes::Attributes;
 use quick_xml::events::{BytesStart, Event};
-use quick_xml::Reader;
+use quick_xml::{Reader, Writer};
 use std::str;
 
 use super::{instance::NoRoleInstance, r#where::Where};
 
+/*
+    struct Templates
+    @elem tableref Option<String>:  => OPT
+    @elem wheres:
+    @elem instances:
+*/
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Templates {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -25,49 +33,16 @@ impl Templates {
   }
   impl_builder_opt_string_attr!(tableref);
 }
-impl QuickXmlReadWrite for Templates {
-  const TAG: &'static str = "TEMPLATES";
-  type Context = ();
-
-  fn from_attributes(
-    attrs: quick_xml::events::attributes::Attributes,
-  ) -> Result<Self, crate::error::VOTableError> {
-    let mut templates = Self::new();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      templates = match attr.key {
-        b"tableref" => templates.set_tableref(value),
-        _ => {
-          return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
-        }
-      }
-    }
-    Ok(templates)
-  }
-
-    non_empty_read_sub!(read_template_sub_elem);
-
-    fn write<W: std::io::Write>(
-        &mut self,
-        writer: &mut quick_xml::Writer<W>,
-        _context: &Self::Context,
-    ) -> Result<(), crate::error::VOTableError> {
-        let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-        //OPTIONAL
-        push2write_opt_string_attr!(self, tag, tableref);
-        writer
-            .write_event(Event::Start(tag.to_borrowed()))
-            .map_err(VOTableError::Write)?;
-        write_elem_vec_empty_context!(self, wheres, writer);
-        let ctx = &();
-        write_elem_vec!(self, instances, writer, ctx);
-        writer
-            .write_event(Event::End(tag.to_end()))
-            .map_err(VOTableError::Write)
-    }
-}
+impl_quickrw_not_e!(
+    [],                     // MANDATORY ATTRIBUTES
+    [tableref],             // OPTIONAL ATTRIBUTES
+    "TEMPLATES",            // TAG, here : <INSTANCE>
+    Templates,              // Struct on which to impl
+    (),                     // Context type
+    [wheres, instances],    // Ordered elements
+    read_template_sub_elem, // Sub elements reader
+    []                      // Empty context writables
+);
 
 ///////////////////////
 // UTILITY FUNCTIONS //
@@ -77,8 +52,7 @@ impl QuickXmlReadWrite for Templates {
     Description:
     *   reads the children of Templates
     @generic R: BufRead; a struct that implements the std::io::BufRead trait.
-    @generic T: QuickXMLReadWrite + ElemImpl<InstanceElem>; a struct that implements the quickXMLReadWrite and ElemImpl for InstanceElem traits.
-    @param instance &mut T: an instance of T (here either GlobOrTempInstance or Templates)
+    @param instance &mut Templates: an instance of Templates
     @param reader &mut quick_xml::Reader<R>: the reader used to read the elements
     @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work

@@ -5,6 +5,11 @@ use quick_xml::events::attributes::Attributes;
 use quick_xml::{Reader, Writer};
 use std::str;
 
+/*
+    struct Model
+    @elem name String: Name of the mapped model as declared in the VO-DML/XML model serialization. => MAND
+    @elem url Option<String>: URL to the VO-DML/XML serialization of the model. If present, this attribute MUST not be empty. => OPT
+*/
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Model {
   name: String,
