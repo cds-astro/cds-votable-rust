@@ -10,10 +10,8 @@ use quick_xml::{
 use std::{io::Write, str};
 
 use super::instance::NoRoleInstance;
-use super::{
-    attribute_c::AttributePatC, join::Join, primarykey::PrimaryKey, reference::Reference, ElemImpl,
-    ElemType,
-};
+use super::reference::{DynRef, StaticRef};
+use super::{attribute_c::AttributePatC, join::Join, primarykey::PrimaryKey, ElemImpl, ElemType};
 
 /*
     enum CollectionElem
@@ -25,7 +23,8 @@ use super::{
 pub enum CollectionElem {
     Attribute(AttributePatC),
     Instance(NoRoleInstance),
-    Reference(Reference),
+    StaticRef(StaticRef),
+    DynRef(DynRef),
     Collection(CollectionPatC),
     Join(Join),
 }
@@ -34,7 +33,8 @@ impl ElemType for CollectionElem {
         match self {
             CollectionElem::Attribute(elem) => elem.write(writer, &()),
             CollectionElem::Instance(elem) => elem.write(writer, &()),
-            CollectionElem::Reference(elem) => elem.write(writer, &()),
+            CollectionElem::StaticRef(elem) => elem.write(writer, &()),
+            CollectionElem::DynRef(elem) => elem.write(writer, &()),
             CollectionElem::Collection(elem) => elem.write(writer, &()),
             CollectionElem::Join(elem) => elem.write(writer, &()),
         }
@@ -199,9 +199,26 @@ fn read_collection_sub_elem<
                 NoRoleInstance::TAG_BYTES => collection.push_to_elems(CollectionElem::Instance(
                     from_event_start!(NoRoleInstance, reader, reader_buff, e),
                 )),
-                Reference::TAG_BYTES => collection.push_to_elems(CollectionElem::Reference(
-                    from_event_start!(Reference, reader, reader_buff, e),
-                )),
+                DynRef::TAG_BYTES => {
+                    if e.attributes()
+                        .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
+                        .is_some()
+                    {
+                        collection.push_to_elems(CollectionElem::DynRef(from_event_start!(
+                            DynRef,
+                            reader,
+                            reader_buff,
+                            e
+                        )))
+                    } else {
+                        collection.push_to_elems(CollectionElem::StaticRef(from_event_start!(
+                            StaticRef,
+                            reader,
+                            reader_buff,
+                            e
+                        )))
+                    }
+                }
                 CollectionPatA::TAG_BYTES => collection.push_to_elems(CollectionElem::Collection(
                     from_event_start!(CollectionPatC, reader, reader_buff, e),
                 )),
@@ -219,8 +236,19 @@ fn read_collection_sub_elem<
                 AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
                     AttributePatC::from_event_empty(e)?,
                 )),
-                Reference::TAG_BYTES => collection
-                    .push_to_elems(CollectionElem::Reference(Reference::from_event_empty(e)?)),
+                DynRef::TAG_BYTES => {
+                    if e.attributes()
+                        .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
+                        .is_some()
+                    {
+                        collection
+                            .push_to_elems(CollectionElem::DynRef(DynRef::from_event_empty(e)?))
+                    } else {
+                        collection.push_to_elems(CollectionElem::StaticRef(
+                            StaticRef::from_event_empty(e)?,
+                        ))
+                    }
+                }
                 _ => {
                     return Err(VOTableError::UnexpectedEmptyTag(
                         e.local_name().to_vec(),

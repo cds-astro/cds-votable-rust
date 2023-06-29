@@ -8,10 +8,11 @@ use quick_xml::{
 };
 use std::{io::Write, str};
 
+use super::reference::{DynRef, StaticRef};
 use super::InstanceType;
 use super::{
-    attribute_a::AttributePatA, collection::CollectionPatA, primarykey::PrimaryKey,
-    reference::Reference, ElemImpl, ElemType,
+    attribute_a::AttributePatA, collection::CollectionPatA, primarykey::PrimaryKey, ElemImpl,
+    ElemType,
 };
 use quick_xml::events::attributes::Attributes;
 
@@ -25,7 +26,8 @@ use quick_xml::events::attributes::Attributes;
 pub enum InstanceElem {
     AttributePatA(AttributePatA),
     Instance(Instance),
-    Reference(Reference),
+    StaticRef(StaticRef),
+    DynRef(DynRef),
     Collection(CollectionPatA),
 }
 impl ElemType for InstanceElem {
@@ -42,7 +44,8 @@ impl ElemType for InstanceElem {
         match self {
             InstanceElem::AttributePatA(elem) => elem.write(writer, &()),
             InstanceElem::Instance(elem) => elem.write(writer, &()),
-            InstanceElem::Reference(elem) => elem.write(writer, &()),
+            InstanceElem::StaticRef(elem) => elem.write(writer, &()),
+            InstanceElem::DynRef(elem) => elem.write(writer, &()),
             InstanceElem::Collection(elem) => elem.write(writer, &()),
         }
     }
@@ -199,9 +202,26 @@ fn read_instance_sub_elem<
                 Instance::TAG_BYTES => instance.push_to_elems(InstanceElem::Instance(
                     from_event_start!(Instance, reader, reader_buff, e),
                 )),
-                Reference::TAG_BYTES => instance.push_to_elems(InstanceElem::Reference(
-                    from_event_start!(Reference, reader, reader_buff, e),
-                )),
+                DynRef::TAG_BYTES => {
+                    if e.attributes()
+                        .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
+                        .is_some()
+                    {
+                        instance.push_to_elems(InstanceElem::DynRef(from_event_start!(
+                            DynRef,
+                            reader,
+                            reader_buff,
+                            e
+                        )))
+                    } else {
+                        instance.push_to_elems(InstanceElem::StaticRef(from_event_start!(
+                            StaticRef,
+                            reader,
+                            reader_buff,
+                            e
+                        )))
+                    }
+                }
                 CollectionPatA::TAG_BYTES => instance.push_to_elems(InstanceElem::Collection(
                     from_event_start!(CollectionPatA, reader, reader_buff, e),
                 )),
@@ -216,8 +236,16 @@ fn read_instance_sub_elem<
                 AttributePatA::TAG_BYTES => instance.push_to_elems(InstanceElem::AttributePatA(
                     AttributePatA::from_event_empty(e)?,
                 )),
-                Reference::TAG_BYTES => {
-                    instance.push_to_elems(InstanceElem::Reference(Reference::from_event_empty(e)?))
+                DynRef::TAG_BYTES => {
+                    if e.attributes()
+                        .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
+                        .is_some()
+                    {
+                        instance.push_to_elems(InstanceElem::DynRef(DynRef::from_event_empty(e)?))
+                    } else {
+                        instance
+                            .push_to_elems(InstanceElem::StaticRef(StaticRef::from_event_empty(e)?))
+                    }
                 }
                 PrimaryKey::TAG_BYTES => instance.push2_pk(PrimaryKey::from_event_empty(e)?),
                 _ => {
