@@ -7,7 +7,7 @@ use quick_xml::{
 
 use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
 
-use super::{collection::Collection, instance::NoRoleInstance, ElemImpl, ElemType};
+use super::{collection::CollectionPatB, instance::NoRoleInstance, ElemImpl, ElemType};
 use std::{io::Write, str};
 
 /*
@@ -19,7 +19,7 @@ use std::{io::Write, str};
 #[serde(tag = "elem_type")]
 pub enum GlobalsElem {
     Instance(NoRoleInstance),
-    Collection(Collection),
+    Collection(CollectionPatB),
 }
 impl ElemType for GlobalsElem {
     fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
@@ -73,8 +73,8 @@ fn read_globals_sub_elem<R: std::io::BufRead, T: QuickXmlReadWrite + ElemImpl<Gl
                 NoRoleInstance::TAG_BYTES => globals.push_to_elems(GlobalsElem::Instance(
                     from_event_start!(NoRoleInstance, reader, reader_buff, e),
                 )),
-                Collection::TAG_BYTES => globals.push_to_elems(GlobalsElem::Collection(
-                    from_event_start!(Collection, reader, reader_buff, e),
+                CollectionPatB::TAG_BYTES => globals.push_to_elems(GlobalsElem::Collection(
+                    from_event_start!(CollectionPatB, reader, reader_buff, e),
                 )),
                 _ => {
                     return Err(VOTableError::UnexpectedStartTag(

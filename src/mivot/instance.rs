@@ -10,7 +10,7 @@ use std::{io::Write, str};
 
 use super::InstanceType;
 use super::{
-    attribute_a::AttributePatA, collection::Collection, primarykey::PrimaryKey,
+    attribute_a::AttributePatA, collection::CollectionPatA, primarykey::PrimaryKey,
     reference::Reference, ElemImpl, ElemType,
 };
 use quick_xml::events::attributes::Attributes;
@@ -26,7 +26,7 @@ pub enum InstanceElem {
     AttributePatA(AttributePatA),
     Instance(Instance),
     Reference(Reference),
-    Collection(Collection),
+    Collection(CollectionPatA),
 }
 impl ElemType for InstanceElem {
     /*
@@ -196,24 +196,19 @@ fn read_instance_sub_elem<
                 AttributePatA::TAG_BYTES => instance.push_to_elems(InstanceElem::AttributePatA(
                     from_event_start!(AttributePatA, reader, reader_buff, e),
                 )),
-                Instance::TAG_BYTES => {
-                    instance.push_to_elems(InstanceElem::Instance(from_event_start!(
-                        Instance,
-                        reader,
-                        reader_buff,
-                        e
-                    )))
-                }
+                Instance::TAG_BYTES => instance.push_to_elems(InstanceElem::Instance(
+                    from_event_start!(Instance, reader, reader_buff, e),
+                )),
                 Reference::TAG_BYTES => instance.push_to_elems(InstanceElem::Reference(
                     from_event_start!(Reference, reader, reader_buff, e),
                 )),
-                Collection::TAG_BYTES => instance.push_to_elems(InstanceElem::Collection(
-                    from_event_start!(Collection, reader, reader_buff, e),
+                CollectionPatA::TAG_BYTES => instance.push_to_elems(InstanceElem::Collection(
+                    from_event_start!(CollectionPatA, reader, reader_buff, e),
                 )),
                 _ => {
                     return Err(VOTableError::UnexpectedStartTag(
                         e.local_name().to_vec(),
-                        Collection::TAG,
+                        Instance::TAG,
                     ))
                 }
               },
