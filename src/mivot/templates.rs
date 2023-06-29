@@ -6,6 +6,7 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::{Reader, Writer};
 use std::str;
 
+use super::r#where::NoFkWhere;
 use super::{instance::NoRoleInstance, r#where::Where};
 
 /*
@@ -19,7 +20,7 @@ pub struct Templates {
     #[serde(skip_serializing_if = "Option::is_none")]
     tableref: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    wheres: Vec<Where>,
+    wheres: Vec<NoFkWhere>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     instances: Vec<NoRoleInstance>,
 }
@@ -81,7 +82,7 @@ fn read_template_sub_elem<R: std::io::BufRead>(
                 }
             },
             Event::Empty(ref e) => match e.local_name() {
-                Where::TAG_BYTES => template.wheres.push(Where::from_event_empty(e)?),
+                Where::TAG_BYTES => template.wheres.push(NoFkWhere::from_event_empty(e)?),
                 _ => {
                     return Err(VOTableError::UnexpectedEmptyTag(
                         e.local_name().to_vec(),
