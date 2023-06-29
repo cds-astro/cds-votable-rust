@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" />
+	<GLOBALS >
+	
+		<COLLECTION dmid="_coordsys" >
+		<!-- Usage 3: Child of COLLECTION, for ORM selection -->
+			
+			<!-- Test Case 5.57: with PRIMARY_KEY not first  -->
+			<INSTANCE dmid="_timesys" dmtype="model:TimeSys" >
+				<ATTRIBUTE dmrole="model:TimeSys.a" dmtype="ivoa:string" value="blah" />
+				<PRIMARY_KEY dmtype="ivoa:string" value="TCB"/>
+			</INSTANCE>
+			<INSTANCE dmid="_spacecys" dmtype="model:SpaceSys" >
+				<PRIMARY_KEY dmtype="ivoa:string" value="ICRS"/>
+				<ATTRIBUTE dmrole="model:SpaceSys.a" dmtype="ivoa:string" value="blah" />
+			</INSTANCE>
+			
+		</COLLECTION>
+
+	</GLOBALS >
+</VODML>

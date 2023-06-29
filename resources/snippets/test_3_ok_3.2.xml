@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+
+	<!-- Test Case 3.2: with COLLECTION only; INSTANCE optional -->
+	<GLOBALS >
+		<COLLECTION dmid="_coordsys" dmrole="" >
+			<INSTANCE dmid="_timesys" dmrole="" dmtype="model:TimeSys" >
+				<PRIMARY_KEY dmtype="ivoa:string" value="TCB"/>
+			</INSTANCE>
+			<INSTANCE dmid="_spacesys" dmrole="" dmtype="model:SpaceSys" >
+				<PRIMARY_KEY dmtype="ivoa:string" value="ICRS"/>
+			</INSTANCE>
+		</COLLECTION>
+	</GLOBALS>
+
+</VODML>

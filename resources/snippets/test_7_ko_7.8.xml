@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<TEMPLATES tableref="fgdgfddf">
+		<INSTANCE dmid="_thing1" dmtype="model:Thing">
+		<!-- Usage 1: Child of INSTANCE -->
+
+			<!-- Test Case 7.8: valid dmrole + dmtype + value + arrayindex; arrayindex only assoc. with ref. -->
+			<ATTRIBUTE dmrole="model:Thing.x" dmtype="ivoa:real" value="77.339" arrayindex="0"/>
+			<ATTRIBUTE dmrole="model:Thing.y" dmtype="ivoa:real" value="44.123" arrayindex="1"/>
+		</INSTANCE>
+		
+	</TEMPLATES>
+
+</VODML>

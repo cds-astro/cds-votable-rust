@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+    <GLOBALS />
+	<!-- Test Case 4.3: WHERE only; INSTANCE required -->
+	<TEMPLATES tableref="fgdgfddf">
+		<WHERE primarykey="sssss" value="ssss" />
+	</TEMPLATES>
+
+</VODML>

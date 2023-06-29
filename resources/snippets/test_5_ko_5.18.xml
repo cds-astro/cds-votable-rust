@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<TEMPLATES tableref="fgdgfddf">
+	<!-- Usage 2: Child of TEMPLATES  -->
+
+		<!-- Test Case 5.18: valid dmid + valid dmrole + empty dmtype; dmtype must not be empty. -->
+		<INSTANCE dmid="eeee" dmrole="" dmtype="" />
+
+	</TEMPLATES>
+</VODML>

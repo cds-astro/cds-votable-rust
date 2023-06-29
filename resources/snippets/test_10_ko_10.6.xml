@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<TEMPLATES tableref="fgdgfddf">
+
+		<!-- Test Case 10.6: must have primarykey or foreignkey with value -->
+		<WHERE value="abc" />
+
+		<!-- required in TEMPLATES -->
+		<INSTANCE dmtype="model:Thing" />
+
+	</TEMPLATES>
+
+</VODML>

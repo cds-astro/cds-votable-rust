@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Test Case 1.6: MODEL subnode must be first -->
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<GLOBALS />
+	<MODEL name="model" url="http://aaaaaa" />
+	<TEMPLATES tableref="fgdgfddf">
+		<INSTANCE dmtype="model:Thing"/>
+	</TEMPLATES>
+
+</VODML>

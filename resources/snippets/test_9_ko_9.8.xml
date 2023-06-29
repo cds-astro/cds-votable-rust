@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- NOTE: JOIN is child of COLLECTION.                                           -->
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" />
+	<MODEL name="model" url="http://aaaaaa" />
+	<GLOBALS>
+		<COLLECTION dmid="_stuff" dmrole="">
+
+			<!-- Test Case 9.8: sourceref must not be empty -->
+			<JOIN sourceref="" />
+			
+		</COLLECTION>
+	</GLOBALS>
+</VODML>

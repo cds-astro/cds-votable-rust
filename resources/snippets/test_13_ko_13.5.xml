@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- 13.5 TEMPLATES/INSTANCE@dmid duplicated in GLOBALS/COLLECTION@dmid -->
+<VODML xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<GLOBALS>
+		<COLLECTION dmid="_sameid" dmrole="">
+			<INSTANCE dmid="_timesys" dmrole="" dmtype="model:TimeSys">
+				<PRIMARY_KEY dmtype="ivoa:string" value="TCB" />
+			</INSTANCE>
+		</COLLECTION>
+
+	</GLOBALS>
+	<TEMPLATES tableref="fgdgfddf">
+		<INSTANCE dmid="_sameid" dmrole="" dmtype="model:thing">
+			<COLLECTION dmrole="model:thing.items">
+				<INSTANCE dmrole="" dmtype="fffff">
+					<PRIMARY_KEY dmtype="fffff" value="tttt" />
+				</INSTANCE>
+
+			</COLLECTION>
+		</INSTANCE>
+	</TEMPLATES>
+</VODML>

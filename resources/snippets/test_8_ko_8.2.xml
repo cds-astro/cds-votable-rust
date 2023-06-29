@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+
+	<!-- Test Case 8.2: COLLECTION under GLOBALS must have dmid -->
+	<GLOBALS>
+		<COLLECTION  dmrole=""/>
+ 	</GLOBALS>
+
+</VODML>

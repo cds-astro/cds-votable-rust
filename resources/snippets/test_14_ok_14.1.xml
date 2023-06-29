@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+	
+	<!-- Test Case 14.1: succeed without message -->
+	<REPORT status="OK" />
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<MODEL name="model" />
+	
+</VODML>

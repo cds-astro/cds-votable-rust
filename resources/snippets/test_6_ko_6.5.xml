@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<TEMPLATES tableref="fgdgfddf">
+		<INSTANCE dmtype="fffff">
+		<!-- Usage 1: Child of INSTANCE -->
+
+			<!-- Test Case 6.5:  no dmrole + dmref; must have non-empty dmrole in this context -->
+			<REFERENCE dmref="fffff" />
+			
+		</INSTANCE>
+	</TEMPLATES>
+</VODML>

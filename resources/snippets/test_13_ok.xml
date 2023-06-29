@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+    dmid must be unique within the mapping block
+    This test suit is derived from 5 with a correct dmid tuning
+-->
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<GLOBALS >
+
+		<COLLECTION dmid="_coordsys" dmrole="" >
+			<INSTANCE dmid="_timesys" dmrole="" dmtype="model:TimeSys" >
+				<PRIMARY_KEY dmtype="ivoa:string" value="TCB"/>
+			</INSTANCE>
+			
+			<!-- Test Case 5.23: no dmid + empty dmrole + dmtype; dmid optional, must have no or empty dmrole. -->
+			<INSTANCE dmrole="" dmtype="model:SpaceSys" >
+				<PRIMARY_KEY dmtype="ivoa:string" value="ICRS"/>
+			</INSTANCE>
+			
+			<!-- Test Case 5.24: dmid + no dmrole + dmtype; dmid optional, must have no or empty dmrole. -->
+			<INSTANCE dmid="_photsys_BP" dmtype="model:PhotometrySys" >
+				<PRIMARY_KEY dmtype="ivoa:string" value="BP"/>
+			</INSTANCE>
+			
+			<!-- Test Case 5.25: no dmid + no dmrole + dmtype; dmid optional, must have no or empty dmrole. -->
+			<INSTANCE dmtype="model:PhotometrySys" >
+				<PRIMARY_KEY dmtype="ivoa:string" value="RP"/>
+			</INSTANCE>
+			
+		</COLLECTION>
+		<COLLECTION dmid="_Datasets" >
+		<!-- Usage 3: Child of COLLECTION, for ORM selection -->
+
+			<!-- Test Case 5.52: with multiplie PRIMARY_KEY; allow zero or more. -->
+			<INSTANCE dmid="_ds1" dmtype="ds:experiment.ObsDataset">
+				<PRIMARY_KEY dmtype="ivoa:string" value="5813181197970338560"/>
+				<PRIMARY_KEY dmtype="ivoa:string" value="VEGA"/>
+			</INSTANCE>
+			<INSTANCE dmid="_ds" dmtype="ds:experiment.ObsDataset">
+				<PRIMARY_KEY dmtype="ivoa:string" value="5813181545327453273"/>
+				<PRIMARY_KEY dmtype="ivoa:string" value="SIRIUS"/>
+			</INSTANCE>
+			
+		</COLLECTION>
+
+		<INSTANCE dmid="_xyz" dmrole="" dmtype="model:thing" >
+			<INSTANCE dmid="_xxx" dmrole="model.thing.a" dmtype="model:foo" />
+
+			<INSTANCE dmrole="model.thing.b" dmtype="model:bar" />
+
+			<COLLECTION dmrole="model.thing.c">
+				<INSTANCE dmid="_uiebb" dmrole="" dmtype="model:alpha" />
+				<INSTANCE dmrole="" dmtype="model:alpha" />
+				<INSTANCE dmid="_uiebd" dmtype="model:alpha" />
+				<INSTANCE dmtype="model:alpha" />
+				
+			</COLLECTION>
+
+		</INSTANCE>
+		
+		<INSTANCE dmrole="" dmtype="model:thing" />
+		<INSTANCE dmid="_wxyz" dmtype="model:thing" />
+		<INSTANCE dmtype="model:thing" />
+
+	</GLOBALS>
+	<TEMPLATES tableref="fgdgfddf">
+		<INSTANCE dmid="aaaa" dmrole="" dmtype="fffff" />
+		<INSTANCE dmrole="" dmtype="fffff" />
+		<INSTANCE dmid="bbbb" dmtype="fffff" />
+		<INSTANCE dmtype="fffff" />
+		<INSTANCE dmid="cccc" dmtype="model:thing">
+			<ATTRIBUTE dmrole="model.thing.a" dmtype="model:foo" value="eeee"/>
+		</INSTANCE>
+		
+		<INSTANCE dmid="dddd" dmtype="model:thing">
+			<INSTANCE dmrole="model:thing.b" dmtype="model:bar" />
+		</INSTANCE>
+        
+		<INSTANCE dmid="eeee" dmtype="model:thing">
+			<REFERENCE dmrole="model.thing.c" dmref="_fffff"/>
+		</INSTANCE>
+        
+		<INSTANCE dmid="ffff" dmtype="model:thing">
+			<COLLECTION dmrole="model:thing.d" />
+		</INSTANCE>
+
+		<INSTANCE dmid="_ref1" dmtype="model:thing">
+			<INSTANCE   dmrole="model.thing.b" dmtype="model:bar" />
+			<COLLECTION dmrole="model.thing.d"/>
+			<ATTRIBUTE  dmrole="model.thing.a" dmtype="model.foo" value="eeee"/>
+			<REFERENCE  dmrole="model.thing.c" dmref="_fffff"/>
+			<COLLECTION dmrole="model.thing.e"/>
+			<INSTANCE   dmrole="model.thing.f" dmtype="model:alpha" />
+			<REFERENCE  dmrole="model.thing.g" dmref="_ggggg"/>
+			<ATTRIBUTE  dmrole="model.thing.h" dmtype="model:beta" value="eeee"/>
+		</INSTANCE>
+
+		<INSTANCE dmid="_ref2" dmrole="" dmtype="model:thing">
+			<COLLECTION dmrole="model:thing.items">
+				<INSTANCE dmrole="" dmtype="fffff">
+					<PRIMARY_KEY dmtype="fffff" value="tttt" />
+				</INSTANCE>
+				
+			</COLLECTION>
+		</INSTANCE>
+
+	</TEMPLATES>
+</VODML>

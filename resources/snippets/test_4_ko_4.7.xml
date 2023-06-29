@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<GLOBALS />
+	
+	<!-- Test Case 4.7: includes invalid subnode -->
+	<TEMPLATES tableref="fgdgfddf">
+		<BANDOL />
+		<INSTANCE dmtype="model:Thing"/>
+	</TEMPLATES>
+	
+</VODML>

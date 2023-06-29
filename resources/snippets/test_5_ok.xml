@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+    The INSTANCE element defines a complex ObjectType or DataType.
+    It may be a child of several other elements, and the requirements on
+    the content (especially dmid and dmrole), may differ depending on 
+    the usage:
+
+    1) Child of GLOBALS:
+       In this case the INSTANCE is a single stand-alone instance which
+       may or may not be referenced by other INSTANCEs.
+       - may have dmid, as target of REFERENCE.ref
+       - must have no or empty dmrole
+
+    2) Child of TEMPLATES:
+       In this case, the INSTANCE is a template for instances which
+       are generated once per row of the associated table.
+       - may have dmid, as target of JOIN.dmref
+       - must have no or empty dmrole
+
+    3) Child of COLLECTION (as option in ORM selection):
+       Each member INSTANCE is an option for selection using PRIMARY/FOREIGN_KEY.
+       * only viable in GLOBALS environment
+       Each member INSTANCE:
+       - must contain at least one PRIMARY_KEY sub-element
+       - may have dmid, as target of REFERENCE.ref
+       - must have no or empty dmrole
+
+    4) Child of COLLECTION (as array/list element):
+       Each member INSTANCE is a cell of an element with multiplicity > 1
+       - may have dmid, as target of REFERENCE.ref
+       - must have no or empty dmrole
+         * dmrole is inherited from the parent COLLECTION
+
+    5) Child of INSTANCE:
+       In this case, each INSTANCE represents a complex ObjectType or
+       DataType playing a role in the parent INSTANCE.
+       - may have dmid, as target of REFERENCE.ref
+       - must have non-empty dmrole
+
+    *) any INSTANCE:
+       - if dmid is present, it must not be empty
+       - must have non-empty dmtype
+-->
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<GLOBALS >
+
+		<COLLECTION dmid="_coordsys" dmrole="" >
+		<!-- Usage 3: Child of COLLECTION, for ORM selection -->
+
+			<!-- Test Case 5.22: dmid + empty dmrole + dmtype; dmid optional, must have no or empty dmrole. -->
+			<!-- Test Case 5.51: with PRIMARY_KEY; must be first  -->
+			<INSTANCE dmid="_timesys" dmrole="" dmtype="model:TimeSys" >
+				<PRIMARY_KEY dmtype="ivoa:string" value="TCB"/>
+			</INSTANCE>
+			
+			<!-- Test Case 5.23: no dmid + empty dmrole + dmtype; dmid optional, must have no or empty dmrole. -->
+			<INSTANCE dmrole="" dmtype="model:SpaceSys" >
+				<PRIMARY_KEY dmtype="ivoa:string" value="ICRS"/>
+			</INSTANCE>
+			
+			<!-- Test Case 5.24: dmid + no dmrole + dmtype; dmid optional, must have no or empty dmrole. -->
+			<INSTANCE dmid="_photsys_BP" dmtype="model:PhotometrySys" >
+				<PRIMARY_KEY dmtype="ivoa:string" value="BP"/>
+			</INSTANCE>
+			
+			<!-- Test Case 5.25: no dmid + no dmrole + dmtype; dmid optional, must have no or empty dmrole. -->
+			<INSTANCE dmtype="model:PhotometrySys" >
+				<PRIMARY_KEY dmtype="ivoa:string" value="RP"/>
+			</INSTANCE>
+			
+		</COLLECTION>
+		<COLLECTION dmid="_Datasets" >
+		<!-- Usage 3: Child of COLLECTION, for ORM selection -->
+
+			<!-- Test Case 5.52: with multiplie PRIMARY_KEY; allow zero or more. -->
+			<INSTANCE dmid="_ds1" dmtype="ds:experiment.ObsDataset">
+				<PRIMARY_KEY dmtype="ivoa:string" value="5813181197970338560"/>
+				<PRIMARY_KEY dmtype="ivoa:string" value="VEGA"/>
+			</INSTANCE>
+			<INSTANCE dmid="_ds2" dmtype="ds:experiment.ObsDataset">
+				<PRIMARY_KEY dmtype="ivoa:string" value="5813181545327453273"/>
+				<PRIMARY_KEY dmtype="ivoa:string" value="SIRIUS"/>
+			</INSTANCE>
+			
+		</COLLECTION>
+
+	<!-- Usage 1: Child of GLOBALS -->
+		<!-- Test Case 5.3: dmid + empty dmrole + dmtype; dmid optional, must have no or empty dmrole. -->
+		<INSTANCE dmid="_wxy" dmrole="" dmtype="model:thing" >
+		<!-- Usage 5: Child of INSTANCE -->
+
+			<!-- Test Case 5.40: dmid + dmrole + dmtype; dmid optional, must have dmrole. -->
+			<INSTANCE dmid="_xxx" dmrole="model.thing.a" dmtype="model:foo" />
+
+			<!-- Test Case 5.41: no dmid + dmrole + dmtype; dmid optional, must have dmrole. -->
+			<INSTANCE dmrole="model.thing.b" dmtype="model:bar" />
+
+			<COLLECTION dmrole="model.thing.c">
+			<!-- Usage 4: Child of COLLECTION, as array/list element -->
+
+				<!-- Test Case 5.32: dmid + empty dmrole + dmtype; dmid optional, must have no or empty dmrole. -->
+				<INSTANCE dmid="_uiebb" dmrole="" dmtype="model:alpha" />
+
+				<!-- Test Case 5.33: no dmid + empty dmrole + dmtype; dmid optional; must have no or empty dmrole). -->
+				<INSTANCE dmrole="" dmtype="model:alpha" />
+
+				<!-- Test Case 5.34: dmid + no dmrole + dmtype; dmid optional; must have no or empty dmrole -->
+				<INSTANCE dmid="_uiebd" dmtype="model:alpha" />
+
+				<!-- Test Case 5.35: no dmid + no dmrole + dmtype; dmid optional; must have no or empty dmrole. -->
+				<INSTANCE dmtype="model:alpha" />
+				
+			</COLLECTION>
+
+		</INSTANCE>
+		
+		<!-- Test Case 5.4: no dmid + empty dmrole + dmtype; dmid optional, must have no or empty dmrole. -->
+		<INSTANCE dmrole="" dmtype="model:thing" />
+
+		<!-- Test Case 5.5: dmid + no dmrole + dmtype; dmid optional, must have no or empty dmrole. -->
+		<INSTANCE dmid="_xyz" dmtype="model:thing" />
+
+		<!-- Test Case 5.6: no dmid + no dmrole + dmtype; dmid optional, must have no or empty dmrole. -->
+		<INSTANCE dmtype="model:thing" />
+
+	</GLOBALS>
+	<TEMPLATES tableref="fgdgfddf">
+	<!-- Usage 2: Child of TEMPLATES -->
+
+		<!-- Test Case 5.50: All subelements optional  -->
+
+		<!-- Test Case 5.12: dmid + empty dmrole + dmtype; dmid optional, must have no or empty dmrole. -->
+		<INSTANCE dmid="aaaa" dmrole="" dmtype="fffff" />
+
+		<!-- Test Case 5.13: no dmid + empty dmrole + dmtype; dmid optional, must have no or empty dmrole -->
+		<INSTANCE dmrole="" dmtype="fffff" />
+		
+
+		<!-- Test Case 5.14: dmid + no dmrole + dmtype; dmid optional, must have no or empty dmrole. -->
+		<INSTANCE dmid="bbbb" dmtype="fffff" />
+
+		<!-- Test Case 5.15: no dmid + no dmrole + dmtype; dmid optional, must have no or empty dmrole -->
+		<INSTANCE dmtype="fffff" />
+		
+
+		<!-- Test Case 5.53: with ATTRIBUTE; zero or more A|I|R|C, any order -->
+		<INSTANCE dmid="cccc" dmtype="model:thing">
+			<ATTRIBUTE dmrole="model.thing.a" dmtype="model:foo" value="eeee"/>
+		</INSTANCE>
+		
+		<!-- Test Case 5.54: with INSTANCE; zero or more A|I|R|C, any order -->
+		<INSTANCE dmid="dddd" dmtype="model:thing">
+			<INSTANCE dmrole="model:thing.b" dmtype="model:bar" />
+		</INSTANCE>
+        
+		<!-- Test Case 5.55: with REFERENCE; zero or more A|I|R|C, any order -->
+		<INSTANCE dmid="eeee" dmtype="model:thing">
+			<REFERENCE dmrole="model.thing.c" dmref="_fffff"/>
+		</INSTANCE>
+        
+		<!-- Test Case 5.56: with COLLECTION; zero or more A|I|R|C, any order -->
+		<INSTANCE dmid="ffff" dmtype="model:thing">
+			<COLLECTION dmrole="model:thing.d" />
+		</INSTANCE>
+
+		<!-- Test Case 5.58: multiple (A,I,R,C) random order -->
+		<INSTANCE dmid="_ref1" dmtype="model:thing">
+			<INSTANCE   dmrole="model.thing.b" dmtype="model:bar" />
+			<COLLECTION dmrole="model.thing.d"/>
+			<ATTRIBUTE  dmrole="model.thing.a" dmtype="model.foo" value="eeee"/>
+			<REFERENCE  dmrole="model.thing.c" dmref="_fffff"/>
+			<COLLECTION dmrole="model.thing.e"/>
+			<INSTANCE   dmrole="model.thing.f" dmtype="model:alpha" />
+			<REFERENCE  dmrole="model.thing.g" dmref="_ggggg"/>
+			<ATTRIBUTE  dmrole="model.thing.h" dmtype="model:beta" value="eeee"/>
+		</INSTANCE>
+
+		<INSTANCE dmid="_ref2" dmrole="" dmtype="model:thing">
+			<COLLECTION dmrole="model:thing.items">
+			<!-- Usage 4: Child of COLLECTION, as array/list element -->
+			
+				<!-- Test Case 5.xx: Usage within TEMPLATES environment -->
+				<INSTANCE dmrole="" dmtype="fffff">
+					<PRIMARY_KEY dmtype="fffff" value="tttt" />
+				</INSTANCE>
+				
+			</COLLECTION>
+		</INSTANCE>
+
+	</TEMPLATES>
+</VODML>

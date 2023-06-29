@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<GLOBALS>
+
+		<!-- Test Case 8.8: COLLECTION under GLOBALS, contains other than INSTANCE. -->
+		<COLLECTION dmid="_bad" >
+				<ATTRIBUTE dmtype="model:elem" value="foo" />
+				<ATTRIBUTE dmtype="model:elem" value="bar" />
+		</COLLECTION>
+
+	</GLOBALS>
+	      
+</VODML>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    The REFERENCE element is used to specify a reference relation to an INSTANCE.
+    There are 2 usages for this element.
+      1) Child of INSTANCE
+         - must have non-empty dmrole, specifying the role the referenced INSTANCE plays in the referencing  INSTANCE.
+
+      2) Child of COLLECTION, as list of references.
+       - must have no or empty dmrole
+         * dmrole is inherited from the parent COLLECTION
+
+    There are 2 variations of this element.
+      A) Simple reference to INSTANCE
+         - must have non-empty dmref
+         - must not have tableref
+         - must not contain FOREIGN_KEY
+
+      B) Referencing an instance based on selection criteria, either from VOTable::TABLE or COLLECTION.
+         - must have tableref, identifying the COLLECTION or TABLE from which to select the referenced INSTANCE.
+         - must have one or more FOREIGN_KEYs identifying the field on which to select.
+
+-->
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<TEMPLATES tableref="fgdgfddf">
+		<INSTANCE  dmtype="fffff">
+		<!-- Usage 1: Child of INSTANCE -->
+
+			<!-- Test Case 6.1:  REFERENCE with dmref -->
+			<REFERENCE dmrole="aaaa" dmref="fffff" />
+			
+			<!-- Test Case 6.2:  REFERENCE with sourceref and FOREIGN_KEY -->
+			<REFERENCE dmrole="aaaa" sourceref="fffff">
+				<FOREIGN_KEY ref="zzzzz" />
+			</REFERENCE>
+
+			<!-- Test Case 6.8:  REFERENCE with sourceref and multiple FOREIGN_KEYs -->
+			<REFERENCE dmrole="aaaa" sourceref="fffff">
+				<FOREIGN_KEY ref="zzzzz" />
+				<FOREIGN_KEY ref="zzzz1" />
+				<FOREIGN_KEY ref="zzzz2" />
+			</REFERENCE>
+			
+			<COLLECTION dmrole="model:thing.reflist">
+			<!-- Usage 2: Child of COLLECTION -->
+
+				<!-- Test Case 6.12: no dmrole + dmref; must have no or empty dmrole -->
+				<REFERENCE dmref="_target1" />
+				
+				<!-- Test Case 6.13: empty dmrole + dmref; must have no or empty dmrole -->
+				<REFERENCE dmrole="" dmref="_target2" />
+				
+				<REFERENCE dmref="_targetn" />
+			</COLLECTION>
+			
+		</INSTANCE>
+	</TEMPLATES>
+</VODML>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<TEMPLATES tableref="fgdgfddf">
+		<INSTANCE dmtype="fffff">
+		<!-- Usage 1: Child of INSTANCE -->
+
+			<!-- Test Case 6.6: valid dmrole + sourceref + no FK;  with sourceref, must have one or more FOREIGN_KEY -->
+			<REFERENCE dmrole="aaaa" sourceref="fffff" />
+
+		</INSTANCE>
+	</TEMPLATES>
+</VODML>

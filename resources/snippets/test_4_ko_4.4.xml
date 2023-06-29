@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+    <GLOBALS />
+
+	<!-- Test Case 4.4: WHERE node(s) must be first. -->
+	<TEMPLATES tableref="fgdgfddf">
+		<INSTANCE dmrole="" dmtype="model:Thing" />
+		<WHERE primarykey="sssss" value="ssss" />
+	</TEMPLATES>
+
+</VODML>

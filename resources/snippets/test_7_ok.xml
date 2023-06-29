@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    The ATTRIBUTE element is used to annotate a primitive DataType, mapping to a VOTable::PARAM|FIELD.
+
+    There are 2 usages for this element.
+      1) Child of INSTANCE
+         - must have non-empty dmrole, specifying the role the attribute plays in the containing INSTANCE.
+
+      2) Child of COLLECTION, as list of references.
+         - must have no or empty dmrole
+           * dmrole is inherited from the parent COLLECTION
+
+      *) any Usage 
+	 - must have non-empty dmtype, indicating how to interpret the value.
+	 - may have unit; if given, must not be empty.(??)
+
+    There are 2 variations of this element.
+      A) associated with VOTable::PARARM|FIELD
+         - must have non-empty ref
+         - may have arrayindex; if given, must be numeric integer value >= 0.
+         - may have value, serves as default if reference cannot be resolved
+
+      B) independently defined value
+         - must have value; may be empty (not constrained)
+         - must not have ref
+         - must not have arrayindex
+-->
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<TEMPLATES tableref="fgdgfddf">
+		<INSTANCE dmid="_thing1" dmtype="model:Thing">
+		<!-- Usage 1: Child of INSTANCE -->
+
+			<!-- Test Case 7.1: valid dmrole + dmtype + value  -->
+			<ATTRIBUTE dmrole="model:Thing.a" dmtype="model:Foo" value="eeee"/>
+
+			<!-- Test Case 7.2: valid dmrole + dmtype + ref  -->
+			<ATTRIBUTE dmrole="model:Thing.b" dmtype="model:Bar" ref="_param1"/>
+
+			<!-- Test Case 7.3: valid dmrole + dmtype + ref + value; value provides default. -->
+			<ATTRIBUTE dmrole="model:Thing.c" dmtype="model:Alpha" ref="_param2" value="aaa"/>
+
+			<!-- Test Case 7.5: valid dmrole + dmtype + value + unit; may have unit. -->
+			<ATTRIBUTE dmrole="model:Thing.d" dmtype="model:Alpha" value="eee" unit="keV"/>
+
+			<!-- Test Case 7.6: valid dmrole + dmtype + ref + unit; may have unit. -->
+			<ATTRIBUTE dmrole="model:Thing.e" dmtype="model.Alpha" ref="_param3" unit="keV"/>
+			
+			<!-- Test Case 7.14: valid dmrole + dmtype + empty value; value may be empty -->
+			<ATTRIBUTE dmrole="model:Thing.f" dmtype="model.Alpha" value=""/>
+			
+			<INSTANCE dmrole="model:Thing.pos" dmtype="adhoc:Position">
+				<!-- Test Case 7.7: valid dmrole + dmtype + ref + arrayindex -->
+				<!--    The value of the ATTRIBUTE is pulled from an array PARAM/FIELD VOTable element. -->
+				<!--    arrayindex indicates which index of the target array to use as the value.       -->
+				<ATTRIBUTE dmrole="adhoc:Position.longitude" dmtype="ivoa:real" ref="_eqpos" arrayindex="0"/>
+				<ATTRIBUTE dmrole="adhoc:Position.latitude" dmtype="ivoa:real" ref="_eqpos" arrayindex="1"/>
+			</INSTANCE>
+		
+			<COLLECTION dmrole="model:Thing.arrayAttribute1">
+			<!-- Usage 2: Child of COLLECTION -->
+				<!-- This illustrates an array attribute being populated from individual PARAM/FIELDs. -->
+			
+				<!-- Test Case 7.17: empty dmrole + dmtype + ref; must have no or empty dmrole in this context. -->
+				<ATTRIBUTE dmrole="" dmtype="ivoa:real" ref="_param4"/>
+				
+				<!-- Test Case 7.6: valid dmrole + dmtype + ref + unit; may have unit. -->
+				<ATTRIBUTE dmrole="" dmtype="ivoa:real" ref="_param5" unit="keV"/>
+				
+				<!-- Test Case 7.19: valid dmrole + dmtype + ref + empty unit; unit may be empty. -->
+				<ATTRIBUTE dmrole="" dmtype="ivoa:real" ref="_param6" unit=""/>
+			</COLLECTION>
+		
+			<COLLECTION dmrole="model:Thing.arrayAttribute2">
+			<!-- Usage 2: Child of COLLECTION -->
+				<!-- Test Case 7.18: no dmrole + dmtype + value; must have no or empty dmrole in this context. -->
+				<ATTRIBUTE dmtype="ivoa:real" value="1.21"/>
+				
+				<!-- Test Case 7.5: valid dmrole + dmtype + value + unit; may have unit. -->
+				<ATTRIBUTE dmtype="ivoa:real" value="1.21" unit="GW"/>
+				
+				<!-- Test Case 7.20: valid dmrole + dmtype + value + empty unit; unit may be empty. -->
+				<ATTRIBUTE dmtype="ivoa:real" value="1.21" unit="" />
+			</COLLECTION>
+
+			<COLLECTION dmrole="model:Thing.arrayAttribute3">
+			<!-- Usage 2: Child of COLLECTION -->
+				<!-- This illustrates an array attribute being populated from an array PARAM/FIELD, with default backup. -->
+
+				<!-- Test Case 7.21: empty dmrole + dmtype + ref + value + arrayindex; -->
+				<ATTRIBUTE dmtype="ivoa:real" ref="_param10" arrayindex="0" value="NaN"/>
+				<ATTRIBUTE dmtype="ivoa:real" ref="_param10" arrayindex="1" value="NaN"/>
+				<ATTRIBUTE dmtype="ivoa:real" ref="_param10" arrayindex="2" value="NaN"/>
+			</COLLECTION>
+			
+		</INSTANCE>
+	</TEMPLATES>
+</VODML>

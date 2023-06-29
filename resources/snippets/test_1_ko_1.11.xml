@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Test Case 1.11: includes invalid subnode. -->
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<GLOBALS />
+	<BEAUJOLAIS tableref="fgdgfddf" />
+
+</VODML>

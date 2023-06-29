@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<GLOBALS>
+
+		<!-- Test Case 8.9: COLLECTION under GLOBALS; with invalid child -->
+		<COLLECTION dmid="asdasdas">
+			<BOGUS dmrole="a.f"/>
+		</COLLECTION>
+
+	</GLOBALS>
+	
+</VODML>
+
+
+

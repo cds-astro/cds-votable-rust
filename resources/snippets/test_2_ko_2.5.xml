@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<!-- Test Case 2.5: url must not be empty -->
+	<MODEL name="model" url="" />
+
+</VODML>

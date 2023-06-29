@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+    <MODEL name="model" />
+	<GLOBALS>
+	<!-- Usage Note: this test applies to all usages, this one is representative of all.  -->
+
+		<!-- Test Case 5.59: contains subnode other than (PK,A,I,R,C) -->
+		<INSTANCE dmid="_ref1" dmtype="model:thing">
+			<ATTRIBUTE dmrole="model:thing.a" dmtype="model:foo" value="7"/>
+			<INSTANCE dmrole="model:thing.b" dmtype="model:bar"/>
+			<OTHER dmrole="model:thing.c" dmtype="model:jar"/>
+		</INSTANCE>
+		
+	</GLOBALS>
+</VODML>

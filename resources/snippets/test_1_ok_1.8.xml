@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Test Case 1.8: allows multiple MODEL subnodes -->
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model1" url="http://aaaaaa" />
+	<MODEL name="model2" url="http://bbbbbb" />
+	<MODEL name="model3" url="http://cccccc" />
+	<GLOBALS />
+	<TEMPLATES tableref="s95dv8ed">
+		<INSTANCE dmtype="zzzzz">
+			<REFERENCE dmref="aaa" dmrole="zzzz" />
+		</INSTANCE>
+	</TEMPLATES>
+
+
+</VODML>

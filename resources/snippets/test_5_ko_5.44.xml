@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" />
+	<TEMPLATES tableref="fgdgfddf">
+		<INSTANCE dmtype="model:thing">
+		<!-- Usage 5: Child of INSTANCE  -->
+		
+			<!-- Test Case 5.44: dmid + no dmrole + dmtype; (must have non-empty dmrole) -->
+			<INSTANCE dmid="_ssss" dmtype="model:foo" />
+			
+		</INSTANCE>
+	</TEMPLATES>
+</VODML>

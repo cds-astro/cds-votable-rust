@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<GLOBALS>
+
+		<INSTANCE dmid="_aaa" dmtype="model:thing">
+
+		        <!-- Test Case 8.24: COLLECTION of other -->
+	        	<!--   * allows (A), (R) or (I,J) only    -->
+			<COLLECTION dmrole="iiiiii">
+				<OTHER dmtype="model:object" />
+				<OTHER dmtype="model:object" />
+			</COLLECTION>
+			
+		</INSTANCE>
+
+		
+	</GLOBALS>
+</VODML>
+
+
+

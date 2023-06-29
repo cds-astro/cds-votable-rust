@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- NOTE: TEMPLATES node allows multiple WHERE nodes.                            -->
+<!--       We take advantage of this to test several valid cases in the same file -->
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<TEMPLATES tableref="fgdgfddf">
+
+		<!-- Test Case 10.2: primarykey + foreignkey -->
+		<WHERE foreignkey="sssss" primarykey="ssss" />
+		
+		<!-- Test Case 10.3: primarykey + value -->
+		<WHERE primarykey="sssss" value="ssss" />
+
+		<!-- Test Case 10.4: foreignkey + value -->
+		<WHERE foreignkey="sssss" value="ssss" />
+
+		<!-- Test Case 10.11: empty value -->
+		<WHERE foreignkey="sssss" value="" />
+		<WHERE primarykey="sssss" value="" />
+
+		<!-- required in TEMPLATES -->
+		<INSTANCE dmtype="fffff" />
+
+	</TEMPLATES>
+
+</VODML>

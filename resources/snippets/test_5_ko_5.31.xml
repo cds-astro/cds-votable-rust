@@ -1,0 +1,18 @@
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<GLOBALS >
+		<INSTANCE dmid="_xyz" dmrole="" dmtype="model:thing" >
+			<COLLECTION dmrole="model.thing.c">
+			<!-- Usage 4: Child of COLLECTION, as array/list element -->
+
+				<!-- Test Case 5.31: no dmid + dmrole + dmtype; must have no or empty dmrole. -->
+				<INSTANCE dmrole="model:thing.c" dmtype="model:alpha" />
+				<INSTANCE dmrole="model:thing.c" dmtype="model:alpha" />
+				
+			</COLLECTION>
+
+		</INSTANCE>
+	</GLOBALS>
+</VODML>
