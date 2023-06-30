@@ -148,7 +148,13 @@ macro_rules! impl_builder_from_attr {
             let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
             tag = match attr.key {
               $(opt_bstringify!($optional $(, [<$name>])?) => {
-                tag.[<set_ $optional>](value)
+                if !(value.len() == 0 && value.is_empty()) {
+                  tag.[<set_ $optional>](value)
+                } else {
+                  return Err(VOTableError::Custom(
+                    format!("If attribute {}  is present it musn't be empty",
+                    opt_stringify!($optional $(, [<$name>])?))))
+                }
               }),*
               $($(opt_bstringify!($empty $(, [<$empname>])?) => {tag}),*)?
                 _ => {
@@ -171,11 +177,23 @@ macro_rules! impl_builder_from_attr {
               let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
               tag = match attr.key {
                 $(opt_bstringify!($mandatory $(, [<$mandname>])?) => {
-                  tag.$mandatory = value.to_string();
-                  tag
+                  if !(value.len() == 0 && value.is_empty()) {
+                    tag.$mandatory = value.to_string();
+                    tag
+                  } else {
+                    return Err(VOTableError::Custom(
+                      format!("Attribute {} is mandatory, it musn't be empty",
+                      opt_stringify!($mandatory $(, [<$mandname>])?))))
+                  }
                 }),*
                 $(opt_bstringify!($optional $(, [<$name>])?) => {
-                  tag.[<set_ $optional>](value)
+                  if !(value.len() == 0 && value.is_empty()) {
+                    tag.[<set_ $optional>](value)
+                  } else {
+                    return Err(VOTableError::Custom(
+                      format!("If attribute {}  is present it musn't be empty",
+                      opt_stringify!($optional $(, [<$name>])?))))
+                  }
                 }),*
                 $($(opt_bstringify!($empty $(, [<$empname>])?) => {tag}),*)?
                   _ => {
@@ -281,13 +299,20 @@ macro_rules! impl_write_not_e {
             writer: &mut Writer<W>,
             _context: &Self::Context,
           ) -> Result<(), crate::error::VOTableError> { //TODO CHECK ELEMS TOO
-            if $(self.$orderelem.is_empty())&&* {
+            // Check if all $orderelem are empty
+            let all_orderelem_empty = $(self.$orderelem.is_empty())&&*;
+
+            let all_elems_empty = true;
+            // Check if all $elems are empty, if $elems is present
+            $(let all_elems_empty = $(self.$elems.is_empty();)&&*)?
+
+            if all_orderelem_empty && all_elems_empty {
                 let mut elem_writer = writer.create_element(Self::TAG_BYTES);
                 write_empty_mandatory_attributes!(elem_writer, self, $($mandatory $(, $mandname)?),*);
                 write_empty_optional_attributes!(elem_writer, self, $($optional $(, $name)?),*);
                 elem_writer.write_empty().map_err(VOTableError::Write)?;
                 return Ok(())
-            }
+            };
             let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
             //MANDATORY
             write_non_empty_mandatory_attributes!(tag, self, $($mandatory $(, $mandname)?),*);
@@ -493,4 +518,13 @@ macro_rules! opt_bstringify {
   ($ident:ident, $name:tt) => {
     bstringify!($name)
   };
+}
+
+macro_rules! opt_stringify {
+    ($ident:ident) => {
+        stringify!($ident)
+    };
+    ($ident:ident, $name:tt) => {
+        stringify!($name)
+    };
 }

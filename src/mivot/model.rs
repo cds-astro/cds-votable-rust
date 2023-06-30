@@ -27,3 +27,34 @@ impl_quickrw_e!(
     Model,   // Struct on which to impl
     ()       // Context type
 );
+
+#[cfg(test)]
+mod tests {
+    //use std::str::from_utf8;
+    use crate::{
+        mivot::model::Model,
+        mivot::test::{get_xml, test_error},
+        tests::test_read,
+    };
+
+    #[test]
+    fn test_model_read() {
+        // OK MODELS
+        let xml = get_xml("./resources/snippets/test_2_ok_2.1.xml");
+        println!("testing 2.1");
+        test_read::<Model>(&xml);
+        let xml = get_xml("./resources/snippets/test_2_ok_2.2.xml");
+        println!("testing 2.2");
+        test_read::<Model>(&xml);
+        // KO MODELS
+        let xml = get_xml("./resources/snippets/test_2_ko_2.3.xml");
+        println!("testing 2.3");
+        test_error::<Model>(&xml, false);
+        let xml = get_xml("./resources/snippets/test_2_ko_2.4.xml");
+        println!("testing 2.4");
+        test_error::<Model>(&xml, false);
+        let xml = get_xml("./resources/snippets/test_2_ko_2.5.xml");
+        println!("testing 2.5");
+        test_error::<Model>(&xml, false);
+    }
+}

@@ -1,8 +1,2 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<VODML xmlns="http://www.ivoa.net/xml/mivot">
-
-	<!-- Test Case 2.3: name required -->
-	<MODEL />
-
-</VODML>
+<!-- Test Case 2.3: name required -->
+<MODEL />
