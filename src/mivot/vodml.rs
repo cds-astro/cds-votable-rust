@@ -132,9 +132,15 @@ fn read_vodml_sub_elem<R: std::io::BufRead>(
                     }
                 }
                 Globals::TAG_BYTES => {
-                    vodml
-                        .globals
-                        .push(from_event_start!(Globals, reader, reader_buff, e))
+                    if vodml.globals.is_empty() {
+                        vodml
+                            .globals
+                            .push(from_event_start!(Globals, reader, reader_buff, e))
+                    } else {
+                        return Err(VOTableError::Custom(
+                            "Only one <GLOBALS> tag should be present".to_owned(),
+                        ));
+                    }
                 }
                 Templates::TAG_BYTES => {
                     vodml
@@ -149,7 +155,22 @@ fn read_vodml_sub_elem<R: std::io::BufRead>(
                 }
             },
             Event::Empty(ref e) => match e.local_name() {
+                Report::TAG_BYTES => {
+                    if vodml.report.is_none() {
+                        vodml.report = Some(Report::from_event_empty(e)?)
+                    }
+                }
                 Model::TAG_BYTES => vodml.models.push(Model::from_event_empty(e)?),
+                Globals::TAG_BYTES => {
+                    if vodml.globals.is_empty() {
+                        vodml.globals.push(Globals::from_event_empty(e)?)
+                    } else {
+                        return Err(VOTableError::Custom(
+                            "Only one <GLOBALS> tag should be present".to_owned(),
+                        ));
+                    }
+                }
+                Templates::TAG_BYTES => vodml.templates.push(Templates::from_event_empty(e)?),
                 _ => {
                     return Err(VOTableError::UnexpectedEmptyTag(
                         e.local_name().to_vec(),
@@ -158,7 +179,15 @@ fn read_vodml_sub_elem<R: std::io::BufRead>(
                 }
             },
             Event::Text(e) if is_empty(e) => {}
-            Event::End(e) if e.local_name() == Vodml::TAG_BYTES => return Ok(reader),
+            Event::End(e) if e.local_name() == Vodml::TAG_BYTES => {
+                if !vodml.models.is_empty() {
+                    return Ok(reader);
+                } else {
+                    return Err(VOTableError::Custom(
+                        "Expected a <MODEL> tag, none was found".to_owned(),
+                    ));
+                }
+            }
             Event::Eof => return Err(VOTableError::PrematureEOF(Vodml::TAG)),
             _ => eprintln!("Discarded event in {}: {:?}", Vodml::TAG, event),
         }
@@ -167,9 +196,11 @@ fn read_vodml_sub_elem<R: std::io::BufRead>(
 
 #[cfg(test)]
 mod tests {
+    use std::{fs::File, io::Read};
+
     //use std::str::from_utf8;
     use crate::{
-        mivot::vodml::Vodml,
+        mivot::{test_error, vodml::Vodml},
         tests::{test_read, test_writer},
     };
 
@@ -178,5 +209,52 @@ mod tests {
         let xml = r#"<VODML xmlns="http://www.ivoa.net/xml/mivot" ><REPORT status="OK">Mapping compiled by hand</REPORT><MODEL name="ivoa" url="https://www.ivoa.net/xml/VODML/IVOA-v1.vo-dml.xml" /><MODEL name="mango" url="https://github.com/ivoa-std/MANGO/blob/master/vo-dml/mango.vo-dml.xml" /><MODEL name="cube" url="https://github.com/ivoa-std/Cube/vo-dml/Cube-1.0.vo-dml.xml" /><MODEL name="ds" url="https://github.com/ivoa-std/DatasetMetadata/vo-dml/DatasetMetadata-1.0.vo-dml.xml" /><MODEL name="coords" url="https://www.ivoa.net/xml/VODML/Coords-v1.vo-dml.xml" /><MODEL name="meas" url="https://www.ivoa.net/xml/VODML/Meas-v1.vo-dml.xml" /><GLOBALS><COLLECTION dmid="\_CoordinateSystems" dmrole="" ><INSTANCE dmid="\_timesys" dmrole="" dmtype="coords:TimeSys"><PRIMARY\_KEY dmtype="ivoa:string" value="TCB"/><INSTANCE dmrole="coords:PhysicalCoordSys.frame" dmtype="coords:TimeFrame"><ATTRIBUTE dmrole="coords:TimeFrame.timescale" dmtype="ivoa:string" value="TCB" /><INSTANCE dmrole="coords:TimeFrame.refPosition" dmtype="coords:StdRefLocation"><ATTRIBUTE dmrole="coords:StdRefLocation.position" dmtype="ivoa:string" value="BARYCENTER"/></INSTANCE></INSTANCE></INSTANCE><INSTANCE dmid="\_spacesys1" dmrole="" dmtype="coords:SpaceSys"><PRIMARY\_KEY dmtype="ivoa:string" value="ICRS"/><INSTANCE dmrole="coords:PhysicalCoordSys.frame" dmtype="coords:SpaceFrame"><ATTRIBUTE dmrole="coords:SpaceFrame.spaceRefFrame" dmtype="ivoa:string" value="ICRS"/><ATTRIBUTE dmrole="coords:SpaceFrame.equinox" dmtype="coords:Epoch" value="J2015.5"/></INSTANCE></INSTANCE><INSTANCE dmid="\_photsys\_G" dmtype="mango:coordinates.PhotometryCoordSys"><PRIMARY\_KEY dmtype="ivoa:string" value="G"/><INSTANCE dmrole="coords:PhysicalCoordSys.frame" dmtype="mango:coordinates.PhotFilter"><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.name" dmtype="ivoa:string" value="GAIA/GAIA2r.G"/><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.zeroPointFlux" dmtype="ivoa:RealQuantity" value="2.49524e-9"/><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.magnitudeSystem" dmtype="ivoa:string" value="Vega"/><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.effectiveWavelength" dmtype="ivoa:RealQuantity" value="6246.77"/><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.unit" dmtype="ivoa:Unit" value="Angstrom" /><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.bandWidth" dmtype="ivoa:real" value="4578.32"/></INSTANCE></INSTANCE><INSTANCE dmid="\_photsys\_RP" dmrole="" dmtype="mango:coordinates.PhotometryCoordSys"><PRIMARY\_KEY dmtype="ivoa:string" value="RP"/><INSTANCE dmrole="coords:PhysicalCoordSys.frame" dmtype="mango:coordinates.PhotFilter"><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.name" dmtype="ivoa:string" value="GAIA/GAIA2r.Grp"/><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.zeroPointFlux" dmtype="ivoa:RealQuantity" value="1.29363e-9"/><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.magnitudeSystem" dmtype="ivoa:string" value="Vega"/><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.effectiveWavelength" dmtype="ivoa:RealQuantity" value="7740.87"/><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.unit" dmtype="ivoa:Unit" value="Angstrom"/><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.bandWidth" dmtype="ivoa:real" value="2943.72"/></INSTANCE></INSTANCE><INSTANCE dmid="\_photsys\_BP" dmrole="" dmtype="mango:coordinates.PhotometryCoordSys"><PRIMARY\_KEY dmtype="ivoa:string" value="BP"/><INSTANCE dmrole="coords:PhysicalCoordSys.frame" dmtype="mango:coordinates.PhotFilter"><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.name" dmtype="ivoa:string" value="GAIA/GAIA2r.Gbp"/><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.zeroPointFlux" dmtype="ivoa:RealQuantity" value="4.03528e-9"/><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.magnitudeSystem" dmtype="ivoa:string" value="Vega"/><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.effectiveWavelength" dmtype="ivoa:RealQuantity" value="5278.58"/><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.unit" dmtype="ivoa:Unit" value="Angstrom"/><ATTRIBUTE dmrole="mango:coordinates.PhotFilter.bandWidth" dmtype="ivoa:real" value="2279.45"/></INSTANCE></INSTANCE></COLLECTION><COLLECTION dmid="\_Datasets" dmrole=""><INSTANCE dmid="\_ds1" dmrole="" dmtype="ds:experiment.ObsDataset"><PRIMARY\_KEY dmtype="ivoa:string" value="5813181197970338560"/><ATTRIBUTE dmrole="ds:dataset.Dataset.dataProductType" dmtype="ds:dataset.DataProductType" value="TIMESERIES"/><ATTRIBUTE dmrole="ds:dataset.Dataset.dataProductSubtype" dmtype="ivoa:string" value="GAIA Time Series"/><ATTRIBUTE dmrole="ds:experiment.ObsDataset.calibLevel" dmtype="ivoa:integer" value="1"/><REFERENCE dmrole="ds:experiment.ObsDataset.target" dmref="\_tg1"/></INSTANCE></COLLECTION><INSTANCE dmid="\_tg1" dmrole="" dmtype="ds:experiment.Target"><ATTRIBUTE dmrole="ds:experiment.BaseTarget.name" dmtype="ivoa:string" value="5813181197970338560"/></INSTANCE></GLOBALS><TEMPLATES tableref="\_PKTable"><INSTANCE dmid="\_TimeSeries" dmrole="" dmtype="cube:SparseCube"><REFERENCE dmrole="cube:DataProduct.dataset" sourceref="\_Datasets"><FOREIGN\_KEY ref="\_pksrcid"/></REFERENCE><COLLECTION dmrole="cube:SparseCube.data"><JOIN dmref="\_ts\_data"><WHERE foreignkey="\_srcid" primarykey="\_pksrcid" /><WHERE foreignkey="\_band" primarykey="\_pkband" /></JOIN></COLLECTION></INSTANCE></TEMPLATES><TEMPLATES tableref="Results"><INSTANCE dmid="\_ts\_data" dmrole="" dmtype="cube:NDPoint"><COLLECTION dmrole="cube:NDPoint.observable"><INSTANCE dmtype="cube:Observable"><ATTRIBUTE dmrole="cube:DataAxis.dependent" dmtype="ivoa:boolean" value="False"/><INSTANCE dmrole="cube:MeasurementAxis.measure" dmtype="meas:Time"><INSTANCE dmrole="meas:Measure.coord" dmtype="coords:MJD"><ATTRIBUTE dmrole="coords:MJD.date" dmtype="ivoa:real" ref="\_obstime"/><REFERENCE dmrole="coords:Coordinate.coordSys" dmref="\_timesys"/></INSTANCE></INSTANCE></INSTANCE><INSTANCE dmtype="cube:Observable"><ATTRIBUTE dmrole="cube:DataAxis.dependent" dmtype="ivoa:boolean" value="True"/><INSTANCE dmrole="cube:MeasurementAxis.measure" dmtype="meas:GenericMeasure"><INSTANCE dmrole="meas:Measure.coord" dmtype="coords:PhysicalCoordinate"><ATTRIBUTE dmrole="coords:PhysicalCoordinate.cval" dmtype="ivoa:RealQuantity" ref="\_mag" unit="mag"/><REFERENCE dmrole="coords:Coordinate.coordSys" sourceref="\_CoordinateSystems"><FOREIGN\_KEY ref="\_band"/></REFERENCE></INSTANCE></INSTANCE></INSTANCE><INSTANCE dmtype="cube:Observable"><ATTRIBUTE dmrole="cube:DataAxis.dependent" dmtype="ivoa:boolean" value="True"/><INSTANCE dmrole="cube:MeasurementAxis.measure" dmtype="meas:GenericMeasure"><INSTANCE dmrole="meas:Measure.coord" dmtype="coords:PhysicalCoordinate"><ATTRIBUTE dmrole="coords:PhysicalCoordinate.cval" dmtype="ivoa:RealQuantity" ref="\_flux" unit="e-/s" /><REFERENCE dmrole="coords:Coordinate.coordSys" sourceref="\_CoordinateSystems"><FOREIGN\_KEY ref="\_band"/></REFERENCE></INSTANCE><INSTANCE dmrole="meas:Measure.error" dmtype="meas:Error"><INSTANCE dmrole="meas:Error.statError" dmtype="meas:Symmetrical"><ATTRIBUTE dmrole="meas:Symmetrical.radius" dmtype="ivoa:RealQuantity" ref="\_fluxerr" unit="e-/s" /></INSTANCE></INSTANCE></INSTANCE></INSTANCE></COLLECTION></INSTANCE></TEMPLATES></VODML>"#; // Test read
         let vodml = test_read::<Vodml>(xml);
         test_writer(vodml, xml);
+    }
+
+    #[test]
+    fn test_1_vodml() {
+        // OK VODMLS
+        let xml = get_xml("./resources/snippets/test_1_ok_1.1.xml");
+        println!("testing 1.1");
+        test_read::<Vodml>(&xml);
+        let xml = get_xml("./resources/snippets/test_1_ok_1.2.xml");
+        println!("testing 1.2");
+        test_read::<Vodml>(&xml);
+        let xml = get_xml("./resources/snippets/test_1_ok_1.3.xml");
+        println!("testing 1.3");
+        test_read::<Vodml>(&xml);
+        let xml = get_xml("./resources/snippets/test_1_ok_1.4.xml");
+        println!("testing 1.4");
+        test_read::<Vodml>(&xml);
+        let xml = get_xml("./resources/snippets/test_1_ok_1.8.xml");
+        println!("testing 1.8");
+        test_read::<Vodml>(&xml);
+        
+        // KO VODMLS
+        let xml = get_xml("./resources/snippets/test_1_ok_1.9.xml");
+        println!("testing 1.9");
+        test_read::<Vodml>(&xml);
+        let xml = get_xml("./resources/snippets/test_1_ko_1.5.xml");
+        println!("testing 1.5");
+        test_error::<Vodml>(&xml);
+        let xml = get_xml("./resources/snippets/test_1_ko_1.6.xml");
+        println!("testing 1.6");
+        test_read::<Vodml>(&xml);
+        let xml = get_xml("./resources/snippets/test_1_ko_1.7.xml");
+        println!("testing 1.7");
+        test_read::<Vodml>(&xml);
+        let xml = get_xml("./resources/snippets/test_1_ko_1.10.xml");
+        println!("testing 1.10");
+        test_error::<Vodml>(&xml);
+        let xml = get_xml("./resources/snippets/test_1_ko_1.11.xml");
+        println!("testing 1.11");
+        test_error::<Vodml>(&xml);
+    }
+    fn get_xml(path: &str) -> String {
+        let mut file = File::open(path).expect("Unable to open the file");
+        let mut xml = String::new();
+        file.read_to_string(&mut xml)
+            .expect("Unable to read the file");
+        xml.replace(&['\n', '\t'][..], "")
     }
 }

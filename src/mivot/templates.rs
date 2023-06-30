@@ -83,6 +83,7 @@ fn read_template_sub_elem<R: std::io::BufRead>(
             },
             Event::Empty(ref e) => match e.local_name() {
                 Where::TAG_BYTES => template.wheres.push(NoFkWhere::from_event_empty(e)?),
+                NoRoleInstance::TAG_BYTES => template.instances.push(NoRoleInstance::from_event_empty(e)?),
                 _ => {
                     return Err(VOTableError::UnexpectedEmptyTag(
                         e.local_name().to_vec(),

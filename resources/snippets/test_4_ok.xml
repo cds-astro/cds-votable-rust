@@ -3,8 +3,7 @@
 <!-- NOTE: VODML node allows multiple TEMPLATES nodes.                            -->
 <!--       We take advantage of this to test several valid cases in the same file -->
 
-<VODML
-	xmlns="http://www.ivoa.net/xml/mivot">
+<VODML xmlns="http://www.ivoa.net/xml/mivot">
 
 	<MODEL name="model" url="http://aaaaaa" />
 

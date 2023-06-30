@@ -244,13 +244,50 @@ macro_rules! impl_write_e {
 /// }
 /// ```
 macro_rules! impl_write_not_e {
+  ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*], [] $(,[$($elems:ident),*])?) => {
+    paste! {
+      fn write<W: std::io::Write>(
+        &mut self,
+        writer: &mut Writer<W>,
+        _context: &Self::Context,
+      ) -> Result<(), crate::error::VOTableError> {
+        if $($(self.$elems.is_empty())&&*)? {
+          let mut elem_writer = writer.create_element(Self::TAG_BYTES);
+          write_empty_mandatory_attributes!(elem_writer, self, $($mandatory $(, $mandname)?),*);
+          write_empty_optional_attributes!(elem_writer, self, $($optional $(, $name)?),*);
+          elem_writer.write_empty().map_err(VOTableError::Write)?;
+          Ok(())
+        } else {
+          let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+          //MANDATORY
+          write_non_empty_mandatory_attributes!(tag, self, $($mandatory $(, $mandname)?),*);
+          //OPTIONAL
+          write_non_empty_optional_attributes!(tag, self, $($optional $(, $name)?),*);
+          writer
+              .write_event(Event::Start(tag.to_borrowed()))
+              .map_err(VOTableError::Write)?;
+            $($(write_elem_vec_no_context!(self, $elems, writer);)*)?
+          writer
+              .write_event(Event::End(tag.to_end()))
+              .map_err(VOTableError::Write)
+        }
+      }
+    }
+};
     ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*], [$($orderelem:ident),*] $(,[$($elems:ident),*])?) => {
         paste! {
           fn write<W: std::io::Write>(
             &mut self,
             writer: &mut Writer<W>,
             _context: &Self::Context,
-          ) -> Result<(), crate::error::VOTableError> {
+          ) -> Result<(), crate::error::VOTableError> { //TODO CHECK ELEMS TOO
+            if $(self.$orderelem.is_empty())&&* {
+                let mut elem_writer = writer.create_element(Self::TAG_BYTES);
+                write_empty_mandatory_attributes!(elem_writer, self, $($mandatory $(, $mandname)?),*);
+                write_empty_optional_attributes!(elem_writer, self, $($optional $(, $name)?),*);
+                elem_writer.write_empty().map_err(VOTableError::Write)?;
+                return Ok(())
+            }
             let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
             //MANDATORY
             write_non_empty_mandatory_attributes!(tag, self, $($mandatory $(, $mandname)?),*);

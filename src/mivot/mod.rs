@@ -1,10 +1,10 @@
 extern crate core;
 
-use crate::error::VOTableError;
-use quick_xml::Writer;
-use std::io::Write;
+use crate::{error::VOTableError, QuickXmlReadWrite};
+use quick_xml::{events::Event, Reader, Writer};
+use std::io::{Cursor, Write};
 
-use self::{primarykey::PrimaryKey, foreignkey::ForeignKey};
+use self::{foreignkey::ForeignKey, primarykey::PrimaryKey};
 
 #[macro_use]
 pub mod macros;
@@ -38,4 +38,33 @@ pub trait InstanceType {
 
 pub trait ReferenceType {
     fn push2_fk(&mut self, fk: ForeignKey);
+}
+
+pub(crate) fn test_error<X: QuickXmlReadWrite<Context = ()>>(xml: &str) -> X {
+    let mut reader = Reader::from_reader(Cursor::new(xml.as_bytes()));
+    let mut buff: Vec<u8> = Vec::with_capacity(xml.len());
+    loop {
+        let mut event = reader.read_event(&mut buff).unwrap();
+        match &mut event {
+            Event::Start(ref mut e) if e.local_name() == X::TAG_BYTES => {
+                let mut info = X::from_attributes(e.attributes()).unwrap();
+                assert!(info
+                    .read_sub_elements_and_clean(reader, &mut buff, &())
+                    .is_err());
+                return info;
+            }
+            Event::Empty(ref mut e) if e.local_name() == X::TAG_BYTES => {
+                let info = X::from_attributes(e.attributes()).unwrap();
+                return info;
+            }
+            Event::Text(ref mut e) if e.escaped().is_empty() => (), // First even read
+            Event::Comment(_) => (),
+            Event::DocType(_) => (),
+            Event::Decl(_) => (),
+            _ => {
+                println!("{:?}", event);
+                unreachable!()
+            }
+        }
+    }
 }

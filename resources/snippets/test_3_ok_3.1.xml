@@ -8,8 +8,7 @@
     2) INSTANCE
        Singleton instances, these may be referenced by other instances, but do not play a direct role within any instance.
 -->
-<VODML
-	xmlns="http://www.ivoa.net/xml/mivot">
+<VODML xmlns="http://www.ivoa.net/xml/mivot">
 
 	<MODEL name="model" url="http://aaaaaa" />
 

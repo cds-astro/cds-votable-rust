@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!-- Test Case 1.4: MODEL node only.. not very useful -->
-<VODML
-	xmlns="http://www.ivoa.net/xml/mivot">
+<VODML xmlns="http://www.ivoa.net/xml/mivot">
 
 	<MODEL name="model" url="http://aaaaaa" />
 
