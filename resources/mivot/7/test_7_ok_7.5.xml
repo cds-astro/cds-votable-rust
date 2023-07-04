@@ -1,0 +1,2 @@
+<!-- Test Case 7.5: valid dmrole + dmtype + value + unit; may have unit. -->
+<ATTRIBUTE dmrole="model:Thing.d" dmtype="model:Alpha" value="eee" unit="keV"/>

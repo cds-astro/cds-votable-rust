@@ -40,6 +40,16 @@ pub trait ReferenceType {
   fn push2_fk(&mut self, fk: ForeignKey);
 }
 
+pub(crate) fn value_checker(value: &str) -> Result<(), VOTableError> {
+  if value.len() == 0 && value.is_empty() {
+    return Err(VOTableError::Custom(
+      "If attribute ref is present it musn't be empty".to_owned(),
+    ));
+  } else {
+    Ok(())
+  }
+}
+
 #[cfg(test)]
 mod test {
   use crate::QuickXmlReadWrite;

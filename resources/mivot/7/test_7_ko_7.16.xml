@@ -1,18 +1,4 @@
-<VODML
-	xmlns="http://www.ivoa.net/xml/mivot">
+<!-- Usage 2: Child of COLLECTION -->
 
-	<MODEL name="model" url="http://aaaaaa" />
-	<TEMPLATES tableref="fgdgfddf">
-		<INSTANCE dmid="_thing1" dmtype="model:Thing">
-			<COLLECTION dmrole="model:Thing.arrayAttribute1">
-			<!-- Usage 2: Child of COLLECTION -->
-			
-				<!-- Test Case 7.21: dmrole + dmtype + ref; must have no or empty dmrole in this context. -->
-				<ATTRIBUTE dmrole="model:Thing.arrayAttribute1" dmtype="ivoa:real" ref="_param4"/>
-				<ATTRIBUTE dmrole="model:Thing.arrayAttribute1" dmtype="ivoa:real" ref="_param5"/>
-				<ATTRIBUTE dmrole="model:Thing.arrayAttribute1" dmtype="ivoa:real" ref="_param6"/>
-			</COLLECTION>
-
-		</INSTANCE>
-	</TEMPLATES>
-</VODML>
+<!-- Test Case 7.21: dmrole + dmtype + ref; must have no or empty dmrole in this context. -->
+<ATTRIBUTE dmrole="model:Thing.arrayAttribute1" dmtype="ivoa:real" ref="_param4"/>

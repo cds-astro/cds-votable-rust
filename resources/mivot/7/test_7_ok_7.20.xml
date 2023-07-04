@@ -1,0 +1,2 @@
+<!-- Test Case 7.20: valid dmrole + dmtype + value + empty unit; unit may be empty. -->
+<ATTRIBUTE dmtype="ivoa:real" value="1.21" unit="" />

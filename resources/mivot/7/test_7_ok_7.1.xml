@@ -1,0 +1,2 @@
+<!-- Test Case 7.1: valid dmrole + dmtype + value  -->
+<ATTRIBUTE dmrole="model:Thing.a" dmtype="model:Foo" value="eeee"/>

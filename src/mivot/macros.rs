@@ -148,13 +148,8 @@ macro_rules! impl_builder_from_attr {
             let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
             tag = match attr.key {
               $(opt_bstringify!($optional $(, [<$name>])?) => {
-                if !(value.len() == 0 && value.is_empty()) {
-                  tag.[<set_ $optional>](value)
-                } else {
-                  return Err(VOTableError::Custom(
-                    format!("If attribute {}  is present it musn't be empty",
-                    opt_stringify!($optional $(, [<$name>])?))))
-                }
+                value_checker(value)?;
+                tag.[<set_ $optional>](value)
               }),*
               $($(opt_bstringify!($empty $(, [<$empname>])?) => {tag}),*)?
                 _ => {
@@ -177,23 +172,13 @@ macro_rules! impl_builder_from_attr {
               let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
               tag = match attr.key {
                 $(opt_bstringify!($mandatory $(, [<$mandname>])?) => {
-                  if !(value.len() == 0 && value.is_empty()) {
-                    tag.$mandatory = value.to_string();
-                    tag
-                  } else {
-                    return Err(VOTableError::Custom(
-                      format!("Attribute {} is mandatory, it musn't be empty",
-                      opt_stringify!($mandatory $(, [<$mandname>])?))))
-                  }
+                  value_checker(value)?;
+                  tag.$mandatory = value.to_string();
+                  tag
                 }),*
                 $(opt_bstringify!($optional $(, [<$name>])?) => {
-                  if !(value.len() == 0 && value.is_empty()) {
-                    tag.[<set_ $optional>](value)
-                  } else {
-                    return Err(VOTableError::Custom(
-                      format!("If attribute {} is present it musn't be empty",
-                      opt_stringify!($optional $(, [<$name>])?))))
-                  }
+                  value_checker(value)?;
+                  tag.[<set_ $optional>](value)
                 }),*
                 $($(opt_bstringify!($empty $(, [<$empname>])?) => {tag}),*)?
                   _ => {
@@ -517,14 +502,5 @@ macro_rules! opt_bstringify {
   };
   ($ident:ident, $name:tt) => {
     bstringify!($name)
-  };
-}
-
-macro_rules! opt_stringify {
-  ($ident:ident) => {
-    stringify!($ident)
-  };
-  ($ident:ident, $name:tt) => {
-    stringify!($name)
   };
 }

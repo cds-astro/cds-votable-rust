@@ -1,0 +1,2 @@
+<!-- Test Case 7.21: empty dmrole + dmtype + ref + value + arrayindex; -->
+<ATTRIBUTE dmtype="ivoa:real" ref="_param10" arrayindex="0" value="NaN"/>
