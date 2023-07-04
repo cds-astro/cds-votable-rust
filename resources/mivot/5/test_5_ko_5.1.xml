@@ -1,0 +1,4 @@
+<!-- Pattern A no dmrole instance -->
+
+<!-- Test Case 5.1: dmid + dmrole + dmtype; must have no or empty dmrole. -->
+<INSTANCE dmid="_xyz" dmrole="model:Apple.seed" dmtype="model:thing" />

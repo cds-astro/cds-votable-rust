@@ -1,0 +1,4 @@
+<!-- Test Case 4.3: WHERE only; INSTANCE required -->
+<TEMPLATES tableref="fgdgfddf">
+	<WHERE primarykey="sssss" value="ssss" />
+</TEMPLATES>

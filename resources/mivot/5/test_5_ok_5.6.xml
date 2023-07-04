@@ -1,0 +1,2 @@
+<!-- Test Case 5.6: no dmid + no dmrole + dmtype; dmid optional, must have no or empty dmrole. -->
+<INSTANCE dmtype="model:thing" />

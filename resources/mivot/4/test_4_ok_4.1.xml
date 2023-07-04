@@ -1,0 +1,4 @@
+<!-- Test Case 4.1: with INSTANCE only; WHERE optional -->
+<TEMPLATES tableref="fgdgfddf">
+  <INSTANCE  dmtype="fffff" />
+</TEMPLATES>

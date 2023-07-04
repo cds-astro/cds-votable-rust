@@ -1,0 +1,7 @@
+<INSTANCE dmtype="model:thing">
+<!-- Usage 5: Child of INSTANCE  -->
+
+	<!-- Test Case 5.46: empty dmid + valid dmrole + valid dmtype; If present, dmid must not be empty. -->
+	<INSTANCE dmid="" dmrole="model.thing.a" dmtype="model:foo" />
+	
+</INSTANCE>

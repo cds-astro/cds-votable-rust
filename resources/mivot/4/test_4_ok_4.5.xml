@@ -1,0 +1,6 @@
+<!-- Test Case 4.5: multiple WHERE nodes -->
+<TEMPLATES tableref="fgdgfddf">
+  <WHERE primarykey="sssss" value="ssss" />
+  <WHERE primarykey="ttttt" value="tttt" />
+  <INSTANCE  dmtype="fffff"/>
+</TEMPLATES>

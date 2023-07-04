@@ -1,0 +1,4 @@
+<!-- Test Case 4.9: tableref must not be empty -->
+<TEMPLATES tableref="">
+	<INSTANCE dmtype="model:Thing" />
+</TEMPLATES>

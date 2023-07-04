@@ -1,0 +1,7 @@
+<!-- Usage 3: Child of COLLECTION, for ORM selection -->
+
+<!-- Test Case 5.57: with PRIMARY_KEY not first  -->
+<INSTANCE dmid="_timesys" dmtype="model:TimeSys" >
+	<ATTRIBUTE dmrole="model:TimeSys.a" dmtype="ivoa:string" value="blah" />
+	<PRIMARY\_KEY dmtype="ivoa:string" value="TCB"/>
+</INSTANCE>

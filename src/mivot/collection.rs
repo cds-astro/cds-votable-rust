@@ -9,7 +9,7 @@ use quick_xml::{
 };
 use std::{io::Write, str};
 
-use super::instance::NoRoleInstance;
+use super::instance::{MandPKInstance, NoRoleInstance};
 use super::reference::{DynRef, StaticRef};
 use super::{attribute_c::AttributePatC, join::Join, primarykey::PrimaryKey, ElemImpl, ElemType};
 
@@ -21,25 +21,27 @@ use super::{attribute_c::AttributePatC, join::Join, primarykey::PrimaryKey, Elem
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum CollectionElem {
-    Attribute(AttributePatC),
-    Instance(NoRoleInstance),
-    StaticRef(StaticRef),
-    DynRef(DynRef),
-    Collection(CollectionPatC),
-    Join(Join),
+  Attribute(AttributePatC),
+  Instance(NoRoleInstance),
+  PKInstance(MandPKInstance),
+  StaticRef(StaticRef),
+  DynRef(DynRef),
+  Collection(CollectionPatC),
+  Join(Join),
 }
 impl ElemType for CollectionElem {
-    fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
-        match self {
-            CollectionElem::Attribute(elem) => elem.write(writer, &()),
-            CollectionElem::Instance(elem) => elem.write(writer, &()),
-            CollectionElem::StaticRef(elem) => elem.write(writer, &()),
-            CollectionElem::DynRef(elem) => elem.write(writer, &()),
-            CollectionElem::Collection(elem) => elem.write(writer, &()),
-            CollectionElem::Join(elem) => elem.write(writer, &()),
-        }
+  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+    match self {
+      CollectionElem::Attribute(elem) => elem.write(writer, &()),
+      CollectionElem::Instance(elem) => elem.write(writer, &()),
+      CollectionElem::PKInstance(elem) => elem.write(writer, &()),
+      CollectionElem::StaticRef(elem) => elem.write(writer, &()),
+      CollectionElem::DynRef(elem) => elem.write(writer, &()),
+      CollectionElem::Collection(elem) => elem.write(writer, &()),
+      CollectionElem::Join(elem) => elem.write(writer, &()),
     }
   }
+}
 
 /////////////////////////
 /////// PATTERN A ///////
@@ -54,34 +56,34 @@ impl ElemType for CollectionElem {
 */
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct CollectionPatA {
-    // MANDATORY
-    dmrole: String,
-    // OPTIONAL
-    #[serde(skip_serializing_if = "Option::is_none")]
-    dmid: Option<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    primary_keys: Vec<PrimaryKey>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    elems: Vec<CollectionElem>,
+  // MANDATORY
+  dmrole: String,
+  // OPTIONAL
+  #[serde(skip_serializing_if = "Option::is_none")]
+  dmid: Option<String>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  primary_keys: Vec<PrimaryKey>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  elems: Vec<CollectionElem>,
 }
 impl CollectionPatA {
-    impl_non_empty_new!([dmrole], [dmid], [primary_keys, elems]);
-    impl_builder_opt_string_attr!(dmid);
+  impl_non_empty_new!([dmrole], [dmid], [primary_keys, elems]);
+  impl_builder_opt_string_attr!(dmid);
 }
 impl ElemImpl<CollectionElem> for CollectionPatA {
-    fn push_to_elems(&mut self, elem: CollectionElem) {
-        self.elems.push(elem)
-    }
+  fn push_to_elems(&mut self, elem: CollectionElem) {
+    self.elems.push(elem)
+  }
 }
 impl_quickrw_not_e!(
-    [dmrole],       // MANDATORY ATTRIBUTES
-    [dmid],         // OPTIONAL ATTRIBUTES
-    "COLLECTION",   // TAG, here : <COLLECTION>
-    CollectionPatA, // Struct on which to impl
-    (),             // Context type
-    [primary_keys],
-    read_collection_sub_elem,
-    [elems]
+  [dmrole],       // MANDATORY ATTRIBUTES
+  [dmid],         // OPTIONAL ATTRIBUTES
+  "COLLECTION",   // TAG, here : <COLLECTION>
+  CollectionPatA, // Struct on which to impl
+  (),             // Context type
+  [primary_keys],
+  read_collection_sub_elem,
+  [elems]
 );
 
 /////////////////////////
@@ -96,32 +98,32 @@ impl_quickrw_not_e!(
 */
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct CollectionPatB {
-    // MANDATORY
-    dmid: String,
-    // OPTIONAL
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    primary_keys: Vec<PrimaryKey>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    elems: Vec<CollectionElem>,
+  // MANDATORY
+  dmid: String,
+  // OPTIONAL
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  primary_keys: Vec<PrimaryKey>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  elems: Vec<CollectionElem>,
 }
 impl CollectionPatB {
-    impl_non_empty_new!([dmid], [], [primary_keys, elems]);
+  impl_non_empty_new!([dmid], [], [primary_keys, elems]);
 }
 impl ElemImpl<CollectionElem> for CollectionPatB {
-    fn push_to_elems(&mut self, elem: CollectionElem) {
-        self.elems.push(elem)
-    }
+  fn push_to_elems(&mut self, elem: CollectionElem) {
+    self.elems.push(elem)
+  }
 }
 impl_quickrw_not_e!(
-    [dmid],         // MANDATORY ATTRIBUTES
-    [],             // OPTIONAL ATTRIBUTES
-    [dmrole],       // Potential empty attributes
-    "COLLECTION",   // TAG, here : <COLLECTION>
-    CollectionPatB, // Struct on which to impl
-    (),             // Context type
-    [primary_keys],
-    read_collection_sub_elem,
-    [elems]
+  [dmid],         // MANDATORY ATTRIBUTES
+  [],             // OPTIONAL ATTRIBUTES
+  [dmrole],       // Potential empty attributes
+  "COLLECTION",   // TAG, here : <COLLECTION>
+  CollectionPatB, // Struct on which to impl
+  (),             // Context type
+  [primary_keys],
+  read_collection_b_sub_elem,
+  [elems]
 );
 
 /////////////////////////
@@ -136,33 +138,33 @@ impl_quickrw_not_e!(
 */
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct CollectionPatC {
-    // OPTIONAL
-    #[serde(skip_serializing_if = "Option::is_none")]
-    dmid: Option<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    primary_keys: Vec<PrimaryKey>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    elems: Vec<CollectionElem>,
+  // OPTIONAL
+  #[serde(skip_serializing_if = "Option::is_none")]
+  dmid: Option<String>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  primary_keys: Vec<PrimaryKey>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  elems: Vec<CollectionElem>,
 }
 impl CollectionPatC {
-    impl_non_empty_new!([], [dmid], [primary_keys, elems]);
-    impl_builder_opt_string_attr!(dmid);
+  impl_non_empty_new!([], [dmid], [primary_keys, elems]);
+  impl_builder_opt_string_attr!(dmid);
 }
 impl ElemImpl<CollectionElem> for CollectionPatC {
-    fn push_to_elems(&mut self, elem: CollectionElem) {
-        self.elems.push(elem)
-    }
+  fn push_to_elems(&mut self, elem: CollectionElem) {
+    self.elems.push(elem)
+  }
 }
 impl_quickrw_not_e!(
-    [],             // MANDATORY ATTRIBUTES
-    [dmid],         // OPTIONAL ATTRIBUTES
-    [dmrole],       //Potential empty attributes
-    "COLLECTION",   // TAG, here : <COLLECTION>
-    CollectionPatC, // Struct on which to impl
-    (),             // Context type
-    [primary_keys],
-    read_collection_sub_elem,
-    [elems]
+  [],             // MANDATORY ATTRIBUTES
+  [dmid],         // OPTIONAL ATTRIBUTES
+  [dmrole],       //Potential empty attributes
+  "COLLECTION",   // TAG, here : <COLLECTION>
+  CollectionPatC, // Struct on which to impl
+  (),             // Context type
+  [primary_keys],
+  read_collection_sub_elem,
+  [elems]
 );
 
 ///////////////////////
@@ -184,82 +186,182 @@ fn read_collection_sub_elem<
   R: std::io::BufRead,
   T: QuickXmlReadWrite + ElemImpl<CollectionElem>,
 >(
-    collection: &mut T,
-    _context: &(),
-    mut reader: quick_xml::Reader<R>,
-    mut reader_buff: &mut Vec<u8>,
+  collection: &mut T,
+  _context: &(),
+  mut reader: quick_xml::Reader<R>,
+  mut reader_buff: &mut Vec<u8>,
 ) -> Result<quick_xml::Reader<R>, crate::error::VOTableError> {
-    loop {
-        let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
-        match &mut event {
-            Event::Start(ref e) => match e.local_name() {
-                AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
-                    from_event_start!(AttributePatC, reader, reader_buff, e),
-                )),
-                NoRoleInstance::TAG_BYTES => collection.push_to_elems(CollectionElem::Instance(
-                    from_event_start!(NoRoleInstance, reader, reader_buff, e),
-                )),
-                DynRef::TAG_BYTES => {
-                    if e.attributes()
-                        .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
-                        .is_some()
-                    {
-                        collection.push_to_elems(CollectionElem::DynRef(from_event_start!(
-                            DynRef,
-                            reader,
-                            reader_buff,
-                            e
-                        )))
-                    } else {
-                        collection.push_to_elems(CollectionElem::StaticRef(from_event_start!(
-                            StaticRef,
-                            reader,
-                            reader_buff,
-                            e
-                        )))
-                    }
-                }
-                CollectionPatA::TAG_BYTES => collection.push_to_elems(CollectionElem::Collection(
-                    from_event_start!(CollectionPatC, reader, reader_buff, e),
-                )),
-                Join::TAG_BYTES => collection.push_to_elems(CollectionElem::Join(
-                    from_event_start!(Join, reader, reader_buff, e),
-                )),
-                _ => {
-                    return Err(VOTableError::UnexpectedStartTag(
-                        e.local_name().to_vec(),
-                        CollectionPatA::TAG,
-                    ))
-                }
-            },
-            Event::Empty(ref e) => match e.local_name() {
-                AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
-                    AttributePatC::from_event_empty(e)?,
-                )),
-                DynRef::TAG_BYTES => {
-                    if e.attributes()
-                        .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
-                        .is_some()
-                    {
-                        collection
-                            .push_to_elems(CollectionElem::DynRef(DynRef::from_event_empty(e)?))
-                    } else {
-                        collection.push_to_elems(CollectionElem::StaticRef(
-                            StaticRef::from_event_empty(e)?,
-                        ))
-                    }
-                }
-                _ => {
-                    return Err(VOTableError::UnexpectedEmptyTag(
-                        e.local_name().to_vec(),
-                        T::TAG,
-                    ))
-                }
-            },
-            Event::Text(e) if is_empty(e) => {}
-            Event::End(e) if e.local_name() == T::TAG_BYTES => return Ok(reader),
-            Event::Eof => return Err(VOTableError::PrematureEOF(T::TAG)),
-            _ => eprintln!("Discarded event in {}: {:?}", T::TAG, event),
+  loop {
+    let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+    match &mut event {
+      Event::Start(ref e) => match e.local_name() {
+        AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
+          from_event_start!(AttributePatC, reader, reader_buff, e),
+        )),
+        NoRoleInstance::TAG_BYTES => collection.push_to_elems(CollectionElem::Instance(
+          from_event_start!(NoRoleInstance, reader, reader_buff, e),
+        )),
+        DynRef::TAG_BYTES => {
+          if e
+            .attributes()
+            .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
+            .is_some()
+          {
+            collection.push_to_elems(CollectionElem::DynRef(from_event_start!(
+              DynRef,
+              reader,
+              reader_buff,
+              e
+            )))
+          } else {
+            collection.push_to_elems(CollectionElem::StaticRef(from_event_start!(
+              StaticRef,
+              reader,
+              reader_buff,
+              e
+            )))
+          }
         }
-      }
+        CollectionPatA::TAG_BYTES => collection.push_to_elems(CollectionElem::Collection(
+          from_event_start!(CollectionPatC, reader, reader_buff, e),
+        )),
+        Join::TAG_BYTES => collection.push_to_elems(CollectionElem::Join(from_event_start!(
+          Join,
+          reader,
+          reader_buff,
+          e
+        ))),
+        _ => {
+          return Err(VOTableError::UnexpectedStartTag(
+            e.local_name().to_vec(),
+            CollectionPatA::TAG,
+          ))
+        }
+      },
+      Event::Empty(ref e) => match e.local_name() {
+        AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
+          AttributePatC::from_event_empty(e)?,
+        )),
+        DynRef::TAG_BYTES => {
+          if e
+            .attributes()
+            .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
+            .is_some()
+          {
+            collection.push_to_elems(CollectionElem::DynRef(DynRef::from_event_empty(e)?))
+          } else {
+            collection.push_to_elems(CollectionElem::StaticRef(StaticRef::from_event_empty(e)?))
+          }
+        }
+        NoRoleInstance::TAG_BYTES => collection.push_to_elems(CollectionElem::Instance(
+          NoRoleInstance::from_event_empty(e)?,
+        )),
+        _ => {
+          return Err(VOTableError::UnexpectedEmptyTag(
+            e.local_name().to_vec(),
+            T::TAG,
+          ))
+        }
+      },
+      Event::Text(e) if is_empty(e) => {}
+      Event::End(e) if e.local_name() == T::TAG_BYTES => return Ok(reader),
+      Event::Eof => return Err(VOTableError::PrematureEOF(T::TAG)),
+      _ => eprintln!("Discarded event in {}: {:?}", T::TAG, event),
     }
+  }
+}
+
+/*
+    function read_collectionB_sub_elem
+    Description:
+    *   reads the children of Collection
+    @generic R: BufRead; a struct that implements the std::io::BufRead trait.
+    @generic T: QuickXMLReadWrite + ElemImpl<CollectionElem>; a struct that implements the quickXMLReadWrite and ElemImpl for CollectionElem traits.
+    @param instance &mut T: an instance of CollectionPatB
+    @param reader &mut quick_xml::Reader<R>: the reader used to read the elements
+    @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
+    #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
+*/
+
+fn read_collection_b_sub_elem<R: std::io::BufRead>(
+  collection: &mut CollectionPatB,
+  _context: &(),
+  mut reader: quick_xml::Reader<R>,
+  mut reader_buff: &mut Vec<u8>,
+) -> Result<quick_xml::Reader<R>, crate::error::VOTableError> {
+  loop {
+    let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+    match &mut event {
+      Event::Start(ref e) => match e.local_name() {
+        AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
+          from_event_start!(AttributePatC, reader, reader_buff, e),
+        )),
+        MandPKInstance::TAG_BYTES => collection.push_to_elems(CollectionElem::PKInstance(
+          from_event_start!(MandPKInstance, reader, reader_buff, e),
+        )),
+        DynRef::TAG_BYTES => {
+          if e
+            .attributes()
+            .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
+            .is_some()
+          {
+            collection.push_to_elems(CollectionElem::DynRef(from_event_start!(
+              DynRef,
+              reader,
+              reader_buff,
+              e
+            )))
+          } else {
+            collection.push_to_elems(CollectionElem::StaticRef(from_event_start!(
+              StaticRef,
+              reader,
+              reader_buff,
+              e
+            )))
+          }
+        }
+        CollectionPatA::TAG_BYTES => collection.push_to_elems(CollectionElem::Collection(
+          from_event_start!(CollectionPatC, reader, reader_buff, e),
+        )),
+        Join::TAG_BYTES => collection.push_to_elems(CollectionElem::Join(from_event_start!(
+          Join,
+          reader,
+          reader_buff,
+          e
+        ))),
+        _ => {
+          return Err(VOTableError::UnexpectedStartTag(
+            e.local_name().to_vec(),
+            CollectionPatA::TAG,
+          ))
+        }
+      },
+      Event::Empty(ref e) => match e.local_name() {
+        AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
+          AttributePatC::from_event_empty(e)?,
+        )),
+        DynRef::TAG_BYTES => {
+          if e
+            .attributes()
+            .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
+            .is_some()
+          {
+            collection.push_to_elems(CollectionElem::DynRef(DynRef::from_event_empty(e)?))
+          } else {
+            collection.push_to_elems(CollectionElem::StaticRef(StaticRef::from_event_empty(e)?))
+          }
+        }
+        _ => {
+          return Err(VOTableError::UnexpectedEmptyTag(
+            e.local_name().to_vec(),
+            CollectionPatB::TAG,
+          ))
+        }
+      },
+      Event::Text(e) if is_empty(e) => {}
+      Event::End(e) if e.local_name() == CollectionPatB::TAG_BYTES => return Ok(reader),
+      Event::Eof => return Err(VOTableError::PrematureEOF(CollectionPatB::TAG)),
+      _ => eprintln!("Discarded event in {}: {:?}", CollectionPatB::TAG, event),
+    }
+  }
+}

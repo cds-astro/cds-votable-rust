@@ -1,0 +1,6 @@
+
+<!-- Test Case 3.6: unexpected subnode -->
+<GLOBALS >
+	<REFERENCE dmid="_mistake" dmrole="" ref="_zzz" />
+	<INSTANCE dmid="_ds" dmrole="" dmtype="ddddd" />
+</GLOBALS>

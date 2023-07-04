@@ -191,7 +191,7 @@ macro_rules! impl_builder_from_attr {
                     tag.[<set_ $optional>](value)
                   } else {
                     return Err(VOTableError::Custom(
-                      format!("If attribute {}  is present it musn't be empty",
+                      format!("If attribute {} is present it musn't be empty",
                       opt_stringify!($optional $(, [<$name>])?))))
                   }
                 }),*
@@ -365,35 +365,35 @@ macro_rules! non_empty_read_sub {
 }
 
 macro_rules! empty_read_sub {
-    () => {
-        paste! {
-          /*
-              function read_sub_elements
-              ! NO SUBELEMENTS SHOULD BE PRESENT
-          */
-          fn read_sub_elements<R: std::io::BufRead>(
-              &mut self,
-              mut _reader: Reader<R>,
-              _reader_buff: &mut Vec<u8>,
-              _context: &Self::Context,
-          ) -> Result<Reader<R>, crate::error::VOTableError> {
-              todo!()
-          }
+  () => {
+    paste! {
+      /*
+          function read_sub_elements
+          ! NO SUBELEMENTS SHOULD BE PRESENT
+      */
+      fn read_sub_elements<R: std::io::BufRead>(
+          &mut self,
+          mut _reader: Reader<R>,
+          _reader_buff: &mut Vec<u8>,
+          _context: &Self::Context,
+      ) -> Result<Reader<R>, crate::error::VOTableError> {
+          todo!()
+      }
 
-          /*
-              function read_sub_elements_by_ref
-              ! NO SUBELEMENTS SHOULD BE PRESENT
-          */
-          fn read_sub_elements_by_ref<R: std::io::BufRead>(
-              &mut self,
-              _reader: &mut Reader<R>,
-              _reader_buff: &mut Vec<u8>,
-              _context: &Self::Context,
-          ) -> Result<(), crate::error::VOTableError> {
-              todo!()
-          }
-        }
-    };
+      /*
+          function read_sub_elements_by_ref
+          ! NO SUBELEMENTS SHOULD BE PRESENT
+      */
+      fn read_sub_elements_by_ref<R: std::io::BufRead>(
+          &mut self,
+          _reader: &mut Reader<R>,
+          _reader_buff: &mut Vec<u8>,
+          _context: &Self::Context,
+      ) -> Result<(), crate::error::VOTableError> {
+          todo!()
+      }
+    }
+  };
 }
 
 macro_rules! impl_quickrw_e {
@@ -521,10 +521,10 @@ macro_rules! opt_bstringify {
 }
 
 macro_rules! opt_stringify {
-    ($ident:ident) => {
-        stringify!($ident)
-    };
-    ($ident:ident, $name:tt) => {
-        stringify!($name)
-    };
+  ($ident:ident) => {
+    stringify!($ident)
+  };
+  ($ident:ident, $name:tt) => {
+    stringify!($name)
+  };
 }

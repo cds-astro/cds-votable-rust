@@ -1,0 +1,4 @@
+<!-- Test Case 5.55: with REFERENCE; zero or more A|I|R|C, any order -->
+<INSTANCE dmid="eeee" dmtype="model:thing">
+  <REFERENCE dmrole="model.thing.c" dmref="_fffff"/>
+</INSTANCE>

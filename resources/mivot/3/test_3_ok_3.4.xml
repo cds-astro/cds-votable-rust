@@ -1,0 +1,22 @@
+<!-- Test Case 3.4: allows multiple instances of each subnode, in any order -->
+<GLOBALS>
+	<COLLECTION dmid="_coordsys" dmrole="" >
+		<INSTANCE dmid="_timesys" dmrole="" dmtype="model:TimeSys" >
+			<PRIMARY\_KEY dmtype="ivoa:string" value="TCB"/>
+		</INSTANCE>
+		<INSTANCE dmid="_spacesys" dmrole="" dmtype="model:SpaceSys" >
+			<PRIMARY\_KEY dmtype="ivoa:string" value="ICRS"/>
+		</INSTANCE>
+	</COLLECTION>
+	<INSTANCE dmid="sadasdas" dmrole="" dmtype="model:Alpha" />
+	<INSTANCE dmid="sadasbff" dmrole="" dmtype="model:Beta" />
+	<COLLECTION dmid="_filters" dmrole="" >
+		<INSTANCE dmid="_Rfilter" dmrole="" dmtype="rrrrr" >
+			<PRIMARY\_KEY dmtype="ivoa:string" value="RP"/>
+		</INSTANCE>
+		<INSTANCE dmid="_Bfilter" dmrole="" dmtype="bbbbb" >
+			<PRIMARY\_KEY dmtype="ivoa:string" value="RP"/>
+		</INSTANCE>
+	</COLLECTION>
+	<INSTANCE dmid="sadasdea" dmrole="" dmtype="model:Gamma" />
+</GLOBALS>

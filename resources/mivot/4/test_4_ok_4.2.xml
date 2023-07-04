@@ -1,0 +1,5 @@
+<!-- Test Case 4.2: with WHERE and INSTANCE -->
+<TEMPLATES tableref="fgdgfddf">
+	<WHERE primarykey="sssss" value="ssss" />
+	<INSTANCE  dmtype="fffff" />
+</TEMPLATES>

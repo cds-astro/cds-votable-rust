@@ -1,0 +1,2 @@
+<!-- Test Case 5.41: no dmid + dmrole + dmtype; dmid optional, must have dmrole. -->
+<INSTANCE dmrole="model.thing.b" dmtype="model:bar" />

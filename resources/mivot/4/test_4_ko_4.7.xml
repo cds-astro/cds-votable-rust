@@ -1,0 +1,5 @@
+<!-- Test Case 4.7: includes invalid subnode -->
+<TEMPLATES tableref="fgdgfddf">
+	<BANDOL />
+	<INSTANCE dmtype="model:Thing"/>
+</TEMPLATES>

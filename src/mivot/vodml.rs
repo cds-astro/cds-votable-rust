@@ -205,40 +205,40 @@ mod tests {
     #[test]
     fn test_vodml_read() {
         // OK VODMLS
-        let xml = get_xml("./resources/snippets/test_1_ok_1.1.xml");
+        let xml = get_xml("./resources/mivot/1/test_1_ok_1.1.xml");
         println!("testing 1.1");
         test_read::<Vodml>(&xml);
-        let xml = get_xml("./resources/snippets/test_1_ok_1.2.xml");
+        let xml = get_xml("./resources/mivot/1/test_1_ok_1.2.xml");
         println!("testing 1.2");
         test_read::<Vodml>(&xml);
-        let xml = get_xml("./resources/snippets/test_1_ok_1.3.xml");
+        let xml = get_xml("./resources/mivot/1/test_1_ok_1.3.xml");
         println!("testing 1.3");
         test_read::<Vodml>(&xml);
-        let xml = get_xml("./resources/snippets/test_1_ok_1.4.xml");
+        let xml = get_xml("./resources/mivot/1/test_1_ok_1.4.xml");
         println!("testing 1.4");
         test_read::<Vodml>(&xml);
-        let xml = get_xml("./resources/snippets/test_1_ok_1.8.xml");
+        let xml = get_xml("./resources/mivot/1/test_1_ok_1.8.xml");
         println!("testing 1.8");
         test_read::<Vodml>(&xml);
-        let xml = get_xml("./resources/snippets/test_1_ok_1.9.xml");
+        let xml = get_xml("./resources/mivot/1/test_1_ok_1.9.xml");
         println!("testing 1.9");
         test_read::<Vodml>(&xml);
         
         // KO VODMLS
-        let xml = get_xml("./resources/snippets/test_1_ko_1.5.xml");
-        println!("testing 1.5");
+        let xml = get_xml("./resources/mivot/1/test_1_ko_1.5.xml");
+        println!("testing 1.5"); // MODEL required
         test_error::<Vodml>(&xml, false);
-        let xml = get_xml("./resources/snippets/test_1_ko_1.6.xml");
-        println!("testing 1.6");
-        test_read::<Vodml>(&xml);
-        let xml = get_xml("./resources/snippets/test_1_ko_1.7.xml");
-        println!("testing 1.7");
-        test_read::<Vodml>(&xml);
-        let xml = get_xml("./resources/snippets/test_1_ko_1.10.xml");
-        println!("testing 1.10");
+        let xml = get_xml("./resources/mivot/1/test_1_ko_1.6.xml");
+        println!("testing 1.6"); // MODEL subnode must be first (parser can overlook this and write it correctly later)
+        test_read::<Vodml>(&xml); // Should read correctly
+        let xml = get_xml("./resources/mivot/1/test_1_ko_1.7.xml");
+        println!("testing 1.7"); // GLOBALS must be after MODEL and before TEMPLATES (parser can overlook this and write it correctly later)
+        test_read::<Vodml>(&xml); // Should read correctly
+        let xml = get_xml("./resources/mivot/1/test_1_ko_1.10.xml");
+        println!("testing 1.10"); // Only 1 GLOBALS subnode allowed.
         test_error::<Vodml>(&xml, false);
-        let xml = get_xml("./resources/snippets/test_1_ko_1.11.xml");
-        println!("testing 1.11");
+        let xml = get_xml("./resources/mivot/1/test_1_ko_1.11.xml");
+        println!("testing 1.11"); // Includes invalid subnode.
         test_error::<Vodml>(&xml, false);
     }
 }
