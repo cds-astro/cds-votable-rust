@@ -15,12 +15,12 @@ pub struct PrimaryKey {
   value: String,
 }
 impl PrimaryKey {
-    impl_empty_new!([dmtype, value], []);
+  impl_empty_new!([dmtype, value], []);
 }
 impl_quickrw_e!(
-    [dmtype, value], // MANDATORY ATTRIBUTES
-    [],              // OPTIONAL ATTRIBUTES
-    "PRIMARY\\_KEY",   // TAG, here : <ATTRIBUTE>
-    PrimaryKey,      // Struct on which to impl
-    ()               // Context type
+  [dmtype, value], // MANDATORY ATTRIBUTES
+  [],              // OPTIONAL ATTRIBUTES
+  "PRIMARY\\_KEY", // TAG, here : <ATTRIBUTE>
+  PrimaryKey,      // Struct on which to impl
+  ()               // Context type
 );

@@ -1,18 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<!-- Usage 1: Child of INSTANCE -->
 
-<VODML
-	xmlns="http://www.ivoa.net/xml/mivot">
-
-	<MODEL name="model" url="http://aaaaaa" />
-	<TEMPLATES tableref="fgdgfddf">
-		<INSTANCE dmtype="fffff">
-		<!-- Usage 1: Child of INSTANCE -->
-
-			<!-- Test Case 6.4:  valid dmrole + dmref + sourceref; must have dmref or sourceref, not both -->
-			<REFERENCE dmrole="aaaa" dmref="fffff" sourceref="fffff">
-				<FOREIGN_KEY ref="zzzzz" />
-			</REFERENCE>
-			
-		</INSTANCE>
-	</TEMPLATES>
-</VODML>
+<!-- Test Case 6.4:  valid dmrole + dmref + sourceref; must have dmref or sourceref, not both -->
+<REFERENCE dmrole="aaaa" dmref="fffff" sourceref="fffff">
+	<FOREIGN_KEY ref="zzzzz" />
+</REFERENCE>

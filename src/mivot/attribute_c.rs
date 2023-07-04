@@ -27,7 +27,7 @@ pub struct AttributePatC {
   unit: Option<String>,
 }
 impl AttributePatC {
-    impl_empty_new!([dmtype], [ref_, value, array_index, unit]);
+  impl_empty_new!([dmtype], [ref_, value, array_index, unit]);
 
   /*
       function setters, enable the setting of an optional through self.set_"var"
@@ -38,9 +38,9 @@ impl AttributePatC {
   impl_builder_opt_string_attr!(unit);
 }
 impl_quickrw_e!(
-    [dmtype],                                // MANDATORY ATTRIBUTES
-    [ref_, "ref", value, array_index, unit], // OPTIONAL ATTRIBUTES
-    "ATTRIBUTE",                             // TAG, here : <ATTRIBUTE>
-    AttributePatC,                           // Struct on which to impl
-    ()                                       // Context type
+  [dmtype],                                // MANDATORY ATTRIBUTES
+  [ref_, "ref", value, array_index, unit], // OPTIONAL ATTRIBUTES
+  "ATTRIBUTE",                             // TAG, here : <ATTRIBUTE>
+  AttributePatC,                           // Struct on which to impl
+  ()                                       // Context type
 );

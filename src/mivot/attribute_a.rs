@@ -29,20 +29,20 @@ pub struct AttributePatA {
   unit: Option<String>,
 }
 impl AttributePatA {
-    impl_empty_new!([dmrole, dmtype], [ref_, value, array_index, unit]);
-    /*
-        function setters, enable the setting of an optional through self.set_"var"
-    */
-    impl_builder_opt_string_attr!(ref_);
-    impl_builder_opt_string_attr!(value);
-    impl_builder_opt_string_attr!(array_index);
-    impl_builder_opt_string_attr!(unit);
+  impl_empty_new!([dmrole, dmtype], [ref_, value, array_index, unit]);
+  /*
+      function setters, enable the setting of an optional through self.set_"var"
+  */
+  impl_builder_opt_string_attr!(ref_);
+  impl_builder_opt_string_attr!(value);
+  impl_builder_opt_string_attr!(array_index);
+  impl_builder_opt_string_attr!(unit);
 }
 
 impl_quickrw_e!(
-    [dmrole, dmtype],                        // MANDATORY ATTRIBUTES
-    [ref_, "ref", value, array_index, unit], // OPTIONAL ATTRIBUTES
-    "ATTRIBUTE",                             // TAG, here : <ATTRIBUTE>
-    AttributePatA,                           // Struct on which to impl
-    ()                                       // Context type
+  [dmrole, dmtype],                        // MANDATORY ATTRIBUTES
+  [ref_, "ref", value, array_index, unit], // OPTIONAL ATTRIBUTES
+  "ATTRIBUTE",                             // TAG, here : <ATTRIBUTE>
+  AttributePatA,                           // Struct on which to impl
+  ()                                       // Context type
 );

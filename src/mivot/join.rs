@@ -18,16 +18,16 @@ use super::{ElemImpl, ElemType};
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum JoinWhereElem {
-    Where(Where),
-    NoFkWhere(NoFkWhere),
+  Where(Where),
+  NoFkWhere(NoFkWhere),
 }
 impl ElemType for JoinWhereElem {
-    fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
-        match self {
-            JoinWhereElem::Where(elem) => elem.write(writer, &()),
-            JoinWhereElem::NoFkWhere(elem) => elem.write(writer, &()),
-        }
+  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+    match self {
+      JoinWhereElem::Where(elem) => elem.write(writer, &()),
+      JoinWhereElem::NoFkWhere(elem) => elem.write(writer, &()),
     }
+  }
 }
 
 /*
@@ -38,32 +38,32 @@ impl ElemType for JoinWhereElem {
 */
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Join {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    dmref: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    sourceref: Option<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    wheres: Vec<JoinWhereElem>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  dmref: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  sourceref: Option<String>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  wheres: Vec<JoinWhereElem>,
 }
 impl Join {
-    impl_non_empty_new!([], [sourceref, dmref], [wheres]);
-    impl_builder_opt_string_attr!(sourceref);
-    impl_builder_opt_string_attr!(dmref);
+  impl_non_empty_new!([], [sourceref, dmref], [wheres]);
+  impl_builder_opt_string_attr!(sourceref);
+  impl_builder_opt_string_attr!(dmref);
 }
 impl ElemImpl<JoinWhereElem> for Join {
-    fn push_to_elems(&mut self, elem: JoinWhereElem) {
-        self.wheres.push(elem)
-    }
+  fn push_to_elems(&mut self, elem: JoinWhereElem) {
+    self.wheres.push(elem)
+  }
 }
 impl_quickrw_not_e!(
-    [],                 // MANDATORY ATTRIBUTES
-    [sourceref, dmref], // OPTIONAL ATTRIBUTES
-    "JOIN",             // TAG, here : <INSTANCE>
-    Join,               // Struct on which to impl
-    (),                 // Context type
-    [],                 // Ordered elements
-    read_join_sub_elem, // Sub elements reader
-    [wheres]            // Empty context writables
+  [],                 // MANDATORY ATTRIBUTES
+  [sourceref, dmref], // OPTIONAL ATTRIBUTES
+  "JOIN",             // TAG, here : <INSTANCE>
+  Join,               // Struct on which to impl
+  (),                 // Context type
+  [],                 // Ordered elements
+  read_join_sub_elem, // Sub elements reader
+  [wheres]            // Empty context writables
 );
 
 ///////////////////////
@@ -80,48 +80,45 @@ impl_quickrw_not_e!(
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
 */
 fn read_join_sub_elem<R: std::io::BufRead>(
-    join: &mut Join,
-    _context: &(),
-    mut reader: quick_xml::Reader<R>,
-    reader_buff: &mut Vec<u8>,
+  join: &mut Join,
+  _context: &(),
+  mut reader: quick_xml::Reader<R>,
+  reader_buff: &mut Vec<u8>,
 ) -> Result<quick_xml::Reader<R>, VOTableError> {
-    loop {
-        let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
-        match &mut event {
-            Event::Start(ref e) => match e.local_name() {
-                _ => {
-                    return Err(VOTableError::UnexpectedStartTag(
-                        e.local_name().to_vec(),
-                        Join::TAG,
-                    ))
-                }
-            },
-            Event::Empty(ref e) => match e.local_name() {
-                Where::TAG_BYTES => {
-                    if e.attributes()
-                        .find(|attribute| {
-                            attribute.as_ref().unwrap().key == "foreignkey".as_bytes()
-                        })
-                        .is_some()
-                    {
-                        join.push_to_elems(JoinWhereElem::Where(Where::from_event_empty(e)?))
-                    } else {
-                        join.push_to_elems(JoinWhereElem::NoFkWhere(NoFkWhere::from_event_empty(
-                            e,
-                        )?))
-                    }
-                }
-                _ => {
-                    return Err(VOTableError::UnexpectedEmptyTag(
-                        e.local_name().to_vec(),
-                        Join::TAG,
-                    ))
-                }
-            },
-            Event::Text(e) if is_empty(e) => {}
-            Event::End(e) if e.local_name() == Join::TAG_BYTES => return Ok(reader),
-            Event::Eof => return Err(VOTableError::PrematureEOF(Join::TAG)),
-            _ => eprintln!("Discarded event in {}: {:?}", Join::TAG, event),
+  loop {
+    let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+    match &mut event {
+      Event::Start(ref e) => match e.local_name() {
+        _ => {
+          return Err(VOTableError::UnexpectedStartTag(
+            e.local_name().to_vec(),
+            Join::TAG,
+          ))
         }
+      },
+      Event::Empty(ref e) => match e.local_name() {
+        Where::TAG_BYTES => {
+          if e
+            .attributes()
+            .find(|attribute| attribute.as_ref().unwrap().key == "foreignkey".as_bytes())
+            .is_some()
+          {
+            join.push_to_elems(JoinWhereElem::Where(Where::from_event_empty(e)?))
+          } else {
+            join.push_to_elems(JoinWhereElem::NoFkWhere(NoFkWhere::from_event_empty(e)?))
+          }
+        }
+        _ => {
+          return Err(VOTableError::UnexpectedEmptyTag(
+            e.local_name().to_vec(),
+            Join::TAG,
+          ))
+        }
+      },
+      Event::Text(e) if is_empty(e) => {}
+      Event::End(e) if e.local_name() == Join::TAG_BYTES => return Ok(reader),
+      Event::Eof => return Err(VOTableError::PrematureEOF(Join::TAG)),
+      _ => eprintln!("Discarded event in {}: {:?}", Join::TAG, event),
     }
+  }
 }

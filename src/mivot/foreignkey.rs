@@ -14,13 +14,13 @@ pub struct ForeignKey {
   ref_: String,
 }
 impl ForeignKey {
-    impl_empty_new!([ref_], []);
+  impl_empty_new!([ref_], []);
 }
 
 impl_quickrw_e!(
-    [ref_, "ref"],   // MANDATORY ATTRIBUTES
-    [],              // OPTIONAL ATTRIBUTES
-    "FOREIGN\\_KEY", // TAG, here : <FOREIGN\_KEY>
-    ForeignKey,      // Struct on which to impl
-    ()               // Context type
+  [ref_, "ref"],   // MANDATORY ATTRIBUTES
+  [],              // OPTIONAL ATTRIBUTES
+  "FOREIGN\\_KEY", // TAG, here : <FOREIGN\_KEY>
+  ForeignKey,      // Struct on which to impl
+  ()               // Context type
 );
