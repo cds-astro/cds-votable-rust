@@ -214,12 +214,9 @@ fn read_collection_sub_elem<
               e
             )))
           } else {
-            collection.push_to_elems(CollectionElem::StaticRef(from_event_start!(
-              StaticRef,
-              reader,
-              reader_buff,
-              e
-            )))
+            return Err(VOTableError::Custom(
+              "A static reference should be empty".to_owned(),
+            ));
           }
         }
         CollectionPatA::TAG_BYTES => collection.push_to_elems(CollectionElem::Collection(
@@ -242,15 +239,17 @@ fn read_collection_sub_elem<
         AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
           AttributePatC::from_event_empty(e)?,
         )),
-        DynRef::TAG_BYTES => {
+        StaticRef::TAG_BYTES => {
           if e
             .attributes()
-            .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
+            .find(|attribute| attribute.as_ref().unwrap().key == "dmref".as_bytes())
             .is_some()
           {
-            collection.push_to_elems(CollectionElem::DynRef(DynRef::from_event_empty(e)?))
-          } else {
             collection.push_to_elems(CollectionElem::StaticRef(StaticRef::from_event_empty(e)?))
+          } else {
+            return Err(VOTableError::Custom(
+              "A dynamic reference shouldn't be empty".to_owned(),
+            ));
           }
         }
         NoRoleInstance::TAG_BYTES => collection.push_to_elems(CollectionElem::Instance(
@@ -312,12 +311,9 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
               e
             )))
           } else {
-            collection.push_to_elems(CollectionElem::StaticRef(from_event_start!(
-              StaticRef,
-              reader,
-              reader_buff,
-              e
-            )))
+            return Err(VOTableError::Custom(
+              "A static reference should be empty".to_owned(),
+            ));
           }
         }
         CollectionPatA::TAG_BYTES => collection.push_to_elems(CollectionElem::Collection(
@@ -340,15 +336,17 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
         AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
           AttributePatC::from_event_empty(e)?,
         )),
-        DynRef::TAG_BYTES => {
+        StaticRef::TAG_BYTES => {
           if e
             .attributes()
-            .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
+            .find(|attribute| attribute.as_ref().unwrap().key == "dmref".as_bytes())
             .is_some()
           {
-            collection.push_to_elems(CollectionElem::DynRef(DynRef::from_event_empty(e)?))
-          } else {
             collection.push_to_elems(CollectionElem::StaticRef(StaticRef::from_event_empty(e)?))
+          } else {
+            return Err(VOTableError::Custom(
+              "A dynamic reference shouldn't be empty".to_owned(),
+            ));
           }
         }
         _ => {

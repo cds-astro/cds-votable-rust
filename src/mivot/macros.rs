@@ -377,7 +377,7 @@ macro_rules! empty_read_sub {
           _reader_buff: &mut Vec<u8>,
           _context: &Self::Context,
       ) -> Result<Reader<R>, crate::error::VOTableError> {
-          todo!()
+          Err(VOTableError::Custom("This tag should be empty".to_owned()))
       }
 
       /*

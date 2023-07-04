@@ -2,5 +2,5 @@
 
 <!-- Test Case 6.7: valid dmrole + dmref + FK; with dmref, must not contain FOREIGN_KEY -->
 <REFERENCE dmrole="aaaa" dmref="fffff">
-	<FOREIGN_KEY ref="zzzzz" />
+	<FOREIGN\_KEY ref="zzzzz" />
 </REFERENCE>
