@@ -1,17 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<!-- Test Case 10.7: primarykey + foreignkey + value; must not have all. -->
+<WHERE foreignkey="sssss" primarykey="ssss" value="ssss" />
 
-<VODML
-	xmlns="http://www.ivoa.net/xml/mivot">
-
-	<MODEL name="model" url="http://aaaaaa" />
-	<TEMPLATES tableref="fgdgfddf">
-
-		<!-- Test Case 10.7: primarykey + foreignkey + value; must not have all. -->
-		<WHERE foreignkey="sssss" primarykey="ssss" value="ssss" />
-
-		<!-- required in TEMPLATES -->
-		<INSTANCE dmtype="model:Thing" />
-
-	</TEMPLATES>
-
-</VODML>

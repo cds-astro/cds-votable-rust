@@ -1,4 +1,4 @@
-use crate::{error::VOTableError, QuickXmlReadWrite, mivot::value_checker};
+use crate::{error::VOTableError, mivot::value_checker, QuickXmlReadWrite};
 use bstringify::bstringify;
 use paste::paste;
 use quick_xml::events::attributes::Attributes;
@@ -42,3 +42,48 @@ impl_quickrw_e!(
   NoFkWhere,
   ()
 );
+
+#[cfg(test)]
+mod tests {
+  use crate::{
+    mivot::{
+      r#where::{Where, NoFkWhere},
+      test::{get_xml, test_error},
+    },
+    tests::test_read,
+  };
+
+  #[test]
+  fn test_where_read() {
+    // OK MODELS
+    let xml = get_xml("./resources/mivot/10/test_10_ok_10.2.xml");
+    println!("testing 10.2");
+    test_read::<Where>(&xml);
+    let xml = get_xml("./resources/mivot/10/test_10_ok_10.3.xml");
+    println!("testing 10.3");
+    test_read::<NoFkWhere>(&xml);
+
+    // KO MODELS
+    let xml = get_xml("./resources/mivot/10/test_10_ko_10.1.xml");
+    println!("testing 10.1"); // Name required.
+    test_error::<Where>(&xml, false);
+    let xml = get_xml("./resources/mivot/10/test_10_ko_10.5.xml");
+    println!("testing 10.5"); // Name required.
+    test_error::<Where>(&xml, false);
+    let xml = get_xml("./resources/mivot/10/test_10_ko_10.6.xml");
+    println!("testing 10.6"); // Name required.
+    test_error::<Where>(&xml, false);
+    let xml = get_xml("./resources/mivot/10/test_10_ko_10.7.xml");
+    println!("testing 10.7"); // Name required.
+    test_error::<Where>(&xml, false);
+    let xml = get_xml("./resources/mivot/10/test_10_ko_10.8.xml");
+    println!("testing 10.8"); // Name required.
+    test_error::<Where>(&xml, false);
+    let xml = get_xml("./resources/mivot/10/test_10_ko_10.9.xml");
+    println!("testing 10.9"); // Name required.
+    test_error::<Where>(&xml, false);
+    let xml = get_xml("./resources/mivot/10/test_10_ko_10.10.xml");
+    println!("testing 10.10"); // Name required.
+    test_error::<Where>(&xml, false);
+  }
+}

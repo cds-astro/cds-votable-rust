@@ -1,0 +1,2 @@
+<!-- Test Case 10.2: primarykey + foreignkey -->
+<WHERE foreignkey="sssss" primarykey="ssss" />
