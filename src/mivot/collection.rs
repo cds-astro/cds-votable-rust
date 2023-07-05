@@ -10,6 +10,7 @@ use quick_xml::{
 use std::{io::Write, str};
 
 use super::instance::{MandPKInstance, NoRoleInstance};
+use super::join::SrcJoin;
 use super::reference::{DynRef, StaticRef};
 use super::CollectionType;
 use super::{attribute_c::AttributePatC, join::Join, primarykey::PrimaryKey, ElemImpl, ElemType};
@@ -29,6 +30,7 @@ pub enum CollectionElem {
   DynRef(DynRef),
   Collection(CollectionPatC),
   Join(Join),
+  SrcJoin(SrcJoin),
 }
 impl ElemType for CollectionElem {
   fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
@@ -40,6 +42,7 @@ impl ElemType for CollectionElem {
       CollectionElem::DynRef(elem) => elem.write(writer, &()),
       CollectionElem::Collection(elem) => elem.write(writer, &()),
       CollectionElem::Join(elem) => elem.write(writer, &()),
+      CollectionElem::SrcJoin(elem) => elem.write(writer, &()),
     }
   }
 }
@@ -425,10 +428,10 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
             e
           )))
         }
-        Join::TAG_BYTES => {
+        SrcJoin::TAG_BYTES => {
           collection.push_to_checker("join".to_owned());
-          collection.push_to_elems(CollectionElem::Join(from_event_start!(
-            Join,
+          collection.push_to_elems(CollectionElem::SrcJoin(from_event_start!(
+            SrcJoin,
             reader,
             reader_buff,
             e
@@ -456,9 +459,9 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
             ));
           }
         }
-        Join::TAG_BYTES => {
+        SrcJoin::TAG_BYTES => {
           collection.push_to_checker("join".to_owned());
-          collection.push_to_elems(CollectionElem::Join(Join::from_event_empty(e)?))
+          collection.push_to_elems(CollectionElem::SrcJoin(SrcJoin::from_event_empty(e)?))
         }
         CollectionPatC::TAG_BYTES => {
           collection.push_to_checker("collection".to_owned());
@@ -531,7 +534,7 @@ mod tests {
     println!("testing 8.9"); // with invalid child
     test_error::<CollectionPatB>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.25.xml");
-    println!("testing 8.25"); // Collection of globals cannot have an instance without a PK 
+    println!("testing 8.25"); // Collection of globals cannot have an instance without a PK
     test_error::<CollectionPatB>(&xml, false);
   }
 
