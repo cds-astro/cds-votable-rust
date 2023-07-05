@@ -1,0 +1,7 @@
+<!-- Pattern Globals -->
+<!-- Test Case 8.24: Collection of globals cannot have an instance without a PK -->
+<COLLECTION dmid="_xxx" dmrole="iiiiii">
+	<INSTANCE dmid="_spacecys" dmtype="model:SpaceSys" />
+</COLLECTION>
+
+

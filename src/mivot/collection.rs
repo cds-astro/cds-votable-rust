@@ -530,6 +530,9 @@ mod tests {
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.9.xml");
     println!("testing 8.9"); // with invalid child
     test_error::<CollectionPatB>(&xml, false);
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.25.xml");
+    println!("testing 8.25"); // Collection of globals cannot have an instance without a PK 
+    test_error::<CollectionPatB>(&xml, false);
   }
 
   #[test]
