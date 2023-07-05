@@ -1,16 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<VODML
-	xmlns="http://www.ivoa.net/xml/mivot">
-
-	<MODEL name="model" url="http://aaaaaa" />
-	<GLOBALS>
-		<INSTANCE dmid="_aaa" dmtype="model:thing">
-
-			<!-- Test Case 8.13: COLLECTION under INSTANCE, dmrole must not be empty. -->
-			<COLLECTION dmrole=""/>
-
-		</INSTANCE>
-
-	</GLOBALS>
-</VODML>
+<!-- Pattern Instance -->
+<!-- Test Case 8.13: COLLECTION under INSTANCE, dmrole must not be empty. -->
+<COLLECTION dmrole=""/>

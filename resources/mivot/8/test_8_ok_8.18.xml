@@ -1,0 +1,5 @@
+<!-- Test Case 8.18: COLLECTION of INSTANCE -->
+<COLLECTION dmrole="iiiiii">
+	<INSTANCE dmtype="model:object" />
+	<INSTANCE dmtype="model:object" />
+</COLLECTION>

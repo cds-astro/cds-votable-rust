@@ -1,0 +1,6 @@
+<!-- Test Case 8.7: COLLECTION of INSTANCE, for ORM selection -->
+<COLLECTION dmid="_zzz" dmrole="">
+	<INSTANCE dmrole="" dmtype="ds:experiment.ObsDataset" >
+		<PRIMARY\_KEY dmtype="ivoa:string" value="5813181197970338560"/>
+	</INSTANCE>
+</COLLECTION>

@@ -32,11 +32,11 @@
 		<!-- NOTE: GLOBALS node allows multiple COLLECTION sub-nodes.                     -->
 		<!--       We take advantage of this to test several valid cases in the same file -->
 	  
-	        <!-- Test Case 8.1: dmid, no dmrole -->
-	        <!-- Test Case 8.6: no children (empty COLLECTION) -->
+	  <!-- Test Case 8.1: dmid, no dmrole -->
+	  <!-- Test Case 8.6: no children (empty COLLECTION) -->
 		<COLLECTION dmid="_xxx"  />
 
-	        <!-- Test Case 8.4: dmid + empty dmrole; if present, dmrole must be empty -->
+	  <!-- Test Case 8.4: dmid + empty dmrole; if present, dmrole must be empty -->
 		<COLLECTION dmid="_yyy" dmrole="" />
 
 		<!-- Test Case 8.7: COLLECTION of INSTANCE, for ORM selection -->

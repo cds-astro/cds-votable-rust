@@ -1,16 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<VODML
-	xmlns="http://www.ivoa.net/xml/mivot">
-
-	<MODEL name="model" url="http://aaaaaa" />
-	<GLOBALS>
-
-		<!-- Test Case 8.3: COLLECTION under GLOBALS, dmid must not be empty -->
-		<COLLECTION dmid="" />
-
-	</GLOBALS>
-</VODML>
-
-
-
+<!-- Pattern Globals -->
+<!-- Test Case 8.3: COLLECTION under GLOBALS, dmid must not be empty -->
+<COLLECTION dmid="" />

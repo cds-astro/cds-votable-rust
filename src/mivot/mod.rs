@@ -40,11 +40,17 @@ pub trait ReferenceType {
   fn push2_fk(&mut self, fk: ForeignKey);
 }
 
+pub trait CollectionType {
+  fn push_to_checker(&mut self, str: String);
+  fn check_elems(&mut self) -> bool;
+}
+
 pub(crate) fn value_checker(value: &str, attribute: &str) -> Result<(), VOTableError> {
   if value.len() == 0 && value.is_empty() {
-    return Err(VOTableError::Custom(
-      format!("If attribute {} is present it musn't be empty", attribute),
-    ));
+    return Err(VOTableError::Custom(format!(
+      "If attribute {} is present it musn't be empty",
+      attribute
+    )));
   } else {
     Ok(())
   }

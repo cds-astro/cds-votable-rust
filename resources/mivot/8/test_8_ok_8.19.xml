@@ -1,0 +1,4 @@
+<!-- Test Case 8.19: COLLECTION of JOIN (collection of external instances) -->
+<COLLECTION dmrole="jjjjjj">
+	<JOIN sourceref="_someTable" dmref="_extInst"/>
+</COLLECTION>

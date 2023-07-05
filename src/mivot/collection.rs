@@ -1,5 +1,5 @@
 use crate::Attributes;
-use crate::{error::VOTableError, is_empty, QuickXmlReadWrite, mivot::value_checker};
+use crate::{error::VOTableError, is_empty, mivot::value_checker, QuickXmlReadWrite};
 use bstringify::bstringify;
 use paste::paste;
 use quick_xml::Reader;
@@ -11,6 +11,7 @@ use std::{io::Write, str};
 
 use super::instance::{MandPKInstance, NoRoleInstance};
 use super::reference::{DynRef, StaticRef};
+use super::CollectionType;
 use super::{attribute_c::AttributePatC, join::Join, primarykey::PrimaryKey, ElemImpl, ElemType};
 
 /*
@@ -65,14 +66,30 @@ pub struct CollectionPatA {
   primary_keys: Vec<PrimaryKey>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   elems: Vec<CollectionElem>,
+  checker: Vec<String>,
 }
 impl CollectionPatA {
-  impl_non_empty_new!([dmrole], [dmid], [primary_keys, elems]);
+  impl_non_empty_new!([dmrole], [dmid], [primary_keys, elems, checker]);
   impl_builder_opt_string_attr!(dmid);
 }
 impl ElemImpl<CollectionElem> for CollectionPatA {
   fn push_to_elems(&mut self, elem: CollectionElem) {
     self.elems.push(elem)
+  }
+}
+impl CollectionType for CollectionPatA {
+  fn push_to_checker(&mut self, str: String) {
+    self.checker.push(str);
+  }
+  fn check_elems(&mut self) -> bool {
+    let first = self.checker.get(0);
+    let mut res = false;
+    self.checker.iter().for_each(|s| {
+      if first != Some(s) {
+        res = true;
+      }
+    });
+    res
   }
 }
 impl_quickrw_not_e!(
@@ -105,13 +122,29 @@ pub struct CollectionPatB {
   primary_keys: Vec<PrimaryKey>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   elems: Vec<CollectionElem>,
+  checker: Vec<String>,
 }
 impl CollectionPatB {
-  impl_non_empty_new!([dmid], [], [primary_keys, elems]);
+  impl_non_empty_new!([dmid], [], [primary_keys, elems, checker]);
 }
 impl ElemImpl<CollectionElem> for CollectionPatB {
   fn push_to_elems(&mut self, elem: CollectionElem) {
     self.elems.push(elem)
+  }
+}
+impl CollectionType for CollectionPatB {
+  fn push_to_checker(&mut self, str: String) {
+    self.checker.push(str);
+  }
+  fn check_elems(&mut self) -> bool {
+    let first = self.checker.get(0);
+    let mut res = false;
+    self.checker.iter().for_each(|s| {
+      if first != Some(s) {
+        res = true;
+      }
+    });
+    res
   }
 }
 impl_quickrw_not_e!(
@@ -145,14 +178,30 @@ pub struct CollectionPatC {
   primary_keys: Vec<PrimaryKey>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   elems: Vec<CollectionElem>,
+  checker: Vec<String>,
 }
 impl CollectionPatC {
-  impl_non_empty_new!([], [dmid], [primary_keys, elems]);
+  impl_non_empty_new!([], [dmid], [primary_keys, elems, checker]);
   impl_builder_opt_string_attr!(dmid);
 }
 impl ElemImpl<CollectionElem> for CollectionPatC {
   fn push_to_elems(&mut self, elem: CollectionElem) {
     self.elems.push(elem)
+  }
+}
+impl CollectionType for CollectionPatC {
+  fn push_to_checker(&mut self, str: String) {
+    self.checker.push(str);
+  }
+  fn check_elems(&mut self) -> bool {
+    let first = self.checker.get(0);
+    let mut res = false;
+    self.checker.iter().for_each(|s| {
+      if first != Some(s) {
+        res = true;
+      }
+    });
+    res
   }
 }
 impl_quickrw_not_e!(
@@ -184,7 +233,7 @@ impl_quickrw_not_e!(
 
 fn read_collection_sub_elem<
   R: std::io::BufRead,
-  T: QuickXmlReadWrite + ElemImpl<CollectionElem>,
+  T: QuickXmlReadWrite + ElemImpl<CollectionElem> + CollectionType,
 >(
   collection: &mut T,
   _context: &(),
@@ -195,13 +244,26 @@ fn read_collection_sub_elem<
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
       Event::Start(ref e) => match e.local_name() {
-        AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
-          from_event_start!(AttributePatC, reader, reader_buff, e),
-        )),
-        NoRoleInstance::TAG_BYTES => collection.push_to_elems(CollectionElem::Instance(
-          from_event_start!(NoRoleInstance, reader, reader_buff, e),
-        )),
+        AttributePatC::TAG_BYTES => {
+          collection.push_to_checker("attribute".to_owned());
+          collection.push_to_elems(CollectionElem::Attribute(from_event_start!(
+            AttributePatC,
+            reader,
+            reader_buff,
+            e
+          )))
+        }
+        NoRoleInstance::TAG_BYTES => {
+          collection.push_to_checker("instance".to_owned());
+          collection.push_to_elems(CollectionElem::Instance(from_event_start!(
+            NoRoleInstance,
+            reader,
+            reader_buff,
+            e
+          )))
+        }
         DynRef::TAG_BYTES => {
+          collection.push_to_checker("reference".to_owned());
           if e
             .attributes()
             .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
@@ -219,15 +281,24 @@ fn read_collection_sub_elem<
             ));
           }
         }
-        CollectionPatA::TAG_BYTES => collection.push_to_elems(CollectionElem::Collection(
-          from_event_start!(CollectionPatC, reader, reader_buff, e),
-        )),
-        Join::TAG_BYTES => collection.push_to_elems(CollectionElem::Join(from_event_start!(
-          Join,
-          reader,
-          reader_buff,
-          e
-        ))),
+        CollectionPatC::TAG_BYTES => {
+          collection.push_to_checker("collection".to_owned());
+          collection.push_to_elems(CollectionElem::Collection(from_event_start!(
+            CollectionPatC,
+            reader,
+            reader_buff,
+            e
+          )))
+        }
+        Join::TAG_BYTES => {
+          collection.push_to_checker("join".to_owned());
+          collection.push_to_elems(CollectionElem::Join(from_event_start!(
+            Join,
+            reader,
+            reader_buff,
+            e
+          )))
+        }
         _ => {
           return Err(VOTableError::UnexpectedStartTag(
             e.local_name().to_vec(),
@@ -236,10 +307,14 @@ fn read_collection_sub_elem<
         }
       },
       Event::Empty(ref e) => match e.local_name() {
-        AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
-          AttributePatC::from_event_empty(e)?,
-        )),
+        AttributePatC::TAG_BYTES => {
+          collection.push_to_checker("attribute".to_owned());
+          collection.push_to_elems(CollectionElem::Attribute(AttributePatC::from_event_empty(
+            e,
+          )?))
+        }
         StaticRef::TAG_BYTES => {
+          collection.push_to_checker("reference".to_owned());
           if e
             .attributes()
             .find(|attribute| attribute.as_ref().unwrap().key == "dmref".as_bytes())
@@ -252,9 +327,22 @@ fn read_collection_sub_elem<
             ));
           }
         }
-        NoRoleInstance::TAG_BYTES => collection.push_to_elems(CollectionElem::Instance(
-          NoRoleInstance::from_event_empty(e)?,
-        )),
+        CollectionPatC::TAG_BYTES => {
+          collection.push_to_checker("collection".to_owned());
+          collection.push_to_elems(CollectionElem::Collection(
+            CollectionPatC::from_event_empty(e)?,
+          ))
+        }
+        NoRoleInstance::TAG_BYTES => {
+          collection.push_to_checker("instance".to_owned());
+          collection.push_to_elems(CollectionElem::Instance(NoRoleInstance::from_event_empty(
+            e,
+          )?))
+        }
+        Join::TAG_BYTES => {
+          collection.push_to_checker("join".to_owned());
+          collection.push_to_elems(CollectionElem::Join(Join::from_event_empty(e)?))
+        }
         _ => {
           return Err(VOTableError::UnexpectedEmptyTag(
             e.local_name().to_vec(),
@@ -263,7 +351,15 @@ fn read_collection_sub_elem<
         }
       },
       Event::Text(e) if is_empty(e) => {}
-      Event::End(e) if e.local_name() == T::TAG_BYTES => return Ok(reader),
+      Event::End(e) if e.local_name() == T::TAG_BYTES => {
+        if collection.check_elems() {
+          return Err(VOTableError::Custom(
+            "A collection cannot have items of diffrent types".to_owned(),
+          ));
+        } else {
+          return Ok(reader);
+        }
+      }
       Event::Eof => return Err(VOTableError::PrematureEOF(T::TAG)),
       _ => eprintln!("Discarded event in {}: {:?}", T::TAG, event),
     }
@@ -292,13 +388,17 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
       Event::Start(ref e) => match e.local_name() {
-        AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
-          from_event_start!(AttributePatC, reader, reader_buff, e),
-        )),
-        MandPKInstance::TAG_BYTES => collection.push_to_elems(CollectionElem::PKInstance(
-          from_event_start!(MandPKInstance, reader, reader_buff, e),
-        )),
+        MandPKInstance::TAG_BYTES => {
+          collection.push_to_checker("instance".to_owned());
+          collection.push_to_elems(CollectionElem::PKInstance(from_event_start!(
+            MandPKInstance,
+            reader,
+            reader_buff,
+            e
+          )))
+        }
         DynRef::TAG_BYTES => {
+          collection.push_to_checker("reference".to_owned());
           if e
             .attributes()
             .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
@@ -316,15 +416,24 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
             ));
           }
         }
-        CollectionPatA::TAG_BYTES => collection.push_to_elems(CollectionElem::Collection(
-          from_event_start!(CollectionPatC, reader, reader_buff, e),
-        )),
-        Join::TAG_BYTES => collection.push_to_elems(CollectionElem::Join(from_event_start!(
-          Join,
-          reader,
-          reader_buff,
-          e
-        ))),
+        CollectionPatC::TAG_BYTES => {
+          collection.push_to_checker("collection".to_owned());
+          collection.push_to_elems(CollectionElem::Collection(from_event_start!(
+            CollectionPatC,
+            reader,
+            reader_buff,
+            e
+          )))
+        }
+        Join::TAG_BYTES => {
+          collection.push_to_checker("join".to_owned());
+          collection.push_to_elems(CollectionElem::Join(from_event_start!(
+            Join,
+            reader,
+            reader_buff,
+            e
+          )))
+        }
         _ => {
           return Err(VOTableError::UnexpectedStartTag(
             e.local_name().to_vec(),
@@ -333,10 +442,8 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
         }
       },
       Event::Empty(ref e) => match e.local_name() {
-        AttributePatC::TAG_BYTES => collection.push_to_elems(CollectionElem::Attribute(
-          AttributePatC::from_event_empty(e)?,
-        )),
         StaticRef::TAG_BYTES => {
+          collection.push_to_checker("reference".to_owned());
           if e
             .attributes()
             .find(|attribute| attribute.as_ref().unwrap().key == "dmref".as_bytes())
@@ -349,6 +456,16 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
             ));
           }
         }
+        Join::TAG_BYTES => {
+          collection.push_to_checker("join".to_owned());
+          collection.push_to_elems(CollectionElem::Join(Join::from_event_empty(e)?))
+        }
+        CollectionPatC::TAG_BYTES => {
+          collection.push_to_checker("collection".to_owned());
+          collection.push_to_elems(CollectionElem::Collection(
+            CollectionPatC::from_event_empty(e)?,
+          ))
+        }
         _ => {
           return Err(VOTableError::UnexpectedEmptyTag(
             e.local_name().to_vec(),
@@ -357,9 +474,112 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
         }
       },
       Event::Text(e) if is_empty(e) => {}
-      Event::End(e) if e.local_name() == CollectionPatB::TAG_BYTES => return Ok(reader),
+      Event::End(e) if e.local_name() == CollectionPatB::TAG_BYTES => {
+        if collection.check_elems() {
+          return Err(VOTableError::Custom(
+            "A collection cannot have items of diffrent types".to_owned(),
+          ));
+        } else {
+          return Ok(reader);
+        }
+      }
       Event::Eof => return Err(VOTableError::PrematureEOF(CollectionPatB::TAG)),
       _ => eprintln!("Discarded event in {}: {:?}", CollectionPatB::TAG, event),
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use crate::{
+    mivot::{
+      collection::{CollectionPatA, CollectionPatB},
+      test::{get_xml, test_error},
+    },
+    tests::test_read,
+  };
+
+  #[test]
+  fn test_collection_b_read() {
+    // OK MODELS
+    let xml = get_xml("./resources/mivot/8/test_8_ok_8.1.xml");
+    println!("testing 8.1");
+    test_read::<CollectionPatB>(&xml);
+    let xml = get_xml("./resources/mivot/8/test_8_ok_8.4.xml");
+    println!("testing 8.4");
+    test_read::<CollectionPatB>(&xml);
+    let xml = get_xml("./resources/mivot/8/test_8_ok_8.6.xml");
+    println!("testing 8.6");
+    test_read::<CollectionPatB>(&xml);
+    let xml = get_xml("./resources/mivot/8/test_8_ok_8.7.xml");
+    println!("testing 8.7");
+    test_read::<CollectionPatB>(&xml);
+    // KO MODELS
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.2.xml");
+    println!("testing 8.2"); // must have dmid
+    test_error::<CollectionPatB>(&xml, false);
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.3.xml");
+    println!("testing 8.3"); // dmid must not be empty
+    test_error::<CollectionPatB>(&xml, false);
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.5.xml");
+    println!("testing 8.5"); // must have empty or no dmrole. (parser can overlook this and write it correctly later)
+    test_read::<CollectionPatB>(&xml); // Should read correctly
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.8.xml");
+    println!("testing 8.8"); // contains other than INSTANCE.
+    test_error::<CollectionPatB>(&xml, false);
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.9.xml");
+    println!("testing 8.9"); // with invalid child
+    test_error::<CollectionPatB>(&xml, false);
+  }
+
+  #[test]
+  fn test_collection_a_read() {
+    // OK MODELS
+    let xml = get_xml("./resources/mivot/8/test_8_ok_8.15.xml");
+    println!("testing 8.15");
+    test_read::<CollectionPatA>(&xml);
+    let xml = get_xml("./resources/mivot/8/test_8_ok_8.16.xml");
+    println!("testing 8.16");
+    test_read::<CollectionPatA>(&xml);
+    let xml = get_xml("./resources/mivot/8/test_8_ok_8.17.xml");
+    println!("testing 8.17");
+    test_read::<CollectionPatA>(&xml);
+    let xml = get_xml("./resources/mivot/8/test_8_ok_8.18.xml");
+    println!("testing 8.18");
+    test_read::<CollectionPatA>(&xml);
+    let xml = get_xml("./resources/mivot/8/test_8_ok_8.19.xml");
+    println!("testing 8.19");
+    test_read::<CollectionPatA>(&xml);
+    // KO MODELS
+    // let xml = get_xml("./resources/mivot/8/test_8_ko_8.10.xml");
+    // println!("testing 8.10"); // must not have dmid
+    // test_error::<CollectionPatA>(&xml, false);
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.11.xml");
+    println!("testing 8.11"); // dmid if present shouldn't be empty
+    test_error::<CollectionPatA>(&xml, false);
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.12.xml");
+    println!("testing 8.12"); // must have dmrole
+    test_error::<CollectionPatA>(&xml, false);
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.13.xml");
+    println!("testing 8.13"); // dmrole must not be empty.
+    test_error::<CollectionPatA>(&xml, false);
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.13.xml");
+    println!("testing 8.14"); // dmrole must not be blank.
+    test_error::<CollectionPatA>(&xml, false);
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.20.xml");
+    println!("testing 8.20"); // COLLECTION of INSTANCE + JOIN (local and external instances)
+    test_error::<CollectionPatA>(&xml, false);
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.21.xml");
+    println!("testing 8.21"); // COLLECTION of ATTRIBUTE + (other)
+    test_error::<CollectionPatA>(&xml, false);
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.22.xml");
+    println!("testing 8.22"); // COLLECTION of REFERENCE + (other)
+    test_error::<CollectionPatA>(&xml, false);
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.23.xml");
+    println!("testing 8.23"); // COLLECTION of INSTANCE + (other)
+    test_error::<CollectionPatA>(&xml, false);
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.24.xml");
+    println!("testing 8.24"); // COLLECTION of other
+    test_error::<CollectionPatA>(&xml, false);
   }
 }
