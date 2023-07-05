@@ -148,7 +148,7 @@ macro_rules! impl_builder_from_attr {
             let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
             tag = match attr.key {
               $(opt_bstringify!($optional $(, [<$name>])?) => {
-                value_checker(value)?;
+                value_checker(value, &opt_stringify!($optional $(, [<$name>])?))?;
                 tag.[<set_ $optional>](value)
               }),*
               $($(opt_bstringify!($empty $(, [<$empname>])?) => {tag}),*)?
@@ -172,12 +172,12 @@ macro_rules! impl_builder_from_attr {
               let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
               tag = match attr.key {
                 $(opt_bstringify!($mandatory $(, [<$mandname>])?) => {
-                  value_checker(value)?;
+                  value_checker(value, &opt_stringify!($mandatory $(, [<$mandname>])?))?;
                   tag.$mandatory = value.to_string();
                   tag
                 }),*
                 $(opt_bstringify!($optional $(, [<$name>])?) => {
-                  value_checker(value)?;
+                  value_checker(value, &opt_stringify!($optional $(, [<$name>])?))?;
                   tag.[<set_ $optional>](value)
                 }),*
                 $($(opt_bstringify!($empty $(, [<$empname>])?) => {tag}),*)?
@@ -502,5 +502,14 @@ macro_rules! opt_bstringify {
   };
   ($ident:ident, $name:tt) => {
     bstringify!($name)
+  };
+}
+
+macro_rules! opt_stringify {
+  ($ident:ident) => {
+    stringify!($ident)
+  };
+  ($ident:ident, $name:tt) => {
+    stringify!($name)
   };
 }

@@ -50,25 +50,25 @@ impl QuickXmlReadWrite for AttributePatA {
       let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
       tag = match attr.key {
         b"dmrole" => {
-          value_checker(value)?;
+          value_checker(value, "dmrole")?;
           tag.dmrole = value.to_string();
           tag
         }
         b"dmtype" => {
-          value_checker(value)?;
+          value_checker(value, "dmtype")?;
           tag.dmtype = value.to_string();
           tag
         }
 
         b"ref" => {
-          value_checker(value)?;
+          value_checker(value, "ref")?;
           tag.set_ref_(value)
         }
 
         b"value" => tag.set_value(value),
 
         b"arrayindex" => {
-          value_checker(value)?;
+          value_checker(value, "arrayindex")?;
           if value.parse::<i32>().is_ok() {
             if !(value.parse::<i32>().unwrap() < 0) {
               tag.set_array_index(value)
@@ -86,7 +86,7 @@ impl QuickXmlReadWrite for AttributePatA {
         }
 
         b"unit" => {
-          value_checker(value)?;
+          value_checker(value, "unit")?;
           tag.set_unit(value)
         }
 
