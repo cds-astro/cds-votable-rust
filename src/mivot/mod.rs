@@ -4,7 +4,7 @@ use crate::error::VOTableError;
 use quick_xml::Writer;
 use std::io::Write;
 
-use self::{foreignkey::ForeignKey, primarykey::PrimaryKey};
+use self::{foreignkey::ForeignKey, primarykey::PrimaryKeyA};
 
 #[macro_use]
 pub mod macros;
@@ -33,7 +33,7 @@ pub trait ElemImpl<T: ElemType> {
 }
 
 pub trait InstanceType {
-  fn push2_pk(&mut self, pk: PrimaryKey);
+  fn push2_pk(&mut self, pk: PrimaryKeyA);
 }
 
 pub trait ReferenceType {

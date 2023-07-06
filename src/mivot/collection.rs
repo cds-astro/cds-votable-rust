@@ -13,7 +13,7 @@ use super::instance::{MandPKInstance, NoRoleInstance};
 use super::join::SrcJoin;
 use super::reference::{DynRef, StaticRef};
 use super::CollectionType;
-use super::{attribute_c::AttributePatC, join::Join, primarykey::PrimaryKey, ElemImpl, ElemType};
+use super::{attribute_c::AttributePatC, join::Join, primarykey::PrimaryKeyB, ElemImpl, ElemType};
 
 /*
     enum CollectionElem
@@ -66,7 +66,7 @@ pub struct CollectionPatA {
   #[serde(skip_serializing_if = "Option::is_none")]
   dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  primary_keys: Vec<PrimaryKey>,
+  primary_keys: Vec<PrimaryKeyB>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   elems: Vec<CollectionElem>,
   checker: Vec<String>,
@@ -122,7 +122,7 @@ pub struct CollectionPatB {
   dmid: String,
   // OPTIONAL
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  primary_keys: Vec<PrimaryKey>,
+  primary_keys: Vec<PrimaryKeyB>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   elems: Vec<CollectionElem>,
   checker: Vec<String>,
@@ -178,7 +178,7 @@ pub struct CollectionPatC {
   #[serde(skip_serializing_if = "Option::is_none")]
   dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  primary_keys: Vec<PrimaryKey>,
+  primary_keys: Vec<PrimaryKeyB>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   elems: Vec<CollectionElem>,
   checker: Vec<String>,

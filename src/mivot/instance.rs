@@ -11,7 +11,7 @@ use std::{io::Write, str};
 use super::reference::{DynRef, StaticRef};
 use super::InstanceType;
 use super::{
-  attribute_a::AttributePatA, collection::CollectionPatA, primarykey::PrimaryKey, ElemImpl,
+  attribute_a::AttributePatA, collection::CollectionPatA, primarykey::PrimaryKeyA, ElemImpl,
   ElemType,
 };
 use quick_xml::events::attributes::Attributes;
@@ -70,7 +70,7 @@ pub struct NoRoleInstance {
   #[serde(skip_serializing_if = "Option::is_none")]
   dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  primary_keys: Vec<PrimaryKey>,
+  primary_keys: Vec<PrimaryKeyA>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   elems: Vec<InstanceElem>,
 }
@@ -82,7 +82,7 @@ impl NoRoleInstance {
   impl_builder_opt_string_attr!(dmid);
 }
 impl InstanceType for NoRoleInstance {
-  fn push2_pk(&mut self, pk: PrimaryKey) {
+  fn push2_pk(&mut self, pk: PrimaryKeyA) {
     self.primary_keys.push(pk);
   }
 }
@@ -130,7 +130,7 @@ pub struct MandPKInstance {
   #[serde(skip_serializing_if = "Option::is_none")]
   dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  primary_keys: Vec<PrimaryKey>,
+  primary_keys: Vec<PrimaryKeyA>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   elems: Vec<InstanceElem>,
 }
@@ -142,7 +142,7 @@ impl MandPKInstance {
   impl_builder_opt_string_attr!(dmid);
 }
 impl InstanceType for MandPKInstance {
-  fn push2_pk(&mut self, pk: PrimaryKey) {
+  fn push2_pk(&mut self, pk: PrimaryKeyA) {
     self.primary_keys.push(pk);
   }
 }
@@ -192,7 +192,7 @@ pub struct Instance {
   #[serde(skip_serializing_if = "Option::is_none")]
   dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  primary_keys: Vec<PrimaryKey>,
+  primary_keys: Vec<PrimaryKeyA>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   elems: Vec<InstanceElem>,
 }
@@ -201,7 +201,7 @@ impl Instance {
   impl_builder_opt_string_attr!(dmid);
 }
 impl InstanceType for Instance {
-  fn push2_pk(&mut self, pk: PrimaryKey) {
+  fn push2_pk(&mut self, pk: PrimaryKeyA) {
     self.primary_keys.push(pk);
   }
 }
@@ -343,7 +343,7 @@ fn read_instance_sub_elem<
         CollectionPatA::TAG_BYTES => instance.push_to_elems(InstanceElem::Collection(
           CollectionPatA::from_event_empty(e)?,
         )),
-        PrimaryKey::TAG_BYTES => instance.push2_pk(PrimaryKey::from_event_empty(e)?),
+        PrimaryKeyA::TAG_BYTES => instance.push2_pk(PrimaryKeyA::from_event_empty(e)?),
         _ => {
           return Err(VOTableError::UnexpectedEmptyTag(
             e.local_name().to_vec(),
