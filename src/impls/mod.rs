@@ -58,10 +58,7 @@ pub enum VOTableValue {
 }
 
 impl Serialize for VOTableValue {
-  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-  where
-    S: Serializer,
-  {
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
     match self {
       VOTableValue::Null =>
       // Hack to be able to serialize in TOML (TOML does not support NULL values :o/)
@@ -152,50 +149,22 @@ pub enum Schema {
   ComplexDouble,
   CharASCII,
   CharUnicode,
-  FixedLengthStringASCII {
-    n_chars: usize,
-  },
-  FixedLengthStringUnicode {
-    n_chars: usize,
-  },
-  VariableLengthStringASCII {
-    /// Maximum number of characters the array may contain if declared as `INT*`), `None` if
-    /// declared as `*`.
-    n_chars_max: Option<usize>,
-  },
-  VariableLengthStringUnicode {
-    /// Maximum number of characters the array may contain if declared as `INT*`), `None` if
-    /// declared as `*`.
-    n_chars_max: Option<usize>,
-  },
-  FixedLengthBitArray {
-    n_bits: usize,
-  },
-  VariableLengthBitArray {
-    /// Maximum number of characters the array may contain if declared as `INT*`), `None` if
-    /// declared as `*`.
-    n_bits_max: Option<usize>,
-  },
-  FixedLengthArray {
-    n_elems: usize,
-    elem_schema: Box<Schema>,
-  },
-  VariableLengthArray {
-    /// Maximum number of elements the array may contain if declared as `INT*`), `None` if
-    /// declared as `*`.
-    n_elems_max: Option<usize>,
-    /// The underlying schema can contains a fixed length array (of fixed length array, ...)
-    /// of primitive type
-    elem_schema: Box<Schema>,
-  }, // { n_chars_min: usize }
+  FixedLengthStringASCII { n_chars: usize },
+  FixedLengthStringUnicode { n_chars: usize },
+  VariableLengthStringASCII, // { n_chars_min: usize }
+  VariableLengthStringUnicode, // { n_chars_min: usize }
+  FixedLengthBitArray { n_bits: usize },
+  VariableLengthBitArray, // { n_chars_min: usize }
+  FixedLengthArray { n_elems: usize, elem_schema: Box<Schema> },
+  VariableLengthArray { elem_schema: Box<Schema> }, // { n_chars_min: usize }
 }
 
 impl Schema {
   /// Returns the size, in bytes, of the binary representation of an entry associated to the Schema.
   /// # Output
   /// * `Ok` for fixed length objects
-  /// * `Err` containing first the size of an element and then the upper bound of the len (if known), for variable size objects
-  pub fn byte_len(&self) -> Result<usize, (usize, Option<usize>)> {
+  /// * `Err` containing the lower bound of the len for varaible size objects 
+  pub fn byte_len(&self) -> Result<usize, usize> {
     match self {
       Schema::Bool => Ok(size_of::<u8>()),
       Schema::Bit => Ok(size_of::<u8>()),
@@ -211,18 +180,13 @@ impl Schema {
       Schema::CharUnicode => Ok(size_of::<u16>()),
       Schema::FixedLengthStringASCII { n_chars } => Ok(n_chars * size_of::<u8>()),
       Schema::FixedLengthStringUnicode { n_chars } => Ok(n_chars * size_of::<u16>()),
-      Schema::VariableLengthStringASCII { n_chars_max } => {
-        Err((size_of::<u8>(), n_chars_max.map(|n| n * size_of::<u8>())))
-      }
-      Schema::VariableLengthStringUnicode { n_chars_max } => {
-        Err((size_of::<u16>(), n_chars_max.map(|n| n * size_of::<u16>())))
-      }
-      Schema::FixedLengthArray {
-        n_elems,
-        elem_schema,
-      } => match elem_schema.as_ref() {
-        Schema::Bit => Ok((*n_elems + 7) / 8),
-        _ => elem_schema.byte_len().map(|l| l * n_elems),
+      Schema::VariableLengthStringASCII => Err(0),
+      Schema::VariableLengthStringUnicode => Err(0),
+      Schema::FixedLengthArray { n_elems, elem_schema } => {
+        match elem_schema.as_ref() {
+          Schema::Bit => Ok((*n_elems + 7) / 8),
+         _ => elem_schema.byte_len().map(| l | l * n_elems)
+        }
       },
       Schema::VariableLengthArray {
         n_elems_max,
@@ -234,145 +198,122 @@ impl Schema {
         Err((elem_byte_len, n_elems_max.map(move |n| n * elem_byte_len)))
       }
       Schema::FixedLengthBitArray { n_bits } => Ok((*n_bits + 7) / 8),
-      Schema::VariableLengthBitArray { n_bits_max } => {
-        Err((0, n_bits_max.map(move |n_bits| (n_bits + 7) / 8)))
-      }
+      Schema::VariableLengthBitArray => Err(0)
     }
   }
 
   // For VOTable DATATABLE field deserialization
   pub fn value_from_str(&self, s: &str) -> Result<VOTableValue, VOTableError> {
-    Ok(if s.is_empty() {
-      VOTableValue::Null
-    } else {
-      match self {
-        Schema::Bool => {
-          if s == "?" {
-            VOTableValue::Null
-          } else {
+    Ok(
+      if s.is_empty() {
+        VOTableValue::Null
+      } else {
+        match self {
+          Schema::Bool => {
+            if s == "?" {
+              VOTableValue::Null
+            } else {
+              VOTableValue::Bool(
+                match s {
+                  "0" | "f" | "F" => false,
+                  "1" | "t" | "T" => true,
+                  _ => {
+                    s.parse().map_err(|_| VOTableError::Custom(
+                      format!("Unable too parse boolean value. Expected: '0', '1', 't', 'f', 'T', 'F' or 'true', 'false'. Actual: '{}'", s))
+                    )?
+                  } 
+                }
+              )
+            }
+          }
+          Schema::Bit => 
             match s {
-                        "0" | "f" | "F" => VOTableValue::Bool(false),
-                        "1" | "t" | "T" => VOTableValue::Bool(true),
-                        _ => {
-                          s.parse::<bool>().map(VOTableValue::Bool).map_err(|_| VOTableError::Custom(
-                            format!("Unable too parse boolean value. Expected: '0', '1', 't', 'f', 'T', 'F' or 'true', 'false'. Actual: '{}'", s))
-                          )?
-                        }
-                      }
+              "0" => VOTableValue::Bool(false),
+              "1" => VOTableValue::Bool(true),
+              _ => return Err(VOTableError::Custom(format!("Unknown bit value: '{}'", s)))
+            }
+          Schema::Byte { null: None } => VOTableValue::Byte(s.parse().map_err(VOTableError::ParseInt)?),
+          Schema::Byte { null: Some(null) } => {
+            let val = s.parse().map_err(VOTableError::ParseInt)?;
+            if val == *null {
+              VOTableValue::Null
+            } else {
+              VOTableValue::Byte(val)
+            }
           }
-        }
-        Schema::Bit => match s {
-          "0" => VOTableValue::Bool(false),
-          "1" => VOTableValue::Bool(true),
-          _ => return Err(VOTableError::Custom(format!("Unknown bit value: '{}'", s))),
-        },
-        Schema::Byte { null: None } => {
-          VOTableValue::Byte(s.parse().map_err(VOTableError::ParseInt)?)
-        }
-        Schema::Byte { null: Some(null) } => {
-          let val = s.parse().map_err(VOTableError::ParseInt)?;
-          if val == *null {
-            VOTableValue::Null
-          } else {
-            VOTableValue::Byte(val)
+          Schema::Short { null: None } => VOTableValue::Short(s.parse().map_err(VOTableError::ParseInt)?),
+          Schema::Short { null: Some(null) } => {
+            let val = s.parse().map_err(VOTableError::ParseInt)?;
+            if val == *null {
+              VOTableValue::Null
+            } else {
+              VOTableValue::Short(val)
+            }
           }
-        }
-        Schema::Short { null: None } => {
-          VOTableValue::Short(s.parse().map_err(VOTableError::ParseInt)?)
-        }
-        Schema::Short { null: Some(null) } => {
-          let val = s.parse().map_err(VOTableError::ParseInt)?;
-          if val == *null {
-            VOTableValue::Null
-          } else {
-            VOTableValue::Short(val)
+          Schema::Int { null: None } => VOTableValue::Int(s.parse().map_err(VOTableError::ParseInt)?),
+          Schema::Int { null: Some(null) } => {
+            let val = s.parse().map_err(VOTableError::ParseInt)?;
+            if val == *null {
+              VOTableValue::Null
+            } else {
+              VOTableValue::Int(val)
+            }
           }
-        }
-        Schema::Int { null: None } => VOTableValue::Int(s.parse().map_err(VOTableError::ParseInt)?),
-        Schema::Int { null: Some(null) } => {
-          let val = s.parse().map_err(VOTableError::ParseInt)?;
-          if val == *null {
-            VOTableValue::Null
-          } else {
-            VOTableValue::Int(val)
+          Schema::Long { null: None } => VOTableValue::Long(s.parse().map_err(VOTableError::ParseInt)?),
+          Schema::Long { null: Some(null) } => {
+            let val = s.parse().map_err(VOTableError::ParseInt)?;
+            if val == *null {
+              VOTableValue::Null
+            } else {
+              VOTableValue::Long(val)
+            }
           }
-        }
-        Schema::Long { null: None } => {
-          VOTableValue::Long(s.parse().map_err(VOTableError::ParseInt)?)
-        }
-        Schema::Long { null: Some(null) } => {
-          let val = s.parse().map_err(VOTableError::ParseInt)?;
-          if val == *null {
-            VOTableValue::Null
-          } else {
-            VOTableValue::Long(val)
+          Schema::Float => VOTableValue::Float(s.parse().map_err(VOTableError::ParseFloat)?),
+          Schema::Double => VOTableValue::Double(s.parse().map_err(VOTableError::ParseFloat)?),
+          Schema::ComplexFloat =>
+            match s.split_once(' ') {
+              Some((l, r)) => VOTableValue::ComplexFloat(
+                (l.parse().map_err(VOTableError::ParseFloat)?,
+                 r.parse().map_err(VOTableError::ParseFloat)?
+                )
+              ),
+              None => return Err(VOTableError::Custom(format!("Unable to parse complex float value: {}", s)))
+            }
+          Schema::ComplexDouble =>
+            match s.split_once(' ') {
+              Some((l, r)) => VOTableValue::ComplexDouble(
+                (l.parse().map_err(VOTableError::ParseFloat)?,
+                 r.parse().map_err(VOTableError::ParseFloat)?
+                )
+              ),
+              None => return Err(VOTableError::Custom(format!("Unable to parse complex double value: {}", s)))
+            }
+          Schema::CharASCII => VOTableValue::CharASCII(s.chars().next().unwrap()), // unwrap ok since we already checked for empty string
+          Schema::CharUnicode => VOTableValue::CharUnicode(s.chars().next().unwrap()), // unwrap ok since we already checked for empty string
+          Schema::FixedLengthStringASCII { n_chars: _ } => VOTableValue::String(s.to_owned()),
+          Schema::VariableLengthStringASCII => VOTableValue::String(s.to_owned()),
+          Schema::FixedLengthStringUnicode { n_chars: _ } => VOTableValue::String(s.to_owned()),
+          Schema::VariableLengthStringUnicode => VOTableValue::String(s.to_owned()),
+          // Schema::Bytes => unreachable!() // only in binary mode?
+          Schema::FixedLengthArray { n_elems, elem_schema } => {
+            let (n_actual_elems, value) = elem_schema.parse_array(s)?;
+            if n_actual_elems != *n_elems {
+              return Err(VOTableError::Custom(format!("Wrong number of fixed length array elements. Expected: {}. Actual: {}.", n_elems, n_actual_elems)));
+            }
+            value
           }
-        }
-        Schema::Float => VOTableValue::Float(s.parse().map_err(VOTableError::ParseFloat)?),
-        Schema::Double => VOTableValue::Double(s.parse().map_err(VOTableError::ParseFloat)?),
-        Schema::ComplexFloat => match s.split_once(' ') {
-          Some((l, r)) => VOTableValue::ComplexFloat((
-            l.parse().map_err(VOTableError::ParseFloat)?,
-            r.parse().map_err(VOTableError::ParseFloat)?,
-          )),
-          None => {
-            return Err(VOTableError::Custom(format!(
-              "Unable to parse complex float value: {}",
-              s
-            )))
+          Schema::VariableLengthArray { elem_schema } => elem_schema.parse_array(s)?.1,
+          Schema::FixedLengthBitArray { n_bits } => {
+            let (n_actual_elems, value) = self.parse_bit_array(s)?;
+            if n_actual_elems != *n_bits {
+              return Err(VOTableError::Custom(format!("Wrong number of fixed length bits elements. Expected: {}. Actual: {}.", n_bits, n_actual_elems)));
+            }
+            value
           }
-        },
-        Schema::ComplexDouble => match s.split_once(' ') {
-          Some((l, r)) => VOTableValue::ComplexDouble((
-            l.parse().map_err(VOTableError::ParseFloat)?,
-            r.parse().map_err(VOTableError::ParseFloat)?,
-          )),
-          None => {
-            return Err(VOTableError::Custom(format!(
-              "Unable to parse complex double value: {}",
-              s
-            )))
-          }
-        },
-        Schema::CharASCII => VOTableValue::CharASCII(s.chars().next().unwrap()), // unwrap ok since we already checked for empty string
-        Schema::CharUnicode => VOTableValue::CharUnicode(s.chars().next().unwrap()), // unwrap ok since we already checked for empty string
-        Schema::FixedLengthStringASCII { n_chars: _ } => VOTableValue::String(s.to_owned()),
-        Schema::VariableLengthStringASCII { n_chars_max: _ } => VOTableValue::String(s.to_owned()),
-        Schema::FixedLengthStringUnicode { n_chars: _ } => VOTableValue::String(s.to_owned()),
-        Schema::VariableLengthStringUnicode { n_chars_max: _ } => {
-          VOTableValue::String(s.to_owned())
+          Schema::VariableLengthBitArray => self.parse_bit_array(s)?.1
         }
-        // Schema::Bytes => unreachable!() // only in binary mode?
-        Schema::FixedLengthArray {
-          n_elems,
-          elem_schema,
-        } => {
-          let (n_actual_elems, value) = elem_schema.parse_array(s)?;
-          if n_actual_elems != *n_elems {
-            return Err(VOTableError::Custom(format!(
-              "Wrong number of fixed length array elements. Expected: {}. Actual: {}.",
-              n_elems, n_actual_elems
-            )));
-          }
-          value
-        }
-        Schema::VariableLengthArray {
-          n_elems_max: _,
-          elem_schema,
-        } => elem_schema.parse_array(s)?.1,
-        Schema::FixedLengthBitArray { n_bits } => {
-          let (n_actual_elems, value) = self.parse_bit_array(s)?;
-          if n_actual_elems != *n_bits {
-            return Err(VOTableError::Custom(format!(
-              "Wrong number of fixed length bits elements. Expected: {}. Actual: {}.",
-              n_bits, n_actual_elems
-            )));
-          }
-          value
-        }
-        Schema::VariableLengthBitArray { n_bits_max: _ } => self.parse_bit_array(s)?.1,
       }
-    })
+    )
   }
 
   fn parse_bit_array(&self, array_str: &str) -> Result<(usize, VOTableValue), VOTableError> {
@@ -511,7 +452,7 @@ impl Schema {
         assert!(matches!(self, Schema::Bool));
         serializer.serialize_u8(*v as u8)
       },
-      VOTableValue::Byte(v) => {
+      VOTableValue::Byte(v) => 
         match self {
           Schema::Byte { .. } => serializer.serialize_u8(*v),
           Schema::Short { .. } => serializer.serialize_i16(*v as i16),
@@ -807,218 +748,181 @@ impl From<&Field> for Schema {
       (Datatype::ComplexFloat, None) => Schema::ComplexFloat,
       (Datatype::ComplexDouble, None) => Schema::ComplexDouble,
       // Char/String
-      (Datatype::CharASCII, Some(size)) => match size {
-        ArraySize::Fixed1D { size } => Schema::FixedLengthStringASCII {
-          n_chars: *size as usize,
-        },
-        ArraySize::FixedND { sizes } => {
-          let mut it = sizes.iter().cloned();
-          let mut schema = Schema::FixedLengthStringASCII {
-            n_chars: it.next().unwrap_or(0) as usize,
-          };
-          for size in it {
-            schema = Schema::FixedLengthArray {
-              n_elems: size as usize,
-              elem_schema: Box::new(schema),
-            }
+      (Datatype::CharASCII, Some("1")) => Schema::CharASCII,
+      (Datatype::CharASCII, Some(size)) =>
+        match fixed_length_array(size) {
+          Err(e) => {
+            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
+            Schema::VariableLengthStringASCII
           }
-          schema
+          Ok(Ok(n_chars)) => Schema::FixedLengthStringASCII { n_chars },
+          Ok(Err(_)) => Schema::VariableLengthStringASCII,
         }
-        ArraySize::Variable1D => Schema::VariableLengthStringASCII { n_chars_max: None },
-        ArraySize::VariableND { sizes } => {
-          let mut it = sizes.iter().cloned();
-          let mut schema = Schema::FixedLengthStringASCII {
-            n_chars: it.next().unwrap_or(0) as usize,
-          };
-          for size in it {
-            schema = Schema::FixedLengthArray {
-              n_elems: size as usize,
-              elem_schema: Box::new(schema),
-            }
+      (Datatype::CharUnicode, Some("1")) => Schema::CharUnicode,
+      (Datatype::CharUnicode, Some(size)) =>
+        match fixed_length_array(size) {
+          Err(e) => {
+            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
+            Schema::VariableLengthStringUnicode
           }
-          Schema::VariableLengthArray {
-            n_elems_max: None,
-            elem_schema: Box::new(schema),
-          }
+          Ok(Ok(n_chars)) => Schema::FixedLengthStringUnicode { n_chars },
+          Ok(Err(_)) => Schema::VariableLengthStringUnicode,
         }
-        ArraySize::VariableWithUpperLimit1D { upper_limit } => Schema::VariableLengthStringASCII {
-          n_chars_max: Some(*upper_limit as usize),
-        },
-        ArraySize::VariableWithUpperLimitND { sizes, upper_limit } => {
-          let mut it = sizes.iter().cloned();
-          let mut schema = Schema::FixedLengthStringASCII {
-            n_chars: it.next().unwrap_or(0) as usize,
-          };
-          for size in sizes.iter().cloned() {
-            schema = Schema::FixedLengthArray {
-              n_elems: size as usize,
-              elem_schema: Box::new(schema),
-            }
-          }
-          Schema::VariableLengthArray {
-            n_elems_max: Some(*upper_limit as usize),
-            elem_schema: Box::new(schema),
-          }
-        }
-      },
-      (Datatype::CharUnicode, Some(size)) => match size {
-        ArraySize::Fixed1D { size } => Schema::FixedLengthStringUnicode {
-          n_chars: *size as usize,
-        },
-        ArraySize::FixedND { sizes } => {
-          let mut it = sizes.iter().cloned();
-          let mut schema = Schema::FixedLengthStringUnicode {
-            n_chars: it.next().unwrap_or(0) as usize,
-          };
-          for size in it {
-            schema = Schema::FixedLengthArray {
-              n_elems: size as usize,
-              elem_schema: Box::new(schema),
-            }
-          }
-          schema
-        }
-        ArraySize::Variable1D => Schema::VariableLengthStringUnicode { n_chars_max: None },
-        ArraySize::VariableND { sizes } => {
-          let mut it = sizes.iter().cloned();
-          let mut schema = Schema::FixedLengthStringUnicode {
-            n_chars: it.next().unwrap_or(0) as usize,
-          };
-          for size in it {
-            schema = Schema::FixedLengthArray {
-              n_elems: size as usize,
-              elem_schema: Box::new(schema),
-            }
-          }
-          Schema::VariableLengthArray {
-            n_elems_max: None,
-            elem_schema: Box::new(schema),
-          }
-        }
-        ArraySize::VariableWithUpperLimit1D { upper_limit } => {
-          Schema::VariableLengthStringUnicode {
-            n_chars_max: Some(*upper_limit as usize),
-          }
-        }
-        ArraySize::VariableWithUpperLimitND { sizes, upper_limit } => {
-          let mut it = sizes.iter().cloned();
-          let mut schema = Schema::FixedLengthStringUnicode {
-            n_chars: it.next().unwrap_or(0) as usize,
-          };
-          for size in sizes.iter().cloned() {
-            schema = Schema::FixedLengthArray {
-              n_elems: size as usize,
-              elem_schema: Box::new(schema),
-            }
-          }
-          Schema::VariableLengthArray {
-            n_elems_max: Some(*upper_limit as usize),
-            elem_schema: Box::new(schema),
-          }
-        }
-      },
       // Arrays
-      (Datatype::Logical, Some(size)) => from_regulartypeschema_and_arraysize(size, Schema::Bool),
-      (Datatype::Bit, Some(size)) => match size {
-        ArraySize::Fixed1D { size } => Schema::FixedLengthBitArray {
-          n_bits: *size as usize,
-        },
-        ArraySize::FixedND { sizes } => {
-          let mut it = sizes.iter().cloned();
-          let mut schema = Schema::FixedLengthBitArray {
-            n_bits: it.next().unwrap_or(0) as usize,
-          };
-          for size in it {
-            schema = Schema::FixedLengthArray {
-              n_elems: size as usize,
-              elem_schema: Box::new(schema),
-            }
+      (Datatype::Logical, Some(size)) => {
+        let elem_schema = Box::new(Schema::Bool);
+        match fixed_length_array(size) {
+          Err(e) => {
+            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
+            Schema::VariableLengthArray { elem_schema }
           }
-          schema
-        }
-        ArraySize::Variable1D => Schema::VariableLengthBitArray { n_bits_max: None },
-        ArraySize::VariableND { sizes } => {
-          let mut it = sizes.iter().cloned();
-          let mut schema = Schema::FixedLengthBitArray {
-            n_bits: it.next().unwrap_or(0) as usize,
-          };
-          for size in it {
-            schema = Schema::FixedLengthArray {
-              n_elems: size as usize,
-              elem_schema: Box::new(schema),
-            }
-          }
-          Schema::VariableLengthArray {
-            n_elems_max: None,
-            elem_schema: Box::new(schema),
-          }
-        }
-        ArraySize::VariableWithUpperLimit1D { upper_limit } => Schema::VariableLengthBitArray {
-          n_bits_max: Some(*upper_limit as usize),
-        },
-        ArraySize::VariableWithUpperLimitND { sizes, upper_limit } => {
-          let mut it = sizes.iter().cloned();
-          let mut schema = Schema::FixedLengthBitArray {
-            n_bits: it.next().unwrap_or(0) as usize,
-          };
-          for size in sizes.iter().cloned() {
-            schema = Schema::FixedLengthArray {
-              n_elems: size as usize,
-              elem_schema: Box::new(schema),
-            }
-          }
-          Schema::VariableLengthArray {
-            n_elems_max: Some(*upper_limit as usize),
-            elem_schema: Box::new(schema),
-          }
+          Ok(Ok(n_elems)) => Schema::FixedLengthArray { n_elems, elem_schema },
+          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema }
         }
       },
+      (Datatype::Bit, Some(size)) => {
+        match fixed_length_array(size) {
+          Err(e) => {
+            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
+            Schema::VariableLengthBitArray
+          }
+          Ok(Ok(n_bits)) => Schema::FixedLengthBitArray { n_bits },
+          Ok(Err(_)) => Schema::VariableLengthBitArray
+        }
+      }
       (Datatype::Byte, Some(size)) => {
         let null = field
           .null_value()
           .map(|null_str| null_str.parse())
           .transpose()
           .unwrap_or_default();
-        let elem_schema = Schema::Byte { null };
-        from_regulartypeschema_and_arraysize(size, elem_schema)
-      }
+        let elem_schema = Box::new(Schema::Byte { null });
+        match fixed_length_array(size) {
+          Err(e) => {
+            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
+            Schema::VariableLengthArray { elem_schema }
+          }
+          Ok(Ok(n_elems)) => Schema::FixedLengthArray { n_elems, elem_schema },
+          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema }
+        }
+      },
       (Datatype::ShortInt, Some(size)) => {
         let null = field
           .null_value()
           .map(|null_str| null_str.parse())
           .transpose()
           .unwrap_or_default();
-        let elem_schema = Schema::Short { null };
-        from_regulartypeschema_and_arraysize(size, elem_schema)
-      }
+        let elem_schema = Box::new(Schema::Short { null });
+        match fixed_length_array(size) {
+          Err(e) => {
+            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
+            Schema::VariableLengthArray { elem_schema }
+          }
+          Ok(Ok(n_elems)) => Schema::FixedLengthArray { n_elems, elem_schema },
+          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema }
+        }
+      },
       (Datatype::Int, Some(size)) => {
         let null = field
           .null_value()
           .map(|null_str| null_str.parse())
           .transpose()
           .unwrap_or_default();
-        let elem_schema = Schema::Int { null };
-        from_regulartypeschema_and_arraysize(size, elem_schema)
-      }
+        let elem_schema = Box::new(Schema::Int { null });
+        match fixed_length_array(size) {
+          Err(e) => {
+            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
+            Schema::VariableLengthArray { elem_schema }
+          }
+          Ok(Ok(n_elems)) => Schema::FixedLengthArray { n_elems, elem_schema },
+          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema }
+        }
+      },
       (Datatype::LongInt, Some(size)) => {
         let null = field
           .null_value()
           .map(|null_str| null_str.parse())
           .transpose()
           .unwrap_or_default();
-        let elem_schema = Schema::Long { null };
-        from_regulartypeschema_and_arraysize(size, elem_schema)
-      }
-      (Datatype::Float, Some(size)) => from_regulartypeschema_and_arraysize(size, Schema::Float),
-      (Datatype::Double, Some(size)) => from_regulartypeschema_and_arraysize(size, Schema::Double),
+        let elem_schema = Box::new(Schema::Long { null });
+        match fixed_length_array(size) {
+          Err(e) => {
+            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
+            Schema::VariableLengthArray { elem_schema }
+          }
+          Ok(Ok(n_elems)) => Schema::FixedLengthArray { n_elems, elem_schema },
+          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema }
+        }
+      },
+      (Datatype::Float, Some(size)) => {
+        let elem_schema = Box::new(Schema::Float);
+        match fixed_length_array(size) {
+          Err(e) => {
+            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
+            Schema::VariableLengthArray { elem_schema }
+          }
+          Ok(Ok(n_elems)) => Schema::FixedLengthArray { n_elems, elem_schema },
+          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema }
+        }
+      },
+      (Datatype::Double, Some(size)) => {
+        let elem_schema = Box::new(Schema::Double);
+        match fixed_length_array(size) {
+          Err(e) => {
+            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
+            Schema::VariableLengthArray { elem_schema }
+          }
+          Ok(Ok(n_elems)) => Schema::FixedLengthArray { n_elems, elem_schema },
+          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema }
+        }
+      },
       (Datatype::ComplexFloat, Some(size)) => {
-        from_regulartypeschema_and_arraysize(size, Schema::ComplexFloat)
-      }
+        let elem_schema = Box::new(Schema::ComplexFloat);
+        match fixed_length_array(size) {
+          Err(e) => {
+            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
+            Schema::VariableLengthArray { elem_schema }
+          }
+          Ok(Ok(n_elems)) => Schema::FixedLengthArray { n_elems, elem_schema },
+          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema }
+        }
+      },
       (Datatype::ComplexDouble, Some(size)) => {
-        from_regulartypeschema_and_arraysize(size, Schema::ComplexDouble)
-      }
+        let elem_schema = Box::new(Schema::ComplexDouble);
+        match fixed_length_array(size) {
+          Err(e) => {
+            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
+            Schema::VariableLengthArray { elem_schema }
+          }
+          Ok(Ok(n_elems)) => Schema::FixedLengthArray { n_elems, elem_schema },
+          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema }
+        }
+      },
     }
   }
+}
+
+/// If the result is:
+/// * `Ok(usize)` => fixed length array of given size
+/// * `Err(usize)` => variable size array of at least the given size
+pub fn fixed_length_array(arraysize: &str) -> Result<Result<usize, usize>, ParseIntError> {
+  let (arraysize, is_variable) = if arraysize.ends_with('*') {
+    (arraysize.strip_suffix('*').unwrap_or(""), true)
+  } else {
+    (arraysize, false)
+  };
+  if arraysize.is_empty() {
+    return Ok(Err(0));
+  }
+  let elems = arraysize.split('x')
+    .map(|v| v.parse::<usize>())
+    .collect::<Result<Vec<usize>, ParseIntError>>()?;
+  let n_tot = elems.into_iter().reduce(|acc, n| acc * n).unwrap_or(0);
+  Ok(if is_variable {
+    Err(n_tot)
+  } else {
+    Ok(n_tot)
+  })
 }
 
 impl<'de> DeserializeSeed<'de> for &Schema {
@@ -1139,120 +1043,78 @@ impl<'de> DeserializeSeed<'de> for &Schema {
           .map(VOTableValue::String)
       }
       // Schema::Bytes => deserializer.deserialize_bytes(BytesVisitor).map(VOTableValue::Bytes),
-      Schema::FixedLengthArray {
-        n_elems,
-        elem_schema,
-      } => match elem_schema.as_ref() {
-        Schema::Byte { .. } => {
-          let visitor = FixedLengthArrayVisitor::<u8>::new(*n_elems);
-          deserializer
-            .deserialize_tuple(*n_elems, visitor)
-            .map(VOTableValue::ByteArray)
+      Schema::FixedLengthArray { n_elems, elem_schema } =>
+        match elem_schema.as_ref() {
+          Schema::Byte { .. } => {
+            let visitor = FixedLengthArrayVisitor::<u8>::new(*n_elems);
+            deserializer.deserialize_tuple(*n_elems, visitor).map(VOTableValue::ByteArray)
+          }
+          Schema::Short { .. } => {
+            let visitor = FixedLengthArrayVisitor::<i16>::new(*n_elems);
+            deserializer.deserialize_tuple(*n_elems, visitor).map(VOTableValue::ShortArray)
+          }
+          Schema::Int { .. } => {
+            let visitor = FixedLengthArrayVisitor::<i32>::new(*n_elems);
+            deserializer.deserialize_tuple(*n_elems, visitor).map(VOTableValue::IntArray)
+          }
+          Schema::Long { .. } => {
+            let visitor = FixedLengthArrayVisitor::<i64>::new(*n_elems);
+            deserializer.deserialize_tuple(*n_elems, visitor).map(VOTableValue::LongArray)
+          }
+          Schema::Float => {
+            let visitor = FixedLengthArrayVisitor::<f32>::new(*n_elems);
+            deserializer.deserialize_tuple(*n_elems, visitor).map(VOTableValue::FloatArray)
+          }
+          Schema::Double => {
+            let visitor = FixedLengthArrayVisitor::<f64>::new(*n_elems);
+            deserializer.deserialize_tuple(*n_elems, visitor).map(VOTableValue::DoubleArray)
+          }
+          Schema::ComplexFloat => {
+            let visitor = FixedLengthArrayVisitor::<(f32, f32)>::new(*n_elems);
+            deserializer.deserialize_tuple(*n_elems, visitor).map(VOTableValue::ComplexFloatArray)
+          }
+          Schema::ComplexDouble => {
+            let visitor = FixedLengthArrayVisitor::<(f64, f64)>::new(*n_elems);
+            deserializer.deserialize_tuple(*n_elems, visitor).map(VOTableValue::ComplexDoubleArray)
+          }
+          _ => Err(D::Error::custom(format!("Unexpected datatype in FixedLengthArray: {:?}", elem_schema)))
         }
-        Schema::Short { .. } => {
-          let visitor = FixedLengthArrayVisitor::<i16>::new(*n_elems);
-          deserializer
-            .deserialize_tuple(*n_elems, visitor)
-            .map(VOTableValue::ShortArray)
-        }
-        Schema::Int { .. } => {
-          let visitor = FixedLengthArrayVisitor::<i32>::new(*n_elems);
-          deserializer
-            .deserialize_tuple(*n_elems, visitor)
-            .map(VOTableValue::IntArray)
-        }
-        Schema::Long { .. } => {
-          let visitor = FixedLengthArrayVisitor::<i64>::new(*n_elems);
-          deserializer
-            .deserialize_tuple(*n_elems, visitor)
-            .map(VOTableValue::LongArray)
-        }
-        Schema::Float => {
-          let visitor = FixedLengthArrayVisitor::<f32>::new(*n_elems);
-          deserializer
-            .deserialize_tuple(*n_elems, visitor)
-            .map(VOTableValue::FloatArray)
-        }
-        Schema::Double => {
-          let visitor = FixedLengthArrayVisitor::<f64>::new(*n_elems);
-          deserializer
-            .deserialize_tuple(*n_elems, visitor)
-            .map(VOTableValue::DoubleArray)
-        }
-        Schema::ComplexFloat => {
-          let visitor = FixedLengthArrayVisitor::<(f32, f32)>::new(*n_elems);
-          deserializer
-            .deserialize_tuple(*n_elems, visitor)
-            .map(VOTableValue::ComplexFloatArray)
-        }
-        Schema::ComplexDouble => {
-          let visitor = FixedLengthArrayVisitor::<(f64, f64)>::new(*n_elems);
-          deserializer
-            .deserialize_tuple(*n_elems, visitor)
-            .map(VOTableValue::ComplexDoubleArray)
-        }
-        _ => Err(D::Error::custom(format!(
-          "Unexpected datatype in FixedLengthArray: {:?}",
-          elem_schema
-        ))),
-      },
-      Schema::VariableLengthArray {
-        n_elems_max,
-        elem_schema,
-      } => match elem_schema.as_ref() {
-        Schema::Byte { .. } => {
-          let visitor = VariableLengthArrayVisitor::<u8>::new(n_elems_max.clone());
-          deserializer
-            .deserialize_seq(visitor)
-            .map(VOTableValue::ByteArray)
-        }
-        Schema::Short { .. } => {
-          let visitor = VariableLengthArrayVisitor::<i16>::new(n_elems_max.clone());
-          deserializer
-            .deserialize_seq(visitor)
-            .map(VOTableValue::ShortArray)
-        }
-        Schema::Int { .. } => {
-          let visitor = VariableLengthArrayVisitor::<i32>::new(n_elems_max.clone());
-          deserializer
-            .deserialize_seq(visitor)
-            .map(VOTableValue::IntArray)
-        }
-        Schema::Long { .. } => {
-          let visitor = VariableLengthArrayVisitor::<i64>::new(n_elems_max.clone());
-          deserializer
-            .deserialize_seq(visitor)
-            .map(VOTableValue::LongArray)
-        }
-        Schema::Float => {
-          let visitor = VariableLengthArrayVisitor::<f32>::new(n_elems_max.clone());
-          deserializer
-            .deserialize_seq(visitor)
-            .map(VOTableValue::FloatArray)
-        }
-        Schema::Double => {
-          let visitor = VariableLengthArrayVisitor::<f64>::new(n_elems_max.clone());
-          deserializer
-            .deserialize_seq(visitor)
-            .map(VOTableValue::DoubleArray)
-        }
-        Schema::ComplexFloat => {
-          let visitor = VariableLengthArrayVisitor::<(f32, f32)>::new(n_elems_max.clone());
-          deserializer
-            .deserialize_seq(visitor)
-            .map(VOTableValue::ComplexFloatArray)
-        }
-        Schema::ComplexDouble => {
-          let visitor = VariableLengthArrayVisitor::<(f64, f64)>::new(n_elems_max.clone());
-          deserializer
-            .deserialize_seq(visitor)
-            .map(VOTableValue::ComplexDoubleArray)
-        }
-        _ => Err(D::Error::custom(format!(
-          "Unexpected datatype in VariableLengthArray: {:?}",
-          elem_schema
-        ))),
-      },
+      Schema::VariableLengthArray { elem_schema } =>
+        match elem_schema.as_ref() {
+          Schema::Byte { .. } => {
+            let visitor = VariableLengthArrayVisitor::<u8>::new();
+            deserializer.deserialize_seq(visitor).map(VOTableValue::ByteArray)
+          }
+          Schema::Short { .. } => {
+            let visitor = VariableLengthArrayVisitor::<i16>::new();
+            deserializer.deserialize_seq(visitor).map(VOTableValue::ShortArray)
+          }
+          Schema::Int { .. } => {
+            let visitor = VariableLengthArrayVisitor::<i32>::new();
+            deserializer.deserialize_seq(visitor).map(VOTableValue::IntArray)
+          }
+          Schema::Long { .. } => {
+            let visitor = VariableLengthArrayVisitor::<i64>::new();
+            deserializer.deserialize_seq(visitor).map(VOTableValue::LongArray)
+          }
+          Schema::Float => {
+            let visitor = VariableLengthArrayVisitor::<f32>::new();
+            deserializer.deserialize_seq(visitor).map(VOTableValue::FloatArray)
+          }
+          Schema::Double => {
+            let visitor = VariableLengthArrayVisitor::<f64>::new();
+            deserializer.deserialize_seq(visitor).map(VOTableValue::DoubleArray)
+          }
+          Schema::ComplexFloat => {
+            let visitor = VariableLengthArrayVisitor::<(f32, f32)>::new();
+            deserializer.deserialize_seq(visitor).map(VOTableValue::ComplexFloatArray)
+          }
+          Schema::ComplexDouble => {
+            let visitor = VariableLengthArrayVisitor::<(f64, f64)>::new();
+            deserializer.deserialize_seq(visitor).map(VOTableValue::ComplexDoubleArray)
+          }
+          _ => Err(D::Error::custom(format!("Unexpected datatype in VariableLengthArray: {:?}", elem_schema)))
+        },
       Schema::FixedLengthBitArray { n_bits } => {
         let n_bytes = (7 + *n_bits) / 8;
         let visitor = FixedLengthArrayVisitor::<u8>::new(n_bytes);

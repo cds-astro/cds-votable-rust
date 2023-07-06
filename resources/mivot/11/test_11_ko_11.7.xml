@@ -1,15 +1,2 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<VODML
-	xmlns="http://www.ivoa.net/xml/mivot">
-
-	<MODEL name="model" url="http://aaaaaa" />
-	<TEMPLATES tableref="fgdgfddf">
-		<INSTANCE dmtype="fffff">
-
-			<!-- Test Case 11.7: ref must not be empty -->
-			<PRIMARY_KEY dmtype="fffff" ref="" />
-
-		</INSTANCE>
-	</TEMPLATES>
-</VODML>
+<!-- Test Case 11.7: ref must not be empty -->
+<PRIMARY\_KEY dmtype="fffff" ref="" />

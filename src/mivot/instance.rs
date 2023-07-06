@@ -1,4 +1,4 @@
-use crate::{error::VOTableError, is_empty, QuickXmlReadWrite, mivot::value_checker};
+use crate::{error::VOTableError, is_empty, mivot::value_checker, QuickXmlReadWrite};
 use bstringify::bstringify;
 use paste::paste;
 use quick_xml::Reader;

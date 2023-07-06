@@ -130,10 +130,7 @@ impl QuickXmlReadWrite for AttributePatC {
 #[cfg(test)]
 mod tests {
   use crate::{
-    mivot::{
-      attribute_c::AttributePatC,
-      test::{get_xml},
-    },
+    mivot::{attribute_c::AttributePatC, test::get_xml},
     tests::test_read,
   };
 

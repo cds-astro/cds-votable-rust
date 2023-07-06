@@ -1,7 +1,3 @@
-use std::{
-  io::{BufRead, Write},
-  str,
-};
 
 use quick_xml::events::{BytesEnd, BytesStart};
 use quick_xml::{
@@ -66,32 +62,27 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.name() {
-          Stream::<C>::TAG_BYTES => {
-            // We could detect if current stream.content.is_some() to prevent from multi-stream...
-            let mut stream = Stream::<C>::from_attributes(e.attributes())?;
-            let mut content = C::new();
-            content.read_binary_content(reader, reader_buff, context)?;
-            stream.content = Some(content);
-            self.stream = stream;
-            // the next call is a failure (because we consume </STREAM> in read_binary_content)
-            let tmp_reader = reader.check_end_names(false);
-            loop {
-              let mut event = tmp_reader
-                .read_event(reader_buff)
-                .map_err(VOTableError::Read)?;
-              match &mut event {
-                Event::Text(e) if is_empty(e) => {}
-                Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(()),
-                _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Start(ref e) =>
+          match e.name() {
+            Stream::<C>::TAG_BYTES => {
+              // We could detect if current stream.content.is_some() to prevent from multi-stream...
+              let mut stream = Stream::<C>::from_attributes(e.attributes())?;
+              let mut content = C::new();
+              reader = content.read_binary_content(reader, reader_buff, context)?;
+              stream.content = Some(content);
+              self.stream = stream;
+              // the next call is a failure (because we consume </STREAM> in read_binary_content)
+              let tmp_reader = reader.check_end_names(false);
+              loop {
+                let mut event = tmp_reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+                match &mut event {
+                  Event::Text(e) if is_empty(e) => { },
+                  Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(reader),
+                  _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+                }
               }
-            }
-          }
-          _ => {
-            return Err(VOTableError::UnexpectedStartTag(
-              e.name().to_vec(),
-              Self::TAG,
-            ))
+            },
+            _ => return Err(VOTableError::UnexpectedStartTag(e.name().to_vec(), Self::TAG)),
           }
         },
         Event::Empty(ref e) => match e.name() {

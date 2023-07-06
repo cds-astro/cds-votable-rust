@@ -3,7 +3,7 @@
 <!--   * allows (A), (R) or (I,J) only    -->
 <COLLECTION dmrole="gggggg">
 	<ATTRIBUTE dmtype="model:elem" value="foo" />
-	<REFERENCE dmref="_ref1" />
+	<REFERENCE dmrole = "fffff" dmref="_ref1" />
 	<ATTRIBUTE dmtype="model:elem" value="bar" />
 </COLLECTION>
 
