@@ -24,3 +24,30 @@ impl_quickrw_e!(
   ForeignKey,      // Struct on which to impl
   ()               // Context type
 );
+
+#[cfg(test)]
+mod tests {
+  use crate::{
+    mivot::{
+      foreignkey::ForeignKey,
+      test::{get_xml, test_error},
+    },
+    tests::test_read,
+  };
+
+  #[test]
+  fn test_fk_read() {
+    // OK MODELS
+    let xml = get_xml("./resources/mivot/12/test_12_ok_12.1.xml");
+    println!("testing 12.1");
+    test_read::<ForeignKey>(&xml);
+
+    // KO MODELS
+    let xml = get_xml("./resources/mivot/12/test_12_ko_12.2.xml");
+    println!("testing 12.2"); // Name required.
+    test_error::<ForeignKey>(&xml, false);
+    let xml = get_xml("./resources/mivot/12/test_12_ko_12.3.xml");
+    println!("testing 12.3"); // Name required.
+    test_error::<ForeignKey>(&xml, false);
+  }
+}
