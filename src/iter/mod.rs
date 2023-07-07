@@ -612,8 +612,7 @@ mod tests {
     println!();
 
     let mut svor =
-      // SimpleVOTableRowIterator::open_file_and_read_to_data("resources/binary.b64").unwrap();
-       SimpleVOTableRowIterator::open_file_and_read_to_data("resources/gaia_dr3.b64").unwrap();
+      SimpleVOTableRowIterator::open_file_and_read_to_data("resources/binary.b64").unwrap();
 
     let context = svor.votable.resources[0].tables[0].elems.as_slice();
     // svor.skip_remaining_data().unwrap();
@@ -655,8 +654,7 @@ mod tests {
     println!();
 
     let mut svor =
-      // SimpleVOTableRowIterator::open_file_and_read_to_data("resources/gaia_dr3.b264").unwrap();
-      SimpleVOTableRowIterator::open_file_and_read_to_data("resources/binary.b264").unwrap();
+      SimpleVOTableRowIterator::open_file_and_read_to_data("resources/gaia_dr3.b264").unwrap();
     let context = svor.votable.resources[0].tables[0].elems.as_slice();
     // svor.skip_remaining_data().unwrap();
     let schema: Vec<Schema> = context
