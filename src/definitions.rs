@@ -76,25 +76,40 @@ impl QuickXmlReadWrite for Definitions {
   fn read_sub_elements<R: BufRead>(
     &mut self,
     mut reader: Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    context: &Self::Context,
+  ) -> Result<Reader<R>, VOTableError> {
+    self
+      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
+      .map(|()| reader)
+  }
+
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    mut reader: &mut Reader<R>,
     mut reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          CooSys::TAG_BYTES => self.elems.push(DefinitionsElem::CooSys(from_event_start!(
-            CooSys,
-            reader,
-            reader_buff,
-            e
-          ))),
-          Param::TAG_BYTES => self.elems.push(DefinitionsElem::Param(from_event_start!(
-            Param,
-            reader,
-            reader_buff,
-            e
-          ))),
+          CooSys::TAG_BYTES => self
+            .elems
+            .push(DefinitionsElem::CooSys(from_event_start_by_ref!(
+              CooSys,
+              reader,
+              reader_buff,
+              e
+            ))),
+          Param::TAG_BYTES => self
+            .elems
+            .push(DefinitionsElem::Param(from_event_start_by_ref!(
+              Param,
+              reader,
+              reader_buff,
+              e
+            ))),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -116,20 +131,11 @@ impl QuickXmlReadWrite for Definitions {
             ))
           }
         },
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    todo!()
   }
 
   fn write<W: Write>(

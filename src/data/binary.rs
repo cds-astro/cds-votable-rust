@@ -52,6 +52,17 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary<C> {
     reader_buff: &mut Vec<u8>,
     context: &Self::Context,
   ) -> Result<Reader<R>, VOTableError> {
+    self
+      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
+      .map(|()| reader)
+  }
+
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    reader: &mut Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    context: &Self::Context,
+  ) -> Result<(), VOTableError> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
@@ -60,7 +71,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary<C> {
             // We could detect if current stream.content.is_some() to prevent from multi-stream...
             let mut stream = Stream::<C>::from_attributes(e.attributes())?;
             let mut content = C::new();
-            reader = content.read_binary_content(reader, reader_buff, context)?;
+            content.read_binary_content(reader, reader_buff, context)?;
             stream.content = Some(content);
             self.stream = stream;
             // the next call is a failure (because we consume </STREAM> in read_binary_content)
@@ -71,7 +82,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary<C> {
                 .map_err(VOTableError::Read)?;
               match &mut event {
                 Event::Text(e) if is_empty(e) => {}
-                Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(reader),
+                Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(()),
                 _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
               }
             }
@@ -97,15 +108,6 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary<C> {
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    todo!()
   }
 
   fn write<W: Write>(

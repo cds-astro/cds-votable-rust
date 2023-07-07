@@ -543,89 +543,13 @@ impl<C: TableDataContent> VOTable<C> {
   fn read_till_next_resource<R: BufRead>(
     &mut self,
     mut reader: Reader<R>,
-    mut reader_buff: &mut Vec<u8>,
+    reader_buff: &mut Vec<u8>,
   ) -> Result<(Resource<C>, Reader<R>), VOTableError> {
-    // If the full document is in memory, we could have use a Reader<'a [u8]> and then the method
-    // `read_event_unbuffered` to avoid a copy.
-    // But are more generic that this to be able to read in streaming mode
-    loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
-      match &mut event {
-        Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => {
-            from_event_start_desc!(self, Description, reader, reader_buff, e)
-          }
-          Info::TAG_BYTES if self.resources.is_empty() => self.elems.push(VOTableElem::Info(
-            from_event_start!(Info, reader, reader_buff, e),
-          )),
-          Group::TAG_BYTES => self.elems.push(VOTableElem::Group(from_event_start!(
-            Group,
-            reader,
-            reader_buff,
-            e
-          ))),
-          Param::TAG_BYTES => self.elems.push(VOTableElem::Param(from_event_start!(
-            Param,
-            reader,
-            reader_buff,
-            e
-          ))),
-          Definitions::TAG_BYTES => self.elems.push(VOTableElem::Definitions(from_event_start!(
-            Definitions,
-            reader,
-            reader_buff,
-            e
-          ))),
-          Resource::<C>::TAG_BYTES => {
-            let resource = Resource::<C>::from_attributes(e.attributes())?;
-            return Ok((resource, reader));
-          }
-          Info::TAG_BYTES => self
-            .post_infos
-            .push(from_event_start!(Info, reader, reader_buff, e)),
-          _ => {
-            return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
-              Self::TAG,
-            ))
-          }
-        },
-        Event::Empty(ref e) => match e.local_name() {
-          Info::TAG_BYTES if self.resources.is_empty() => self
-            .elems
-            .push(VOTableElem::Info(Info::from_event_empty(e)?)),
-          CooSys::TAG_BYTES => self
-            .elems
-            .push(VOTableElem::CooSys(CooSys::from_event_empty(e)?)),
-          TimeSys::TAG_BYTES => self
-            .elems
-            .push(VOTableElem::TimeSys(TimeSys::from_event_empty(e)?)),
-          Group::TAG_BYTES => self
-            .elems
-            .push(VOTableElem::Group(Group::from_event_empty(e)?)),
-          Param::TAG_BYTES => self
-            .elems
-            .push(VOTableElem::Param(Param::from_event_empty(e)?)),
-          Definitions::TAG_BYTES => self
-            .elems
-            .push(VOTableElem::Definitions(Definitions::from_event_empty(e)?)),
-          Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
-          _ => {
-            return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
-              Self::TAG,
-            ))
-          }
-        },
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => {
-          return Err(VOTableError::Custom(String::from(
-            "No resource found in the VOTable",
-          )))
-        }
-        Event::Text(e) if is_empty(e) => {}
-        Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
-      }
+    match self.read_till_next_resource_by_ref(&mut reader, reader_buff)? {
+      Some(resource) => Ok((resource, reader)),
+      None => Err(VOTableError::Custom(String::from(
+        "No resource found in the VOTable",
+      ))),
     }
   }
 }
@@ -680,9 +604,20 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
   fn read_sub_elements<R: BufRead>(
     &mut self,
     mut reader: Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    context: &Self::Context,
+  ) -> Result<Reader<R>, VOTableError> {
+    self
+      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
+      .map(|()| reader)
+  }
+
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    mut reader: &mut Reader<R>,
     mut reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     // If the full document is in memory, we could have use a Reader<'a [u8]> and then the method
     // `read_event_unbuffered` to avoid a copy.
     // But are more generic that this to be able to read in streaming mode
@@ -691,37 +626,43 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
           Description::TAG_BYTES => {
-            from_event_start_desc!(self, Description, reader, reader_buff, e)
+            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
           }
           Info::TAG_BYTES if self.resources.is_empty() => self.elems.push(VOTableElem::Info(
-            from_event_start!(Info, reader, reader_buff, e),
+            from_event_start_by_ref!(Info, reader, reader_buff, e),
           )),
-          Group::TAG_BYTES => self.elems.push(VOTableElem::Group(from_event_start!(
+          Group::TAG_BYTES => self.elems.push(VOTableElem::Group(from_event_start_by_ref!(
             Group,
             reader,
             reader_buff,
             e
           ))),
-          Param::TAG_BYTES => self.elems.push(VOTableElem::Param(from_event_start!(
+          Param::TAG_BYTES => self.elems.push(VOTableElem::Param(from_event_start_by_ref!(
             Param,
             reader,
             reader_buff,
             e
           ))),
-          Definitions::TAG_BYTES => self.elems.push(VOTableElem::Definitions(from_event_start!(
-            Definitions,
-            reader,
-            reader_buff,
-            e
-          ))),
+          Definitions::TAG_BYTES => {
+            self
+              .elems
+              .push(VOTableElem::Definitions(from_event_start_by_ref!(
+                Definitions,
+                reader,
+                reader_buff,
+                e
+              )))
+          }
           Resource::<C>::TAG_BYTES => {
             self
               .resources
-              .push(from_event_start!(Resource, reader, reader_buff, e))
+              .push(from_event_start_by_ref!(Resource, reader, reader_buff, e))
           }
-          Info::TAG_BYTES => self
-            .post_infos
-            .push(from_event_start!(Info, reader, reader_buff, e)),
+          Info::TAG_BYTES => {
+            self
+              .post_infos
+              .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
+          }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -762,7 +703,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
               "No resource found in the VOTable",
             )))
           } else {
-            Ok(reader)
+            Ok(())
           }
         }
         /*
@@ -778,15 +719,6 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    todo!()
   }
 
   fn write<W: Write>(
@@ -900,6 +832,7 @@ mod tests {
   fn test_votable_read_with_cdata() {
     let votable =
       VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/vot_with_cdata.vot");
+    println!("{:?}", votable);
     assert!(votable.is_ok())
   }
 
@@ -919,7 +852,7 @@ mod tests {
   }
 
   #[test]
-  fn test_votable_read_dataLink_003_file() {
+  fn test_votable_read_datalink_003_file() {
     match VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/dataLink_003.xml") {
       Ok(_) => {}
       Err(e) => {

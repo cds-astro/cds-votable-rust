@@ -22,6 +22,176 @@ use super::{
   QuickXmlReadWrite,
 };
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ArraySize {
+  // 8
+  Fixed1D { size: u32 },
+  // 8x5x...
+  FixedND { sizes: Vec<u32> },
+  // *
+  Variable1D,
+  // 8x...x*
+  VariableND { sizes: Vec<u32> },
+  // 8*
+  VariableWithUpperLimit1D { upper_limit: u32 },
+  // 8x...x5*
+  VariableWithUpperLimitND { sizes: Vec<u32>, upper_limit: u32 },
+}
+
+impl ArraySize {
+  pub fn new_fixed_1d(size: u32) -> Self {
+    ArraySize::Fixed1D { size }
+  }
+
+  pub fn new_fixed_nd(sizes: Vec<u32>) -> Self {
+    ArraySize::FixedND { sizes }
+  }
+
+  pub fn new_variable_1d() -> Self {
+    ArraySize::Variable1D
+  }
+
+  pub fn new_variable_nd(sizes: Vec<u32>) -> Self {
+    ArraySize::VariableND { sizes }
+  }
+
+  pub fn new_fixed_1d_with_upper_limit(upper_limit: u32) -> Self {
+    ArraySize::VariableWithUpperLimit1D { upper_limit }
+  }
+
+  pub fn new_fixed_nd_with_upper_limit(sizes: Vec<u32>, upper_limit: u32) -> Self {
+    ArraySize::VariableWithUpperLimitND { sizes, upper_limit }
+  }
+
+  pub fn is_fixed(&self) -> bool {
+    match self {
+      Self::Fixed1D { size: _ } | Self::FixedND { sizes: _ } => true,
+      _ => false,
+    }
+  }
+
+  pub fn is_variable(&self) -> bool {
+    !self.is_fixed()
+  }
+
+  pub fn has_upper_limit(&self) -> bool {
+    match self {
+      Self::VariableWithUpperLimit1D { upper_limit: _ }
+      | Self::VariableWithUpperLimitND {
+        sizes: _,
+        upper_limit: _,
+      } => true,
+      _ => false,
+    }
+  }
+
+  /// Returns:
+  /// * `None` if the size is variable with no upper limit
+  /// * `Some(Ok(size))` if the size is fixed
+  /// * `Some(Err(upper_limit))` if the size is variable but with an upper limit
+  pub fn n_elems(&self) -> Option<Result<u32, u32>> {
+    let compute_size = |elems: &Vec<u32>| elems.iter().fold(1_u32, |acc, n| acc * *n);
+    match self {
+      Self::Fixed1D { size } => Some(Ok(*size)),
+      Self::FixedND { sizes } => Some(Ok(compute_size(sizes))),
+      Self::Variable1D | Self::VariableND { sizes: _ } => None,
+      Self::VariableWithUpperLimit1D { upper_limit } => Some(Err(*upper_limit)),
+      Self::VariableWithUpperLimitND { sizes, upper_limit } => {
+        Some(Err(compute_size(sizes) * upper_limit))
+      }
+    }
+  }
+}
+
+impl FromStr for ArraySize {
+  type Err = ParseIntError;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    let arraysize = s.trim();
+    let (arraysize, is_variable) = if arraysize.ends_with('*') {
+      (arraysize.strip_suffix('*').unwrap_or(""), true)
+    } else {
+      (arraysize, false)
+    };
+    if arraysize.is_empty() {
+      return Ok(Self::Variable1D);
+    }
+    let (arraysize, end_with_x) = if arraysize.ends_with('x') {
+      (arraysize.strip_suffix('x').unwrap_or(""), true)
+    } else {
+      (arraysize, false)
+    };
+    let mut elems = arraysize
+      .split('x')
+      .map(|v| v.parse::<u32>())
+      .collect::<Result<Vec<u32>, ParseIntError>>()?;
+    Ok(if !is_variable {
+      if elems.len() == 1 {
+        Self::Fixed1D { size: elems[0] }
+      } else {
+        Self::FixedND { sizes: elems }
+      }
+    } else if end_with_x {
+      Self::VariableND { sizes: elems }
+    } else if elems.len() == 1 {
+      Self::VariableWithUpperLimit1D {
+        upper_limit: elems[0],
+      }
+    } else {
+      let upper_limit = elems.pop().unwrap_or(0);
+      Self::VariableWithUpperLimitND {
+        sizes: elems,
+        upper_limit: upper_limit,
+      }
+    })
+  }
+}
+
+impl fmt::Display for ArraySize {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn write_sizes(sizes: &Vec<u32>, f: &mut fmt::Formatter) -> fmt::Result {
+      let mut first = true;
+      for size in sizes {
+        if first {
+          write!(f, "{}", size)?;
+          first = false;
+        } else {
+          write!(f, "x{}", size)?;
+        }
+      }
+      Ok(())
+    }
+    match self {
+      Self::Fixed1D { size } => write!(f, "{}", size),
+      Self::FixedND { sizes } => write_sizes(sizes, f),
+      Self::Variable1D => write!(f, "*"),
+      Self::VariableND { sizes } => write_sizes(sizes, f).and_then(|()| write!(f, "x*")),
+      Self::VariableWithUpperLimit1D { upper_limit } => write!(f, "{}*", upper_limit),
+      Self::VariableWithUpperLimitND { sizes, upper_limit } => {
+        write_sizes(sizes, f).and_then(|()| write!(f, "x{}*", upper_limit))
+      }
+    }
+  }
+}
+impl Serialize for ArraySize {
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+  where
+    S: Serializer,
+  {
+    serializer.serialize_str(&self.to_string())
+  }
+}
+
+impl<'de> Deserialize<'de> for ArraySize {
+  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+  where
+    D: Deserializer<'de>,
+  {
+    let s = String::deserialize(deserializer)?;
+    FromStr::from_str(&s).map_err(de::Error::custom)
+  }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub enum Precision {
   /// Significant figures after the decimal (for the decimal notation)
@@ -104,7 +274,7 @@ pub struct Field {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub utype: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  pub arraysize: Option<String>, // part of the schema ?
+  pub arraysize: Option<ArraySize>, // part of the schema ?
   // extra attributes
   #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
   pub extra: HashMap<String, Value>,
@@ -154,7 +324,7 @@ impl Field {
   impl_builder_opt_string_attr!(ref_, ref);
   impl_builder_opt_string_attr!(ucd);
   impl_builder_opt_string_attr!(utype);
-  impl_builder_opt_string_attr!(arraysize);
+  impl_builder_opt_attr!(arraysize, ArraySize);
   // extra attributes
   impl_builder_insert_extra!();
   // sub-elements
@@ -200,7 +370,9 @@ impl QuickXmlReadWrite for Field {
         b"ref" => field.set_ref(value),
         b"ucd" => field.set_ucd(value),
         b"utype" => field.set_utype(value),
-        b"arraysize" => field.set_arraysize(value),
+        b"arraysize" if !value.is_empty() => {
+          field.set_arraysize(value.parse::<ArraySize>().map_err(VOTableError::ParseInt)?)
+        }
         _ => field.insert_extra(
           str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
           Value::String(value.into()),
@@ -315,7 +487,7 @@ impl QuickXmlReadWrite for Field {
     push2write_opt_string_attr!(self, tag, ref_, ref);
     push2write_opt_string_attr!(self, tag, ucd);
     push2write_opt_string_attr!(self, tag, utype);
-    push2write_opt_string_attr!(self, tag, arraysize);
+    push2write_opt_tostring_attr!(self, tag, arraysize);
     push2write_extra!(self, tag);
     writer
       .write_event(Event::Start(tag.to_borrowed()))
@@ -328,5 +500,63 @@ impl QuickXmlReadWrite for Field {
     writer
       .write_event(Event::End(tag.to_end()))
       .map_err(VOTableError::Write)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use crate::field::ArraySize;
+  use std::str::FromStr;
+
+  #[test]
+  fn test_arraysize_from_str() {
+    assert_eq!(
+      ArraySize::from_str("12"),
+      Ok(ArraySize::Fixed1D { size: 12 })
+    );
+    assert_eq!(ArraySize::from_str("*"), Ok(ArraySize::Variable1D));
+    assert_eq!(
+      ArraySize::from_str("12*"),
+      Ok(ArraySize::VariableWithUpperLimit1D { upper_limit: 12 })
+    );
+    assert_eq!(
+      ArraySize::from_str("12x8"),
+      Ok(ArraySize::FixedND { sizes: vec![12, 8] })
+    );
+    assert_eq!(
+      ArraySize::from_str("12x*"),
+      Ok(ArraySize::VariableND { sizes: vec![12] })
+    );
+    assert_eq!(
+      ArraySize::from_str("12x8*"),
+      Ok(ArraySize::VariableWithUpperLimitND {
+        sizes: vec![12],
+        upper_limit: 8
+      })
+    );
+    assert_eq!(
+      ArraySize::from_str("12x8x15"),
+      Ok(ArraySize::FixedND {
+        sizes: vec![12, 8, 15]
+      })
+    );
+    assert_eq!(
+      ArraySize::from_str("12x8x*"),
+      Ok(ArraySize::VariableND { sizes: vec![12, 8] })
+    );
+    assert_eq!(
+      ArraySize::from_str("12x8x15*"),
+      Ok(ArraySize::VariableWithUpperLimitND {
+        sizes: vec![12, 8],
+        upper_limit: 15
+      })
+    );
+
+    let elems = [
+      "12", "*", "12*", "12x8", "12x*", "12x8*", "12x8x15", "12x8x*", "12x8x15*",
+    ];
+    for elem in elems {
+      assert_eq!(ArraySize::from_str(elem).unwrap().to_string(), elem);
+    }
   }
 }

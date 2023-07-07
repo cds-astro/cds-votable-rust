@@ -141,17 +141,6 @@ macro_rules! impl_builder_insert_extra {
 macro_rules! read_content {
   ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident) => {
     {
-      /*let event: Event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
-      let content = match &event {
-        Event::Text(e) => e.unescape_and_decode(&$reader).map_err(VOTableError::Read),
-        _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: Text. Actual: {:?}.", $Self::TAG, event))),
-      }?;
-      $self.content = Some(content);
-      let event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
-      match &event {
-        Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok($reader),
-        _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End. Actual: {:?}.", $Self::TAG, event))),
-      }*/
       let mut content = String::new();
       loop {
         let mut event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
@@ -171,17 +160,6 @@ macro_rules! read_content {
   };
   ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident, $content:tt) => {
     {
-      /*let event: Event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
-      let content = match &event {
-        Event::Text(e) => e.unescape_and_decode(&$reader).map_err(VOTableError::Read),
-        _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: Text. Actual: {:?}.", $Self::TAG, event))),
-      }?;
-      $self.$content = content;
-      let event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
-      match &event {
-        Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok($reader),
-        _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End. Actual: {:?}.", $Self::TAG, event))),
-      }*/
       let mut content = String::new();
       loop {
         let mut event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
@@ -202,56 +180,44 @@ macro_rules! read_content {
 }
 
 macro_rules! read_content_by_ref {
-  ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident) => {{
-    let event: Event = $reader
-      .read_event($reader_buff)
-      .map_err(VOTableError::Read)?;
-    let content = match &event {
-      Event::Text(e) => e.unescape_and_decode(&$reader).map_err(VOTableError::Read),
-      _ => Err(VOTableError::Custom(format!(
-        "Unexpected {} event. Expected: Text. Actual: {:?}.",
-        $Self::TAG,
-        event
-      ))),
-    }?;
-    $self.content = Some(content);
-    let event = $reader
-      .read_event($reader_buff)
-      .map_err(VOTableError::Read)?;
-    match &event {
-      Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok(()),
-      _ => Err(VOTableError::Custom(format!(
-        "Unexpected {} event. Expected: End. Actual: {:?}.",
-        $Self::TAG,
-        event
-      ))),
+  ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident) => {
+    {
+      let mut content = String::new();
+      loop {
+        let mut event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
+        match &mut event {
+          Event::Text(e) => content.push_str(e.unescape_and_decode(&$reader).map_err(VOTableError::Read)?.as_str()),
+          Event::CData(e) => content.push_str(str::from_utf8(e.clone().into_inner().as_ref()).map_err(VOTableError::Utf8)?),
+          Event::End(e) if e.local_name() == $Self::TAG_BYTES => {
+            $self.content = Some(content);
+            return Ok(());
+          },
+          Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
+          _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+          // _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End or Text or CDATA. Actual: {:?}.", $Self::TAG, event))),
+        }
+      }
     }
-  }};
-  ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident, $content:tt) => {{
-    let event: Event = $reader
-      .read_event($reader_buff)
-      .map_err(VOTableError::Read)?;
-    let content = match &event {
-      Event::Text(e) => e.unescape_and_decode(&$reader).map_err(VOTableError::Read),
-      _ => Err(VOTableError::Custom(format!(
-        "Unexpected {} event. Expected: Text. Actual: {:?}.",
-        $Self::TAG,
-        event
-      ))),
-    }?;
-    $self.$content = content;
-    let event = $reader
-      .read_event($reader_buff)
-      .map_err(VOTableError::Read)?;
-    match &event {
-      Event::End(e) if e.local_name() == $Self::TAG_BYTES => Ok(()),
-      _ => Err(VOTableError::Custom(format!(
-        "Unexpected {} event. Expected: End. Actual: {:?}.",
-        $Self::TAG,
-        event
-      ))),
+  };
+  ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident, $content:tt) => {
+    {
+      let mut content = String::new();
+      loop {
+        let mut event = $reader.read_event($reader_buff).map_err(VOTableError::Read)?;
+        match &mut event {
+          Event::Text(e) => content.push_str(e.unescape_and_decode(&$reader).map_err(VOTableError::Read)?.as_str()),
+          Event::CData(e) => content.push_str(std::str::from_utf8(e.clone().into_inner().as_ref()).map_err(VOTableError::Utf8)?),
+          Event::End(e) if e.local_name() == $Self::TAG_BYTES => {
+            $self.$content = content;
+            return Ok(());
+          },
+          Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
+          _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+          // _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End or Text or CDATA. Actual: {:?}.", $Self::TAG, event))),
+        }
+      }
     }
-  }};
+  };
 }
 
 /// E.g. `write_opt_string_attr(self, elem_writer, ID)` leads to
@@ -468,18 +434,6 @@ macro_rules! from_event_start_by_ref {
     elem.read_sub_elements_and_clean_by_ref(&mut $reader, &mut $reader_buff, &$context)?;
     elem
   }};
-}
-
-macro_rules! from_event_start_desc {
-  ($self:ident, $elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {
-    {
-      let mut desc = $elem::from_attributes($e.attributes())?;
-      $reader = desc.read_sub_elements_and_clean($reader, &mut $reader_buff, &())?;
-      if $self.description.replace(desc).is_some() {
-        eprintln!("WARNING: multiple occurrence of DESCRIPTION in VOTable. All but the last one are discarded.");
-      }
-    }
-  };
 }
 
 macro_rules! from_event_start_desc_by_ref {

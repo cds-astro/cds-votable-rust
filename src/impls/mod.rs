@@ -1,7 +1,6 @@
 use std::{
   fmt::{self, Display, Formatter, Write},
   mem::size_of,
-  num::ParseIntError,
 };
 
 use bitvec::{order::Msb0, vec::BitVec as BV};
@@ -18,6 +17,7 @@ pub mod b64;
 pub mod mem;
 pub mod visitors;
 
+use crate::field::ArraySize;
 use crate::impls::visitors::{FixedLengthArrayVisitor, VariableLengthArrayVisitor};
 use visitors::CharVisitor;
 
@@ -158,17 +158,34 @@ pub enum Schema {
   FixedLengthStringUnicode {
     n_chars: usize,
   },
-  VariableLengthStringASCII,   // { n_chars_min: usize }
-  VariableLengthStringUnicode, // { n_chars_min: usize }
+  VariableLengthStringASCII {
+    /// Maximum number of characters the array may contain if declared as `INT*`), `None` if
+    /// declared as `*`.
+    n_chars_max: Option<usize>,
+  },
+  VariableLengthStringUnicode {
+    /// Maximum number of characters the array may contain if declared as `INT*`), `None` if
+    /// declared as `*`.
+    n_chars_max: Option<usize>,
+  },
   FixedLengthBitArray {
     n_bits: usize,
   },
-  VariableLengthBitArray, // { n_chars_min: usize }
+  VariableLengthBitArray {
+    /// Maximum number of characters the array may contain if declared as `INT*`), `None` if
+    /// declared as `*`.
+    n_bits_max: Option<usize>,
+  },
   FixedLengthArray {
     n_elems: usize,
     elem_schema: Box<Schema>,
   },
   VariableLengthArray {
+    /// Maximum number of elements the array may contain if declared as `INT*`), `None` if
+    /// declared as `*`.
+    n_elems_max: Option<usize>,
+    /// The underlying schema can contains a fixed length array (of fixed length array, ...)
+    /// of primitive type
     elem_schema: Box<Schema>,
   }, // { n_chars_min: usize }
 }
@@ -177,8 +194,8 @@ impl Schema {
   /// Returns the size, in bytes, of the binary representation of an entry associated to the Schema.
   /// # Output
   /// * `Ok` for fixed length objects
-  /// * `Err` containing the lower bound of the len for varaible size objects
-  pub fn byte_len(&self) -> Result<usize, usize> {
+  /// * `Err` containing first the size of an element and then the upper bound of the len (if known), for variable size objects
+  pub fn byte_len(&self) -> Result<usize, (usize, Option<usize>)> {
     match self {
       Schema::Bool => Ok(size_of::<u8>()),
       Schema::Bit => Ok(size_of::<u8>()),
@@ -194,8 +211,12 @@ impl Schema {
       Schema::CharUnicode => Ok(size_of::<u16>()),
       Schema::FixedLengthStringASCII { n_chars } => Ok(n_chars * size_of::<u8>()),
       Schema::FixedLengthStringUnicode { n_chars } => Ok(n_chars * size_of::<u16>()),
-      Schema::VariableLengthStringASCII => Err(0),
-      Schema::VariableLengthStringUnicode => Err(0),
+      Schema::VariableLengthStringASCII { n_chars_max } => {
+        Err((size_of::<u8>(), n_chars_max.map(|n| n * size_of::<u8>())))
+      }
+      Schema::VariableLengthStringUnicode { n_chars_max } => {
+        Err((size_of::<u16>(), n_chars_max.map(|n| n * size_of::<u16>())))
+      }
       Schema::FixedLengthArray {
         n_elems,
         elem_schema,
@@ -203,9 +224,19 @@ impl Schema {
         Schema::Bit => Ok((*n_elems + 7) / 8),
         _ => elem_schema.byte_len().map(|l| l * n_elems),
       },
-      Schema::VariableLengthArray { elem_schema: _ } => Err(0),
+      Schema::VariableLengthArray {
+        n_elems_max,
+        elem_schema,
+      } => {
+        let elem_byte_len = elem_schema
+          .byte_len()
+          .expect("Variable size array of variable size elements not supported in VOTable!");
+        Err((elem_byte_len, n_elems_max.map(move |n| n * elem_byte_len)))
+      }
       Schema::FixedLengthBitArray { n_bits } => Ok((*n_bits + 7) / 8),
-      Schema::VariableLengthBitArray => Err(0),
+      Schema::VariableLengthBitArray { n_bits_max } => {
+        Err((0, n_bits_max.map(move |n_bits| (n_bits + 7) / 8)))
+      }
     }
   }
 
@@ -306,9 +337,11 @@ impl Schema {
         Schema::CharASCII => VOTableValue::CharASCII(s.chars().next().unwrap()), // unwrap ok since we already checked for empty string
         Schema::CharUnicode => VOTableValue::CharUnicode(s.chars().next().unwrap()), // unwrap ok since we already checked for empty string
         Schema::FixedLengthStringASCII { n_chars: _ } => VOTableValue::String(s.to_owned()),
-        Schema::VariableLengthStringASCII => VOTableValue::String(s.to_owned()),
+        Schema::VariableLengthStringASCII { n_chars_max: _ } => VOTableValue::String(s.to_owned()),
         Schema::FixedLengthStringUnicode { n_chars: _ } => VOTableValue::String(s.to_owned()),
-        Schema::VariableLengthStringUnicode => VOTableValue::String(s.to_owned()),
+        Schema::VariableLengthStringUnicode { n_chars_max: _ } => {
+          VOTableValue::String(s.to_owned())
+        }
         // Schema::Bytes => unreachable!() // only in binary mode?
         Schema::FixedLengthArray {
           n_elems,
@@ -323,7 +356,10 @@ impl Schema {
           }
           value
         }
-        Schema::VariableLengthArray { elem_schema } => elem_schema.parse_array(s)?.1,
+        Schema::VariableLengthArray {
+          n_elems_max: _,
+          elem_schema,
+        } => elem_schema.parse_array(s)?.1,
         Schema::FixedLengthBitArray { n_bits } => {
           let (n_actual_elems, value) = self.parse_bit_array(s)?;
           if n_actual_elems != *n_bits {
@@ -334,7 +370,7 @@ impl Schema {
           }
           value
         }
-        Schema::VariableLengthBitArray => self.parse_bit_array(s)?.1,
+        Schema::VariableLengthBitArray { n_bits_max: _ } => self.parse_bit_array(s)?.1,
       }
     })
   }
@@ -462,14 +498,14 @@ impl Schema {
           Schema::CharUnicode => serializer.serialize_char('\0'),
           Schema::FixedLengthStringASCII { n_chars } => serialize_fixed_length_array(serializer, *n_chars, &vec![0; *n_chars]),
           Schema::FixedLengthStringUnicode { n_chars } => serialize_fixed_length_array(serializer, (*n_chars) << 1, &vec![0; (*n_chars) << 1]),
-          Schema::VariableLengthStringASCII => serialize_variable_length_array(serializer, &[0; 0]),
-          Schema::VariableLengthStringUnicode => serialize_variable_length_array(serializer, &[0; 0]),
+          Schema::VariableLengthStringASCII { n_chars_max: _ } => serialize_variable_length_array(serializer, &[0; 0]),
+          Schema::VariableLengthStringUnicode { n_chars_max: _ } => serialize_variable_length_array(serializer, &[0; 0]),
           // Schema::Bytes => serializer.serialize_bytes([0_u8; 0].as_slice())
           Schema::FixedLengthArray { n_elems, elem_schema } => serialize_fixed_length_array(serializer, *n_elems, &vec![0; (*n_elems) * elem_schema.byte_len().unwrap()]),
-          Schema::VariableLengthArray { elem_schema: _ } => serialize_variable_length_array(serializer, &[0; 0]),
+          Schema::VariableLengthArray { n_elems_max: _, elem_schema: _ } => serialize_variable_length_array(serializer, &[0; 0]),
           Schema::Bit => serializer.serialize_u8(0_u8),
           Schema::FixedLengthBitArray { n_bits } => serialize_fixed_length_array(serializer, (7 + *n_bits)/ 8, &vec![0; (7 + *n_bits)/ 8]),
-          Schema::VariableLengthBitArray => serialize_variable_length_array(serializer, &[0_u8; 0]),
+          Schema::VariableLengthBitArray { n_bits_max: _ } => serialize_variable_length_array(serializer, &[0_u8; 0]),
         }
       VOTableValue::Bool(v) => {
         assert!(matches!(self, Schema::Bool));
@@ -544,9 +580,9 @@ impl Schema {
           Schema::CharASCII => serializer.serialize_u8(*v as u8),
           Schema::CharUnicode => serializer.serialize_char(*v),
           Schema::FixedLengthStringASCII { n_chars } => serialize_fixed_length_array(serializer, *n_chars, v.to_string().as_str().as_bytes()),
-          Schema::VariableLengthStringASCII => serialize_variable_length_array(serializer, v.to_string().as_str().as_bytes()),
+          Schema::VariableLengthStringASCII { n_chars_max: _ } => serialize_variable_length_array(serializer, v.to_string().as_str().as_bytes()),
           Schema::FixedLengthStringUnicode { n_chars } => serialize_fixed_length_array(serializer, *n_chars, &encode_ucs2(v.to_string().as_str()).map_err(S::Error::custom)?),
-          Schema::VariableLengthStringUnicode => serialize_variable_length_array(serializer, &encode_ucs2(v.to_string().as_str()).map_err(S::Error::custom)?),
+          Schema::VariableLengthStringUnicode { n_chars_max: _ } => serialize_variable_length_array(serializer, &encode_ucs2(v.to_string().as_str()).map_err(S::Error::custom)?),
           _ => Err(S::Error::custom(format!("Value of type CharASCII with schema: {:?}", self)))
         }
       },
@@ -555,18 +591,18 @@ impl Schema {
           Schema::CharASCII => serializer.serialize_u8(*v as u8),
           Schema::CharUnicode => serializer.serialize_char(*v),
           Schema::FixedLengthStringASCII { n_chars } => serialize_fixed_length_array(serializer, *n_chars, v.to_string().as_str().as_bytes()),
-          Schema::VariableLengthStringASCII => serialize_variable_length_array(serializer, v.to_string().as_str().as_bytes()),
+          Schema::VariableLengthStringASCII { n_chars_max: _ } => serialize_variable_length_array(serializer, v.to_string().as_str().as_bytes()),
           Schema::FixedLengthStringUnicode { n_chars } => serialize_fixed_length_array(serializer, *n_chars, &encode_ucs2(v.to_string().as_str()).map_err(S::Error::custom)?),
-          Schema::VariableLengthStringUnicode => serialize_variable_length_array(serializer, &encode_ucs2(v.to_string().as_str()).map_err(S::Error::custom)?),
+          Schema::VariableLengthStringUnicode { n_chars_max: _ } => serialize_variable_length_array(serializer, &encode_ucs2(v.to_string().as_str()).map_err(S::Error::custom)?),
           _ => Err(S::Error::custom(format!("Value of type CharUnicode with schema: {:?}", self)))
         }
       },
       VOTableValue::String(s) =>
         match &self {
           Schema::FixedLengthStringASCII { n_chars } => serialize_fixed_length_array(serializer, *n_chars, s.as_bytes()),
-          Schema::VariableLengthStringASCII => serialize_variable_length_array(serializer, s.as_bytes()),
+          Schema::VariableLengthStringASCII { n_chars_max: _ } => serialize_variable_length_array(serializer, s.as_bytes()),
           Schema::FixedLengthStringUnicode { n_chars } => serialize_fixed_length_array(serializer, *n_chars, &encode_ucs2(s.as_str()).map_err(S::Error::custom)?),
-          Schema::VariableLengthStringUnicode => serialize_variable_length_array(serializer, &encode_ucs2(s.as_str()).map_err(S::Error::custom)?),
+          Schema::VariableLengthStringUnicode { n_chars_max: _ } => serialize_variable_length_array(serializer, &encode_ucs2(s.as_str()).map_err(S::Error::custom)?),
           _ => Err(S::Error::custom(format!("Wrong schema associated to String. Actual: {:?}. Expected: \
           FixedLengthStringASCII, VariableLengthStringASCII\
           FixedLengthStringUnicode or VariableLengthStringUnicode.", &self)))
@@ -581,7 +617,7 @@ impl Schema {
             }
             serialize_fixed_length_array(serializer, v.len(), &v)
           },
-          Schema::VariableLengthBitArray => serialize_variable_length_array(serializer, &v),
+          Schema::VariableLengthBitArray { n_bits_max: _ } => serialize_variable_length_array(serializer, &v),
           _ => Err(S::Error::custom(format!("Wrong schema associated to BitArray. Actual: {:?}. Expected: FixedLengthBitArray or VariableLengthBitArray.", &self)))
         }
       }
@@ -589,7 +625,7 @@ impl Schema {
         match &self {
           Schema::FixedLengthArray { n_elems, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Byte { .. }) =>
             serialize_fixed_length_array(serializer, *n_elems, v),
-          Schema::VariableLengthArray { elem_schema } if matches!(elem_schema.as_ref(), &Schema::Byte { .. }) =>
+          Schema::VariableLengthArray { n_elems_max: _,  elem_schema } if matches!(elem_schema.as_ref(), &Schema::Byte { .. }) =>
             serialize_variable_length_array(serializer, v),
           _ => Err(S::Error::custom(format!("Wrong schema associated to ByteArray. Actual: {:?}. Expected: FixedLengthArray(Byte) or VariableLengthArray(Byte).", &self)))
         }
@@ -597,7 +633,7 @@ impl Schema {
         match &self {
           Schema::FixedLengthArray { n_elems, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Short { .. }) =>
             serialize_fixed_length_array(serializer, *n_elems, v),
-          Schema::VariableLengthArray { elem_schema } if matches!(elem_schema.as_ref(), &Schema::Short { .. }) =>
+          Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Short { .. }) =>
             serialize_variable_length_array(serializer, v),
           _ => Err(S::Error::custom(format!("Wrong schema associated to ShortArray. Actual: {:?}. Expected: FixedLengthArray(Short) or VariableLengthArray(Short).", &self)))
         }
@@ -605,7 +641,7 @@ impl Schema {
         match &self {
           Schema::FixedLengthArray { n_elems, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Int { .. }) =>
             serialize_fixed_length_array(serializer, *n_elems, v),
-          Schema::VariableLengthArray { elem_schema } if matches!(elem_schema.as_ref(), &Schema::Int { .. }) =>
+          Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Int { .. }) =>
             serialize_variable_length_array(serializer, v),
           _ => Err(S::Error::custom(format!("Wrong schema associated to IntArray. Actual: {:?}. Expected: FixedLengthArray(Int) or VariableLengthArray(Int).", &self)))
         }
@@ -613,7 +649,7 @@ impl Schema {
         match &self {
           Schema::FixedLengthArray { n_elems, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Long { .. }) =>
             serialize_fixed_length_array(serializer, *n_elems, v),
-          Schema::VariableLengthArray { elem_schema } if matches!(elem_schema.as_ref(), &Schema::Long { .. }) =>
+          Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Long { .. }) =>
             serialize_variable_length_array(serializer, v),
           _ => Err(S::Error::custom(format!("Wrong schema associated to LongArray. Actual: {:?}. Expected: FixedLengthArray(Long) or VariableLengthArray(Long).", &self)))
         }
@@ -621,7 +657,7 @@ impl Schema {
         match &self {
           Schema::FixedLengthArray { n_elems, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Float) =>
             serialize_fixed_length_array(serializer, *n_elems, v),
-          Schema::VariableLengthArray { elem_schema } if matches!(elem_schema.as_ref(), &Schema::Float) =>
+          Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Float) =>
             serialize_variable_length_array(serializer, v),
           _ => Err(S::Error::custom(format!("Wrong schema associated to FloatArray. Actual: {:?}. Expected: FixedLengthArray(Float) or VariableLengthArray(Float).", &self)))
         }
@@ -629,7 +665,7 @@ impl Schema {
         match &self {
           Schema::FixedLengthArray { n_elems, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Double) =>
             serialize_fixed_length_array(serializer, *n_elems, v),
-          Schema::VariableLengthArray { elem_schema } if matches!(elem_schema.as_ref(), &Schema::Double) =>
+          Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Double) =>
             serialize_variable_length_array(serializer, v),
           _ => Err(S::Error::custom(format!("Wrong schema associated to DoubleArray. Actual: {:?}. Expected: FixedLengthArray(Double) or VariableLengthArray(Double).", &self)))
         }
@@ -637,7 +673,7 @@ impl Schema {
         match &self {
           Schema::FixedLengthArray { n_elems, elem_schema } if matches!(elem_schema.as_ref(), &Schema::ComplexFloat) =>
             serialize_fixed_length_array(serializer, *n_elems, v),
-          Schema::VariableLengthArray { elem_schema } if matches!(elem_schema.as_ref(), &Schema::ComplexFloat) =>
+          Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::ComplexFloat) =>
             serialize_variable_length_array(serializer, v),
           _ => Err(S::Error::custom(format!("Wrong schema associated to ComplexFloatArray. Actual: {:?}. Expected: FixedLengthArray(ComplexFloat) or VariableLengthArray(ComplexFloat).", &self)))
         }
@@ -645,7 +681,7 @@ impl Schema {
         match &self {
           Schema::FixedLengthArray { n_elems, elem_schema } if matches!(elem_schema.as_ref(), &Schema::ComplexDouble) =>
             serialize_fixed_length_array(serializer, *n_elems, v),
-          Schema::VariableLengthArray { elem_schema } if matches!(elem_schema.as_ref(), &Schema::ComplexDouble) =>
+          Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::ComplexDouble) =>
             serialize_variable_length_array(serializer, v),
           _ => Err(S::Error::custom(format!("Wrong schema associated to ComplexDoubleArray. Actual: {:?}. Expected: FixedLengthArray(ComplexDouble) or VariableLengthArray(ComplexDouble).", &self)))
         },
@@ -679,7 +715,61 @@ where
 
 impl From<&Field> for Schema {
   fn from(field: &Field) -> Self {
-    match (field.datatype, field.arraysize.as_deref()) {
+    // For all expect Bits, CharASCII, CharUNICODE
+    fn from_regulartypeschema_and_arraysize(arraysize: &ArraySize, schema: Schema) -> Schema {
+      match arraysize {
+        ArraySize::Fixed1D { size } => Schema::FixedLengthArray {
+          n_elems: *size as usize,
+          elem_schema: Box::new(schema),
+        },
+        ArraySize::FixedND { sizes } => {
+          let mut schema = schema;
+          for size in sizes.iter().cloned() {
+            schema = Schema::FixedLengthArray {
+              n_elems: size as usize,
+              elem_schema: Box::new(schema),
+            }
+          }
+          schema
+        }
+        ArraySize::Variable1D => Schema::VariableLengthArray {
+          n_elems_max: None,
+          elem_schema: Box::new(schema),
+        },
+        ArraySize::VariableND { sizes } => {
+          let mut schema = schema;
+          for size in sizes.iter().cloned() {
+            schema = Schema::FixedLengthArray {
+              n_elems: size as usize,
+              elem_schema: Box::new(schema),
+            }
+          }
+          Schema::VariableLengthArray {
+            n_elems_max: None,
+            elem_schema: Box::new(schema),
+          }
+        }
+        ArraySize::VariableWithUpperLimit1D { upper_limit } => Schema::VariableLengthArray {
+          n_elems_max: Some(*upper_limit as usize),
+          elem_schema: Box::new(schema),
+        },
+        ArraySize::VariableWithUpperLimitND { sizes, upper_limit } => {
+          let mut schema = schema;
+          for size in sizes.iter().cloned() {
+            schema = Schema::FixedLengthArray {
+              n_elems: size as usize,
+              elem_schema: Box::new(schema),
+            }
+          }
+          Schema::VariableLengthArray {
+            n_elems_max: Some(*upper_limit as usize),
+            elem_schema: Box::new(schema),
+          }
+        }
+      }
+    }
+
+    match (field.datatype, &field.arraysize) {
       (Datatype::Logical, None) => Schema::Bool,
       (Datatype::Bit, None) => Schema::Bit,
       (Datatype::Byte, None) => Schema::Byte {
@@ -717,46 +807,171 @@ impl From<&Field> for Schema {
       (Datatype::ComplexFloat, None) => Schema::ComplexFloat,
       (Datatype::ComplexDouble, None) => Schema::ComplexDouble,
       // Char/String
-      (Datatype::CharASCII, Some("1")) => Schema::CharASCII,
-      (Datatype::CharASCII, Some(size)) => match fixed_length_array(size) {
-        Err(e) => {
-          eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
-          Schema::VariableLengthStringASCII
+      (Datatype::CharASCII, Some(size)) => match size {
+        ArraySize::Fixed1D { size } => Schema::FixedLengthStringASCII {
+          n_chars: *size as usize,
+        },
+        ArraySize::FixedND { sizes } => {
+          let mut it = sizes.iter().cloned();
+          let mut schema = Schema::FixedLengthStringASCII {
+            n_chars: it.next().unwrap_or(0) as usize,
+          };
+          for size in it {
+            schema = Schema::FixedLengthArray {
+              n_elems: size as usize,
+              elem_schema: Box::new(schema),
+            }
+          }
+          schema
         }
-        Ok(Ok(n_chars)) => Schema::FixedLengthStringASCII { n_chars },
-        Ok(Err(_)) => Schema::VariableLengthStringASCII,
+        ArraySize::Variable1D => Schema::VariableLengthStringASCII { n_chars_max: None },
+        ArraySize::VariableND { sizes } => {
+          let mut it = sizes.iter().cloned();
+          let mut schema = Schema::FixedLengthStringASCII {
+            n_chars: it.next().unwrap_or(0) as usize,
+          };
+          for size in it {
+            schema = Schema::FixedLengthArray {
+              n_elems: size as usize,
+              elem_schema: Box::new(schema),
+            }
+          }
+          Schema::VariableLengthArray {
+            n_elems_max: None,
+            elem_schema: Box::new(schema),
+          }
+        }
+        ArraySize::VariableWithUpperLimit1D { upper_limit } => Schema::VariableLengthStringASCII {
+          n_chars_max: Some(*upper_limit as usize),
+        },
+        ArraySize::VariableWithUpperLimitND { sizes, upper_limit } => {
+          let mut it = sizes.iter().cloned();
+          let mut schema = Schema::FixedLengthStringASCII {
+            n_chars: it.next().unwrap_or(0) as usize,
+          };
+          for size in sizes.iter().cloned() {
+            schema = Schema::FixedLengthArray {
+              n_elems: size as usize,
+              elem_schema: Box::new(schema),
+            }
+          }
+          Schema::VariableLengthArray {
+            n_elems_max: Some(*upper_limit as usize),
+            elem_schema: Box::new(schema),
+          }
+        }
       },
-      (Datatype::CharUnicode, Some("1")) => Schema::CharUnicode,
-      (Datatype::CharUnicode, Some(size)) => match fixed_length_array(size) {
-        Err(e) => {
-          eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
-          Schema::VariableLengthStringUnicode
+      (Datatype::CharUnicode, Some(size)) => match size {
+        ArraySize::Fixed1D { size } => Schema::FixedLengthStringUnicode {
+          n_chars: *size as usize,
+        },
+        ArraySize::FixedND { sizes } => {
+          let mut it = sizes.iter().cloned();
+          let mut schema = Schema::FixedLengthStringUnicode {
+            n_chars: it.next().unwrap_or(0) as usize,
+          };
+          for size in it {
+            schema = Schema::FixedLengthArray {
+              n_elems: size as usize,
+              elem_schema: Box::new(schema),
+            }
+          }
+          schema
         }
-        Ok(Ok(n_chars)) => Schema::FixedLengthStringUnicode { n_chars },
-        Ok(Err(_)) => Schema::VariableLengthStringUnicode,
+        ArraySize::Variable1D => Schema::VariableLengthStringUnicode { n_chars_max: None },
+        ArraySize::VariableND { sizes } => {
+          let mut it = sizes.iter().cloned();
+          let mut schema = Schema::FixedLengthStringUnicode {
+            n_chars: it.next().unwrap_or(0) as usize,
+          };
+          for size in it {
+            schema = Schema::FixedLengthArray {
+              n_elems: size as usize,
+              elem_schema: Box::new(schema),
+            }
+          }
+          Schema::VariableLengthArray {
+            n_elems_max: None,
+            elem_schema: Box::new(schema),
+          }
+        }
+        ArraySize::VariableWithUpperLimit1D { upper_limit } => {
+          Schema::VariableLengthStringUnicode {
+            n_chars_max: Some(*upper_limit as usize),
+          }
+        }
+        ArraySize::VariableWithUpperLimitND { sizes, upper_limit } => {
+          let mut it = sizes.iter().cloned();
+          let mut schema = Schema::FixedLengthStringUnicode {
+            n_chars: it.next().unwrap_or(0) as usize,
+          };
+          for size in sizes.iter().cloned() {
+            schema = Schema::FixedLengthArray {
+              n_elems: size as usize,
+              elem_schema: Box::new(schema),
+            }
+          }
+          Schema::VariableLengthArray {
+            n_elems_max: Some(*upper_limit as usize),
+            elem_schema: Box::new(schema),
+          }
+        }
       },
       // Arrays
-      (Datatype::Logical, Some(size)) => {
-        let elem_schema = Box::new(Schema::Bool);
-        match fixed_length_array(size) {
-          Err(e) => {
-            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
-            Schema::VariableLengthArray { elem_schema }
+      (Datatype::Logical, Some(size)) => from_regulartypeschema_and_arraysize(size, Schema::Bool),
+      (Datatype::Bit, Some(size)) => match size {
+        ArraySize::Fixed1D { size } => Schema::FixedLengthBitArray {
+          n_bits: *size as usize,
+        },
+        ArraySize::FixedND { sizes } => {
+          let mut it = sizes.iter().cloned();
+          let mut schema = Schema::FixedLengthBitArray {
+            n_bits: it.next().unwrap_or(0) as usize,
+          };
+          for size in it {
+            schema = Schema::FixedLengthArray {
+              n_elems: size as usize,
+              elem_schema: Box::new(schema),
+            }
           }
-          Ok(Ok(n_elems)) => Schema::FixedLengthArray {
-            n_elems,
-            elem_schema,
-          },
-          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema },
+          schema
         }
-      }
-      (Datatype::Bit, Some(size)) => match fixed_length_array(size) {
-        Err(e) => {
-          eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
-          Schema::VariableLengthBitArray
+        ArraySize::Variable1D => Schema::VariableLengthBitArray { n_bits_max: None },
+        ArraySize::VariableND { sizes } => {
+          let mut it = sizes.iter().cloned();
+          let mut schema = Schema::FixedLengthBitArray {
+            n_bits: it.next().unwrap_or(0) as usize,
+          };
+          for size in it {
+            schema = Schema::FixedLengthArray {
+              n_elems: size as usize,
+              elem_schema: Box::new(schema),
+            }
+          }
+          Schema::VariableLengthArray {
+            n_elems_max: None,
+            elem_schema: Box::new(schema),
+          }
         }
-        Ok(Ok(n_bits)) => Schema::FixedLengthBitArray { n_bits },
-        Ok(Err(_)) => Schema::VariableLengthBitArray,
+        ArraySize::VariableWithUpperLimit1D { upper_limit } => Schema::VariableLengthBitArray {
+          n_bits_max: Some(*upper_limit as usize),
+        },
+        ArraySize::VariableWithUpperLimitND { sizes, upper_limit } => {
+          let mut it = sizes.iter().cloned();
+          let mut schema = Schema::FixedLengthBitArray {
+            n_bits: it.next().unwrap_or(0) as usize,
+          };
+          for size in sizes.iter().cloned() {
+            schema = Schema::FixedLengthArray {
+              n_elems: size as usize,
+              elem_schema: Box::new(schema),
+            }
+          }
+          Schema::VariableLengthArray {
+            n_elems_max: Some(*upper_limit as usize),
+            elem_schema: Box::new(schema),
+          }
+        }
       },
       (Datatype::Byte, Some(size)) => {
         let null = field
@@ -764,18 +979,8 @@ impl From<&Field> for Schema {
           .map(|null_str| null_str.parse())
           .transpose()
           .unwrap_or_default();
-        let elem_schema = Box::new(Schema::Byte { null });
-        match fixed_length_array(size) {
-          Err(e) => {
-            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
-            Schema::VariableLengthArray { elem_schema }
-          }
-          Ok(Ok(n_elems)) => Schema::FixedLengthArray {
-            n_elems,
-            elem_schema,
-          },
-          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema },
-        }
+        let elem_schema = Schema::Byte { null };
+        from_regulartypeschema_and_arraysize(size, elem_schema)
       }
       (Datatype::ShortInt, Some(size)) => {
         let null = field
@@ -783,18 +988,8 @@ impl From<&Field> for Schema {
           .map(|null_str| null_str.parse())
           .transpose()
           .unwrap_or_default();
-        let elem_schema = Box::new(Schema::Short { null });
-        match fixed_length_array(size) {
-          Err(e) => {
-            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
-            Schema::VariableLengthArray { elem_schema }
-          }
-          Ok(Ok(n_elems)) => Schema::FixedLengthArray {
-            n_elems,
-            elem_schema,
-          },
-          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema },
-        }
+        let elem_schema = Schema::Short { null };
+        from_regulartypeschema_and_arraysize(size, elem_schema)
       }
       (Datatype::Int, Some(size)) => {
         let null = field
@@ -802,18 +997,8 @@ impl From<&Field> for Schema {
           .map(|null_str| null_str.parse())
           .transpose()
           .unwrap_or_default();
-        let elem_schema = Box::new(Schema::Int { null });
-        match fixed_length_array(size) {
-          Err(e) => {
-            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
-            Schema::VariableLengthArray { elem_schema }
-          }
-          Ok(Ok(n_elems)) => Schema::FixedLengthArray {
-            n_elems,
-            elem_schema,
-          },
-          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema },
-        }
+        let elem_schema = Schema::Int { null };
+        from_regulartypeschema_and_arraysize(size, elem_schema)
       }
       (Datatype::LongInt, Some(size)) => {
         let null = field
@@ -821,97 +1006,19 @@ impl From<&Field> for Schema {
           .map(|null_str| null_str.parse())
           .transpose()
           .unwrap_or_default();
-        let elem_schema = Box::new(Schema::Long { null });
-        match fixed_length_array(size) {
-          Err(e) => {
-            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
-            Schema::VariableLengthArray { elem_schema }
-          }
-          Ok(Ok(n_elems)) => Schema::FixedLengthArray {
-            n_elems,
-            elem_schema,
-          },
-          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema },
-        }
+        let elem_schema = Schema::Long { null };
+        from_regulartypeschema_and_arraysize(size, elem_schema)
       }
-      (Datatype::Float, Some(size)) => {
-        let elem_schema = Box::new(Schema::Float);
-        match fixed_length_array(size) {
-          Err(e) => {
-            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
-            Schema::VariableLengthArray { elem_schema }
-          }
-          Ok(Ok(n_elems)) => Schema::FixedLengthArray {
-            n_elems,
-            elem_schema,
-          },
-          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema },
-        }
-      }
-      (Datatype::Double, Some(size)) => {
-        let elem_schema = Box::new(Schema::Double);
-        match fixed_length_array(size) {
-          Err(e) => {
-            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
-            Schema::VariableLengthArray { elem_schema }
-          }
-          Ok(Ok(n_elems)) => Schema::FixedLengthArray {
-            n_elems,
-            elem_schema,
-          },
-          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema },
-        }
-      }
+      (Datatype::Float, Some(size)) => from_regulartypeschema_and_arraysize(size, Schema::Float),
+      (Datatype::Double, Some(size)) => from_regulartypeschema_and_arraysize(size, Schema::Double),
       (Datatype::ComplexFloat, Some(size)) => {
-        let elem_schema = Box::new(Schema::ComplexFloat);
-        match fixed_length_array(size) {
-          Err(e) => {
-            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
-            Schema::VariableLengthArray { elem_schema }
-          }
-          Ok(Ok(n_elems)) => Schema::FixedLengthArray {
-            n_elems,
-            elem_schema,
-          },
-          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema },
-        }
+        from_regulartypeschema_and_arraysize(size, Schema::ComplexFloat)
       }
       (Datatype::ComplexDouble, Some(size)) => {
-        let elem_schema = Box::new(Schema::ComplexDouble);
-        match fixed_length_array(size) {
-          Err(e) => {
-            eprintln!("Error parsing arraysize: {:?}. Set to variable length.", e);
-            Schema::VariableLengthArray { elem_schema }
-          }
-          Ok(Ok(n_elems)) => Schema::FixedLengthArray {
-            n_elems,
-            elem_schema,
-          },
-          Ok(Err(_)) => Schema::VariableLengthArray { elem_schema },
-        }
+        from_regulartypeschema_and_arraysize(size, Schema::ComplexDouble)
       }
     }
   }
-}
-
-/// If the result is:
-/// * `Ok(usize)` => fixed length array of given size
-/// * `Err(usize)` => variable size array of at least the given size
-pub fn fixed_length_array(arraysize: &str) -> Result<Result<usize, usize>, ParseIntError> {
-  let (arraysize, is_variable) = if arraysize.ends_with('*') {
-    (arraysize.strip_suffix('*').unwrap_or(""), true)
-  } else {
-    (arraysize, false)
-  };
-  if arraysize.is_empty() {
-    return Ok(Err(0));
-  }
-  let elems = arraysize
-    .split('x')
-    .map(|v| v.parse::<usize>())
-    .collect::<Result<Vec<usize>, ParseIntError>>()?;
-  let n_tot = elems.into_iter().reduce(|acc, n| acc * n).unwrap_or(0);
-  Ok(if is_variable { Err(n_tot) } else { Ok(n_tot) })
 }
 
 impl<'de> DeserializeSeed<'de> for &Schema {
@@ -1017,15 +1124,15 @@ impl<'de> DeserializeSeed<'de> for &Schema {
           .map_err(D::Error::custom)
           .map(VOTableValue::String)
       }
-      Schema::VariableLengthStringASCII => {
-        let visitor = VariableLengthArrayVisitor::new();
+      Schema::VariableLengthStringASCII { n_chars_max } => {
+        let visitor = VariableLengthArrayVisitor::new(n_chars_max.clone());
         let bytes: Vec<u8> = deserializer.deserialize_seq(visitor)?;
         String::from_utf8(bytes)
           .map_err(D::Error::custom)
           .map(VOTableValue::String)
       }
-      Schema::VariableLengthStringUnicode => {
-        let visitor = VariableLengthArrayVisitor::new();
+      Schema::VariableLengthStringUnicode { n_chars_max } => {
+        let visitor = VariableLengthArrayVisitor::new(n_chars_max.clone());
         let bytes: Vec<u16> = deserializer.deserialize_seq(visitor)?;
         decode_ucs2(bytes)
           .map_err(D::Error::custom)
@@ -1089,51 +1196,54 @@ impl<'de> DeserializeSeed<'de> for &Schema {
           elem_schema
         ))),
       },
-      Schema::VariableLengthArray { elem_schema } => match elem_schema.as_ref() {
+      Schema::VariableLengthArray {
+        n_elems_max,
+        elem_schema,
+      } => match elem_schema.as_ref() {
         Schema::Byte { .. } => {
-          let visitor = VariableLengthArrayVisitor::<u8>::new();
+          let visitor = VariableLengthArrayVisitor::<u8>::new(n_elems_max.clone());
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::ByteArray)
         }
         Schema::Short { .. } => {
-          let visitor = VariableLengthArrayVisitor::<i16>::new();
+          let visitor = VariableLengthArrayVisitor::<i16>::new(n_elems_max.clone());
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::ShortArray)
         }
         Schema::Int { .. } => {
-          let visitor = VariableLengthArrayVisitor::<i32>::new();
+          let visitor = VariableLengthArrayVisitor::<i32>::new(n_elems_max.clone());
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::IntArray)
         }
         Schema::Long { .. } => {
-          let visitor = VariableLengthArrayVisitor::<i64>::new();
+          let visitor = VariableLengthArrayVisitor::<i64>::new(n_elems_max.clone());
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::LongArray)
         }
         Schema::Float => {
-          let visitor = VariableLengthArrayVisitor::<f32>::new();
+          let visitor = VariableLengthArrayVisitor::<f32>::new(n_elems_max.clone());
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::FloatArray)
         }
         Schema::Double => {
-          let visitor = VariableLengthArrayVisitor::<f64>::new();
+          let visitor = VariableLengthArrayVisitor::<f64>::new(n_elems_max.clone());
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::DoubleArray)
         }
         Schema::ComplexFloat => {
-          let visitor = VariableLengthArrayVisitor::<(f32, f32)>::new();
+          let visitor = VariableLengthArrayVisitor::<(f32, f32)>::new(n_elems_max.clone());
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::ComplexFloatArray)
         }
         Schema::ComplexDouble => {
-          let visitor = VariableLengthArrayVisitor::<(f64, f64)>::new();
+          let visitor = VariableLengthArrayVisitor::<(f64, f64)>::new(n_elems_max.clone());
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::ComplexDoubleArray)
@@ -1149,8 +1259,9 @@ impl<'de> DeserializeSeed<'de> for &Schema {
         let bytes: Vec<u8> = deserializer.deserialize_tuple(n_bytes, visitor)?;
         Ok(VOTableValue::BitArray(BitVec(BV::from_vec(bytes))))
       }
-      Schema::VariableLengthBitArray => {
-        let visitor = VariableLengthArrayVisitor::<u8>::new();
+      Schema::VariableLengthBitArray { n_bits_max } => {
+        let visitor =
+          VariableLengthArrayVisitor::<u8>::new(n_bits_max.clone().map(|n_bits| (n_bits + 7) / 8));
         let bytes: Vec<u8> = deserializer.deserialize_seq(visitor)?;
         Ok(VOTableValue::BitArray(BitVec(BV::from_vec(bytes))))
       }

@@ -45,17 +45,23 @@ pub enum DataElem<C: TableDataContent> {
 }
 
 impl<C: TableDataContent> DataElem<C> {
-  fn read_sub_elements<R: BufRead>(
+  fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
-    reader: Reader<R>,
+    reader: &mut Reader<R>,
     reader_buff: &mut Vec<u8>,
     context: &Vec<TableElem>,
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     match self {
-      DataElem::TableData(ref mut e) => e.read_sub_elements_and_clean(reader, reader_buff, context),
-      DataElem::Binary(ref mut e) => e.read_sub_elements_and_clean(reader, reader_buff, context),
-      DataElem::Binary2(ref mut e) => e.read_sub_elements_and_clean(reader, reader_buff, context),
-      DataElem::Fits(ref mut e) => e.read_sub_elements_and_clean(reader, reader_buff, &()),
+      DataElem::TableData(ref mut e) => {
+        e.read_sub_elements_and_clean_by_ref(reader, reader_buff, context)
+      }
+      DataElem::Binary(ref mut e) => {
+        e.read_sub_elements_and_clean_by_ref(reader, reader_buff, context)
+      }
+      DataElem::Binary2(ref mut e) => {
+        e.read_sub_elements_and_clean_by_ref(reader, reader_buff, context)
+      }
+      DataElem::Fits(ref mut e) => e.read_sub_elements_and_clean_by_ref(reader, reader_buff, &()),
     }
   }
 
@@ -212,30 +218,49 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
   fn read_sub_elements<R: BufRead>(
     &mut self,
     mut reader: Reader<R>,
-    mut reader_buff: &mut Vec<u8>,
+    reader_buff: &mut Vec<u8>,
     context: &Self::Context,
   ) -> Result<Reader<R>, VOTableError> {
+    self
+      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
+      .map(|_| reader)
+  }
+
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    mut reader: &mut Reader<R>,
+    mut reader_buff: &mut Vec<u8>,
+    context: &Self::Context,
+  ) -> Result<(), VOTableError> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
           TableData::<C>::TAG_BYTES => {
-            reader = self.data.read_sub_elements(reader, reader_buff, context)?
+            self
+              .data
+              .read_sub_elements_by_ref(reader, reader_buff, context)?
           }
           Binary::<C>::TAG_BYTES => {
             self.data = DataElem::Binary(Binary::new());
-            reader = self.data.read_sub_elements(reader, reader_buff, context)?
+            self
+              .data
+              .read_sub_elements_by_ref(reader, reader_buff, context)?
           }
           Binary2::<C>::TAG_BYTES => {
             self.data = DataElem::Binary2(Binary2::new());
-            reader = self.data.read_sub_elements(reader, reader_buff, context)?
+            self
+              .data
+              .read_sub_elements_by_ref(reader, reader_buff, context)?
           }
           Fits::TAG_BYTES => {
-            self.data = DataElem::Fits(from_event_start!(Fits, reader, reader_buff, e))
+            self.data = DataElem::Fits(from_event_start_by_ref!(Fits, reader, reader_buff, e))
           }
-          Info::TAG_BYTES => self
-            .infos
-            .push(from_event_start!(Info, reader, reader_buff, e)),
+          Info::TAG_BYTES => {
+            self
+              .infos
+              .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
+          }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -253,20 +278,11 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
           }
         },
         Event::Text(e) if is_empty(e) => {}
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    todo!()
   }
 
   fn write<W: Write>(

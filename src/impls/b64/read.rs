@@ -1,10 +1,12 @@
 use std::io::{self, BufRead, BufReader, Bytes, Error, ErrorKind, Read};
+use std::mem::size_of;
 
 use base64::{engine::GeneralPurpose, read::DecoderReader};
-use byteorder::{BigEndian, ReadBytesExt};
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use serde::{de::Visitor, Deserializer};
 
 use crate::error::VOTableError;
+use crate::impls::Schema;
 
 /// Take a Byte iterator from a BufRead and remove the '\n', 'r' and ' ' characters.
 /// We recall that the allowed characters in base64 are: '0-9a-zA-Z+-' and '=' (for padding).
@@ -76,17 +78,146 @@ impl<'a, R: BufRead> Read for B64Cleaner<'a, R> {
   }
 }
 
-pub struct BinaryDeserializer<'a, R: BufRead> {
+pub struct BulkBinaryRowDeserializer<'a, R: BufRead> {
   reader: BufReader<DecoderReader<'static, GeneralPurpose, B64Cleaner<'a, R>>>,
+  bulk_reader: Vec<BulkReaderElem>,
 }
 
-impl<'de, 'a, R: BufRead> BinaryDeserializer<'a, R> {
-  pub fn new(reader: DecoderReader<'static, GeneralPurpose, B64Cleaner<'a, R>>) -> Self {
+impl<'a, R: BufRead> BulkBinaryRowDeserializer<'a, R> {
+  pub fn new_binary(
+    reader: DecoderReader<'static, GeneralPurpose, B64Cleaner<'a, R>>,
+    schemas: &[Schema],
+  ) -> Self {
     Self {
       reader: BufReader::new(reader),
+      bulk_reader: BulkReaderElem::from_schemas(schemas, false),
     }
   }
 
+  pub fn new_binary2(
+    reader: DecoderReader<'static, GeneralPurpose, B64Cleaner<'a, R>>,
+    schemas: &[Schema],
+  ) -> Self {
+    Self {
+      reader: BufReader::new(reader),
+      bulk_reader: BulkReaderElem::from_schemas(schemas, true),
+    }
+  }
+
+  pub fn has_data_left(&mut self) -> Result<bool, io::Error> {
+    self.reader.fill_buf().map(|b| !b.is_empty())
+  }
+
+  pub fn read_raw_row(&mut self, buf: &mut Vec<u8>) -> Result<usize, VOTableError> {
+    BulkReaderElem::read_all(self.bulk_reader.as_slice(), &mut self.reader, buf)
+  }
+}
+
+enum BulkReaderElem {
+  Fixed { n_bytes: usize },
+  VariableBits,
+  VariableBytes { n_bytes_by_elem: usize },
+}
+
+impl BulkReaderElem {
+  fn from_schemas(schemas: &[Schema], binary2: bool) -> Vec<Self> {
+    let mut elems: Vec<BulkReaderElem> = Vec::new();
+    let mut prev_n_bytes = if binary2 {
+      // Fixed Array of bytes
+      (schemas.len() + 7) / 8 // bytes for the null flags
+    } else {
+      0_usize
+    };
+    for schema in schemas {
+      match schema.byte_len() {
+        Ok(n_bytes) => prev_n_bytes += n_bytes,
+        Err((0, _)) => {
+          if prev_n_bytes != 0 {
+            elems.push(BulkReaderElem::Fixed {
+              n_bytes: prev_n_bytes,
+            });
+            prev_n_bytes = 0;
+          }
+          elems.push(BulkReaderElem::VariableBits);
+        }
+        Err((n_bytes, _)) => {
+          if prev_n_bytes != 0 {
+            elems.push(BulkReaderElem::Fixed {
+              n_bytes: prev_n_bytes,
+            });
+            prev_n_bytes = 0;
+          }
+          elems.push(BulkReaderElem::VariableBytes {
+            n_bytes_by_elem: n_bytes,
+          });
+        }
+      }
+    }
+    if prev_n_bytes != 0 {
+      elems.push(BulkReaderElem::Fixed {
+        n_bytes: prev_n_bytes,
+      });
+    }
+    elems
+  }
+
+  /// Put in `buf` the bytes of `elems` read from the given `reader`.
+  fn read_all<R: BufRead>(
+    elems: &[Self],
+    mut reader: R,
+    buf: &mut Vec<u8>,
+  ) -> Result<usize, VOTableError> {
+    let read_write_len = |reader: &mut R, buf: &mut Vec<u8>| {
+      reader
+        .read_i32::<BigEndian>()
+        .and_then(|len| buf.write_i32::<BigEndian>(len).map(|()| len))
+        .map_err(VOTableError::Io)
+    };
+    let mut cur = 0;
+    for elem in elems {
+      let n_bytes = match elem {
+        BulkReaderElem::Fixed { n_bytes } => *n_bytes,
+        BulkReaderElem::VariableBits => {
+          let len = read_write_len(&mut reader, buf)?;
+          cur += size_of::<i32>();
+          ((len + 7) / 8) as usize
+        }
+        BulkReaderElem::VariableBytes { n_bytes_by_elem } => {
+          let len = read_write_len(&mut reader, buf)?;
+          cur += size_of::<i32>();
+          *n_bytes_by_elem * (len as usize)
+        }
+      };
+      let mut copy = vec![0_u8; n_bytes];
+      reader
+        .read_exact(copy.as_mut_slice())
+        .map_err(VOTableError::Io)?;
+      buf.append(&mut copy);
+      cur += n_bytes;
+    }
+    Ok(cur)
+  }
+}
+
+/// Read from binary data.
+/*pub struct BinaryDeserializer<'a, R: BufRead> {
+  reader: BufReader<DecoderReader<'static, GeneralPurpose, B64Cleaner<'a, R>>>,
+}*/
+pub struct BinaryDeserializer<R: BufRead> {
+  reader: R,
+}
+
+/*impl<'de, 'a, R: BufRead> BinaryDeserializer<'a, R> {
+pub fn new(reader: DecoderReader<'static, GeneralPurpose, B64Cleaner<'a, R>>) -> Self {
+  Self {
+    reader: BufReader::new(reader),
+  }
+}*/
+
+impl<'de, R: BufRead> BinaryDeserializer<R> {
+  pub fn new(reader: R) -> Self {
+    Self { reader }
+  }
   pub fn has_data_left(&mut self) -> Result<bool, io::Error> {
     self.reader.fill_buf().map(|b| !b.is_empty())
   }
@@ -105,7 +236,8 @@ impl<'de, 'a, R: BufRead> BinaryDeserializer<'a, R> {
 
 // <'de, 'a: 'de, R: BufRead>
 //   'a lasts at least as long as 'de
-impl<'de, 'b, 'a: 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializer<'a, R> {
+// impl<'de, 'b, 'a: 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializer<'a, R> {
+impl<'de, 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializer<R> {
   type Error = VOTableError;
 
   fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
@@ -299,12 +431,17 @@ impl<'de, 'b, 'a: 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializ
     V: Visitor<'de>,
   {
     // used to deserialize variable length array
-    struct Access<'b, 'a: 'b, R: BufRead> {
+    /*struct Access<'b, 'a: 'b, R: BufRead> {
       deserializer: &'b mut BinaryDeserializer<'a, R>,
+      len: usize,
+    }*/
+    struct Access<'b, R: BufRead> {
+      deserializer: &'b mut BinaryDeserializer<R>,
       len: usize,
     }
 
-    impl<'de, 'b, 'a: 'b, R: BufRead> serde::de::SeqAccess<'de> for Access<'b, 'a, R> {
+    // impl<'de, 'b, 'a: 'b, R: BufRead> serde::de::SeqAccess<'de> for Access<'b, 'a, R> {
+    impl<'de, 'b, R: BufRead> serde::de::SeqAccess<'de> for Access<'b, R> {
       type Error = VOTableError;
 
       fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
@@ -340,12 +477,17 @@ impl<'de, 'b, 'a: 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializ
     V: Visitor<'de>,
   {
     // used to deserialize fixed length array and rows
-    struct Access<'b, 'a: 'b, R: BufRead> {
+    /*struct Access<'b, 'a: 'b, R: BufRead> {
       deserializer: &'b mut BinaryDeserializer<'a, R>,
+      len: usize,
+    }*/
+    struct Access<'b, R: BufRead> {
+      deserializer: &'b mut BinaryDeserializer<R>,
       len: usize,
     }
 
-    impl<'de, 'b, 'a: 'b, R: BufRead> serde::de::SeqAccess<'de> for Access<'b, 'a, R> {
+    //impl<'de, 'b, 'a: 'b, R: BufRead> serde::de::SeqAccess<'de> for Access<'b, 'a, R> {
+    impl<'de, 'b, R: BufRead> serde::de::SeqAccess<'de> for Access<'b, R> {
       type Error = VOTableError;
 
       fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>

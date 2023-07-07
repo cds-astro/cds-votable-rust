@@ -109,29 +109,42 @@ impl QuickXmlReadWrite for Group {
   fn read_sub_elements<R: BufRead>(
     &mut self,
     mut reader: Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    context: &Self::Context,
+  ) -> Result<Reader<R>, VOTableError> {
+    self
+      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
+      .map(|()| reader)
+  }
+
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    mut reader: &mut Reader<R>,
     mut reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
           Description::TAG_BYTES => {
-            from_event_start_desc!(self, Description, reader, reader_buff, e);
+            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e);
           }
-          ParamRef::TAG_BYTES => self.elems.push(GroupElem::ParamRef(from_event_start!(
-            ParamRef,
-            reader,
-            reader_buff,
-            e
-          ))),
-          Param::TAG_BYTES => self.elems.push(GroupElem::Param(from_event_start!(
+          ParamRef::TAG_BYTES => self
+            .elems
+            .push(GroupElem::ParamRef(from_event_start_by_ref!(
+              ParamRef,
+              reader,
+              reader_buff,
+              e
+            ))),
+          Param::TAG_BYTES => self.elems.push(GroupElem::Param(from_event_start_by_ref!(
             Param,
             reader,
             reader_buff,
             e
           ))),
-          Group::TAG_BYTES => self.elems.push(GroupElem::Group(from_event_start!(
+          Group::TAG_BYTES => self.elems.push(GroupElem::Group(from_event_start_by_ref!(
             Group,
             reader,
             reader_buff,
@@ -158,20 +171,11 @@ impl QuickXmlReadWrite for Group {
             ))
           }
         },
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    todo!()
   }
 
   fn write<W: Write>(
@@ -310,42 +314,65 @@ impl QuickXmlReadWrite for TableGroup {
   fn read_sub_elements<R: BufRead>(
     &mut self,
     mut reader: Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    context: &Self::Context,
+  ) -> Result<Reader<R>, VOTableError> {
+    self
+      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
+      .map(|()| reader)
+  }
+
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    mut reader: &mut Reader<R>,
     mut reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
           Description::TAG_BYTES => {
-            from_event_start_desc!(self, Description, reader, reader_buff, e);
+            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e);
           }
-          FieldRef::TAG_BYTES => self.elems.push(TableGroupElem::FieldRef(from_event_start!(
-            FieldRef,
-            reader,
-            reader_buff,
-            e
-          ))),
-          ParamRef::TAG_BYTES => self.elems.push(TableGroupElem::ParamRef(from_event_start!(
-            ParamRef,
-            reader,
-            reader_buff,
-            e
-          ))),
-          Param::TAG_BYTES => self.elems.push(TableGroupElem::Param(from_event_start!(
-            Param,
-            reader,
-            reader_buff,
-            e
-          ))),
-          TableGroup::TAG_BYTES => self
+          FieldRef::TAG_BYTES => {
+            self
+              .elems
+              .push(TableGroupElem::FieldRef(from_event_start_by_ref!(
+                FieldRef,
+                reader,
+                reader_buff,
+                e
+              )))
+          }
+          ParamRef::TAG_BYTES => {
+            self
+              .elems
+              .push(TableGroupElem::ParamRef(from_event_start_by_ref!(
+                ParamRef,
+                reader,
+                reader_buff,
+                e
+              )))
+          }
+          Param::TAG_BYTES => self
             .elems
-            .push(TableGroupElem::TableGroup(from_event_start!(
-              TableGroup,
+            .push(TableGroupElem::Param(from_event_start_by_ref!(
+              Param,
               reader,
               reader_buff,
               e
             ))),
+          TableGroup::TAG_BYTES => {
+            self
+              .elems
+              .push(TableGroupElem::TableGroup(from_event_start_by_ref!(
+                TableGroup,
+                reader,
+                reader_buff,
+                e
+              )))
+          }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -370,20 +397,11 @@ impl QuickXmlReadWrite for TableGroup {
             ))
           }
         },
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    todo!()
   }
 
   fn write<W: Write>(

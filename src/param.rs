@@ -14,7 +14,7 @@ use super::{
   datatype::Datatype,
   desc::Description,
   error::VOTableError,
-  field::{Field, Precision},
+  field::{ArraySize, Field, Precision},
   link::Link,
   values::Values,
   QuickXmlReadWrite,
@@ -69,8 +69,8 @@ impl Param {
     self.field.utype = Some(utype.into());
     self
   }
-  pub fn set_arraysize<I: Into<String>>(mut self, arraysize: I) -> Self {
-    self.field.arraysize = Some(arraysize.into());
+  pub fn set_arraysize(mut self, arraysize: ArraySize) -> Self {
+    self.field.arraysize = Some(arraysize);
     self
   }
   pub fn insert_extra<S: Into<String>>(mut self, key: S, value: Value) -> Self {
@@ -126,7 +126,9 @@ impl QuickXmlReadWrite for Param {
         b"ref" => param.set_ref(value),
         b"ucd" => param.set_ucd(value),
         b"utype" => param.set_utype(value),
-        b"arraysize" => param.set_arraysize(value),
+        b"arraysize" if !value.is_empty() => {
+          param.set_arraysize(value.parse::<ArraySize>().map_err(VOTableError::ParseInt)?)
+        }
         b"value" => {
           param.value = value.to_string();
           param
@@ -153,23 +155,41 @@ impl QuickXmlReadWrite for Param {
   fn read_sub_elements<R: BufRead>(
     &mut self,
     mut reader: Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    context: &Self::Context,
+  ) -> Result<Reader<R>, VOTableError> {
+    self
+      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
+      .map(|()| reader)
+  }
+
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    mut reader: &mut Reader<R>,
     mut reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
           Description::TAG_BYTES => {
-            self.field.description = Some(from_event_start!(Description, reader, reader_buff, e))
+            self.field.description = Some(from_event_start_by_ref!(
+              Description,
+              reader,
+              reader_buff,
+              e
+            ))
           }
           Values::TAG_BYTES => {
-            self.field.values = Some(from_event_start!(Values, reader, reader_buff, e))
+            self.field.values = Some(from_event_start_by_ref!(Values, reader, reader_buff, e))
           }
-          Link::TAG_BYTES => self
-            .field
-            .links
-            .push(from_event_start!(Link, reader, reader_buff, e)),
+          Link::TAG_BYTES => {
+            self
+              .field
+              .links
+              .push(from_event_start_by_ref!(Link, reader, reader_buff, e))
+          }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -187,20 +207,11 @@ impl QuickXmlReadWrite for Param {
             ))
           }
         },
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    todo!()
   }
 
   fn write<W: Write>(
@@ -239,7 +250,7 @@ impl QuickXmlReadWrite for Param {
       tag.push_attribute(("utype", utype.as_str()));
     };
     if let Some(arraysize) = &self.field.arraysize {
-      tag.push_attribute(("arraysize", arraysize.as_str()));
+      tag.push_attribute(("arraysize", arraysize.to_string().as_str()));
     };
     for (key, val) in &self.field.extra {
       tag.push_attribute((key.as_str(), val.to_string().as_str()));

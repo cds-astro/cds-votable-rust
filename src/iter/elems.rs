@@ -1,5 +1,7 @@
+use std::io::BufReader;
 use std::{io::BufRead, slice::Iter, str};
 
+use base64::engine::GeneralPurpose;
 use base64::{engine::general_purpose, read::DecoderReader};
 
 use quick_xml::{events::Event, Reader};
@@ -185,7 +187,7 @@ impl<'a, R: BufRead> Iterator for DataTableFieldValueIterator<'a, R> {
 pub struct BinaryRowValueIterator<'a, R: BufRead> {
   table: &'a mut Table<VoidTableDataContent>,
   schema: Vec<Schema>,
-  binary_deser: BinaryDeserializer<'a, R>,
+  binary_deser: BinaryDeserializer<BufReader<DecoderReader<'a, GeneralPurpose, B64Cleaner<'a, R>>>>,
 }
 
 impl<'a, R: BufRead> BinaryRowValueIterator<'a, R> {
@@ -197,7 +199,7 @@ impl<'a, R: BufRead> BinaryRowValueIterator<'a, R> {
     let internal_reader = reader.get_mut();
     let b64_cleaner = B64Cleaner::new(internal_reader);
     let decoder = DecoderReader::new(b64_cleaner, &general_purpose::STANDARD);
-    let binary_deser = BinaryDeserializer::new(decoder);
+    let binary_deser = BinaryDeserializer::new(BufReader::new(decoder));
     Self {
       table,
       schema,
@@ -237,7 +239,7 @@ impl<'a, R: BufRead> Iterator for BinaryRowValueIterator<'a, R> {
 pub struct Binary2RowValueIterator<'a, R: BufRead> {
   table: &'a mut Table<VoidTableDataContent>,
   schema: Vec<Schema>,
-  binary_deser: BinaryDeserializer<'a, R>,
+  binary_deser: BinaryDeserializer<BufReader<DecoderReader<'a, GeneralPurpose, B64Cleaner<'a, R>>>>,
   n_bytes: usize,
 }
 
@@ -250,7 +252,7 @@ impl<'a, R: BufRead> Binary2RowValueIterator<'a, R> {
     let internal_reader = reader.get_mut();
     let b64_cleaner = B64Cleaner::new(internal_reader);
     let decoder = DecoderReader::new(b64_cleaner, &general_purpose::STANDARD);
-    let binary_deser = BinaryDeserializer::new(decoder);
+    let binary_deser = BinaryDeserializer::new(BufReader::new(decoder));
     let n_bytes = (schema.len() + 7) / 8;
     Self {
       table,

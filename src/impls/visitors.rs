@@ -246,18 +246,20 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for FixedLengthArrayVisitor<'de, T> 
 }
 
 pub struct VariableLengthArrayVisitor<'de, T: Deserialize<'de>> {
+  upper_n_elems: Option<usize>,
   _marker: &'de PhantomData<T>,
 }
 
 impl<'de, T: Deserialize<'de>> Default for VariableLengthArrayVisitor<'de, T> {
   fn default() -> Self {
-    Self::new()
+    Self::new(None)
   }
 }
 
 impl<'de, T: Deserialize<'de>> VariableLengthArrayVisitor<'de, T> {
-  pub fn new() -> Self {
+  pub fn new(upper_n_elems: Option<usize>) -> Self {
     Self {
+      upper_n_elems,
       _marker: &PhantomData,
     }
   }
@@ -274,7 +276,11 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for VariableLengthArrayVisitor<'de, 
   where
     A: SeqAccess<'de>,
   {
-    let mut v: Vec<T> = Vec::with_capacity(size_hint::cautious(seq.size_hint()));
+    let mut v: Vec<T> = Vec::with_capacity(
+      self
+        .upper_n_elems
+        .unwrap_or_else(|| size_hint::cautious(seq.size_hint())),
+    );
     while let Some(value) = seq.next_element()? {
       v.push(value);
     }

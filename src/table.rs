@@ -52,16 +52,16 @@ pub struct Table<C: TableDataContent> {
   nrows: Option<u64>,
   // extra attributes
   #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-  pub extra: HashMap<String, Value>,
+  pub(crate) extra: HashMap<String, Value>,
   // sub-elements
   #[serde(skip_serializing_if = "Option::is_none")]
   description: Option<Description>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  pub elems: Vec<TableElem>,
+  pub(crate) elems: Vec<TableElem>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   links: Vec<Link>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  data: Option<Data<C>>,
+  pub(crate) data: Option<Data<C>>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   infos: Vec<Info>,
 }
@@ -211,9 +211,20 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
   fn read_sub_elements<R: BufRead>(
     &mut self,
     mut reader: Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    context: &Self::Context,
+  ) -> Result<Reader<R>, VOTableError> {
+    self
+      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
+      .map(|()| reader)
+  }
+
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    mut reader: &mut Reader<R>,
     mut reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     // If the full document is in memory, we could have use a Reader<'a [u8]> and then the method
     // `read_event_unbuffered` to avoid a copy.
     // But are more generic that this to be able to read in streaming mode
@@ -222,35 +233,49 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
           Description::TAG_BYTES => {
-            from_event_start_desc!(self, Description, reader, reader_buff, e)
+            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
           }
-          Field::TAG_BYTES => self.elems.push(TableElem::Field(from_event_start!(
+          Field::TAG_BYTES => self.elems.push(TableElem::Field(from_event_start_by_ref!(
             Field,
             reader,
             reader_buff,
             e
           ))),
-          Param::TAG_BYTES => self.elems.push(TableElem::Param(from_event_start!(
+          Param::TAG_BYTES => self.elems.push(TableElem::Param(from_event_start_by_ref!(
             Param,
             reader,
             reader_buff,
             e
           ))),
-          TableGroup::TAG_BYTES => self.elems.push(TableElem::TableGroup(from_event_start!(
-            TableGroup,
-            reader,
-            reader_buff,
-            e
-          ))),
-          Link::TAG_BYTES => self
-            .links
-            .push(from_event_start!(Link, reader, reader_buff, e)),
-          Data::<C>::TAG_BYTES => {
-            self.data = Some(from_event_start!(Data, reader, reader_buff, e, self.elems))
+          TableGroup::TAG_BYTES => {
+            self
+              .elems
+              .push(TableElem::TableGroup(from_event_start_by_ref!(
+                TableGroup,
+                reader,
+                reader_buff,
+                e
+              )))
           }
-          Info::TAG_BYTES => self
-            .infos
-            .push(from_event_start!(Info, reader, reader_buff, e)),
+          Link::TAG_BYTES => {
+            self
+              .links
+              .push(from_event_start_by_ref!(Link, reader, reader_buff, e))
+          }
+          Data::<C>::TAG_BYTES => {
+            self.data = Some(from_event_start_by_ref!(
+              Data,
+              reader,
+              reader_buff,
+              e,
+              self.elems
+            ))
+          }
+          Info::TAG_BYTES => {
+            self
+              .infos
+              .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
+          }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -278,20 +303,11 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
           }
         },
         Event::Text(e) if is_empty(e) => {}
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    todo!()
   }
 
   fn write<W: Write>(

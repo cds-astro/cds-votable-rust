@@ -59,28 +59,28 @@ pub trait TableDataContent: Default + serde::Serialize {
   /// return after event Event::End("DATATABLE")
   fn read_datatable_content<R: BufRead>(
     &mut self,
-    reader: Reader<R>,
+    reader: &mut Reader<R>,
     reader_buff: &mut Vec<u8>,
     context: &[TableElem],
-  ) -> Result<Reader<R>, VOTableError>;
+  ) -> Result<(), VOTableError>;
 
   /// Called when Event::Start("STREAM") as been detected (in BINARY) and **MUST**
   /// return after event Event::End("STREAM")
   fn read_binary_content<R: BufRead>(
     &mut self,
-    reader: Reader<R>,
+    reader: &mut Reader<R>,
     reader_buff: &mut Vec<u8>,
     context: &[TableElem],
-  ) -> Result<Reader<R>, VOTableError>;
+  ) -> Result<(), VOTableError>;
 
   /// Called when Event::Start("STREAM") as been detected (in BINARY2) and **MUST**
   /// return after event Event::End("STREAM")
   fn read_binary2_content<R: BufRead>(
     &mut self,
-    reader: Reader<R>,
+    reader: &mut Reader<R>,
     reader_buff: &mut Vec<u8>,
     context: &[TableElem],
-  ) -> Result<Reader<R>, VOTableError>;
+  ) -> Result<(), VOTableError>;
 
   fn write_in_datatable<W: Write>(
     &mut self,

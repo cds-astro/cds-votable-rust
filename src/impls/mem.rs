@@ -1,3 +1,4 @@
+use std::io::BufReader;
 use std::{
   io::{BufRead, Write},
   mem,
@@ -28,16 +29,20 @@ use crate::{
   QuickXmlReadWrite, TableDataContent,
 };
 
+/// Do not parse/contains any data.
+/// Only made for VOTable parsers taking charge of parsing (and dealing with) the data part
+/// of the VOTable.
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct VoidTableDataContent;
+#[serde(transparent)]
+pub struct VoidTableDataContent(());
 
 impl TableDataContent for VoidTableDataContent {
   fn read_datatable_content<R: BufRead>(
     &mut self,
-    _reader: Reader<R>,
+    _reader: &mut Reader<R>,
     _reader_buff: &mut Vec<u8>,
     _context: &[TableElem],
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     Err(VOTableError::Custom(String::from(
       "Read/write not implemented for VoidTableDataContent",
     )))
@@ -45,10 +50,10 @@ impl TableDataContent for VoidTableDataContent {
 
   fn read_binary_content<R: BufRead>(
     &mut self,
-    _reader: Reader<R>,
+    _reader: &mut Reader<R>,
     _reader_buff: &mut Vec<u8>,
     _context: &[TableElem],
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     Err(VOTableError::Custom(String::from(
       "Read/write not implemented for VoidTableDataContent",
     )))
@@ -56,10 +61,10 @@ impl TableDataContent for VoidTableDataContent {
 
   fn read_binary2_content<R: BufRead>(
     &mut self,
-    _reader: Reader<R>,
+    _reader: &mut Reader<R>,
     _reader_buff: &mut Vec<u8>,
     _context: &[TableElem],
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     Err(VOTableError::Custom(String::from(
       "Read/write not implemented for VoidTableDataContent",
     )))
@@ -96,6 +101,10 @@ impl TableDataContent for VoidTableDataContent {
   }
 }
 
+/// Save in memory all rows in a vector.
+/// Each row is itself a vector of field.
+/// Each field is a String (this is not memory efficient, if the full VOTable fits in memory,
+/// we should save each field as a `&str`).
 #[derive(Default, Debug, serde::Serialize, serde::Deserialize)]
 pub struct InMemTableDataStringRows {
   rows: Vec<Vec<String>>,
@@ -107,22 +116,13 @@ impl InMemTableDataStringRows {
   }
 }
 
-/*
-fn read_td_content<R: BufRead>(mut reader: Reader<R>, mut reader_buff: &mut Vec<u8>) -> Result<String, VOTableError> {
-  let mut event = reader.read_event(&mut reader_buff).map_err(VOTableError::Read)?;
-  match &mut event {
-    Event::Text(e) => e.unescape_and_decode(&reader).map_err(VOTableError::Read),
-    _ => Err(VOTableError::Custom(format!("Wring event in TD. Expected: Text. Actual: {:?}", event))),
-  }
-}*/
-
 impl TableDataContent for InMemTableDataStringRows {
   fn read_datatable_content<R: BufRead>(
     &mut self,
-    mut reader: Reader<R>,
+    reader: &mut Reader<R>,
     reader_buff: &mut Vec<u8>,
     context: &[TableElem],
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     let mut row: Vec<String> = Vec::with_capacity(context.len());
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
@@ -146,7 +146,7 @@ impl TableDataContent for InMemTableDataStringRows {
           b"TR" => self
             .rows
             .push(mem::replace(&mut row, Vec::with_capacity(context.len()))),
-          TableData::<Self>::TAG_BYTES => return Ok(reader),
+          TableData::<Self>::TAG_BYTES => return Ok(()),
           _ => eprintln!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
         },
         Event::Eof => return Err(VOTableError::PrematureEOF(TableData::<Self>::TAG)),
@@ -158,10 +158,10 @@ impl TableDataContent for InMemTableDataStringRows {
 
   fn read_binary_content<R: BufRead>(
     &mut self,
-    _reader: Reader<R>,
+    _reader: &mut Reader<R>,
     _reader_buff: &mut Vec<u8>,
     _context: &[TableElem],
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     Err(VOTableError::Custom(String::from(
       "InMemTableDataStringRows not able to read/write BINARY data",
     )))
@@ -169,10 +169,10 @@ impl TableDataContent for InMemTableDataStringRows {
 
   fn read_binary2_content<R: BufRead>(
     &mut self,
-    _reader: Reader<R>,
+    _reader: &mut Reader<R>,
     _reader_buff: &mut Vec<u8>,
     _context: &[TableElem],
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     Err(VOTableError::Custom(String::from(
       "InMemTableDataStringRows not able to read/write BINARY2 data",
     )))
@@ -222,6 +222,9 @@ impl TableDataContent for InMemTableDataStringRows {
   }
 }
 
+/// Save in memory all rows in a vector.
+/// Each row is itself a vector of field.
+/// Each field is `VOTableValue` parse according to the table schema.
 #[derive(Default, Debug, serde::Serialize, serde::Deserialize)]
 pub struct InMemTableDataRows {
   rows: Vec<Vec<VOTableValue>>,
@@ -236,10 +239,10 @@ impl InMemTableDataRows {
 impl TableDataContent for InMemTableDataRows {
   fn read_datatable_content<R: BufRead>(
     &mut self,
-    mut reader: Reader<R>,
+    reader: &mut Reader<R>,
     reader_buff: &mut Vec<u8>,
     context: &[TableElem],
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     let schema: Vec<Schema> = context
       .iter()
       .filter_map(|table_elem| match table_elem {
@@ -275,7 +278,7 @@ impl TableDataContent for InMemTableDataRows {
           b"TR" => self
             .rows
             .push(mem::replace(&mut row, Vec::with_capacity(context.len()))),
-          TableData::<Self>::TAG_BYTES => return Ok(reader),
+          TableData::<Self>::TAG_BYTES => return Ok(()),
           _ => eprintln!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
         },
         Event::Eof => return Err(VOTableError::PrematureEOF(TableData::<Self>::TAG)),
@@ -287,15 +290,15 @@ impl TableDataContent for InMemTableDataRows {
 
   fn read_binary_content<R: BufRead>(
     &mut self,
-    mut reader: Reader<R>,
+    reader: &mut Reader<R>,
     _reader_buff: &mut Vec<u8>,
     context: &[TableElem],
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     // Prepare reader
     let mut internal_reader = reader.get_mut();
     let b64_cleaner = B64Cleaner::new(&mut internal_reader);
     let decoder = DecoderReader::new(b64_cleaner, &general_purpose::STANDARD);
-    let mut binary_deser = BinaryDeserializer::new(decoder);
+    let mut binary_deser = BinaryDeserializer::new(BufReader::new(decoder));
     // Get schema
     let schema: Vec<Schema> = context
       .iter()
@@ -315,20 +318,20 @@ impl TableDataContent for InMemTableDataRows {
         .rows
         .push(mem::replace(&mut row, Vec::with_capacity(schema.len())));
     }
-    Ok(reader)
+    Ok(())
   }
 
   fn read_binary2_content<R: BufRead>(
     &mut self,
-    mut reader: Reader<R>,
+    reader: &mut Reader<R>,
     _reader_buff: &mut Vec<u8>,
     context: &[TableElem],
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     // Prepare reader
     let mut internal_reader = reader.get_mut();
     let b64_cleaner = B64Cleaner::new(&mut internal_reader);
     let decoder = DecoderReader::new(b64_cleaner, &general_purpose::STANDARD);
-    let mut binary_deser = BinaryDeserializer::new(decoder);
+    let mut binary_deser = BinaryDeserializer::new(BufReader::new(decoder));
     // Get schema
     let schema: Vec<Schema> = context
       .iter()
@@ -356,7 +359,7 @@ impl TableDataContent for InMemTableDataRows {
         .rows
         .push(mem::replace(&mut row, Vec::with_capacity(schema.len())));
     }
-    Ok(reader)
+    Ok(())
   }
 
   fn write_in_datatable<W: Write>(
@@ -387,7 +390,7 @@ impl TableDataContent for InMemTableDataRows {
     writer: &mut Writer<W>,
     context: &[TableElem],
   ) -> Result<(), VOTableError> {
-    // Get schema
+    // Get FIELD schema (ignoring PARAMS, ...)
     let schema: Vec<Schema> = context
       .iter()
       .filter_map(|table_elem| match table_elem {
@@ -414,7 +417,7 @@ impl TableDataContent for InMemTableDataRows {
     writer: &mut Writer<W>,
     context: &[TableElem],
   ) -> Result<(), VOTableError> {
-    // Get schema
+    // Get FIELD schema (ignoring PARAMS, ...)
     let schema: Vec<Schema> = context
       .iter()
       .filter_map(|table_elem| match table_elem {

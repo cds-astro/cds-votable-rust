@@ -41,22 +41,24 @@ impl<C: TableDataContent> QuickXmlReadWrite for TableData<C> {
 
   fn read_sub_elements<R: BufRead>(
     &mut self,
-    reader: Reader<R>,
+    mut reader: Reader<R>,
     reader_buff: &mut Vec<u8>,
     context: &Self::Context,
   ) -> Result<Reader<R>, VOTableError> {
     self
-      .content
-      .read_datatable_content(reader, reader_buff, context)
+      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
+      .map(|()| reader)
   }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
+    mut reader: &mut Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    todo!()
+    self
+      .content
+      .read_datatable_content(&mut reader, reader_buff, context)
   }
 
   fn write<W: Write>(
