@@ -264,6 +264,10 @@ impl SimpleVOTableRowIterator {
     }
   }
 
+  pub fn data_type(&self) -> &TableOrBinOrBin2 {
+    &self.data_type
+  }
+
   /// An external code have to take charge of the parsing o the data part of the VOTable till:
   /// * `</TABLEDATA>` for `<TABLEDATA>`
   /// * `</BINARY>` for `<BINARY>`
@@ -573,15 +577,18 @@ impl<R: BufRead> VOTableIterator<R> {
 
 #[cfg(test)]
 mod tests {
+  use std::io::Cursor;
+
+  use serde::{de::DeserializeSeed, Deserializer};
+
   use crate::{
+    data::TableOrBinOrBin2,
     impls::{
       b64::read::BinaryDeserializer, visitors::FixedLengthArrayVisitor, Schema, VOTableValue,
     },
     iter::{Binary1or2RowIterator, SimpleVOTableRowIterator, TabledataRowIterator},
     table::TableElem,
   };
-  use serde::{de::DeserializeSeed, Deserializer};
-  use std::io::Cursor;
 
   #[test]
   fn test_simple_votable_read_iter_tabledata() {
@@ -591,6 +598,8 @@ mod tests {
 
     let mut svor =
       SimpleVOTableRowIterator::open_file_and_read_to_data("resources/sdss12.vot").unwrap();
+    assert!(matches!(svor.data_type(), &TableOrBinOrBin2::TableData));
+
     // svor.skip_remaining_data().unwrap();
     let raw_row_it = TabledataRowIterator::new(&mut svor.reader, &mut svor.reader_buff);
     for raw_row_res in raw_row_it {
@@ -613,6 +622,7 @@ mod tests {
 
     let mut svor =
       SimpleVOTableRowIterator::open_file_and_read_to_data("resources/binary.b64").unwrap();
+    assert!(matches!(svor.data_type(), &TableOrBinOrBin2::Binary));
 
     let context = svor.votable.resources[0].tables[0].elems.as_slice();
     // svor.skip_remaining_data().unwrap();
@@ -655,6 +665,8 @@ mod tests {
 
     let mut svor =
       SimpleVOTableRowIterator::open_file_and_read_to_data("resources/gaia_dr3.b264").unwrap();
+    assert!(matches!(svor.data_type(), &TableOrBinOrBin2::Binary2));
+
     let context = svor.votable.resources[0].tables[0].elems.as_slice();
     // svor.skip_remaining_data().unwrap();
     let schema: Vec<Schema> = context
