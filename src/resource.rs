@@ -11,11 +11,16 @@ use quick_xml::{
   Reader, Writer,
 };
 
-use crate::data::binary::Binary;
-use crate::data::binary2::Binary2;
-use crate::data::Data;
-use crate::impls::mem::VoidTableDataContent;
 use serde_json::Value;
+
+use crate::{
+  impls::mem::VoidTableDataContent,
+  data::{
+  Data,
+  binary::Binary,
+  binary2::Binary2
+}
+};
 
 use super::{
   coosys::CooSys, desc::Description, error::VOTableError, group::Group, info::Info, is_empty,
