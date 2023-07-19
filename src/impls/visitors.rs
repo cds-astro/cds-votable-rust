@@ -279,7 +279,7 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for VariableLengthArrayVisitor<'de, 
     let mut v: Vec<T> = Vec::with_capacity(
       self
         .upper_n_elems
-        .unwrap_or_else(|| size_hint::cautious(seq.size_hint())),
+        .unwrap_or_else(|| size_hint::cautious::<T>(seq.size_hint())),
     );
     while let Some(value) = seq.next_element()? {
       v.push(value);
