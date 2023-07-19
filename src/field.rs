@@ -55,11 +55,11 @@ impl ArraySize {
     ArraySize::VariableND { sizes }
   }
 
-  pub fn new_fixed_1d_with_upper_limit(upper_limit: u32) -> Self {
+  pub fn new_variable_1d_with_upper_limit(upper_limit: u32) -> Self {
     ArraySize::VariableWithUpperLimit1D { upper_limit }
   }
 
-  pub fn new_fixed_nd_with_upper_limit(sizes: Vec<u32>, upper_limit: u32) -> Self {
+  pub fn new_variable_nd_with_upper_limit(sizes: Vec<u32>, upper_limit: u32) -> Self {
     ArraySize::VariableWithUpperLimitND { sizes, upper_limit }
   }
 
