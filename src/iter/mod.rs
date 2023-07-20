@@ -1,10 +1,10 @@
-use base64::engine::general_purpose;
-use base64::read::DecoderReader;
 use std::{
   fs::File,
   io::{BufRead, BufReader},
   path::Path,
 };
+
+use base64::{engine::general_purpose, read::DecoderReader};
 
 use memchr::memmem::Finder;
 use once_cell::sync::Lazy;
@@ -187,21 +187,44 @@ impl<'a> Iterator for Binary1or2RowIterator<'a> {
 
 /// Structure made to iterate on the raw rows of a "simple" VOTable.
 /// By "simple", we mean a VOTable containing a single resource containing itself a single table.  
-pub struct SimpleVOTableRowIterator {
-  reader: Reader<BufReader<File>>,
+pub struct SimpleVOTableRowIterator<R: BufRead> {
+  reader: Reader<R>,
   reader_buff: Vec<u8>,
   votable: VOTable<VoidTableDataContent>,
   data_type: TableOrBinOrBin2,
 }
 
-impl SimpleVOTableRowIterator {
+impl SimpleVOTableRowIterator<BufReader<File>> {
   /// Starts parsing the VOTable till (includive):
   /// * `TABLEDATA` for the `TABLEDATA` tag
   /// * `STREAM` for `BINARY` and `BINARY2` tags
   pub fn open_file_and_read_to_data<P: AsRef<Path>>(path: P) -> Result<Self, VOTableError> {
     let mut reader_buff: Vec<u8> = Vec::with_capacity(1024);
-    let (mut votable, mut resource, mut reader) =
+    let (votable, resource, reader) =
       VOTableWrapper::<VoidTableDataContent>::manual_from_ivoa_xml_file(path, &mut reader_buff)?;
+    SimpleVOTableRowIterator::<BufReader<File>>::from_votable_resource_reader(
+      votable,
+      resource,
+      reader,
+      reader_buff,
+    )
+  }
+}
+
+impl<R: BufRead> SimpleVOTableRowIterator<R> {
+  pub fn read_to_data(reader: R) -> Result<Self, VOTableError> {
+    let mut reader_buff: Vec<u8> = Vec::with_capacity(1024);
+    let (votable, resource, reader) =
+      VOTable::from_reader_till_next_resource(reader, &mut reader_buff)?;
+    Self::from_votable_resource_reader(votable, resource, reader, reader_buff)
+  }
+
+  fn from_votable_resource_reader(
+    mut votable: VOTable<VoidTableDataContent>,
+    mut resource: Resource<VoidTableDataContent>,
+    mut reader: Reader<R>,
+    mut reader_buff: Vec<u8>,
+  ) -> Result<Self, VOTableError> {
     match resource.read_till_next_resource_or_table_by_ref(&mut reader, &mut reader_buff)? {
       Some(ResourceOrTable::<_>::Table(mut table)) => {
         if let Some(mut data) = table.read_till_data_by_ref(&mut reader, &mut reader_buff)? {
@@ -272,7 +295,7 @@ impl SimpleVOTableRowIterator {
   /// * `</TABLEDATA>` for `<TABLEDATA>`
   /// * `</BINARY>` for `<BINARY>`
   /// * `</BINARY2>` for `<BINARY2>`
-  pub fn borrow_mut_reader_and_buff(&mut self) -> (&mut Reader<BufReader<File>>, &mut Vec<u8>) {
+  pub fn borrow_mut_reader_and_buff(&mut self) -> (&mut Reader<R>, &mut Vec<u8>) {
     (&mut self.reader, &mut self.reader_buff)
   }
 
