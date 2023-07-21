@@ -35,7 +35,7 @@ pub struct Definitions {
   // no attributes
   // sub-elems
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  elems: Vec<DefinitionsElem>,
+  pub elems: Vec<DefinitionsElem>,
 }
 
 impl Default for Definitions {

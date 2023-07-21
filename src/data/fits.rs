@@ -22,9 +22,9 @@ use super::{
 pub struct Fits {
   // attribute
   #[serde(skip_serializing_if = "Option::is_none")]
-  extnum: Option<u32>,
+  pub extnum: Option<u32>,
   // I assume (so far) that for FITS there is no STREAM content (but a link pointing to the FITS file)
-  stream: Stream<VoidTableDataContent>,
+  pub stream: Stream<VoidTableDataContent>,
 }
 
 impl Fits {

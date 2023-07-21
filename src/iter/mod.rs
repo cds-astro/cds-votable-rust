@@ -287,6 +287,10 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
     &self.data_type
   }
 
+  pub fn votable(&self) -> &VOTable<VoidTableDataContent> {
+    &self.votable
+  }
+
   /// An external code have to take charge of the parsing o the data part of the VOTable till:
   /// * `</TABLEDATA>` for `<TABLEDATA>`
   /// * `</BINARY>` for `<BINARY>`

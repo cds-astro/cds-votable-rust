@@ -18,11 +18,11 @@ use super::{error::VOTableError, QuickXmlReadWrite};
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ParamRef {
   #[serde(rename = "ref")]
-  ref_: String,
+  pub ref_: String,
   #[serde(skip_serializing_if = "Option::is_none")]
-  ucd: Option<String>,
+  pub ucd: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  utype: Option<String>,
+  pub utype: Option<String>,
   // extra attributes
   #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
   pub extra: HashMap<String, Value>,

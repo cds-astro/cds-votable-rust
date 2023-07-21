@@ -23,8 +23,8 @@ use super::{
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Param {
   #[serde(flatten)]
-  field: Field,
-  value: String,
+  pub field: Field,
+  pub value: String,
 }
 
 impl Param {

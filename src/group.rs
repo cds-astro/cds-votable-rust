@@ -37,20 +37,20 @@ impl GroupElem {
 pub struct Group {
   // attributes
   #[serde(rename = "ID", skip_serializing_if = "Option::is_none")]
-  id: Option<String>,
+  pub id: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  name: Option<String>,
+  pub name: Option<String>,
   #[serde(rename = "ref", skip_serializing_if = "Option::is_none")]
-  ref_: Option<String>,
+  pub ref_: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  ucd: Option<String>,
+  pub ucd: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  utype: Option<String>,
+  pub utype: Option<String>,
   // Sub-elems
   #[serde(skip_serializing_if = "Option::is_none")]
-  description: Option<Description>,
+  pub description: Option<Description>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  elems: Vec<GroupElem>,
+  pub elems: Vec<GroupElem>,
 }
 
 impl Default for Group {
@@ -241,20 +241,20 @@ impl TableGroupElem {
 pub struct TableGroup {
   // attributes
   #[serde(skip_serializing_if = "Option::is_none")]
-  id: Option<String>,
+  pub id: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  name: Option<String>,
+  pub name: Option<String>,
   #[serde(rename = "ref", skip_serializing_if = "Option::is_none")]
-  ref_: Option<String>,
+  pub ref_: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  ucd: Option<String>,
+  pub ucd: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  utype: Option<String>,
+  pub utype: Option<String>,
   // Sub-elems
   #[serde(skip_serializing_if = "Option::is_none")]
-  description: Option<Description>,
+  pub description: Option<Description>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  elems: Vec<TableGroupElem>,
+  pub elems: Vec<TableGroupElem>,
 }
 
 impl Default for TableGroup {

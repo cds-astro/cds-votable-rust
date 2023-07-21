@@ -18,7 +18,7 @@ use super::{
 
 #[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Binary2<C: TableDataContent> {
-  stream: Stream<C>,
+  pub stream: Stream<C>,
 }
 
 impl<C: TableDataContent> Binary2<C> {

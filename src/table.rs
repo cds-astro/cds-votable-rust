@@ -39,31 +39,31 @@ impl TableElem {
 pub struct Table<C: TableDataContent> {
   // attributes
   #[serde(skip_serializing_if = "Option::is_none")]
-  id: Option<String>,
+  pub id: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  name: Option<String>,
+  pub name: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  ucd: Option<String>,
+  pub ucd: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  utype: Option<String>,
+  pub utype: Option<String>,
   #[serde(rename = "ref", skip_serializing_if = "Option::is_none")]
-  ref_: Option<String>,
+  pub ref_: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  nrows: Option<u64>,
+  pub nrows: Option<u64>,
   // extra attributes
   #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-  pub(crate) extra: HashMap<String, Value>,
+  pub extra: HashMap<String, Value>,
   // sub-elements
   #[serde(skip_serializing_if = "Option::is_none")]
-  description: Option<Description>,
+  pub description: Option<Description>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  pub(crate) elems: Vec<TableElem>,
+  pub elems: Vec<TableElem>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  links: Vec<Link>,
+  pub links: Vec<Link>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  pub(crate) data: Option<Data<C>>,
+  pub data: Option<Data<C>>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  infos: Vec<Info>,
+  pub infos: Vec<Info>,
 }
 
 impl<C: TableDataContent> Table<C> {
