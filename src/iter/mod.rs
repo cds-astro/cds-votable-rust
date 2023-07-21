@@ -38,14 +38,14 @@ static TR_END_FINDER: Lazy<Finder<'static>> = Lazy::new(|| Finder::new("</TR>"))
 /// Iterate over the raw rows (i.e. everything inside the `<TR>`/`</TR>` tags).
 /// We assume the `<TABLEDATA>` tag has already been consumed and this iterator will consume
 /// the `</TABLEDATA>` tag.
-pub struct TabledataRowIterator<'a> {
-  reader: &'a mut Reader<BufReader<File>>,
+pub struct TabledataRowIterator<'a, R: BufRead> {
+  reader: &'a mut Reader<R>,
   reader_buff: &'a mut Vec<u8>,
 }
 
-impl<'a> TabledataRowIterator<'a> {
+impl<'a, R: BufRead> TabledataRowIterator<'a, R> {
   /// We assume here that the reader has already consumed the `<TABLEDATA>` tag.
-  pub fn new(reader: &'a mut Reader<BufReader<File>>, reader_buff: &'a mut Vec<u8>) -> Self {
+  pub fn new(reader: &'a mut Reader<R>, reader_buff: &'a mut Vec<u8>) -> Self {
     Self {
       reader,
       reader_buff,
@@ -102,7 +102,7 @@ impl<'a> TabledataRowIterator<'a> {
   // skip_until ?
 }
 
-impl<'a> Iterator for TabledataRowIterator<'a> {
+impl<'a, R: BufRead> Iterator for TabledataRowIterator<'a, R> {
   type Item = Result<Vec<u8>, VOTableError>;
 
   fn next(&mut self) -> Option<Self::Item> {
@@ -139,17 +139,13 @@ impl<'a> Iterator for TabledataRowIterator<'a> {
 /// Iterate over the raw rows (i.e. everything inside the `<TR>`/`</TR>` tags).
 /// We assume the `<TABLEDATA>` tag has already been consumed and this iterator will consume
 /// the `</TABLEDATA>` tag.
-pub struct Binary1or2RowIterator<'a> {
-  reader: BulkBinaryRowDeserializer<'a, BufReader<File>>,
+pub struct Binary1or2RowIterator<'a, R: BufRead> {
+  reader: BulkBinaryRowDeserializer<'a, R>,
 }
 
-impl<'a> Binary1or2RowIterator<'a> {
+impl<'a, R: BufRead> Binary1or2RowIterator<'a, R> {
   /// We assume here that the reader has already consumed the `<STREAM>` tag.
-  pub fn new(
-    reader: &'a mut Reader<BufReader<File>>,
-    context: &[TableElem],
-    is_binary2: bool,
-  ) -> Self {
+  pub fn new(reader: &'a mut Reader<R>, context: &[TableElem], is_binary2: bool) -> Self {
     let b64_cleaner = B64Cleaner::new(reader.get_mut());
     let decoder = DecoderReader::new(b64_cleaner, &general_purpose::STANDARD);
     // Get schema
@@ -169,7 +165,7 @@ impl<'a> Binary1or2RowIterator<'a> {
   }
 }
 
-impl<'a> Iterator for Binary1or2RowIterator<'a> {
+impl<'a, R: BufRead> Iterator for Binary1or2RowIterator<'a, R> {
   type Item = Result<Vec<u8>, VOTableError>;
 
   fn next(&mut self) -> Option<Self::Item> {
