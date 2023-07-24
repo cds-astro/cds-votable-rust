@@ -442,7 +442,8 @@ impl QuickXmlReadWrite for TableGroup {
 
 #[cfg(test)]
 mod tests {
-  use crate::{tests::{test_read, test_writer}, group::Group};
+  use crate::group::Group;
+  use crate::tests::{test_read, test_writer};
 
   #[test]
   fn test_group_read_write() {

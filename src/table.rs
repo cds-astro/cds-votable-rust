@@ -345,9 +345,10 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
 
 #[cfg(test)]
 mod tests {
-use crate::{
+  use crate::{
     impls::mem::InMemTableDataRows,
-    tests::{test_read, test_writer}, table::Table,
+    table::Table,
+    tests::{test_read, test_writer},
   };
 
   #[test]
