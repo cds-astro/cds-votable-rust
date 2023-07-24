@@ -50,7 +50,6 @@ impl ElemType for CollectionElem {
 /////////////////////////
 /////// PATTERN A ///////
 /////////////////////////
-
 /*
     struct Collection => pattern A valid in Instance
     @elem dmrole String: Modeled node related => MAND
@@ -142,9 +141,12 @@ impl CollectionType for CollectionPatB {
   fn check_elems(&mut self) -> bool {
     let first = self.checker.get(0);
     let mut res = false;
+    if self.checker.contains(&"join".to_owned()) && self.checker.len() > 1 {
+      return true;
+    }
     self.checker.iter().for_each(|s| {
       if first != Some(s) {
-        res = true;
+        res = true
       }
     });
     res
@@ -535,6 +537,9 @@ mod tests {
     test_error::<CollectionPatB>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.25.xml");
     println!("testing 8.25"); // Collection of globals cannot have an instance without a PK
+    test_error::<CollectionPatB>(&xml, false);
+    let xml = get_xml("./resources/mivot/8/test_8_ko_8.25.xml");
+    println!("testing 8.26"); // Collection of globals cannot have an instance without a PK
     test_error::<CollectionPatB>(&xml, false);
   }
 

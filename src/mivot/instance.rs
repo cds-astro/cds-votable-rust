@@ -394,13 +394,13 @@ mod tests {
     test_read::<NoRoleInstance>(&xml); // Should read correctly
     let xml = get_xml("./resources/mivot/5/test_5_ko_5.7.xml");
     println!("testing 5.7"); // empty dmid + valid dmrole + valid dmtype; If present, dmid must not be empty.
-    test_error::<NoRoleInstance>(&xml, true);
+    test_error::<NoRoleInstance>(&xml, false);
     let xml = get_xml("./resources/mivot/5/test_5_ko_5.8.xml");
     println!("testing 5.8"); // valid dmid + valid dmrole + no dmtype; must have dmtype
-    test_error::<NoRoleInstance>(&xml, true);
+    test_error::<NoRoleInstance>(&xml, false);
     let xml = get_xml("./resources/mivot/5/test_5_ko_5.9.xml");
     println!("testing 5.9"); // valid dmid + valid dmrole + empty dmtype; dmtype must not be empty
-    test_error::<NoRoleInstance>(&xml, true);
+    test_error::<NoRoleInstance>(&xml, false);
   }
 
   #[test]

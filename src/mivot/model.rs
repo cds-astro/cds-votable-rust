@@ -51,9 +51,9 @@ mod tests {
     test_error::<Model>(&xml, false);
     let xml = get_xml("./resources/mivot/2/test_2_ko_2.4.xml");
     println!("testing 2.4"); // Name must not be empty.
-    test_error::<Model>(&xml, true);
+    test_error::<Model>(&xml, false);
     let xml = get_xml("./resources/mivot/2/test_2_ko_2.5.xml");
     println!("testing 2.5"); // Url must not be empty (when present).
-    test_error::<Model>(&xml, true);
+    test_error::<Model>(&xml, false);
   }
 }

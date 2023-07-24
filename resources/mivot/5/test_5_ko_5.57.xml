@@ -3,5 +3,5 @@
 <!-- Test Case 5.57: with PRIMARY_KEY not first  -->
 <INSTANCE dmid="_timesys" dmtype="model:TimeSys" >
 	<ATTRIBUTE dmrole="model:TimeSys.a" dmtype="ivoa:string" value="blah" />
-	<PRIMARY\_KEY dmtype="ivoa:string" value="TCB"/>
+	<PRIMARY\_KEY dmtype="ivoa:string" ref="TCB"/>
 </INSTANCE>
