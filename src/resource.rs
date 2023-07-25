@@ -415,7 +415,7 @@ mod tests {
   fn test_resource_read_write_w_end_info() {
     let xml = r#"<RESOURCE ID="yCat_5147" name="V/147"><DESCRIPTION>The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)</DESCRIPTION><TABLE ID="V_148_sdss12" name="V/148/sdss12"><FIELD name="DE_ICRS" datatype="char" ucd="pos.eq.dec;meta.main"></FIELD><DATA><TABLEDATA><TR><TD>b</TD></TR></TABLEDATA></DATA></TABLE><INFO name="matches" value="50">matching records</INFO><INFO name="warning" value="No center provided++++"/></RESOURCE>"#; // Test read
     let resource = test_read::<Resource<InMemTableDataRows>>(xml);
-    assert_eq!(resource.infos.get(0).unwrap().name, "matches");
-    assert_eq!(resource.infos.get(1).unwrap().name, "warning");
+    assert_eq!(resource.post_infos.get(0).unwrap().name, "matches");
+    assert_eq!(resource.post_infos.get(1).unwrap().name, "warning");
   }
 }
