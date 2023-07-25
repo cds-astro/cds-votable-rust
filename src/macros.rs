@@ -293,7 +293,7 @@ macro_rules! push2write_opt_string_attr {
       }
     }
   };
-  ($self:ident, $tag:ident, $arg:ident, $arg_str:literal) => {
+  ($self:ident, $tag:ident, $arg:ident, $arg_str:ident) => {
     paste! {
       if let Some([<$arg:lower>]) = &$self.[<$arg:lower>] {
         $tag.push_attribute((stringify!($arg_str), [<$arg:lower>].as_str()));
@@ -434,18 +434,6 @@ macro_rules! from_event_start_by_ref {
     elem.read_sub_elements_and_clean_by_ref(&mut $reader, &mut $reader_buff, &$context)?;
     elem
   }};
-}
-
-macro_rules! from_event_start_desc {
-  ($self:ident, $elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {
-    {
-      let mut desc = $elem::from_attributes($e.attributes())?;
-      $reader = desc.read_sub_elements_and_clean($reader, &mut $reader_buff, &())?;
-      if $self.description.replace(desc).is_some() {
-        eprintln!("WARNING: multiple occurrence of DESCRIPTION in VOTable. All but the last one are discarded.");
-      }
-    }
-  };
 }
 
 macro_rules! from_event_start_desc_by_ref {

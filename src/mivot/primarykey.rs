@@ -43,7 +43,10 @@ impl QuickXmlReadWrite for PrimaryKeyB {
       };
     }
     if tag.dmtype.as_str() == NULL || tag.value.as_str() == NULL {
-      Err(VOTableError::Custom(format!("Attributes dmtype value are mandatory in tag {}", Self::TAG)))
+      Err(VOTableError::Custom(format!(
+        "Attributes dmtype value are mandatory in tag {}",
+        Self::TAG
+      )))
     } else {
       Ok(tag)
     }

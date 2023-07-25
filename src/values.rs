@@ -449,9 +449,9 @@ impl QuickXmlReadWrite for Values {
       let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
       // Write tag + attributes
       push2write_opt_string_attr!(self, tag, ID);
-      push2write_opt_string_attr!(self, tag, type_, "type");
+      push2write_opt_string_attr!(self, tag, type_, type);
       push2write_opt_string_attr!(self, tag, null);
-      push2write_opt_string_attr!(self, tag, ref_, "ref");
+      push2write_opt_string_attr!(self, tag, ref_, ref);
       writer
         .write_event(Event::Start(tag.to_borrowed()))
         .map_err(VOTableError::Write)?;

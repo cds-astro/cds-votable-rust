@@ -111,6 +111,6 @@ mod test {
     file
       .read_to_string(&mut xml)
       .expect("Unable to read the file");
-    xml.replace(&['\n', '\t'][..], "")
+    xml.replace(&['\n', '\t', '\r'][..], "")
   }
 }

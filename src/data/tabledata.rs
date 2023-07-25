@@ -1,3 +1,7 @@
+use std::{
+  io::{BufRead, Write},
+  str,
+};
 
 use quick_xml::{
   events::{attributes::Attributes, BytesEnd, BytesStart, Event},
@@ -41,7 +45,9 @@ impl<C: TableDataContent> QuickXmlReadWrite for TableData<C> {
     reader_buff: &mut Vec<u8>,
     context: &Self::Context,
   ) -> Result<Reader<R>, VOTableError> {
-    self.content.read_datatable_content(reader, reader_buff, context)
+    self
+      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
+      .map(|()| reader)
   }
 
   fn read_sub_elements_by_ref<R: BufRead>(
