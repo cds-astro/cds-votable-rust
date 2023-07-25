@@ -193,7 +193,7 @@ mod tests {
   };
   use crate::data::Data;
   use crate::impls::VOTableValue;
-  use quick_xml::Writer;
+  use quick_xml::{Writer, Reader, events::Event};
   use serde_json::{Number, Value};
   use std::str::from_utf8;
 
@@ -486,4 +486,38 @@ In this version, NULL integer columns are written as an empty string
 
       // AVRO ?
   }*/
+
+  use std::io::Cursor;
+
+  pub(crate) fn test_read<X: QuickXmlReadWrite<Context = ()>>(xml: &str) -> X {
+    let mut reader = Reader::from_reader(Cursor::new(xml.as_bytes()));
+    let mut buff: Vec<u8> = Vec::with_capacity(xml.len());
+    loop {
+      let mut event = reader.read_event(&mut buff).unwrap();
+      match &mut event {
+        Event::Start(ref mut e) if e.local_name() == X::TAG_BYTES => {
+          let mut info = X::from_attributes(e.attributes()).unwrap();
+          info
+            .read_sub_elements_and_clean(reader, &mut buff, &())
+            .unwrap();
+          return info;
+        }
+        Event::Empty(ref mut e) if e.local_name() == X::TAG_BYTES => {
+          let info = X::from_attributes(e.attributes()).unwrap();
+          return info;
+        }
+        Event::Text(ref mut e) if e.escaped().is_empty() => (), // First even read
+        _ => unreachable!(),
+      }
+    }
+  }
+
+  pub(crate) fn test_writer<X: QuickXmlReadWrite<Context = ()>>(mut writable: X, xml: &str) {
+    // Test write
+    let mut writer = Writer::new(Cursor::new(Vec::new()));
+    writable.write(&mut writer, &()).unwrap();
+    let output = writer.into_inner().into_inner();
+    let output_str = unsafe { std::str::from_utf8_unchecked(output.as_slice()) };
+    assert_eq!(output_str, xml);
+  }
 }

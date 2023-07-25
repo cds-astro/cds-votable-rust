@@ -115,3 +115,22 @@ impl QuickXmlReadWrite for FieldRef {
     Ok(())
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use crate::{
+    fieldref::FieldRef,
+    tests::{test_read, test_writer},
+  };
+
+  #[test]
+  fn test_fieldref_read_write() {
+    let xml = r#"<FIELDref ref="col4" ucd="UCD" utype="ut"></FIELDref>"#; // Test read
+    let field = test_read::<FieldRef>(xml);
+    assert_eq!(field.ref_.as_str(), "col4");
+    assert_eq!(field.utype, Some("ut".to_string()));
+    assert_eq!(field.ucd, Some("UCD".to_string()));
+    // Test write
+    test_writer(field, xml)
+  }
+}

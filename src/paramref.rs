@@ -115,3 +115,22 @@ impl QuickXmlReadWrite for ParamRef {
     Ok(())
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use crate::{
+    paramref::ParamRef,
+    tests::{test_read, test_writer},
+  };
+
+  #[test]
+  fn test_paramref_read_write() {
+    let xml = r#"<PARAMref ref="col3" ucd="UCD" utype="ut"></PARAMref>"#; // Test read
+    let param = test_read::<ParamRef>(xml);
+    assert_eq!(param.ref_.as_str(), "col3");
+    assert_eq!(param.utype, Some("ut".to_string()));
+    assert_eq!(param.ucd, Some("UCD".to_string()));
+    // Test write
+    test_writer(param, xml)
+  }
+}

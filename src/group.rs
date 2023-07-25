@@ -439,3 +439,24 @@ impl QuickXmlReadWrite for TableGroup {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use crate::group::Group;
+  use crate::tests::{test_read, test_writer};
+
+  #[test]
+  fn test_group_read_write() {
+    let xml = r#"<GROUP ID="flux" name="Flux" ucd="phot.flux;em.radio.200-400MHz"><DESCRIPTION>Flux measured at 352MHz</DESCRIPTION><PARAM name="Freq" datatype="float" value="352" ucd="em.freq" utype="MHz"></PARAM><PARAMref ref="col4"/><PARAMref ref="col5"/></GROUP>"#;
+    let group = test_read::<Group>(xml);
+    assert_eq!(group.id, Some("flux".to_string()));
+    assert_eq!(group.name, Some("Flux".to_string()));
+    assert_eq!(group.ucd, Some("phot.flux;em.radio.200-400MHz".to_string()));
+    assert_eq!(
+      group.description.as_ref().unwrap().0,
+      "Flux measured at 352MHz"
+    );
+    assert_eq!(group.elems.len(), 3);
+    test_writer(group, xml);
+  }
+}

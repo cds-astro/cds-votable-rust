@@ -14,12 +14,8 @@ use quick_xml::{
 use serde_json::Value;
 
 use crate::{
+  data::{binary::Binary, binary2::Binary2, Data},
   impls::mem::VoidTableDataContent,
-  data::{
-  Data,
-  binary::Binary,
-  binary2::Binary2
-}
 };
 
 use super::{
@@ -387,5 +383,39 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
     writer
       .write_event(Event::End(tag.to_end()))
       .map_err(VOTableError::Write)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use crate::{
+    impls::mem::InMemTableDataRows,
+    resource::Resource,
+    tests::{test_read, test_writer},
+  };
+
+  #[test]
+  fn test_resource_read_write() {
+    let xml = r#"<RESOURCE ID="yCat_5147" name="V/147"><DESCRIPTION>The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)</DESCRIPTION><INFO name="matches" value="50">matching records</INFO><INFO name="warning" value="No center provided++++"/><TABLE ID="V_147_sdss12" name="V/147/sdss12"><FIELD name="RA_ICRS" datatype="char" ucd="pos.eq.ra;meta.main"></FIELD><DATA><TABLEDATA><TR><TD>a</TD></TR></TABLEDATA></DATA></TABLE><TABLE ID="V_148_sdss12" name="V/148/sdss12"><FIELD name="DE_ICRS" datatype="char" ucd="pos.eq.dec;meta.main"></FIELD><DATA><TABLEDATA><TR><TD>b</TD></TR></TABLEDATA></DATA></TABLE></RESOURCE>"#; // Test read
+    let resource = test_read::<Resource<InMemTableDataRows>>(xml);
+    assert_eq!(resource.id.as_ref().unwrap().as_str(), "yCat_5147");
+    assert_eq!(resource.name.as_ref().unwrap().as_str(), "V/147");
+    assert_eq!(
+      resource.description.as_ref().unwrap().0,
+      "The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)"
+    );
+    assert_eq!(resource.tables.len(), 2);
+    assert_eq!(resource.infos.get(0).unwrap().name, "matches");
+    assert_eq!(resource.infos.get(1).unwrap().name, "warning");
+    // Test write
+    test_writer(resource, xml);
+  }
+
+  #[test]
+  fn test_resource_read_write_w_end_info() {
+    let xml = r#"<RESOURCE ID="yCat_5147" name="V/147"><DESCRIPTION>The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)</DESCRIPTION><TABLE ID="V_148_sdss12" name="V/148/sdss12"><FIELD name="DE_ICRS" datatype="char" ucd="pos.eq.dec;meta.main"></FIELD><DATA><TABLEDATA><TR><TD>b</TD></TR></TABLEDATA></DATA></TABLE><INFO name="matches" value="50">matching records</INFO><INFO name="warning" value="No center provided++++"/></RESOURCE>"#; // Test read
+    let resource = test_read::<Resource<InMemTableDataRows>>(xml);
+    assert_eq!(resource.post_infos.get(0).unwrap().name, "matches");
+    assert_eq!(resource.post_infos.get(1).unwrap().name, "warning");
   }
 }

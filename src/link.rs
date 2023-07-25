@@ -157,3 +157,25 @@ impl QuickXmlReadWrite for Link {
     Ok(())
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use crate::{
+    link::Link,
+    tests::{test_read, test_writer},
+  };
+
+  #[test]
+  fn test_link_read_write() {
+    let xml =
+      r#"<LINK ID="id" content-role="doc" content-type="text/text" href="http://127.0.0.1/"/>"#; // Test read
+    let link = test_read::<Link>(xml);
+    assert_eq!(link.id, Some("id".to_string()));
+    assert_eq!(link.href, Some("http://127.0.0.1/".to_string()));
+    let role = format!("{}", link.content_role.as_ref().unwrap());
+    assert_eq!(role, "Doc".to_string());
+    assert_eq!(link.content_type, Some("text/text".to_string()));
+    // Test write
+    test_writer(link, xml);
+  }
+}
