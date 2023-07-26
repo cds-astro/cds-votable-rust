@@ -65,24 +65,25 @@ impl ElemType for InstanceElem {
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct NoRoleInstance {
   // MANDATORY
-  dmtype: String,
+  pub dmtype: String,
   // OPTIONAL
   #[serde(skip_serializing_if = "Option::is_none")]
-  dmid: Option<String>,
+  pub dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  primary_keys: Vec<PrimaryKeyA>,
+  pub primary_keys: Vec<PrimaryKeyA>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  elems: Vec<InstanceElem>,
+  pub elems: Vec<InstanceElem>,
 }
 impl NoRoleInstance {
   impl_non_empty_new!([dmtype], [dmid], [primary_keys, elems]);
   /*
-      function setters, enable the setting of an optional through self.set_"var"
+      function setters, enable the setting of an optional or mandatory through self.set_"var"
   */
   impl_builder_opt_string_attr!(dmid);
+  impl_builder_mand_string_attr!(dmtype);
 }
 impl InstanceType for NoRoleInstance {
-  fn push2_pk(&mut self, pk: PrimaryKeyA) {
+  fn push_pk(&mut self, pk: PrimaryKeyA) {
     self.primary_keys.push(pk);
   }
 }
@@ -95,8 +96,8 @@ impl ElemImpl<InstanceElem> for NoRoleInstance {
       @param dmid InstanceElem: the elem that needs to be pushed
       #returns ()
   */
-  fn push_to_elems(&mut self, elem: InstanceElem) {
-    self.elems.push(elem)
+  fn push_elems(&mut self, elem: InstanceElem) {
+    self.elems.push(elem);
   }
 }
 impl_quickrw_not_e!(
@@ -125,14 +126,14 @@ impl_quickrw_not_e!(
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct MandPKInstance {
   // MANDATORY
-  dmtype: String,
+  pub dmtype: String,
   // OPTIONAL
   #[serde(skip_serializing_if = "Option::is_none")]
-  dmid: Option<String>,
+  pub dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  primary_keys: Vec<PrimaryKeyA>,
+  pub primary_keys: Vec<PrimaryKeyA>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  elems: Vec<InstanceElem>,
+  pub elems: Vec<InstanceElem>,
 }
 impl MandPKInstance {
   impl_non_empty_new!([dmtype], [dmid], [primary_keys, elems]);
@@ -140,9 +141,10 @@ impl MandPKInstance {
       function setters, enable the setting of an optional through self.set_"var"
   */
   impl_builder_opt_string_attr!(dmid);
+  impl_builder_mand_string_attr!(dmtype);
 }
 impl InstanceType for MandPKInstance {
-  fn push2_pk(&mut self, pk: PrimaryKeyA) {
+  fn push_pk(&mut self, pk: PrimaryKeyA) {
     self.primary_keys.push(pk);
   }
 }
@@ -155,8 +157,8 @@ impl ElemImpl<InstanceElem> for MandPKInstance {
       @param dmid InstanceElem: the elem that needs to be pushed
       #returns ()
   */
-  fn push_to_elems(&mut self, elem: InstanceElem) {
-    self.elems.push(elem)
+  fn push_elems(&mut self, elem: InstanceElem) {
+    self.elems.push(elem);
   }
 }
 impl_quickrw_not_e!(
@@ -186,22 +188,24 @@ impl_quickrw_not_e!(
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Instance {
   // MANDATORY
-  dmrole: String,
-  dmtype: String,
+  pub dmrole: String,
+  pub dmtype: String,
   // OPTIONAL
   #[serde(skip_serializing_if = "Option::is_none")]
-  dmid: Option<String>,
+  pub dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  primary_keys: Vec<PrimaryKeyA>,
+  pub primary_keys: Vec<PrimaryKeyA>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  elems: Vec<InstanceElem>,
+  pub elems: Vec<InstanceElem>,
 }
 impl Instance {
   impl_non_empty_new!([dmrole, dmtype], [dmid], [primary_keys, elems]);
   impl_builder_opt_string_attr!(dmid);
+  impl_builder_mand_string_attr!(dmrole);
+  impl_builder_mand_string_attr!(dmtype);
 }
 impl InstanceType for Instance {
-  fn push2_pk(&mut self, pk: PrimaryKeyA) {
+  fn push_pk(&mut self, pk: PrimaryKeyA) {
     self.primary_keys.push(pk);
   }
 }
@@ -214,8 +218,8 @@ impl ElemImpl<InstanceElem> for Instance {
       @param dmid InstanceElem: the elem that needs to be pushed
       #returns ()
   */
-  fn push_to_elems(&mut self, elem: InstanceElem) {
-    self.elems.push(elem)
+  fn push_elems(&mut self, elem: InstanceElem) {
+    self.elems.push(elem);
   }
 }
 impl_quickrw_not_e!(
@@ -282,10 +286,10 @@ fn read_instance_sub_elem<
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
       Event::Start(ref e) => match e.local_name() {
-        AttributePatA::TAG_BYTES => instance.push_to_elems(InstanceElem::AttributePatA(
+        AttributePatA::TAG_BYTES => instance.push_elems(InstanceElem::AttributePatA(
           from_event_start!(AttributePatA, reader, reader_buff, e),
         )),
-        Instance::TAG_BYTES => instance.push_to_elems(InstanceElem::Instance(from_event_start!(
+        Instance::TAG_BYTES => instance.push_elems(InstanceElem::Instance(from_event_start!(
           Instance,
           reader,
           reader_buff,
@@ -296,14 +300,14 @@ fn read_instance_sub_elem<
             .attributes()
             .any(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
           {
-            instance.push_to_elems(InstanceElem::DynRef(from_event_start!(
+            instance.push_elems(InstanceElem::DynRef(from_event_start!(
               DynRef,
               reader,
               reader_buff,
               e
             )))
           } else {
-            instance.push_to_elems(InstanceElem::StaticRef(from_event_start!(
+            instance.push_elems(InstanceElem::StaticRef(from_event_start!(
               StaticRef,
               reader,
               reader_buff,
@@ -311,7 +315,7 @@ fn read_instance_sub_elem<
             )))
           }
         }
-        CollectionPatA::TAG_BYTES => instance.push_to_elems(InstanceElem::Collection(
+        CollectionPatA::TAG_BYTES => instance.push_elems(InstanceElem::Collection(
           from_event_start!(CollectionPatA, reader, reader_buff, e),
         )),
         _ => {
@@ -323,9 +327,9 @@ fn read_instance_sub_elem<
       },
       Event::Empty(ref e) => match e.local_name() {
         Instance::TAG_BYTES => {
-          instance.push_to_elems(InstanceElem::Instance(Instance::from_event_empty(e)?))
+          instance.push_elems(InstanceElem::Instance(Instance::from_event_empty(e)?))
         }
-        AttributePatA::TAG_BYTES => instance.push_to_elems(InstanceElem::AttributePatA(
+        AttributePatA::TAG_BYTES => instance.push_elems(InstanceElem::AttributePatA(
           AttributePatA::from_event_empty(e)?,
         )),
         DynRef::TAG_BYTES => {
@@ -333,15 +337,15 @@ fn read_instance_sub_elem<
             .attributes()
             .any(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
           {
-            instance.push_to_elems(InstanceElem::DynRef(DynRef::from_event_empty(e)?))
+            instance.push_elems(InstanceElem::DynRef(DynRef::from_event_empty(e)?))
           } else {
-            instance.push_to_elems(InstanceElem::StaticRef(StaticRef::from_event_empty(e)?))
+            instance.push_elems(InstanceElem::StaticRef(StaticRef::from_event_empty(e)?))
           }
         }
-        CollectionPatA::TAG_BYTES => instance.push_to_elems(InstanceElem::Collection(
+        CollectionPatA::TAG_BYTES => instance.push_elems(InstanceElem::Collection(
           CollectionPatA::from_event_empty(e)?,
         )),
-        PrimaryKeyA::TAG_BYTES => instance.push2_pk(PrimaryKeyA::from_event_empty(e)?),
+        PrimaryKeyA::TAG_BYTES => instance.push_pk(PrimaryKeyA::from_event_empty(e)?),
         _ => {
           return Err(VOTableError::UnexpectedEmptyTag(
             e.local_name().to_vec(),

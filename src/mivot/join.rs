@@ -38,19 +38,20 @@ impl ElemType for JoinWhereElem {
 */
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Join {
-  dmref: String,
+  pub dmref: String,
   #[serde(skip_serializing_if = "Option::is_none")]
-  sourceref: Option<String>,
+  pub sourceref: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  wheres: Vec<JoinWhereElem>,
+  pub wheres: Vec<JoinWhereElem>,
 }
 impl Join {
   impl_non_empty_new!([dmref], [sourceref], [wheres]);
   impl_builder_opt_string_attr!(sourceref);
+  impl_builder_mand_string_attr!(dmref);
 }
 impl ElemImpl<JoinWhereElem> for Join {
-  fn push_to_elems(&mut self, elem: JoinWhereElem) {
-    self.wheres.push(elem)
+  fn push_elems(&mut self, elem: JoinWhereElem) {
+    self.wheres.push(elem);
   }
 }
 impl_quickrw_not_e!(
@@ -73,18 +74,19 @@ impl_quickrw_not_e!(
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct SrcJoin {
   #[serde(skip_serializing_if = "Option::is_none")]
-  dmref: Option<String>,
-  sourceref: String,
+  pub dmref: Option<String>,
+  pub sourceref: String,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  wheres: Vec<JoinWhereElem>,
+  pub wheres: Vec<JoinWhereElem>,
 }
 impl SrcJoin {
   impl_non_empty_new!([sourceref], [dmref], [wheres]);
   impl_builder_opt_string_attr!(dmref);
+  impl_builder_mand_string_attr!(sourceref);
 }
 impl ElemImpl<JoinWhereElem> for SrcJoin {
-  fn push_to_elems(&mut self, elem: JoinWhereElem) {
-    self.wheres.push(elem)
+  fn push_elems(&mut self, elem: JoinWhereElem) {
+    self.wheres.push(elem);
   }
 }
 impl_quickrw_not_e!(
@@ -133,9 +135,9 @@ fn read_join_sub_elem<R: std::io::BufRead, T: QuickXmlReadWrite + ElemImpl<JoinW
             .attributes()
             .any(|attribute| attribute.as_ref().unwrap().key == "foreignkey".as_bytes())
           {
-            join.push_to_elems(JoinWhereElem::Where(Where::from_event_empty(e)?))
+            join.push_elems(JoinWhereElem::Where(Where::from_event_empty(e)?))
           } else {
-            join.push_to_elems(JoinWhereElem::NoFkWhere(NoFkWhere::from_event_empty(e)?))
+            join.push_elems(JoinWhereElem::NoFkWhere(NoFkWhere::from_event_empty(e)?))
           }
         }
         _ => {

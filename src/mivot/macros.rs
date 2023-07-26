@@ -521,6 +521,44 @@ macro_rules! impl_quickrw_not_e {
   };
 }
 
+macro_rules! impl_builder_mand_string_attr {
+  ($arg:ident) => {
+    paste! {
+      pub fn [<set_ $arg>]<I: Into<String>>(mut self, $arg: I) -> Self {
+        self.$arg = $arg.into();
+        self
+      }
+    }
+  };
+  ($arg:ident, $alt:ident) => {
+    paste! {
+      pub fn [<set_ $alt>]<I: Into<String>>(mut self, $arg: I) -> Self {
+        self.$arg = $arg.into();
+        self
+      }
+    }
+  };
+}
+
+macro_rules! impl_builder_mand_attr {
+  ($arg: ident, $t: ty) => {
+    paste! {
+      pub fn [<set_ $arg>](mut self, $arg: $t) -> Self {
+        self.$arg = $arg;
+        self
+      }
+    }
+  };
+  ($arg: ident, $alt:ident, $t: ty) => {
+    paste! {
+      pub fn [<set_ $alt>](mut self, $arg: $t) -> Self {
+        self.$arg = $arg;
+        self
+      }
+    }
+  };
+}
+
 macro_rules! opt_bstringify {
   ($ident:ident) => {
     bstringify!($ident)

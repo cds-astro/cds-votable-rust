@@ -18,11 +18,11 @@ use super::{instance::NoRoleInstance, r#where::Where};
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Templates {
   #[serde(skip_serializing_if = "Option::is_none")]
-  tableref: Option<String>,
+  pub tableref: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  wheres: Vec<NoFkWhere>,
+  pub wheres: Vec<NoFkWhere>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  instances: Vec<NoRoleInstance>,
+  pub instances: Vec<NoRoleInstance>,
 }
 impl Templates {
   fn new() -> Self {
@@ -33,6 +33,15 @@ impl Templates {
     }
   }
   impl_builder_opt_string_attr!(tableref);
+
+  pub fn push_where(mut self, where_: NoFkWhere) -> Self {
+    self.wheres.push(where_);
+    self
+  }
+  pub fn push_instance(mut self, instance: NoRoleInstance) -> Self {
+    self.instances.push(instance);
+    self
+  }
 }
 impl_quickrw_not_e!(
   [],                     // MANDATORY ATTRIBUTES

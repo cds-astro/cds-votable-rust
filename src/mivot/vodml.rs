@@ -43,13 +43,13 @@ use std::str;
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct Vodml {
   #[serde(skip_serializing_if = "Option::is_none")]
-  report: Option<Report>,
+  pub report: Option<Report>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  models: Vec<Model>,
+  pub models: Vec<Model>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  globals: Vec<Globals>,
+  pub globals: Vec<Globals>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  templates: Vec<Templates>,
+  pub templates: Vec<Templates>,
   // extra attributes
   #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
   pub extra: HashMap<String, Value>,
@@ -57,6 +57,19 @@ pub struct Vodml {
 impl Vodml {
   impl_builder_opt_attr!(report, Report);
   impl_builder_insert_extra!();
+
+  pub fn push_model(mut self, model: Model) -> Self {
+    self.models.push(model);
+    self
+  }
+  pub fn push_global(mut self, global: Globals) -> Self {
+    self.globals.push(global);
+    self
+  }
+  pub fn push_template(mut self, template: Templates) -> Self {
+    self.templates.push(template);
+    self
+  }
 }
 impl QuickXmlReadWrite for Vodml {
   const TAG: &'static str = "VODML";

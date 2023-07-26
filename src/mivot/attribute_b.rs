@@ -15,14 +15,14 @@ use std::str;
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct AttributePatB {
   // MANDATORY
-  dmrole: String,
-  dmtype: String,
-  value: String,
+  pub dmrole: String,
+  pub dmtype: String,
+  pub value: String,
   // OPTIONAL
   #[serde(skip_serializing_if = "Option::is_none")]
-  array_index: Option<String>,
+  pub array_index: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  unit: Option<String>,
+  pub unit: Option<String>,
 }
 impl AttributePatB {
   impl_empty_new!([dmrole, dmtype, value], [array_index, unit]);
@@ -31,6 +31,9 @@ impl AttributePatB {
   */
   impl_builder_opt_string_attr!(array_index);
   impl_builder_opt_string_attr!(unit);
+  impl_builder_mand_string_attr!(dmrole);
+  impl_builder_mand_string_attr!(dmtype);
+  impl_builder_mand_string_attr!(value);
 }
 impl_quickrw_e!(
   [dmrole, dmtype, value], // MANDATORY ATTRIBUTES

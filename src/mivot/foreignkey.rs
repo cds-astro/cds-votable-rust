@@ -11,10 +11,11 @@ use std::str;
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ForeignKey {
   #[serde(rename = "ref")]
-  ref_: String,
+  pub ref_: String,
 }
 impl ForeignKey {
   impl_empty_new!([ref_], []);
+  impl_builder_mand_string_attr!(ref_, ref);
 }
 
 impl_quickrw_e!(

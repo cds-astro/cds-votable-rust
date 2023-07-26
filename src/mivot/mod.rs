@@ -29,15 +29,15 @@ pub trait ElemType {
   fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError>;
 }
 pub trait ElemImpl<T: ElemType> {
-  fn push_to_elems(&mut self, elem: T);
+  fn push_elems(&mut self, elem: T) ;
 }
 
 pub trait InstanceType {
-  fn push2_pk(&mut self, pk: PrimaryKeyA);
+  fn push_pk(&mut self, pk: PrimaryKeyA) ;
 }
 
 pub trait ReferenceType {
-  fn push2_fk(&mut self, fk: ForeignKey);
+  fn push_fk(&mut self, fk: ForeignKey);
 }
 
 pub trait CollectionType {

@@ -17,11 +17,13 @@ use std::str;
 */
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct StaticRef {
-  dmrole: String,
-  dmref: String,
+  pub dmrole: String,
+  pub dmref: String,
 }
 impl StaticRef {
   impl_empty_new!([dmrole, dmref], []);
+  impl_builder_mand_string_attr!(dmrole);
+  impl_builder_mand_string_attr!(dmref);
 }
 impl_quickrw_e! {
   [dmrole, dmref],
@@ -40,16 +42,18 @@ impl_quickrw_e! {
 */
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct DynRef {
-  dmrole: String,
-  sourceref: String,
+  pub dmrole: String,
+  pub sourceref: String,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  foreign_keys: Vec<ForeignKey>,
+  pub foreign_keys: Vec<ForeignKey>,
 }
 impl DynRef {
   impl_non_empty_new!([dmrole, sourceref], [], [foreign_keys]);
+  impl_builder_mand_string_attr!(dmrole);
+  impl_builder_mand_string_attr!(sourceref);
 }
 impl ReferenceType for DynRef {
-  fn push2_fk(&mut self, fk: ForeignKey) {
+  fn push_fk(&mut self, fk: ForeignKey) {
     self.foreign_keys.push(fk);
   }
 }
@@ -112,7 +116,7 @@ fn read_dynref_sub_elem<R: std::io::BufRead>(
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
       Event::Empty(ref e) => match e.local_name() {
-        ForeignKey::TAG_BYTES => reference.push2_fk(ForeignKey::from_event_empty(e)?),
+        ForeignKey::TAG_BYTES => reference.push_fk(ForeignKey::from_event_empty(e)?),
         _ => {
           return Err(VOTableError::UnexpectedEmptyTag(
             e.local_name().to_vec(),

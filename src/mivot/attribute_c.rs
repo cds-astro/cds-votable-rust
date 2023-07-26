@@ -14,27 +14,28 @@ use std::str;
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct AttributePatC {
   // MANDATORY
-  dmtype: String,
+  pub dmtype: String,
   // OPTIONAL
   #[serde(rename = "ref", skip_serializing_if = "Option::is_none")]
-  ref_: Option<String>,
+  pub ref_: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  value: Option<String>,
+  pub value: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  array_index: Option<String>,
+  pub array_index: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  unit: Option<String>,
+  pub unit: Option<String>,
 }
 impl AttributePatC {
   impl_empty_new!([dmtype], [ref_, value, array_index, unit]);
 
   /*
-      function setters, enable the setting of an optional through self.set_"var"
+      function setters, enable the setting of an optional or mandatory through self.set_"var"
   */
-  impl_builder_opt_string_attr!(ref_);
+  impl_builder_opt_string_attr!(ref_, ref);
   impl_builder_opt_string_attr!(value);
   impl_builder_opt_string_attr!(array_index);
   impl_builder_opt_string_attr!(unit);
+  impl_builder_mand_string_attr!(dmtype);
 }
 impl QuickXmlReadWrite for AttributePatC {
   const TAG: &'static str = "ATTRIBUTE";
@@ -58,7 +59,7 @@ impl QuickXmlReadWrite for AttributePatC {
 
         b"ref" => {
           value_checker(value, "ref")?;
-          tag.set_ref_(value)
+          tag.set_ref(value)
         }
 
         b"value" => tag.set_value(value),

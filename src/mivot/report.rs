@@ -1,4 +1,5 @@
 use crate::{error::VOTableError, QuickXmlReadWrite};
+use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesText, Event},
   Reader, Writer,
@@ -55,6 +56,8 @@ impl Report {
       content: None,
     }
   }
+  impl_builder_mand_attr!(status, Status);
+  impl_builder_opt_string_attr!(content);
 }
 
 impl QuickXmlReadWrite for Report {

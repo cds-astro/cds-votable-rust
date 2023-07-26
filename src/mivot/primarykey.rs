@@ -11,11 +11,13 @@ use std::str;
 */
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct PrimaryKeyB {
-  dmtype: String,
-  value: String,
+  pub dmtype: String,
+  pub value: String,
 }
 impl PrimaryKeyB {
   impl_empty_new!([dmtype, value], []);
+  impl_builder_mand_string_attr!(dmtype);
+  impl_builder_mand_string_attr!(value);
 }
 impl QuickXmlReadWrite for PrimaryKeyB {
   const TAG: &'static str = "PRIMARY\\_KEY";
@@ -62,11 +64,13 @@ impl QuickXmlReadWrite for PrimaryKeyB {
 */
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct PrimaryKeyA {
-  dmtype: String,
-  ref_: String,
+  pub dmtype: String,
+  pub ref_: String,
 }
 impl PrimaryKeyA {
   impl_empty_new!([dmtype, ref_], []);
+  impl_builder_mand_string_attr!(dmtype);
+  impl_builder_mand_string_attr!(ref_, ref);
 }
 impl_quickrw_e!(
   [dmtype, "dmtype", ref_, "ref"], // MANDATORY ATTRIBUTES

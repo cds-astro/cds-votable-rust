@@ -60,23 +60,29 @@ impl ElemType for CollectionElem {
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct CollectionPatA {
   // MANDATORY
-  dmrole: String,
+  pub dmrole: String,
   // OPTIONAL
   #[serde(skip_serializing_if = "Option::is_none")]
-  dmid: Option<String>,
+  pub dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  primary_keys: Vec<PrimaryKeyB>,
+  pub primary_keys: Vec<PrimaryKeyB>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  elems: Vec<CollectionElem>,
-  checker: Vec<String>,
+  pub elems: Vec<CollectionElem>,
+  pub checker: Vec<String>,
 }
 impl CollectionPatA {
   impl_non_empty_new!([dmrole], [dmid], [primary_keys, elems, checker]);
   impl_builder_opt_string_attr!(dmid);
+  impl_builder_mand_string_attr!(dmrole);
+
+  pub fn push_pk(mut self, pk: PrimaryKeyB) -> Self {
+    self.primary_keys.push(pk);
+    self
+  }
 }
 impl ElemImpl<CollectionElem> for CollectionPatA {
-  fn push_to_elems(&mut self, elem: CollectionElem) {
-    self.elems.push(elem)
+  fn push_elems(&mut self, elem: CollectionElem) {
+    self.elems.push(elem);
   }
 }
 impl CollectionType for CollectionPatA {
@@ -128,10 +134,16 @@ pub struct CollectionPatB {
 }
 impl CollectionPatB {
   impl_non_empty_new!([dmid], [], [primary_keys, elems, checker]);
+  impl_builder_mand_string_attr!(dmid);
+
+  pub fn push_pk(mut self, pk: PrimaryKeyB) -> Self {
+    self.primary_keys.push(pk);
+    self
+  }
 }
 impl ElemImpl<CollectionElem> for CollectionPatB {
-  fn push_to_elems(&mut self, elem: CollectionElem) {
-    self.elems.push(elem)
+  fn push_elems(&mut self, elem: CollectionElem) {
+    self.elems.push(elem);
   }
 }
 impl CollectionType for CollectionPatB {
@@ -188,10 +200,15 @@ pub struct CollectionPatC {
 impl CollectionPatC {
   impl_non_empty_new!([], [dmid], [primary_keys, elems, checker]);
   impl_builder_opt_string_attr!(dmid);
+
+  pub fn push_pk(mut self, pk: PrimaryKeyB) -> Self {
+    self.primary_keys.push(pk);
+    self
+  }
 }
 impl ElemImpl<CollectionElem> for CollectionPatC {
-  fn push_to_elems(&mut self, elem: CollectionElem) {
-    self.elems.push(elem)
+  fn push_elems(&mut self, elem: CollectionElem) {
+    self.elems.push(elem);
   }
 }
 impl CollectionType for CollectionPatC {
@@ -251,7 +268,7 @@ fn read_collection_sub_elem<
       Event::Start(ref e) => match e.local_name() {
         AttributePatC::TAG_BYTES => {
           collection.push_to_checker("attribute".to_owned());
-          collection.push_to_elems(CollectionElem::Attribute(from_event_start!(
+          collection.push_elems(CollectionElem::Attribute(from_event_start!(
             AttributePatC,
             reader,
             reader_buff,
@@ -260,7 +277,7 @@ fn read_collection_sub_elem<
         }
         NoRoleInstance::TAG_BYTES => {
           collection.push_to_checker("instance".to_owned());
-          collection.push_to_elems(CollectionElem::Instance(from_event_start!(
+          collection.push_elems(CollectionElem::Instance(from_event_start!(
             NoRoleInstance,
             reader,
             reader_buff,
@@ -273,7 +290,7 @@ fn read_collection_sub_elem<
             .attributes()
             .any(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
           {
-            collection.push_to_elems(CollectionElem::DynRef(from_event_start!(
+            collection.push_elems(CollectionElem::DynRef(from_event_start!(
               DynRef,
               reader,
               reader_buff,
@@ -287,7 +304,7 @@ fn read_collection_sub_elem<
         }
         CollectionPatC::TAG_BYTES => {
           collection.push_to_checker("collection".to_owned());
-          collection.push_to_elems(CollectionElem::Collection(from_event_start!(
+          collection.push_elems(CollectionElem::Collection(from_event_start!(
             CollectionPatC,
             reader,
             reader_buff,
@@ -296,7 +313,7 @@ fn read_collection_sub_elem<
         }
         Join::TAG_BYTES => {
           collection.push_to_checker("join".to_owned());
-          collection.push_to_elems(CollectionElem::Join(from_event_start!(
+          collection.push_elems(CollectionElem::Join(from_event_start!(
             Join,
             reader,
             reader_buff,
@@ -313,7 +330,7 @@ fn read_collection_sub_elem<
       Event::Empty(ref e) => match e.local_name() {
         AttributePatC::TAG_BYTES => {
           collection.push_to_checker("attribute".to_owned());
-          collection.push_to_elems(CollectionElem::Attribute(AttributePatC::from_event_empty(
+          collection.push_elems(CollectionElem::Attribute(AttributePatC::from_event_empty(
             e,
           )?))
         }
@@ -323,7 +340,7 @@ fn read_collection_sub_elem<
             .attributes()
             .any(|attribute| attribute.as_ref().unwrap().key == "dmref".as_bytes())
           {
-            collection.push_to_elems(CollectionElem::StaticRef(StaticRef::from_event_empty(e)?))
+            collection.push_elems(CollectionElem::StaticRef(StaticRef::from_event_empty(e)?))
           } else {
             return Err(VOTableError::Custom(
               "A dynamic reference shouldn't be empty".to_owned(),
@@ -332,19 +349,19 @@ fn read_collection_sub_elem<
         }
         CollectionPatC::TAG_BYTES => {
           collection.push_to_checker("collection".to_owned());
-          collection.push_to_elems(CollectionElem::Collection(
+          collection.push_elems(CollectionElem::Collection(
             CollectionPatC::from_event_empty(e)?,
           ))
         }
         NoRoleInstance::TAG_BYTES => {
           collection.push_to_checker("instance".to_owned());
-          collection.push_to_elems(CollectionElem::Instance(NoRoleInstance::from_event_empty(
+          collection.push_elems(CollectionElem::Instance(NoRoleInstance::from_event_empty(
             e,
           )?))
         }
         Join::TAG_BYTES => {
           collection.push_to_checker("join".to_owned());
-          collection.push_to_elems(CollectionElem::Join(Join::from_event_empty(e)?))
+          collection.push_elems(CollectionElem::Join(Join::from_event_empty(e)?))
         }
         _ => {
           return Err(VOTableError::UnexpectedEmptyTag(
@@ -393,7 +410,7 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
       Event::Start(ref e) => match e.local_name() {
         MandPKInstance::TAG_BYTES => {
           collection.push_to_checker("instance".to_owned());
-          collection.push_to_elems(CollectionElem::PKInstance(from_event_start!(
+          collection.push_elems(CollectionElem::PKInstance(from_event_start!(
             MandPKInstance,
             reader,
             reader_buff,
@@ -406,7 +423,7 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
             .attributes()
             .any(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
           {
-            collection.push_to_elems(CollectionElem::DynRef(from_event_start!(
+            collection.push_elems(CollectionElem::DynRef(from_event_start!(
               DynRef,
               reader,
               reader_buff,
@@ -420,7 +437,7 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
         }
         CollectionPatC::TAG_BYTES => {
           collection.push_to_checker("collection".to_owned());
-          collection.push_to_elems(CollectionElem::Collection(from_event_start!(
+          collection.push_elems(CollectionElem::Collection(from_event_start!(
             CollectionPatC,
             reader,
             reader_buff,
@@ -429,7 +446,7 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
         }
         SrcJoin::TAG_BYTES => {
           collection.push_to_checker("join".to_owned());
-          collection.push_to_elems(CollectionElem::SrcJoin(from_event_start!(
+          collection.push_elems(CollectionElem::SrcJoin(from_event_start!(
             SrcJoin,
             reader,
             reader_buff,
@@ -450,7 +467,7 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
             .attributes()
             .any(|attribute| attribute.as_ref().unwrap().key == "dmref".as_bytes())
           {
-            collection.push_to_elems(CollectionElem::StaticRef(StaticRef::from_event_empty(e)?))
+            collection.push_elems(CollectionElem::StaticRef(StaticRef::from_event_empty(e)?))
           } else {
             return Err(VOTableError::Custom(
               "A dynamic reference shouldn't be empty".to_owned(),
@@ -459,11 +476,11 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
         }
         SrcJoin::TAG_BYTES => {
           collection.push_to_checker("join".to_owned());
-          collection.push_to_elems(CollectionElem::SrcJoin(SrcJoin::from_event_empty(e)?))
+          collection.push_elems(CollectionElem::SrcJoin(SrcJoin::from_event_empty(e)?))
         }
         CollectionPatC::TAG_BYTES => {
           collection.push_to_checker("collection".to_owned());
-          collection.push_to_elems(CollectionElem::Collection(
+          collection.push_elems(CollectionElem::Collection(
             CollectionPatC::from_event_empty(e)?,
           ))
         }

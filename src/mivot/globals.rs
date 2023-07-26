@@ -37,11 +37,11 @@ impl ElemType for GlobalsElem {
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct Globals {
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  elems: Vec<GlobalsElem>,
+  pub elems: Vec<GlobalsElem>,
 }
 impl ElemImpl<GlobalsElem> for Globals {
-  fn push_to_elems(&mut self, elem: GlobalsElem) {
-    self.elems.push(elem)
+  fn push_elems(&mut self, elem: GlobalsElem) {
+    self.elems.push(elem);
   }
 }
 impl_quickrw_not_e_no_a!("GLOBALS", Globals, (), [], read_globals_sub_elem, [elems]);
@@ -70,10 +70,10 @@ fn read_globals_sub_elem<R: std::io::BufRead, T: QuickXmlReadWrite + ElemImpl<Gl
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
       Event::Start(ref e) => match e.local_name() {
-        NoRoleInstance::TAG_BYTES => globals.push_to_elems(GlobalsElem::Instance(
+        NoRoleInstance::TAG_BYTES => globals.push_elems(GlobalsElem::Instance(
           from_event_start!(NoRoleInstance, reader, reader_buff, e),
         )),
-        CollectionPatB::TAG_BYTES => globals.push_to_elems(GlobalsElem::Collection(
+        CollectionPatB::TAG_BYTES => globals.push_elems(GlobalsElem::Collection(
           from_event_start!(CollectionPatB, reader, reader_buff, e),
         )),
         _ => {
@@ -85,9 +85,9 @@ fn read_globals_sub_elem<R: std::io::BufRead, T: QuickXmlReadWrite + ElemImpl<Gl
       },
       Event::Empty(ref e) => match e.local_name() {
         NoRoleInstance::TAG_BYTES => {
-          globals.push_to_elems(GlobalsElem::Instance(NoRoleInstance::from_event_empty(e)?))
+          globals.push_elems(GlobalsElem::Instance(NoRoleInstance::from_event_empty(e)?))
         }
-        CollectionPatB::TAG_BYTES => globals.push_to_elems(GlobalsElem::Collection(
+        CollectionPatB::TAG_BYTES => globals.push_elems(GlobalsElem::Collection(
           CollectionPatB::from_event_empty(e)?,
         )),
         _ => {
