@@ -72,9 +72,9 @@ impl QuickXmlReadWrite for Report {
             report.status = Status::from_str(value);
             report
           } else {
-            return Err(VOTableError::Custom(format!(
-              "Attribute status is mandatory it musn't be empty"
-            )));
+            return Err(VOTableError::Custom(
+              "Attribute status is mandatory it musn't be empty".to_owned(),
+            ));
           }
         }
         _ => {

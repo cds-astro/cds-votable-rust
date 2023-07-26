@@ -126,9 +126,9 @@ fn read_dynref_sub_elem<R: std::io::BufRead>(
     }
   }
   if reference.foreign_keys.is_empty() {
-    return Err(VOTableError::Custom(
+    Err(VOTableError::Custom(
       "A dynamic reference should have 1 or more foreign keys".to_owned(),
-    ));
+    ))
   } else {
     Ok(reader)
   }

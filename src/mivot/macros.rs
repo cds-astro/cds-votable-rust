@@ -247,6 +247,30 @@ macro_rules! impl_write_e {
 /// }
 /// ```
 macro_rules! impl_write_not_e {
+  ([] $(,[$($elems:ident),*])?) => {
+    paste! {
+      fn write<W: std::io::Write>(
+        &mut self,
+        writer: &mut Writer<W>,
+        _context: &Self::Context,
+      ) -> Result<(), crate::error::VOTableError> {
+        if $($(self.$elems.is_empty())&&*)? {
+          let elem_writer = writer.create_element(Self::TAG_BYTES);
+          elem_writer.write_empty().map_err(VOTableError::Write)?;
+          Ok(())
+        } else {
+          let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+          writer
+              .write_event(Event::Start(tag.to_borrowed()))
+              .map_err(VOTableError::Write)?;
+            $($(write_elem_vec_no_context!(self, $elems, writer);)*)?
+          writer
+              .write_event(Event::End(tag.to_end()))
+              .map_err(VOTableError::Write)
+        }
+      }
+    }
+  };
   ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*], [] $(,[$($elems:ident),*])?) => {
     paste! {
       fn write<W: std::io::Write>(
@@ -276,41 +300,42 @@ macro_rules! impl_write_not_e {
         }
       }
     }
-};
+  };
     ([$($mandatory:ident $(, $mandname:literal)?),*], [$($optional:ident $(, $name:literal)?),*], [$($orderelem:ident),*] $(,[$($elems:ident),*])?) => {
         paste! {
           fn write<W: std::io::Write>(
             &mut self,
             writer: &mut Writer<W>,
             _context: &Self::Context,
-          ) -> Result<(), crate::error::VOTableError> { //TODO CHECK ELEMS TOO
+          ) -> Result<(), crate::error::VOTableError> {
             // Check if all $orderelem are empty
             let all_orderelem_empty = $(self.$orderelem.is_empty())&&*;
 
-            let all_elems_empty = true;
+            let _all_elems_empty = true;
             // Check if all $elems are empty, if $elems is present
-            $(let all_elems_empty = $(self.$elems.is_empty();)&&*)?
+            $(let _all_elems_empty = $(self.$elems.is_empty();)&&*)?
 
-            if all_orderelem_empty && all_elems_empty {
-                let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-                write_empty_mandatory_attributes!(elem_writer, self, $($mandatory $(, $mandname)?),*);
-                write_empty_optional_attributes!(elem_writer, self, $($optional $(, $name)?),*);
-                elem_writer.write_empty().map_err(VOTableError::Write)?;
-                return Ok(())
+            if all_orderelem_empty && _all_elems_empty {
+              let mut elem_writer = writer.create_element(Self::TAG_BYTES);
+              write_empty_mandatory_attributes!(elem_writer, self, $($mandatory $(, $mandname)?),*);
+              write_empty_optional_attributes!(elem_writer, self, $($optional $(, $name)?),*);
+              elem_writer.write_empty().map_err(VOTableError::Write)?;
+              return Ok(())
+            } else {
+              let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+              //MANDATORY
+              write_non_empty_mandatory_attributes!(tag, self, $($mandatory $(, $mandname)?),*);
+              //OPTIONAL
+              write_non_empty_optional_attributes!(tag, self, $($optional $(, $name)?),*);
+              writer
+                  .write_event(Event::Start(tag.to_borrowed()))
+                  .map_err(VOTableError::Write)?;
+                $(write_elem_vec_empty_context!(self, $orderelem, writer);)*
+                $($(write_elem_vec_no_context!(self, $elems, writer);)*)?
+              return writer
+                  .write_event(Event::End(tag.to_end()))
+                  .map_err(VOTableError::Write)
             };
-            let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-            //MANDATORY
-            write_non_empty_mandatory_attributes!(tag, self, $($mandatory $(, $mandname)?),*);
-            //OPTIONAL
-            write_non_empty_optional_attributes!(tag, self, $($optional $(, $name)?),*);
-            writer
-                .write_event(Event::Start(tag.to_borrowed()))
-                .map_err(VOTableError::Write)?;
-              $(write_elem_vec_empty_context!(self, $orderelem, writer);)*
-              $($(write_elem_vec_no_context!(self, $elems, writer);)*)?
-            writer
-                .write_event(Event::End(tag.to_end()))
-                .map_err(VOTableError::Write)
           }
         }
     };
@@ -454,7 +479,7 @@ macro_rules! impl_quickrw_not_e_no_a {
             @param context &Self::Context: the context used for writing UNUSED
             #returns Result<(), VOTableError>: returns an error if writing doesn't work
         */
-        impl_write_not_e!([], [] ,[$($orderelem),*] $(,[$($elems),*])?);
+        impl_write_not_e!([$($orderelem),*] $(,[$($elems),*])?);
       }
     }
   };

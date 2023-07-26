@@ -70,12 +70,10 @@ impl QuickXmlReadWrite for Vodml {
       let attr = attr_res.map_err(VOTableError::Attr)?;
       let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
       let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      vodml = match attr.key {
-        _ => vodml.insert_extra(
-          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
-          Value::String(value.into()),
-        ),
-      }
+      vodml = vodml.insert_extra(
+        str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
+        Value::String(value.into()),
+      )
     }
     Ok(vodml)
   }

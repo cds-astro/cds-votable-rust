@@ -29,7 +29,7 @@ impl QuickXmlReadWrite for PrimaryKeyB {
       let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
       tag = match attr.key {
         b"dmtype" => {
-          value_checker(value, &"dmtype")?;
+          value_checker(value, "dmtype")?;
           tag.dmtype = value.to_string();
           tag
         }

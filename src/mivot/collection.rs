@@ -271,8 +271,7 @@ fn read_collection_sub_elem<
           collection.push_to_checker("reference".to_owned());
           if e
             .attributes()
-            .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
-            .is_some()
+            .any(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
           {
             collection.push_to_elems(CollectionElem::DynRef(from_event_start!(
               DynRef,
@@ -322,8 +321,7 @@ fn read_collection_sub_elem<
           collection.push_to_checker("reference".to_owned());
           if e
             .attributes()
-            .find(|attribute| attribute.as_ref().unwrap().key == "dmref".as_bytes())
-            .is_some()
+            .any(|attribute| attribute.as_ref().unwrap().key == "dmref".as_bytes())
           {
             collection.push_to_elems(CollectionElem::StaticRef(StaticRef::from_event_empty(e)?))
           } else {
@@ -406,8 +404,7 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
           collection.push_to_checker("reference".to_owned());
           if e
             .attributes()
-            .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
-            .is_some()
+            .any(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
           {
             collection.push_to_elems(CollectionElem::DynRef(from_event_start!(
               DynRef,
@@ -451,8 +448,7 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
           collection.push_to_checker("reference".to_owned());
           if e
             .attributes()
-            .find(|attribute| attribute.as_ref().unwrap().key == "dmref".as_bytes())
-            .is_some()
+            .any(|attribute| attribute.as_ref().unwrap().key == "dmref".as_bytes())
           {
             collection.push_to_elems(CollectionElem::StaticRef(StaticRef::from_event_empty(e)?))
           } else {

@@ -121,20 +121,17 @@ fn read_join_sub_elem<R: std::io::BufRead, T: QuickXmlReadWrite + ElemImpl<JoinW
   loop {
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
-      Event::Start(ref e) => match e.local_name() {
-        _ => {
-          return Err(VOTableError::UnexpectedStartTag(
-            e.local_name().to_vec(),
-            T::TAG,
-          ))
-        }
-      },
+      Event::Start(ref e) => {
+        return Err(VOTableError::UnexpectedStartTag(
+          e.local_name().to_vec(),
+          T::TAG,
+        ))
+      }
       Event::Empty(ref e) => match e.local_name() {
         Where::TAG_BYTES => {
           if e
             .attributes()
-            .find(|attribute| attribute.as_ref().unwrap().key == "foreignkey".as_bytes())
-            .is_some()
+            .any(|attribute| attribute.as_ref().unwrap().key == "foreignkey".as_bytes())
           {
             join.push_to_elems(JoinWhereElem::Where(Where::from_event_empty(e)?))
           } else {

@@ -46,11 +46,11 @@ pub trait CollectionType {
 }
 
 pub(crate) fn value_checker(value: &str, attribute: &str) -> Result<(), VOTableError> {
-  if value.len() == 0 && value.is_empty() {
-    return Err(VOTableError::Custom(format!(
+  if value.is_empty() {
+    Err(VOTableError::Custom(format!(
       "If attribute {} is present it musn't be empty",
       attribute
-    )));
+    )))
   } else {
     Ok(())
   }

@@ -70,7 +70,7 @@ impl QuickXmlReadWrite for AttributePatA {
         b"arrayindex" => {
           value_checker(value, "arrayindex")?;
           if value.parse::<i32>().is_ok() {
-            if !(value.parse::<i32>().unwrap() < 0) {
+            if value.parse::<i32>().unwrap() >= 0 {
               tag.set_array_index(value)
             } else {
               return Err(VOTableError::Custom(

@@ -250,11 +250,11 @@ fn read_mand_pk_instance_sub_elem<R: std::io::BufRead>(
 ) -> Result<quick_xml::Reader<R>, VOTableError> {
   let reader = read_instance_sub_elem(instance, _context, reader, reader_buff)?;
   if instance.primary_keys.is_empty() {
-    return Err(VOTableError::Custom(
+    Err(VOTableError::Custom(
       "When a collection is child of globals then its instances need a primary key.".to_owned(),
-    ));
+    ))
   } else {
-    return Ok(reader);
+    Ok(reader)
   }
 }
 
@@ -294,8 +294,7 @@ fn read_instance_sub_elem<
         DynRef::TAG_BYTES => {
           if e
             .attributes()
-            .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
-            .is_some()
+            .any(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
           {
             instance.push_to_elems(InstanceElem::DynRef(from_event_start!(
               DynRef,
@@ -332,8 +331,7 @@ fn read_instance_sub_elem<
         DynRef::TAG_BYTES => {
           if e
             .attributes()
-            .find(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
-            .is_some()
+            .any(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
           {
             instance.push_to_elems(InstanceElem::DynRef(DynRef::from_event_empty(e)?))
           } else {
