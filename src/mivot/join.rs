@@ -45,9 +45,9 @@ pub struct Join {
   pub wheres: Vec<JoinWhereElem>,
 }
 impl Join {
-  impl_non_empty_new!([dmref], [sourceref], [wheres]);
+  impl_new!([dmref], [sourceref], [wheres]);
+  impl_empty_new!([dmref], [sourceref], [wheres]);
   impl_builder_opt_string_attr!(sourceref);
-  impl_builder_mand_string_attr!(dmref);
 }
 impl ElemImpl<JoinWhereElem> for Join {
   fn push_elems(&mut self, elem: JoinWhereElem) {
@@ -80,9 +80,9 @@ pub struct SrcJoin {
   pub wheres: Vec<JoinWhereElem>,
 }
 impl SrcJoin {
-  impl_non_empty_new!([sourceref], [dmref], [wheres]);
+  impl_new!([sourceref], [dmref], [wheres]);
+  impl_empty_new!([sourceref], [dmref], [wheres]);
   impl_builder_opt_string_attr!(dmref);
-  impl_builder_mand_string_attr!(sourceref);
 }
 impl ElemImpl<JoinWhereElem> for SrcJoin {
   fn push_elems(&mut self, elem: JoinWhereElem) {

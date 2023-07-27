@@ -71,9 +71,9 @@ pub struct CollectionPatA {
   pub checker: Vec<String>,
 }
 impl CollectionPatA {
-  impl_non_empty_new!([dmrole], [dmid], [primary_keys, elems, checker]);
+  impl_new!([dmrole], [dmid], [primary_keys, elems, checker]);
+  impl_empty_new!([dmrole], [dmid], [primary_keys, elems, checker]);
   impl_builder_opt_string_attr!(dmid);
-  impl_builder_mand_string_attr!(dmrole);
 
   pub fn push_pk(mut self, pk: PrimaryKeyB) -> Self {
     self.primary_keys.push(pk);
@@ -133,8 +133,8 @@ pub struct CollectionPatB {
   checker: Vec<String>,
 }
 impl CollectionPatB {
-  impl_non_empty_new!([dmid], [], [primary_keys, elems, checker]);
-  impl_builder_mand_string_attr!(dmid);
+  impl_new!([dmid], [], [primary_keys, elems, checker]);
+  impl_empty_new!([dmid], [], [primary_keys, elems, checker]);
 
   pub fn push_pk(mut self, pk: PrimaryKeyB) -> Self {
     self.primary_keys.push(pk);
@@ -198,7 +198,7 @@ pub struct CollectionPatC {
   checker: Vec<String>,
 }
 impl CollectionPatC {
-  impl_non_empty_new!([], [dmid], [primary_keys, elems, checker]);
+  impl_empty_new!([], [dmid], [primary_keys, elems, checker]);
   impl_builder_opt_string_attr!(dmid);
 
   pub fn push_pk(mut self, pk: PrimaryKeyB) -> Self {

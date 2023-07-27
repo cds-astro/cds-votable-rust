@@ -28,6 +28,7 @@ pub struct AttributePatA {
   pub unit: Option<String>,
 }
 impl AttributePatA {
+  impl_new!([dmrole, dmtype], [ref_, value, array_index, unit]);
   impl_empty_new!([dmrole, dmtype], [ref_, value, array_index, unit]);
   /*
       function setters, enable the setting of an optional through self.set_"var"
@@ -36,8 +37,6 @@ impl AttributePatA {
   impl_builder_opt_string_attr!(value);
   impl_builder_opt_string_attr!(array_index);
   impl_builder_opt_string_attr!(unit);
-  impl_builder_mand_string_attr!(dmrole);
-  impl_builder_mand_string_attr!(dmtype);
 }
 impl QuickXmlReadWrite for AttributePatA {
   const TAG: &'static str = "ATTRIBUTE";
@@ -45,7 +44,7 @@ impl QuickXmlReadWrite for AttributePatA {
 
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     const NULL: &str = "@TBD";
-    let mut tag = Self::new();
+    let mut tag = Self::new_empty();
     for attr_res in attrs {
       let attr = attr_res.map_err(VOTableError::Attr)?;
       let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;

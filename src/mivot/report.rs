@@ -50,13 +50,18 @@ pub struct Report {
 }
 
 impl Report {
+  pub fn new(status: Status) -> Self {
+    Report {
+      status,
+      content: None,
+    }
+  }
   fn new_empty() -> Self {
     Report {
       status: Status::NULL,
       content: None,
     }
   }
-  impl_builder_mand_attr!(status, Status);
   impl_builder_opt_string_attr!(content);
 }
 

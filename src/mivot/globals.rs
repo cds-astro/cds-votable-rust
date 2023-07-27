@@ -39,6 +39,11 @@ pub struct Globals {
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub elems: Vec<GlobalsElem>,
 }
+impl Globals {
+  pub fn new() -> Self {
+    Self { elems: vec![] }
+  }
+}
 impl ElemImpl<GlobalsElem> for Globals {
   fn push_elems(&mut self, elem: GlobalsElem) {
     self.elems.push(elem);

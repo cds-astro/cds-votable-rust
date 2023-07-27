@@ -26,6 +26,7 @@ pub struct AttributePatC {
   pub unit: Option<String>,
 }
 impl AttributePatC {
+  impl_new!([dmtype], [ref_, value, array_index, unit]);
   impl_empty_new!([dmtype], [ref_, value, array_index, unit]);
 
   /*
@@ -35,7 +36,6 @@ impl AttributePatC {
   impl_builder_opt_string_attr!(value);
   impl_builder_opt_string_attr!(array_index);
   impl_builder_opt_string_attr!(unit);
-  impl_builder_mand_string_attr!(dmtype);
 }
 impl QuickXmlReadWrite for AttributePatC {
   const TAG: &'static str = "ATTRIBUTE";
@@ -43,7 +43,7 @@ impl QuickXmlReadWrite for AttributePatC {
 
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     const NULL: &str = "@TBD";
-    let mut tag = Self::new();
+    let mut tag = Self::new_empty();
     for attr_res in attrs {
       let attr = attr_res.map_err(VOTableError::Attr)?;
       let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;

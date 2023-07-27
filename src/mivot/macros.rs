@@ -37,7 +37,7 @@ macro_rules! impl_empty_new {
         *   creates a new instance of the struct
         #returns Self: returns an instance of the struct
       */
-      fn new() -> Self {
+      fn new_empty() -> Self {
         const NULL: &str = "@TBD";
         Self {
             // MANDATORY
@@ -47,10 +47,7 @@ macro_rules! impl_empty_new {
         }
       }
     }
-  }
-}
-
-macro_rules! impl_non_empty_new {
+  };
   ([], [$($optional:ident),*], [$($vec:ident),*]) => {
     paste! {
       /*
@@ -59,7 +56,7 @@ macro_rules! impl_non_empty_new {
         *   creates a new instance of the struct
         #returns Self: returns an instance of the struct
       */
-      fn new() -> Self {
+      fn new_empty() -> Self {
         Self {
             // OPTIONAL
             $($optional: None,)*
@@ -77,7 +74,7 @@ macro_rules! impl_non_empty_new {
         *   creates a new instance of the struct
         #returns Self: returns an instance of the struct
       */
-      fn new() -> Self {
+      fn new_empty() -> Self {
         const NULL: &str = "@TBD";
         Self {
             // MANDATORY
@@ -85,6 +82,47 @@ macro_rules! impl_non_empty_new {
             // OPTIONAL
             $($optional: None,)*
             // ELEMS
+            $($vec: vec![]),*
+        }
+      }
+    }
+  }
+}
+
+macro_rules! impl_new {
+  ([$($mandatory:ident),*], [$($optional:ident),*]) => {
+    paste! {
+      /*
+        function New
+        Description:
+        *   creates a new instance of the struct
+        #returns Self: returns an instance of the struct
+      */
+      pub fn new<I: Into<String>>($($mandatory: I),*) -> Self {
+        Self {
+            // MANDATORY
+            $($mandatory: $mandatory.into(),)*
+            // OPTIONAL
+            $($optional: None),*
+        }
+      }
+    }
+  };
+  ([$($mandatory:ident),*], [$($optional:ident),*], [$($vec:ident),*]) => {
+    paste! {
+      /*
+        function New
+        Description:
+        *   creates a new instance of the struct
+        #returns Self: returns an instance of the struct
+      */
+      pub fn new<I: Into<String>>($($mandatory: I),*) -> Self {
+        Self {
+            // MANDATORY
+            $($mandatory: $mandatory.into(),)*
+            // OPTIONAL
+            $($optional: None,)*
+            // Vecs
             $($vec: vec![]),*
         }
       }
@@ -141,7 +179,7 @@ macro_rules! impl_builder_from_attr {
   ([], [$($optional:ident $(, $name:literal)?),*] $(,[$($empty:ident $(, $empname:literal)?),*],)?) => {
     paste! {
       fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-        let mut tag = Self::new();
+        let mut tag = Self::new_empty();
         for attr_res in attrs {
             let attr = attr_res.map_err(VOTableError::Attr)?;
             let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
@@ -165,7 +203,7 @@ macro_rules! impl_builder_from_attr {
       paste! {
         fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
           const NULL: &str = "@TBD";
-          let mut tag = Self::new();
+          let mut tag = Self::new_empty();
           for attr_res in attrs {
               let attr = attr_res.map_err(VOTableError::Attr)?;
               let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
@@ -516,44 +554,6 @@ macro_rules! impl_quickrw_not_e {
             #returns Result<(), VOTableError>: returns an error if writing doesn't work
         */
         impl_write_not_e!([$($mandatory $(, $mandname)?),*], [$($optional $(, $name)?),*] ,[$($orderelem),*] $(,[$($elems),*])?);
-      }
-    }
-  };
-}
-
-macro_rules! impl_builder_mand_string_attr {
-  ($arg:ident) => {
-    paste! {
-      pub fn [<set_ $arg>]<I: Into<String>>(mut self, $arg: I) -> Self {
-        self.$arg = $arg.into();
-        self
-      }
-    }
-  };
-  ($arg:ident, $alt:ident) => {
-    paste! {
-      pub fn [<set_ $alt>]<I: Into<String>>(mut self, $arg: I) -> Self {
-        self.$arg = $arg.into();
-        self
-      }
-    }
-  };
-}
-
-macro_rules! impl_builder_mand_attr {
-  ($arg: ident, $t: ty) => {
-    paste! {
-      pub fn [<set_ $arg>](mut self, $arg: $t) -> Self {
-        self.$arg = $arg;
-        self
-      }
-    }
-  };
-  ($arg: ident, $alt:ident, $t: ty) => {
-    paste! {
-      pub fn [<set_ $alt>](mut self, $arg: $t) -> Self {
-        self.$arg = $arg;
-        self
       }
     }
   };

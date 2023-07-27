@@ -75,12 +75,12 @@ pub struct NoRoleInstance {
   pub elems: Vec<InstanceElem>,
 }
 impl NoRoleInstance {
-  impl_non_empty_new!([dmtype], [dmid], [primary_keys, elems]);
+  impl_new!([dmtype], [dmid], [primary_keys, elems]);
+  impl_empty_new!([dmtype], [dmid], [primary_keys, elems]);
   /*
       function setters, enable the setting of an optional or mandatory through self.set_"var"
   */
   impl_builder_opt_string_attr!(dmid);
-  impl_builder_mand_string_attr!(dmtype);
 }
 impl InstanceType for NoRoleInstance {
   fn push_pk(&mut self, pk: PrimaryKeyA) {
@@ -136,12 +136,12 @@ pub struct MandPKInstance {
   pub elems: Vec<InstanceElem>,
 }
 impl MandPKInstance {
-  impl_non_empty_new!([dmtype], [dmid], [primary_keys, elems]);
+  impl_new!([dmtype], [dmid], [primary_keys, elems]);
+  impl_empty_new!([dmtype], [dmid], [primary_keys, elems]);
   /*
       function setters, enable the setting of an optional through self.set_"var"
   */
   impl_builder_opt_string_attr!(dmid);
-  impl_builder_mand_string_attr!(dmtype);
 }
 impl InstanceType for MandPKInstance {
   fn push_pk(&mut self, pk: PrimaryKeyA) {
@@ -199,10 +199,9 @@ pub struct Instance {
   pub elems: Vec<InstanceElem>,
 }
 impl Instance {
-  impl_non_empty_new!([dmrole, dmtype], [dmid], [primary_keys, elems]);
+  impl_new!([dmrole, dmtype], [dmid], [primary_keys, elems]);
+  impl_empty_new!([dmrole, dmtype], [dmid], [primary_keys, elems]);
   impl_builder_opt_string_attr!(dmid);
-  impl_builder_mand_string_attr!(dmrole);
-  impl_builder_mand_string_attr!(dmtype);
 }
 impl InstanceType for Instance {
   fn push_pk(&mut self, pk: PrimaryKeyA) {

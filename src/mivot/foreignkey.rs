@@ -14,8 +14,8 @@ pub struct ForeignKey {
   pub ref_: String,
 }
 impl ForeignKey {
+  impl_new!([ref_], []);
   impl_empty_new!([ref_], []);
-  impl_builder_mand_string_attr!(ref_, ref);
 }
 
 impl_quickrw_e!(

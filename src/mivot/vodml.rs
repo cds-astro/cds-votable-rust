@@ -55,6 +55,16 @@ pub struct Vodml {
   pub extra: HashMap<String, Value>,
 }
 impl Vodml {
+  pub fn new() -> Self {
+    Self {
+      report: None,
+      models: vec![],
+      globals: vec![],
+      templates: vec![],
+      extra: HashMap::default(),
+    }
+  }
+
   impl_builder_opt_attr!(report, Report);
   impl_builder_insert_extra!();
 

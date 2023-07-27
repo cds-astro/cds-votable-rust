@@ -25,15 +25,13 @@ pub struct AttributePatB {
   pub unit: Option<String>,
 }
 impl AttributePatB {
+  impl_new!([dmrole, dmtype, value], [array_index, unit]);
   impl_empty_new!([dmrole, dmtype, value], [array_index, unit]);
   /*
       function setters, enable the setting of an optional through self.set_"var"
   */
   impl_builder_opt_string_attr!(array_index);
   impl_builder_opt_string_attr!(unit);
-  impl_builder_mand_string_attr!(dmrole);
-  impl_builder_mand_string_attr!(dmtype);
-  impl_builder_mand_string_attr!(value);
 }
 impl_quickrw_e!(
   [dmrole, dmtype, value], // MANDATORY ATTRIBUTES

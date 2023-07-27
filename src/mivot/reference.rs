@@ -21,9 +21,8 @@ pub struct StaticRef {
   pub dmref: String,
 }
 impl StaticRef {
+  impl_new!([dmrole, dmref], []);
   impl_empty_new!([dmrole, dmref], []);
-  impl_builder_mand_string_attr!(dmrole);
-  impl_builder_mand_string_attr!(dmref);
 }
 impl_quickrw_e! {
   [dmrole, dmref],
@@ -48,9 +47,8 @@ pub struct DynRef {
   pub foreign_keys: Vec<ForeignKey>,
 }
 impl DynRef {
-  impl_non_empty_new!([dmrole, sourceref], [], [foreign_keys]);
-  impl_builder_mand_string_attr!(dmrole);
-  impl_builder_mand_string_attr!(sourceref);
+  impl_new!([dmrole, sourceref], [], [foreign_keys]);
+  impl_empty_new!([dmrole, sourceref], [], [foreign_keys]);
 }
 impl ReferenceType for DynRef {
   fn push_fk(&mut self, fk: ForeignKey) {

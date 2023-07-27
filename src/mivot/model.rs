@@ -17,9 +17,9 @@ pub struct Model {
   pub url: Option<String>,
 }
 impl Model {
+  impl_new!([name], [url]);
   impl_empty_new!([name], [url]);
   impl_builder_opt_string_attr!(url);
-  impl_builder_mand_string_attr!(name);
 }
 impl_quickrw_e!(
   [name],  // MANDATORY ATTRIBUTES

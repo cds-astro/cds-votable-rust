@@ -15,16 +15,15 @@ pub struct PrimaryKeyB {
   pub value: String,
 }
 impl PrimaryKeyB {
+  impl_new!([dmtype, value], []);
   impl_empty_new!([dmtype, value], []);
-  impl_builder_mand_string_attr!(dmtype);
-  impl_builder_mand_string_attr!(value);
 }
 impl QuickXmlReadWrite for PrimaryKeyB {
   const TAG: &'static str = "PRIMARY\\_KEY";
   type Context = ();
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     const NULL: &str = "@TBD";
-    let mut tag = Self::new();
+    let mut tag = Self::new_empty();
     for attr_res in attrs {
       let attr = attr_res.map_err(VOTableError::Attr)?;
       let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
@@ -68,9 +67,8 @@ pub struct PrimaryKeyA {
   pub ref_: String,
 }
 impl PrimaryKeyA {
+  impl_new!([dmtype, ref_], []);
   impl_empty_new!([dmtype, ref_], []);
-  impl_builder_mand_string_attr!(dmtype);
-  impl_builder_mand_string_attr!(ref_, ref);
 }
 impl_quickrw_e!(
   [dmtype, "dmtype", ref_, "ref"], // MANDATORY ATTRIBUTES

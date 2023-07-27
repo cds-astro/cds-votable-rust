@@ -25,7 +25,7 @@ pub struct Templates {
   pub instances: Vec<NoRoleInstance>,
 }
 impl Templates {
-  fn new() -> Self {
+  fn new_empty() -> Self {
     Self {
       tableref: None,
       wheres: vec![],

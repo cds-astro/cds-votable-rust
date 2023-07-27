@@ -17,9 +17,8 @@ pub struct Where {
   pub foreign_key: String,
 }
 impl Where {
+  impl_new!([primary_key, foreign_key], []);
   impl_empty_new!([primary_key, foreign_key], []);
-  impl_builder_mand_string_attr!(primary_key);
-  impl_builder_mand_string_attr!(foreign_key);
 }
 impl_quickrw_e!(
   [primary_key, "primarykey", foreign_key, "foreignkey"],
@@ -35,9 +34,8 @@ pub struct NoFkWhere {
   pub value: String,
 }
 impl NoFkWhere {
+  impl_new!([primary_key, value], []);
   impl_empty_new!([primary_key, value], []);
-  impl_builder_mand_string_attr!(primary_key);
-  impl_builder_mand_string_attr!(value);
 }
 impl_quickrw_e!(
   [primary_key, "primarykey", value, "value"],
