@@ -1,0 +1,2 @@
+<!-- Test Case 12.1:  FOREIGN_KEY with ref -->
+<FOREIGN\_KEY ref="zzzzz" />

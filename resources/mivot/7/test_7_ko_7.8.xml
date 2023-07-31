@@ -1,0 +1,4 @@
+<!-- Usage 1: Child of INSTANCE -->
+
+<!-- Test Case 7.8: valid dmrole + dmtype + value + arrayindex; arrayindex only assoc. with ref. -->
+<ATTRIBUTE dmrole="model:Thing.x" dmtype="ivoa:real" value="77.339" arrayindex="0"/>

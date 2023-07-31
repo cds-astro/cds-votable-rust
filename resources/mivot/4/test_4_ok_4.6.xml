@@ -1,0 +1,6 @@
+<!-- Test Case 4.6: multiple INSTANCE nodes -->
+<TEMPLATES tableref="fgdgfddf">
+	<WHERE primarykey="sssss" value="ssss" />
+	<INSTANCE  dmtype="fffff"/>
+	<INSTANCE  dmtype="fffff"/>
+</TEMPLATES>

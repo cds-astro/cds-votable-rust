@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- NOTE: JOIN is child of COLLECTION.                                           -->
+<!--       A bug in the current schema (20210916) prevents multiple JOINs         -->
+<!--       So, here we use a separate COLLECTION for each case.                   -->
+<!--                                                                              -->
+<!--       We take advantage of this to test several valid cases in the same file -->
+
+<VODML
+    xmlns="http://www.ivoa.net/xml/mivot">
+    <REPORT status="OK"></REPORT>
+	<MODEL name="model" url="http://aaaaaa" />
+	<GLOBALS>
+		<COLLECTION dmid="id1" dmrole="">
+			<!-- Test Case 9.1: dmref + no sourceref; ok if only 1 table. -->
+			<JOIN dmref="aaaaa" />
+		</COLLECTION>
+		
+		<COLLECTION  dmid="id2" dmrole="">
+			<!-- Test Case 9.4: dmref + sourceref -->
+			<JOIN sourceref="_table1" dmref="aaaaa"/>
+		</COLLECTION>
+		
+		<COLLECTION  dmid="id3"  dmrole="">
+			<!-- Test Case 9.5: dmref + no sourceref + WHERE -->
+			<JOIN dmref="aaaaa">
+				<WHERE foreignkey="eee" value="ssss" />
+			</JOIN>
+		</COLLECTION>
+		
+		<COLLECTION   dmid="id4" dmrole="">
+			<!-- Test Case 9.6: sourceref + dmref + WHERE (multiple) -->
+			<JOIN sourceref="aaaaa" dmref="aaaaa">
+				<WHERE foreignkey="eee" value="ssss" />
+				<WHERE foreignkey="fff" value="tttt" />
+			</JOIN>
+		</COLLECTION>
+		
+		<COLLECTION   dmid="id5" dmrole="">
+			<!-- Test Case 9.6b: sourceref + no dmref + WHERE (multiple) -->
+			<JOIN sourceref="aaaaa" >
+				<WHERE foreignkey="eee" value="ssss" />
+				<WHERE foreignkey="fff" value="tttt" />
+			</JOIN>
+		</COLLECTION>
+
+	</GLOBALS>
+</VODML>

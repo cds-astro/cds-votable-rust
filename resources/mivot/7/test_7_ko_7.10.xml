@@ -1,0 +1,4 @@
+<!-- Usage 1: Child of INSTANCE -->
+
+<!-- Test Case 7.10: valid dmrole + no dmtype + value; must have non-empty dmtype. -->
+<ATTRIBUTE dmrole="model:Thing.a" value="eeee"/>

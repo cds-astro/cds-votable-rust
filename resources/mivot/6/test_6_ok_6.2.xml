@@ -1,0 +1,4 @@
+<!-- Test Case 6.2:  REFERENCE with sourceref and FOREIGN_KEY -->
+<REFERENCE dmrole="aaaa" sourceref="fffff">
+  <FOREIGN\_KEY ref="zzzzz" />
+</REFERENCE>

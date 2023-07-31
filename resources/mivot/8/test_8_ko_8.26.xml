@@ -1,0 +1,8 @@
+<!-- Pattern Globals -->
+<!-- Test Case 8.26: More than one join in collection -->
+<COLLECTION dmid="_xxx" dmrole="iiiiii">
+		<JOIN sourceref="_someTable" dmref="_extInst"/>
+		<JOIN sourceref="_someOtherTable" dmref="_otherExtInst"/>
+</COLLECTION>
+
+

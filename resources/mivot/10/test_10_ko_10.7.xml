@@ -1,0 +1,3 @@
+<!-- Test Case 10.7: primarykey + foreignkey + value; must not have all. -->
+<WHERE foreignkey="sssss" primarykey="ssss" value="ssss" />
+

@@ -35,6 +35,7 @@ pub mod group;
 pub mod impls;
 pub mod info;
 pub mod link;
+pub mod mivot;
 pub mod param;
 pub mod paramref;
 pub mod resource;
@@ -193,7 +194,7 @@ mod tests {
   };
   use crate::data::Data;
   use crate::impls::VOTableValue;
-  use quick_xml::{Writer, Reader, events::Event};
+  use quick_xml::{events::Event, Reader, Writer};
   use serde_json::{Number, Value};
   use std::str::from_utf8;
 
@@ -460,30 +461,26 @@ In this version, NULL integer columns are written as an empty string
           Err(error) => println!("{:?}", &error),
       }
 
-      println!("\n\n#### TOML ####\n");
+    println!("\n\n#### TOML ####\n");
+    
+    match toml::ser::to_string_pretty(&votable) {
+        Ok(content) => {
+            println!("{}", &content);
+        },
+        Err(error) => println!("{:?}", &error),
 
-      match toml::ser::to_string_pretty(&votable) {
-          Ok(content) => {
-              println!("{}", &content);
-          },
-          Err(error) => println!("{:?}", &error),
-      }
-
-      println!("\n\n#### VOTABLE ####\n");
-
+    println!("\n\n#### VOTABLE ####\n");
       let mut write = Writer::new_with_indent(stdout(), b' ', 4);
       match votable.unwrap().write(&mut write, &()) {
           Ok(content) => println!("\nOK"),
           Err(error) => println!("Error: {:?}", &error),
       }
 
-      /*println!("\n\n#### XML ####\n");
-
+    println!("\n\n#### XML ####\n");
       match quick_xml::se::to_string(&votable) {
         Ok(content) => println!("{}", &content),
         Err(error) => println!("{:?}", &error),
-      }*/
-
+      }
       // AVRO ?
   }*/
 
@@ -507,7 +504,13 @@ In this version, NULL integer columns are written as an empty string
           return info;
         }
         Event::Text(ref mut e) if e.escaped().is_empty() => (), // First even read
-        _ => unreachable!(),
+        Event::Comment(_) => (),
+        Event::DocType(_) => (),
+        Event::Decl(_) => (),
+        _ => {
+          println!("{:?}", event);
+          unreachable!()
+        }
       }
     }
   }

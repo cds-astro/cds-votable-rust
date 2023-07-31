@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- 13.4 TEMPLATES/INSTANCE@dmid duplicated in GLOBALS/INSTANCE@dmid -->
+<VODML xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<GLOBALS>
+        <INSTANCE dmid="_ref2"  dmtype="model:thing">
+        </INSTANCE>
+
+	</GLOBALS>
+	<TEMPLATES tableref="fgdgfddf">
+		<INSTANCE dmid="_ref2" dmrole="" dmtype="model:thing">
+			<COLLECTION dmrole="model:thing.items">
+				<INSTANCE dmrole="" dmtype="fffff">
+					<PRIMARY_KEY dmtype="fffff" value="tttt" />
+				</INSTANCE>
+
+			</COLLECTION>
+		</INSTANCE>
+	</TEMPLATES>
+</VODML>

@@ -1,0 +1,7 @@
+<INSTANCE dmtype="model:thing">
+<!-- Usage 5: Child of INSTANCE  -->
+
+	<!-- Test Case 5.44: dmid + no dmrole + dmtype; (must have non-empty dmrole) -->
+	<INSTANCE dmid="_ssss" dmtype="model:foo" />
+	
+</INSTANCE>

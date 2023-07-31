@@ -1,0 +1,5 @@
+<!-- Test Case 8.16: COLLECTION of ATTRIBUTE -->
+<COLLECTION dmrole="gggggg">
+  <ATTRIBUTE dmtype="model:elem" value="foo" />
+  <ATTRIBUTE dmtype="model:elem" value="bar" />
+</COLLECTION>

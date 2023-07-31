@@ -1,0 +1,2 @@
+<!-- Test Case 2.3: name must not be empty -->
+<MODEL name="" />

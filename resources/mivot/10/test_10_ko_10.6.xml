@@ -1,0 +1,2 @@
+<!-- Test Case 10.6: must have primarykey with value -->
+<WHERE value="abc" />

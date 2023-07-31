@@ -1,0 +1,2 @@
+<!-- Test Case 10.1: primarykey must have foreignkey or value -->
+<WHERE primarykey="ssss" />

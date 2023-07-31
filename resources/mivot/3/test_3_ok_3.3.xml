@@ -1,0 +1,4 @@
+<!-- Test Case 3.3: with INSTANCE only; COLLECTION optional -->
+<GLOBALS >
+	<INSTANCE dmid="_ds" dmrole="" dmtype="model:Thing" />
+</GLOBALS>

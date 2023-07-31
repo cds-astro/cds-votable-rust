@@ -1,0 +1,4 @@
+<!-- Usage 1: Child of INSTANCE -->
+
+<!-- Test Case 7.11: empty dmrole + dmtype + ref; must have non-empty dmrole in this context -->
+<ATTRIBUTE dmrole="" dmtype="model:Bar" ref="_param1"/>

@@ -1,0 +1,4 @@
+<!-- Test Case 7.7: valid dmrole + dmtype + ref + arrayindex -->
+<!--    The value of the ATTRIBUTE is pulled from an array PARAM/FIELD VOTable element. -->
+<!--    arrayindex indicates which index of the target array to use as the value.       -->
+<ATTRIBUTE dmrole="adhoc:Position.longitude" dmtype="ivoa:real" ref="_eqpos" arrayindex="0"/>

@@ -1,0 +1,2 @@
+<!-- Test Case 2.5: url must not be empty -->
+<MODEL name="model" url="" />

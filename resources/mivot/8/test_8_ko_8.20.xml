@@ -1,0 +1,11 @@
+<!-- Pattern Instance -->
+<!-- Test Case 8.20: COLLECTION of INSTANCE + JOIN (local and external instances) -->
+<COLLECTION dmrole="iiiiii">
+    <INSTANCE dmtype="model:object" />
+    <JOIN sourceref="_someTable" dmref="_extInst1"/>
+    <JOIN sourceref="_someOtherTable" dmref="_extInst2"/>
+    <INSTANCE dmtype="model:object" />
+    <INSTANCE dmtype="model:object" />
+</COLLECTION>
+
+

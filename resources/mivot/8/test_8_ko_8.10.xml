@@ -1,0 +1,3 @@
+<!-- Pattern Instance -->
+<!-- Test Case 8.10: COLLECTION under INSTANCE, must not have dmid -->
+<COLLECTION dmid="_zzz" dmrole="model:thing.a"/>

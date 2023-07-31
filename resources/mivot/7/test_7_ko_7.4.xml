@@ -1,0 +1,4 @@
+<!-- Usage 1: Child of INSTANCE -->
+
+<!-- Test Case 7.4: valid dmrole + dmtype; must have one or both of (value, ref) -->
+<ATTRIBUTE dmrole="model:Thing.b" dmtype="model:Bar"/>

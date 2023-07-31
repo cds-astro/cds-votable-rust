@@ -1,0 +1,2 @@
+<!-- Test Case 7.17: empty dmrole + dmtype + ref; must have no or empty dmrole in this context. -->
+<ATTRIBUTE dmrole="" dmtype="ivoa:real" ref="_param4"/>

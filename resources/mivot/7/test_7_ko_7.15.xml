@@ -1,0 +1,4 @@
+<!-- Usage 1: Child of INSTANCE -->
+
+<!-- Test Case 7.15: valid dmrole + dmtype + ref + (arrayindex < 0); invalid arrayindex value (< 0) -->
+<ATTRIBUTE dmrole="model:Thing.y" dmtype="ivoa:real" ref="_eqpos" arrayindex="-2"/>

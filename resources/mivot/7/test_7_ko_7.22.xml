@@ -1,0 +1,18 @@
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<GLOBALS>
+		<INSTANCE dmid="_thing1" dmtype="model:Thing">
+			<COLLECTION dmrole="model:Thing.arrayAttribute1">
+			<!-- Usage 2: Child of COLLECTION -->
+			
+				<!-- Test Case 7.22: Must have no @ref in GLOBALS. -->
+				<ATTRIBUTE  dmtype="ivoa:real" ref=""/>
+				<ATTRIBUTE  dmtype="ivoa:real" ref="_param5"/>
+				<ATTRIBUTE dmtype="ivoa:real" ref="_param6"/>
+			</COLLECTION>
+
+		</INSTANCE>
+	</GLOBALS>
+</VODML>

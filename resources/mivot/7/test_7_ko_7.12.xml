@@ -1,0 +1,4 @@
+<!-- Usage 1: Child of INSTANCE -->
+
+<!-- Test Case 7.12: dmtype must not be empty -->
+<ATTRIBUTE dmrole="model:Thing.b" dmtype="" ref="_param1"/>

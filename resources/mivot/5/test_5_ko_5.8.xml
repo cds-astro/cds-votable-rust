@@ -1,0 +1,4 @@
+<!-- Pattern A no dmrole instance -->
+
+<!-- Test Case 5.8: valid dmid + valid dmrole + no dmtype; must have dmtype -->
+<INSTANCE dmid="_xyz" />

@@ -1,0 +1,2 @@
+<!-- Test Case 10.3: primarykey + value -->
+<WHERE primarykey="sssss" value="ssss" />

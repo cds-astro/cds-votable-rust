@@ -1,0 +1,4 @@
+<!-- Usage 1: Child of INSTANCE -->
+
+<!-- Test Case 6.6: valid dmrole + sourceref + no FK;  with sourceref, must have one or more FOREIGN_KEY -->
+<REFERENCE dmrole="aaaa" sourceref="fffff" />

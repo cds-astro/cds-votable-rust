@@ -1,0 +1,4 @@
+<!-- Test Case 5.53: with ATTRIBUTE; zero or more A|I|R|C, any order -->
+<INSTANCE dmid="cccc" dmtype="model:thing">
+  <ATTRIBUTE dmrole="model.thing.a" dmtype="model:foo" value="eeee"/>
+</INSTANCE>

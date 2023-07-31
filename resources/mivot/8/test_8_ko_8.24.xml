@@ -1,0 +1,9 @@
+<!-- Pattern Instance -->
+<!-- Test Case 8.24: COLLECTION of other -->
+<!--   * allows (A), (R) or (I,J) only    -->
+<COLLECTION dmrole="iiiiii">
+	<OTHER dmtype="model:object" />
+	<OTHER dmtype="model:object" />
+</COLLECTION>
+
+

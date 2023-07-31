@@ -1,0 +1,13 @@
+<!-- Test Case 3.1: all subnodes -->
+<GLOBALS >
+	<COLLECTION dmid="_coordsys" dmrole="" >
+		<INSTANCE dmid="_timesys" dmrole="" dmtype="model:TimeSys" >
+			<PRIMARY\_KEY dmtype="ivoa:string" ref="TCB"/>
+		</INSTANCE>
+		<INSTANCE dmid="_spacesys" dmrole="" dmtype="model:SpaceSys" >
+			<PRIMARY\_KEY dmtype="ivoa:string" ref="ICRS"/>
+		</INSTANCE>
+	</COLLECTION>
+	
+	<INSTANCE dmid="_ds" dmrole="" dmtype="ddddd" />
+</GLOBALS>

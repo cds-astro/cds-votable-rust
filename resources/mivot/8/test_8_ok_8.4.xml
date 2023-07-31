@@ -1,0 +1,2 @@
+<!-- Test Case 8.4: dmid + empty dmrole; if present, dmrole must be empty -->
+<COLLECTION dmid="_yyy" dmrole="" />

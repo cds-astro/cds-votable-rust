@@ -1,0 +1,2 @@
+<!-- Test Case 9.4: dmref + sourceref -->
+<JOIN sourceref="_table1" dmref="aaaaa"/>

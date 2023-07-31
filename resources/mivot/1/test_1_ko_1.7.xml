@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Test Case 1.7: GLOBALS must be after MODEL and before TEMPLATES -->
+<VODML xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<TEMPLATES tableref="fgdgfddf">
+		<INSTANCE dmtype="model:Thing"/>
+	</TEMPLATES>
+	<GLOBALS />
+
+</VODML>

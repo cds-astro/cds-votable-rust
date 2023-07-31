@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+    13.2 duplicated GLOBALS/COLLECTION/INSTANCEdmid 
+-->
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<GLOBALS >
+
+		<COLLECTION dmid="_id" dmrole="" >
+			<INSTANCE dmid="_timesys" dmrole="" dmtype="model:TimeSys" >
+				<PRIMARY_KEY dmtype="ivoa:string" value="TCB"/>
+			</INSTANCE>
+		</COLLECTION>
+		<COLLECTION dmid="_other_id" >
+
+			<INSTANCE dmid="_sameid" dmtype="ds:experiment.ObsDataset">
+				<PRIMARY_KEY dmtype="ivoa:string" value="5813181197970338560"/>
+				<PRIMARY_KEY dmtype="ivoa:string" value="VEGA"/>
+			</INSTANCE>
+			<INSTANCE dmid="_sameid" dmtype="ds:experiment.ObsDataset">
+				<PRIMARY_KEY dmtype="ivoa:string" value="5813181545327453273"/>
+				<PRIMARY_KEY dmtype="ivoa:string" value="SIRIUS"/>
+			</INSTANCE>
+			
+		</COLLECTION>
+
+
+	</GLOBALS>
+	<TEMPLATES tableref="fgdgfddf">
+	</TEMPLATES>
+</VODML>

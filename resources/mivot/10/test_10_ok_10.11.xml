@@ -1,0 +1,2 @@
+<!-- Test Case 10.11: empty value -->
+<WHERE foreignkey="sssss" value="" />

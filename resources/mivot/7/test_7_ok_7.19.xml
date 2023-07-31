@@ -1,0 +1,2 @@
+<!-- Test Case 7.19: valid dmrole + dmtype + ref + empty unit; unit may be empty. -->
+<ATTRIBUTE dmrole="" dmtype="ivoa:real" ref="_param6" unit=""/>

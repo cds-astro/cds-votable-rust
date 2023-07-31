@@ -1,0 +1,4 @@
+<!-- Pattern A no dmrole instance -->
+
+<!-- Test Case 5.7: empty dmid + valid dmrole + valid dmtype; If present, dmid must not be empty. -->
+<INSTANCE dmid="" dmrole="" dmtype="model:thing" />

@@ -1,0 +1,15 @@
+<!-- Test Case 4.8: missing tableref -->
+<!-- 
+			In many instances, the annotation is satisfied by a single TEMPLATES 
+			node associated with the, usually one and only, native TABLE block. 
+			Additionally, we have found that in existing datasets, this TABLE block 
+			will often not have an assigned dmid. And so, in order to:
+							* minimize the need to modify the native serialization
+							* minimize the burden on annotators to explicitly define a self-evident relation
+						we allow that if the tableref is missing, the TEMPLATES block refers
+			to the first TABLE.
+-->
+
+<TEMPLATES >
+	<INSTANCE  dmtype="fffff" />
+</TEMPLATES>

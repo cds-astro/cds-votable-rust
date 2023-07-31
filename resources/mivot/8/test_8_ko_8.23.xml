@@ -1,0 +1,10 @@
+<!-- Pattern Instance -->
+<!-- Test Case 8.23: COLLECTION of INSTANCE + (other) -->
+<!--   * allows (A), (R) or (I,J) only    -->
+<COLLECTION dmrole="iiiiii">
+	<INSTANCE dmtype="model:object" />
+	<ATTRIBUTE dmtype="model:elem" value="foo" />
+	<INSTANCE dmtype="model:object" />
+</COLLECTION>
+
+

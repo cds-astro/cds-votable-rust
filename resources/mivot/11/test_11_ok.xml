@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- NOTE: TEMPLATES node allows multiple INSTANCE nodes.                         -->
+<!--       We take advantage of this to test several valid cases in the same file -->
+<!-- NOTE: a bug in the schema currently (20210917) allows only 1 PRIMARY_KEY per -->
+<!--       instance, so these cases are implemented at that level.                -->
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<TEMPLATES tableref="fgdgfddf">
+
+		<INSTANCE  dmtype="fffff">
+			<!-- Test Case 11.1: dmtype + ref -->
+			<PRIMARY_KEY dmtype="fffff" ref="zzzz" />
+		</INSTANCE>
+
+		<INSTANCE dmtype="fffff">
+			<!-- Test Case 11.2: dmtype + value -->
+			<PRIMARY_KEY dmtype="fffff" value="tttt" />
+		</INSTANCE>
+
+		<INSTANCE  dmtype="fffff">
+			<!-- Test Case 11.8: empty value -->
+			<PRIMARY_KEY dmtype="fffff" value="" />
+		</INSTANCE>
+
+	</TEMPLATES>
+</VODML>

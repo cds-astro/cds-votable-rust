@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VOTABLE xmlns="http://www.ivoa.net/xml/VOTable/v1.3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	version="1.3">
+
+	<RESOURCE type="results">
+		<RESOURCE type="meta">
+
+			<VODML xmlns="http://www.ivoa.net/xml/mivot">
+				<MODEL name="test" />
+
+				<GLOBALS>
+					<INSTANCE dmid="SpaceFrame_ICRS" dmtype="coords:SpaceFrame">
+						<INSTANCE dmrole="coords:SpaceFrame.refPosition" dmtype="coords:StdRefLocation">
+							<ATTRIBUTE_XXX dmrole="coords:StdRefLocation.position" dmtype="ivoa:string" value="NoSet" />
+						</INSTANCE>
+						<ATTRIBUTE dmrole="coords:SpaceFrame.spaceRefFrame" dmtype="ivoa:string" value="ICRS" />
+						<ATTRIBUTE dmrole="coords:SpaceFrame.equinox" dmtype="coords:Epoch" value="NoSet" />
+					</INSTANCE>
+
+					<INSTANCE dmrole="root" dmtype="test.model">
+						<INSTANCE dmrole="test.header" dmtype="test.Header">
+							<REFERENCE dmrole="test.frame" dmref="SpaceFrame_ICRS" />
+							<INSTANCE dmrole="test.owner" dmtype="test.Owner">
+								<ATTRIBUTE dmrole="test.owner.name" dmtype="string" value="Michel" />
+								<ATTRIBUTE dmrole="test.owner.firstname" dmtype="string" value="Laurent" />
+								<ATTRIBUTE dmrole="test.title" dmtype="string" ref="_title" />
+							</INSTANCE>
+							<COLLECTION dmrole="test.points">
+								<JOIN sourceref="Results" />
+							</COLLECTION>
+						</INSTANCE>
+					</INSTANCE>
+				</GLOBALS>
+
+				<TEMPLATES tableref="Results">
+					<INSTANCE dmid="_point" dmrole="primary:point" dmtype="Point">
+						<ATTRIBUTE dmrole="test:detection.num" dmtype="ivoa:real" ref="_poserr_148" />
+						<COLLECTION dmrole="test.detections">
+							<JOIN sourceref="OtherResults">
+								<WHERE primarykey="_poserr_148" foreignkey="_foreign" />
+							</JOIN>
+							<INSTANCE dmrole="test:detection" dmtype="test:Detection">
+								<ATTRIBUTE dmrole="test:detection.num" dmtype="ivoa:real" ref="_num_148" />
+								<ATTRIBUTE dmrole="test:detection.id" dmtype="ivoa:real" ref="_foreign" />
+							</INSTANCE>
+						</COLLECTION>
+						<COLLECTION dmrole="test.spectra">
+							<JOIN sourceref="Spectra">
+								<WHERE primarykey="_poserr_148" foreignkey="_foreign" />
+							</JOIN>
+							<INSTANCE dmrole="test:detection" dmtype="test:Detection">
+								<ATTRIBUTE dmrole="test:detection.num" dmtype="ivoa:string" ref="_spc_148" />
+								<ATTRIBUTE dmrole="test:detection.id" dmtype="ivoa:real" ref="_foreign" />
+							</INSTANCE>
+						</COLLECTION>
+					</INSTANCE>
+				</TEMPLATES>
+
+				<TEMPLATES tableref="OtherResults">
+					<INSTANCE dmrole="test:detection" dmtype="test:Detection">
+						<ATTRIBUTE dmrole="test:detection.num" dmtype="ivoa:real" ref="_num_148" />
+						<ATTRIBUTE dmrole="test:detection.id" dmtype="ivoa:real" ref="_foreign_other" />
+					</INSTANCE>
+				</TEMPLATES>
+				
+				<TEMPLATES tableref="Spectra">
+					<INSTANCE dmrole="test:spectrum" dmtype="test:Spectrum">
+						<ATTRIBUTE dmrole="test:detection.num" dmtype="ivoa:stringl" ref="_spc_148" />
+						<ATTRIBUTE dmrole="test:detection.id" dmtype="ivoa:real" ref="_foreign_spectra" />
+					</INSTANCE>
+				</TEMPLATES>
+			</VODML>
+			
+		</RESOURCE>
+		<RESOURCE type="results">
+			<TABLE name="Results">
+				<PARAM ID="_title" name="title" value="TilteReadInParam" datatype="char" arraysize="*" />
+				<FIELD ID="_poserr_148" name="oidsaada" datatype="long" ucd="meta.id;meta.main" />
+				<DATA>
+					<TABLEDATA>
+						<TR>
+							<TD>1</TD>
+						</TR>
+						<TR>
+							<TD>2</TD>
+						</TR>
+					</TABLEDATA>
+				</DATA>
+			</TABLE>
+			<TABLE name="OtherResults">
+				<FIELD ID="_num_148" name="oidsaada" datatype="long" ucd="meta.id;meta.main" />
+				<FIELD ID="_foreign_other" name="cle" datatype="long" ucd="meta.id;meta.main" />
+				<DATA>
+					<TABLEDATA>
+						<TR>
+							<TD>11</TD>
+							<TD>1</TD>
+						</TR>
+						<TR>
+							<TD>12</TD>
+							<TD>1</TD>
+						</TR>
+						<TR>
+							<TD>21</TD>
+							<TD>2</TD>
+						</TR>
+						<TR>
+							<TD>22</TD>
+							<TD>2</TD>
+						</TR>
+					</TABLEDATA>
+				</DATA>
+			</TABLE>
+			<TABLE name="Spectra">
+				<FIELD ID="_spc_148" name="oidsaada" datatype="char" arraysize='*' ucd="meta.id;meta.main" />
+				<FIELD ID="_foreign_spectra" name="cle" datatype="long" ucd="meta.id;meta.main" />
+				<DATA>
+					<TABLEDATA>
+						<TR>
+							<TD>Spectrum 11</TD>
+							<TD>1</TD>
+						</TR>
+						<TR>
+							<TD>Spectrum 12</TD>
+							<TD>1</TD>
+						</TR>
+						<TR>
+							<TD>Spectrum 21</TD>
+							<TD>2</TD>
+						</TR>
+						<TR>
+							<TD>Spectrum 22</TD>
+							<TD>2</TD>
+						</TR>
+					</TABLEDATA>
+				</DATA>
+			</TABLE>
+		</RESOURCE>
+	</RESOURCE>
+</VOTABLE>

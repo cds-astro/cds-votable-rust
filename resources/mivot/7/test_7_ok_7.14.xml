@@ -1,0 +1,2 @@
+<!-- Test Case 7.14: valid dmrole + dmtype + empty value; value may be empty -->
+<ATTRIBUTE dmrole="model:Thing.f" dmtype="model.Alpha" value=""/>

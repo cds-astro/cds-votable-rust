@@ -1,0 +1,2 @@
+<!-- Test Case 9.8: sourceref must not be empty -->
+<JOIN sourceref="" />

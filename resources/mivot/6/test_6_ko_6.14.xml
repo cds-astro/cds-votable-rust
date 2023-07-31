@@ -1,0 +1,4 @@
+<!-- Usage 2: Child of COLLECTION -->
+
+<!-- Test Case 6.14: dmrole + dmref; must have no or empty dmrole -->
+<REFERENCE dmrole="model:thing.reflist" dmref="_target1" />

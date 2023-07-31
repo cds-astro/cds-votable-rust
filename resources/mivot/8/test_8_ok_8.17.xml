@@ -1,0 +1,5 @@
+<!-- Test Case 8.17: COLLECTION of REFERENCE -->
+<COLLECTION dmrole="hhhhhh">
+	<REFERENCE dmrole="aaaa" dmref="_ref1" />
+	<REFERENCE dmrole="bbbb" dmref="_ref2" />
+</COLLECTION>

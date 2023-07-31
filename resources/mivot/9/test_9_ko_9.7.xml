@@ -1,0 +1,2 @@
+<!-- Test Case 9.7: dmref must not be empty -->
+<JOIN dmref="" />

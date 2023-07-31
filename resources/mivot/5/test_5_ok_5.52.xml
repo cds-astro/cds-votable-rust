@@ -1,0 +1,5 @@
+<!-- Test Case 5.52: with multiplie PRIMARY_KEY; allow zero or more. -->
+<INSTANCE dmid="_ds1" dmtype="ds:experiment.ObsDataset">
+	<PRIMARY\_KEY dmtype="ivoa:string" ref="5813181197970338560"/>
+	<PRIMARY\_KEY dmtype="ivoa:string" ref="VEGA"/>
+</INSTANCE>

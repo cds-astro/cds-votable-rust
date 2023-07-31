@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Test Case 1.9: allow multiple TEMPLATES subnodes -->
+<VODML xmlns="http://www.ivoa.net/xml/mivot">
+
+	<MODEL name="model" url="http://aaaaaa" />
+	<GLOBALS />
+	<TEMPLATES tableref="fgdgfddf">
+		<INSTANCE  dmtype="eeeee">
+			<REFERENCE dmref="aaa" dmrole="qqq"/>
+		</INSTANCE>
+	</TEMPLATES>
+	<TEMPLATES tableref="dgjovds4">
+		<INSTANCE  dmtype="eeeee">
+			<REFERENCE dmref="aaa" dmrole="zzzz"/>
+		</INSTANCE>
+	</TEMPLATES>
+	<TEMPLATES tableref="s95dv8ed">
+		<INSTANCE  dmtype="eeeee">
+			<REFERENCE dmref="aaa" dmrole="zzzz"/>
+		</INSTANCE>
+	</TEMPLATES>
+
+</VODML>

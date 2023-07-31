@@ -1,0 +1,4 @@
+<!-- Test Case 5.54: with INSTANCE; zero or more A|I|R|C, any order -->
+<INSTANCE dmid="dddd" dmtype="model:thing">
+  <INSTANCE dmrole="model:thing.b" dmtype="model:bar" />
+</INSTANCE>

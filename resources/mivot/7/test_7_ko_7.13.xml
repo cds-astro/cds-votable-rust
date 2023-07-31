@@ -1,0 +1,4 @@
+<!-- Usage 1: Child of INSTANCE -->
+
+<!-- Test Case 7.13: ref must not be empty -->
+<ATTRIBUTE dmrole="model:Thing.b" dmtype="model:Bar" ref=""/>

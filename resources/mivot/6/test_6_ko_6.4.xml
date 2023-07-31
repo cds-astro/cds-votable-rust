@@ -1,0 +1,6 @@
+<!-- Usage 1: Child of INSTANCE -->
+
+<!-- Test Case 6.4:  valid dmrole + dmref + sourceref; must have dmref or sourceref, not both -->
+<REFERENCE dmrole="aaaa" dmref="fffff" sourceref="fffff">
+	<FOREIGN\_KEY ref="zzzzz" />
+</REFERENCE>

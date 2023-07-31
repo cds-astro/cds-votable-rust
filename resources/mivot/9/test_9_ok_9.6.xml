@@ -1,0 +1,7 @@
+<!-- Test Case 9.6: sourceref + dmref + WHERE (multiple) -->
+<JOIN sourceref="aaaaa" dmref="aaaaa">
+  <!--<WHERE foreignkey="eee" value="ssss" />-->
+  <!--<WHERE foreignkey="fff" value="tttt" />-->
+  <WHERE primarykey="eee" value="ssss" />
+  <WHERE primarykey="fff" value="tttt" />
+</JOIN>

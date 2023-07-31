@@ -1,0 +1,2 @@
+<!-- Test Case 8.14: dmrole must not be blank -->
+<COLLECTION dmrole="" />

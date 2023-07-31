@@ -1,0 +1,2 @@
+<!-- Test Case 7.3: valid dmrole + dmtype + ref + value; value provides default. -->
+<ATTRIBUTE dmrole="model:Thing.c" dmtype="model:Alpha" ref="_param2" value="aaa"/>

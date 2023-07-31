@@ -1,0 +1,2 @@
+<!-- Test Case 7.18: no dmrole + dmtype + value; must have no or empty dmrole in this context. -->
+<ATTRIBUTE dmtype="ivoa:real" value="1.21"/>

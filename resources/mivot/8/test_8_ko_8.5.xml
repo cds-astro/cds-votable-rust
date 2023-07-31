@@ -1,0 +1,3 @@
+<!-- Pattern Globals -->
+<!-- Test Case 8.5: COLLECTION under GLOBALS must have empty or no dmrole. -->
+<COLLECTION dmid="asdasdas" dmrole="dfgdfd"/>

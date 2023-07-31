@@ -1,0 +1,2 @@
+<!-- Test Case 12.3:  ref must not be empty -->
+<FOREIGN\_KEY ref="" />

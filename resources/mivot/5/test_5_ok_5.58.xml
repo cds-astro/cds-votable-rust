@@ -1,0 +1,11 @@
+<!-- Test Case 5.58: multiple (A,I,R,C) random order -->
+<INSTANCE dmid="_ref1" dmtype="model:thing">
+  <INSTANCE   dmrole="model.thing.b" dmtype="model:bar" />
+  <COLLECTION dmrole="model.thing.d"/>
+  <ATTRIBUTE  dmrole="model.thing.a" dmtype="model.foo" value="eeee"/>
+  <REFERENCE  dmrole="model.thing.c" dmref="_fffff"/>
+  <COLLECTION dmrole="model.thing.e"/>
+  <INSTANCE   dmrole="model.thing.f" dmtype="model:alpha" />
+  <REFERENCE  dmrole="model.thing.g" dmref="_ggggg"/>
+  <ATTRIBUTE  dmrole="model.thing.h" dmtype="model:beta" value="eeee"/>
+</INSTANCE>

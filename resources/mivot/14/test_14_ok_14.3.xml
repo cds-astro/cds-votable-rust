@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<VODML
+	xmlns="http://www.ivoa.net/xml/mivot">
+	
+	<!-- Test Case 14.3: failing with a message -->
+	<REPORT status="FAILED">
+	The annotation process failed
+	</REPORT>
+	
+</VODML>

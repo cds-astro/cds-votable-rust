@@ -1,0 +1,2 @@
+<!-- Test Case 11.6: dmtype must not be empty -->
+<PRIMARY\_KEY dmtype="" value="tttt" />

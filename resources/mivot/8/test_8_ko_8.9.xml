@@ -1,0 +1,5 @@
+<!-- Pattern Globals -->
+<!-- Test Case 8.9: COLLECTION under GLOBALS; with invalid child -->
+<COLLECTION dmid="asdasdas">
+	<BOGUS dmrole="a.f"/>
+</COLLECTION>

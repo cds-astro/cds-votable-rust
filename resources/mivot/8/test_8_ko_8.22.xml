@@ -1,0 +1,10 @@
+<!-- Pattern Instance -->
+<!-- Test Case 8.22: COLLECTION of REFERENCE + (other) -->
+<!--   * allows (A), (R) or (I,J) only    -->
+<COLLECTION dmrole="gggggg">
+	<REFERENCE dmrole = "fffff" dmref="_ref1" />
+	<INSTANCE dmtype="model:object" />
+	<REFERENCE dmrole = "fffff" dmref="_ref2" />
+</COLLECTION>
+
+

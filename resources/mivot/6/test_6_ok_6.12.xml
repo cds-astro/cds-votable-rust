@@ -1,0 +1,2 @@
+<!-- Test Case 6.12: no dmrole + dmref; must have no or empty dmrole -->
+<REFERENCE dmref="_target1" />

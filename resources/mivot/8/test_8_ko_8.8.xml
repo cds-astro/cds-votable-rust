@@ -1,0 +1,6 @@
+<!-- Pattern Globals -->
+<!-- Test Case 8.8: COLLECTION under GLOBALS, contains other than INSTANCE. -->
+<COLLECTION dmid="_bad" >
+	<ATTRIBUTE dmtype="model:elem" value="foo" />
+	<ATTRIBUTE dmtype="model:elem" value="bar" />
+</COLLECTION>

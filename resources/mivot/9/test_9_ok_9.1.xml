@@ -1,0 +1,2 @@
+<!-- Test Case 9.1: dmref + no sourceref; ok if only 1 table. -->
+<JOIN dmref="aaaaa" />

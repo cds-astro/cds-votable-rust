@@ -1,0 +1,4 @@
+<!-- Test Case 5.56: with COLLECTION; zero or more A|I|R|C, any order -->
+<INSTANCE dmid="ffff" dmtype="model:thing">
+  <COLLECTION dmrole="model:thing.d" />
+</INSTANCE>

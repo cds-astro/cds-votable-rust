@@ -1,0 +1,4 @@
+<!-- Usage 1: Child of INSTANCE -->
+
+<!-- Test Case 6.9: empty dmrole + dmref; must have non-empty dmrole in this context -->
+<REFERENCE dmrole="" dmref="fffff" />

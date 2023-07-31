@@ -1,0 +1,6 @@
+<!-- Usage 1: Child of INSTANCE -->
+
+<!-- Test Case 6.10:  dmrole + empty sourceref; if sourceref, must not be empty -->
+<REFERENCE dmrole="aaaa" sourceref="">
+	<FOREIGN\_KEY ref="zzzzz" />
+</REFERENCE>

@@ -1,0 +1,422 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VOTABLE version="1.3" xmlns="http://www.ivoa.net/xml/VOTable/v1.3"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.ivoa.net/xml/VOTable/v1.3 http://www.ivoa.net/xml/VOTable/v1.3">
+  <RESOURCE type="results">
+
+    <RESOURCE type="meta">
+      <VODML xmlns:dm-mapping="http://www.ivoa.net/xml/merged-syntax">
+        <REPORT status="OK">hand-made mapping</REPORT>
+
+        <MODEL name="meas" url="https://www.ivoa.net/xml/Meas/20200908/Meas-v1.0.vo-dml.xml" />
+        <MODEL name="coords" url="https://www.ivoa.net/xml/STC/20200908/Coords-v1.0.vo-dml.xml" />
+        <MODEL name="ivoa" url="https://www.ivoa.net/xml/VODML/IVOA-v1.vo-dml.xml" />
+
+        <GLOBALS>
+          <INSTANCE dmid="SpaceFrame_ICRS" dmtype="coords:SpaceSys">
+            <INSTANCE dmrole="coords:PhysicalCoordSys.frame" dmtype="coords:SpaceFrame">
+              <ATTRIBUTE dmrole="coords:SpaceFrame.spaceRefFrame" dmtype="ivoa:string" value="ICRS" />
+              <INSTANCE dmrole="coords:SpaceFrame.refPosition" dmtype="coords:CustomRefLocation">
+                <ATTRIBUTE dmrole="coords:CustomRefLocation.epoch" dmtype="coords:Epoch" value="2015.0"/>
+              </INSTANCE>              
+            </INSTANCE>
+          </INSTANCE>
+        </GLOBALS>
+
+        <TEMPLATES tableref="Results">
+        
+          <INSTANCE dmrole="" dmtype="meas:Position">
+            <ATTRIBUTE dmrole="meas:Measure.ucd" dmtype="ivoa:string" value="pos" />
+            <INSTANCE dmrole="meas:Measure.coord" dmtype="coords:LonLatPoint">
+              <ATTRIBUTE dmtype="ivoa:RealQuantity" dmrole="coords:LonLatPoint.lon" ref="ra" unit="deg"/>
+              <ATTRIBUTE dmtype="ivoa:RealQuantity" dmrole="coords:LonLatPoint.lat" ref="dec" unit="deg"/>
+              <ATTRIBUTE dmtype="ivoa:RealQuantity" dmrole="coords:LonLatPoint.dist" ref="parallax" unit="parsec"/>
+              <REFERENCE dmrole="coords:Coordinate.coordSys" dmref="SpaceFrame_ICRS" />
+            </INSTANCE>
+
+            <INSTANCE dmrole="meas:Measure.error" dmtype="meas:Ellipse">
+              <ATTRIBUTE dmrole="meas:Ellipse.posAngle" value="0"/>
+              <COLLECTION dmrole="meas:Ellipse.semiAxis">
+                <ATTRIBUTE dmtype="ivoa:RealQuantity" ref="ra_error" unit="mas"/>
+                <ATTRIBUTE dmtype="ivoa:RealQuantity" ref="dec_error" unit="mas"/>
+              </COLLECTION>
+            </INSTANCE>
+          </INSTANCE>
+
+          <INSTANCE dmrole="" dmtype="meas:Velocity">
+            <ATTRIBUTE dmrole="meas:Measure.ucd" dmtype="ivoa:string" value="spect.dopplerVeloc.opt" />
+            <INSTANCE dmrole="meas:Measure.coord" dmtype="coords:LonLatPoint">
+              <ATTRIBUTE dmtype="ivoa:RealQuantity" dmrole="coords:LonLatPoint.dist"  
+                         ref="radial_velocity" unit="km/s"/>
+            </INSTANCE>
+            <ATTRIBUTE dmrole="meas:Measure.error" dmtype="meas:Symmetrical" 
+                       ref="radial_velocity_error" unit="km/s"/>
+           </INSTANCE>
+
+          <INSTANCE dmrole="" dmtype="meas:GenericMeasure">
+            <ATTRIBUTE dmrole="meas:Measure.ucd" dmtype="ivoa:string" value="pos.parallax" />
+            <INSTANCE dmrole="meas:Measure.coord" dmtype="coords:PhysicalCoordinate">
+              <ATTRIBUTE dmrole="coords:PhysicalCoordinate.cval" dmtype="ivoa:RealQuantity" ref="parallax" unit="mas"/>
+            </INSTANCE>
+            <ATTRIBUTE dmrole="meas:Measure.error" dmtype="meas:Symmetrical" ref="parallax_error" unit="mas"/>
+          </INSTANCE>
+
+          <INSTANCE dmrole="" dmtype="meas:ProperMotion">
+            <ATTRIBUTE dmrole="meas:Measure.ucd" dmtype="ivoa:string" value="pos.pm" />
+            <INSTANCE dmrole="meas:Measure.coord" dmtype="coords:LonLatPoint">
+              <ATTRIBUTE dmrole="coords:LonLatPoint.lon" dmtype="ivoa:RealQuantity" ref="pmra" unit="mas/year"/>
+              <ATTRIBUTE dmrole="coords:LonLatPoint.lat" dmtype="ivoa:RealQuantity" ref="pmdec" unit="mas/year"/>
+              <ATTRIBUTE dmrole="meas:ProperMotion.cosLat_applied" dmtype="ivoa:bool" value="true" />
+            </INSTANCE>
+            
+            <INSTANCE dmrole="meas:Measure.error" dmtype="meas:Ellipse">
+              <ATTRIBUTE dmrole="meas:Ellipse.posAngle" value="0"/>
+              <COLLECTION dmrole="meas:Ellipse.semiAxis">
+                <ATTRIBUTE dmtype="ivoa:RealQuantity" ref="pmra_error" unit="mas/year"/>
+                <ATTRIBUTE dmtype="ivoa:RealQuantity" ref="pmdec_error" unit="mas/year"/>
+              </COLLECTION>
+            </INSTANCE>
+            
+          </INSTANCE>
+        </TEMPLATES>
+      </VODML>
+    </RESOURCE>
+    <INFO name="QUERY_STATUS" value="OK" />
+
+    <INFO name="QUERY"
+      value="SELECT TOP 100 gaiadr2.gaia_source.designation , gaiadr2.gaia_source.ra , gaiadr2.gaia_source.ra_error , gaiadr2.gaia_source.&quot;dec&quot; , gaiadr2.gaia_source.dec_error , gaiadr2.gaia_source.parallax , gaiadr2.gaia_source.parallax_error , gaiadr2.gaia_source.pmra , gaiadr2.gaia_source.pmra_error , gaiadr2.gaia_source.pmdec , gaiadr2.gaia_source.pmdec_error , gaiadr2.gaia_source.radial_velocity , gaiadr2.gaia_source.radial_velocity_error
+ FROM  gaiadr2.gaia_source
+ WHERE ( CONTAINS(POINT(&#039;ICRS&#039;, ra, &quot;dec&quot;), CIRCLE(&#039;ICRS&#039;, 162.328814, -53.319466, 0.016666666666666666)) = 1 )"><![CDATA[SELECT TOP 100 gaiadr2.gaia_source.designation , gaiadr2.gaia_source.ra , gaiadr2.gaia_source.ra_error , gaiadr2.gaia_source."dec" , gaiadr2.gaia_source.dec_error , gaiadr2.gaia_source.parallax , gaiadr2.gaia_source.parallax_error , gaiadr2.gaia_source.pmra , gaiadr2.gaia_source.pmra_error , gaiadr2.gaia_source.pmdec , gaiadr2.gaia_source.pmdec_error , gaiadr2.gaia_source.radial_velocity , gaiadr2.gaia_source.radial_velocity_error
+ FROM  gaiadr2.gaia_source
+ WHERE ( CONTAINS(POINT('ICRS', ra, "dec"), CIRCLE('ICRS', 162.328814, -53.319466, 0.016666666666666666)) = 1 )]]></INFO>
+    <INFO name="CAPTION"
+      value="How to cite and acknowledge Gaia: https://gea.esac.esa.int/archive/documentation/credits.html"><![CDATA[How to cite and acknowledge Gaia: https://gea.esac.esa.int/archive/documentation/credits.html]]></INFO>
+    <INFO name="PAGE" value="" />
+    <INFO name="PAGE_SIZE" value="" />
+    <INFO name="SERVICE" value="">https://gea.esac.esa.int/tap-server/tap</INFO>
+    <INFO name="ORIGIN" value="1643099754507O"><![CDATA[1643099754507O]]></INFO>
+    <INFO name="JOBNAME" value="" />
+    <COOSYS ID="GAIADR2" epoch="J2015.5" system="ICRS" />
+    <COOSYS ID="t3252230-coosys-1" epoch="J2015.5" system="ICRS" />
+    <TABLE ID="Results">
+      <FIELD arraysize="*" datatype="char" name="designation" ucd="meta.id;meta.main">
+        <DESCRIPTION>Unique source designation (unique across all Data Releases)</DESCRIPTION>
+      </FIELD>
+      <FIELD datatype="double" name="ra" ref="t3723554-coosys-1" ucd="pos.eq.ra;meta.main" unit="deg"
+        utype="Char.SpatialAxis.Coverage.Location.Coord.Position2D.Value2.C1">
+        <DESCRIPTION>Right ascension</DESCRIPTION>
+      </FIELD>
+      <FIELD datatype="double" name="ra_error" ucd="stat.error;pos.eq.ra" unit="mas">
+        <DESCRIPTION>Standard error of right ascension</DESCRIPTION>
+      </FIELD>
+      <FIELD datatype="double" name="dec" ref="t3723554-coosys-1" ucd="pos.eq.dec;meta.main" unit="deg"
+        utype="Char.SpatialAxis.Coverage.Location.Coord.Position2D.Value2.C2">
+        <DESCRIPTION>Declination</DESCRIPTION>
+      </FIELD>
+      <FIELD datatype="double" name="dec_error" ucd="stat.error;pos.eq.dec" unit="mas">
+        <DESCRIPTION>Standard error of declination</DESCRIPTION>
+      </FIELD>
+      <FIELD datatype="double" name="parallax" ucd="pos.parallax" unit="mas">
+        <DESCRIPTION>Parallax</DESCRIPTION>
+      </FIELD>
+      <FIELD datatype="double" name="parallax_error" ucd="stat.error;pos.parallax" unit="mas">
+        <DESCRIPTION>Standard error of parallax</DESCRIPTION>
+      </FIELD>
+      <FIELD datatype="double" name="pmra" ucd="pos.pm;pos.eq.ra" unit="mas.yr**-1">
+        <DESCRIPTION>Proper motion in right ascension direction</DESCRIPTION>
+      </FIELD>
+      <FIELD datatype="double" name="pmra_error" ucd="stat.error;pos.pm;pos.eq.ra" unit="mas.yr**-1">
+        <DESCRIPTION>Standard error of proper motion in right ascension direction</DESCRIPTION>
+      </FIELD>
+      <FIELD datatype="double" name="pmdec" ucd="pos.pm;pos.eq.dec" unit="mas.yr**-1">
+        <DESCRIPTION>Proper motion in declination direction</DESCRIPTION>
+      </FIELD>
+      <FIELD datatype="double" name="pmdec_error" ucd="stat.error;pos.pm;pos.eq.dec" unit="mas.yr**-1">
+        <DESCRIPTION>Standard error of proper motion in declination direction</DESCRIPTION>
+      </FIELD>
+      <FIELD datatype="double" name="radial_velocity" ucd="spect.dopplerVeloc.opt" unit="km.s**-1">
+        <DESCRIPTION>Radial velocity</DESCRIPTION>
+      </FIELD>
+      <FIELD datatype="double" name="radial_velocity_error" ucd="stat.error;spect.dopplerVeloc.opt" unit="km.s**-1">
+        <DESCRIPTION>Radial velocity error</DESCRIPTION>
+      </FIELD>
+      <DATA>
+        <BINARY2>
+          <STREAM encoding='base64'>
+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
+</STREAM>
+        </BINARY2>
+      </DATA>
+    </TABLE>
+  </RESOURCE>
+</VOTABLE>
