@@ -1,5 +1,7 @@
-use std::io::{self, BufRead, BufReader, Bytes, Error, ErrorKind, Read};
-use std::mem::size_of;
+use std::{
+  io::{self, BufRead, BufReader, Bytes, Error, ErrorKind, Read},
+  mem::size_of,
+};
 
 use base64::{engine::GeneralPurpose, read::DecoderReader};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
@@ -199,6 +201,109 @@ impl BulkReaderElem {
   }
 }
 
+// Owned version of B64Cleaner...
+pub struct OwnedB64Cleaner<R: BufRead> {
+  reader: R,
+  is_over: bool,
+}
+
+impl<R: BufRead> OwnedB64Cleaner<R> {
+  pub fn new(reader: R) -> Self {
+    Self {
+      reader,
+      is_over: false,
+    }
+  }
+
+  pub fn is_over(&self) -> bool {
+    self.is_over
+  }
+
+  pub fn get(self) -> R {
+    self.reader
+  }
+}
+
+impl<R: BufRead> Read for OwnedB64Cleaner<R> {
+  fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+    if self.is_over {
+      return Ok(0);
+    }
+    let mut bytes = (&mut self.reader).bytes();
+    for (i, byte) in buf.iter_mut().enumerate() {
+      *byte = loop {
+        match bytes.next() {
+          Some(read_byte) => {
+            match read_byte? {
+              // Simply ignore blank and carriage return (possibly added for formatting purpose)
+              b'\n' | b'\t' | b' ' => continue,
+              // Return when we detect the beginning of the </STREAM> tag
+              b'<' => {
+                assert_eq!(bytes.next().unwrap().unwrap(), b'/');
+                assert_eq!(bytes.next().unwrap().unwrap(), b'S');
+                assert_eq!(bytes.next().unwrap().unwrap(), b'T');
+                assert_eq!(bytes.next().unwrap().unwrap(), b'R');
+                assert_eq!(bytes.next().unwrap().unwrap(), b'E');
+                assert_eq!(bytes.next().unwrap().unwrap(), b'A');
+                assert_eq!(bytes.next().unwrap().unwrap(), b'M');
+                assert_eq!(bytes.next().unwrap().unwrap(), b'>');
+                self.is_over = true;
+                return Ok(i);
+              }
+              // Valid b64 chars are 0-9a-zA-Z+/= (= for padding only), we let the base64 decoder
+              // throw an error, no need to check them here
+              b => break b,
+            }
+          }
+          None => {
+            return Err(Error::new(
+              ErrorKind::UnexpectedEof,
+              "Premature end of b64 encoded binary data",
+            ))
+          }
+        }
+      }
+    }
+    Ok(buf.len())
+  }
+}
+
+// Owned version of BulkBinaryRowDeserializer
+pub struct OwnedBulkBinaryRowDeserializer<R: BufRead> {
+  reader: BufReader<DecoderReader<'static, GeneralPurpose, OwnedB64Cleaner<R>>>,
+  bulk_reader: Vec<BulkReaderElem>,
+}
+
+impl<R: BufRead> OwnedBulkBinaryRowDeserializer<R> {
+  pub fn new_binary(
+    reader: DecoderReader<'static, GeneralPurpose, OwnedB64Cleaner<R>>,
+    schemas: &[Schema],
+  ) -> Self {
+    Self {
+      reader: BufReader::new(reader),
+      bulk_reader: BulkReaderElem::from_schemas(schemas, false),
+    }
+  }
+
+  pub fn new_binary2(
+    reader: DecoderReader<'static, GeneralPurpose, OwnedB64Cleaner<R>>,
+    schemas: &[Schema],
+  ) -> Self {
+    Self {
+      reader: BufReader::new(reader),
+      bulk_reader: BulkReaderElem::from_schemas(schemas, true),
+    }
+  }
+
+  pub fn has_data_left(&mut self) -> Result<bool, io::Error> {
+    self.reader.fill_buf().map(|b| !b.is_empty())
+  }
+
+  pub fn read_raw_row(&mut self, buf: &mut Vec<u8>) -> Result<usize, VOTableError> {
+    BulkReaderElem::read_all(self.bulk_reader.as_slice(), &mut self.reader, buf)
+  }
+}
+
 /// Read from binary data.
 /*pub struct BinaryDeserializer<'a, R: BufRead> {
   reader: BufReader<DecoderReader<'static, GeneralPurpose, B64Cleaner<'a, R>>>,
@@ -309,11 +414,16 @@ impl<'de, 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializer<R> {
     visitor.visit_u8(self.reader.read_u8().map_err(VOTableError::Io)?)
   }
 
-  fn deserialize_u16<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
+  fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
   where
     V: Visitor<'de>,
   {
-    unreachable!("No u16 in VOTable")
+    // Only used for unicode chars with the CharVisitor
+    self
+      .reader
+      .read_u16::<BigEndian>()
+      .map_err(VOTableError::Io)
+      .and_then(|v| visitor.visit_u16(v))
   }
 
   fn deserialize_u32<V>(self, _visitor: V) -> Result<V::Value, Self::Error>

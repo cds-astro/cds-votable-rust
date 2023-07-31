@@ -1,5 +1,25 @@
 # `votable` Change Log
 
+## 0.3.0
+
+Released 2023-XX-XX
+
+### Added
+
+* 'SimpleVOTableRowIterator' to make external parser taking charge
+   of parsing rows
+* More atrributes/sub-elements made public
+
+### Changed
+
+* Arraysize no more a String but a enum
+
+### Bug correction
+
+* Better handling of arrays
+
+
+
 ## 0.2.3
 
 Released 2023-05-01

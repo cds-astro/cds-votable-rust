@@ -16,7 +16,9 @@ use crate::{
   },
   error::VOTableError,
   impls::{
-    b64::read::{B64Cleaner, BulkBinaryRowDeserializer},
+    b64::read::{
+      B64Cleaner, BulkBinaryRowDeserializer, OwnedB64Cleaner, OwnedBulkBinaryRowDeserializer,
+    },
     mem::VoidTableDataContent,
     Schema, VOTableValue,
   },
@@ -136,6 +138,50 @@ impl<'a, R: BufRead> Iterator for TabledataRowIterator<'a, R> {
   }
 }
 
+pub struct OwnedTabledataRowIterator<R: BufRead> {
+  pub reader: Reader<R>,
+  pub reader_buff: Vec<u8>,
+  pub votable: VOTable<VoidTableDataContent>,
+}
+
+impl<R: BufRead> OwnedTabledataRowIterator<R> {
+  pub fn skip_remaining_data(&mut self) -> Result<(), VOTableError> {
+    self
+      .reader
+      .read_to_end(
+        TableData::<VoidTableDataContent>::TAG_BYTES,
+        &mut self.reader_buff,
+      )
+      .map_err(VOTableError::Read)
+  }
+
+  pub fn read_to_end(self) -> Result<VOTable<VoidTableDataContent>, VOTableError> {
+    let Self {
+      mut reader,
+      mut reader_buff,
+      mut votable,
+    } = self;
+    // TODO: redundant code with SimpleVOTableRowIterator...
+    votable.resources[0].tables[0]
+      .data
+      .as_mut()
+      .unwrap()
+      .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &Vec::default())?;
+    votable.resources[0].tables[0].read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
+    votable.resources[0].read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
+    votable.read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
+    Ok(votable)
+  }
+}
+
+impl<R: BufRead> Iterator for OwnedTabledataRowIterator<R> {
+  type Item = Result<Vec<u8>, VOTableError>;
+
+  fn next(&mut self) -> Option<Self::Item> {
+    TabledataRowIterator::new(&mut self.reader, &mut self.reader_buff).next()
+  }
+}
+
 /// Iterate over the raw rows (i.e. everything inside the `<TR>`/`</TR>` tags).
 /// We assume the `<TABLEDATA>` tag has already been consumed and this iterator will consume
 /// the `</TABLEDATA>` tag.
@@ -181,13 +227,40 @@ impl<'a, R: BufRead> Iterator for Binary1or2RowIterator<'a, R> {
   }
 }
 
+pub struct OwnedBinary1or2RowIterator<R: BufRead> {
+  pub votable: VOTable<VoidTableDataContent>,
+  pub reader: OwnedBulkBinaryRowDeserializer<R>,
+}
+
+impl<R: BufRead> OwnedBinary1or2RowIterator<R> {
+  pub fn new(reader: Reader<R>, votable: VOTable<VoidTableDataContent>, is_binary2: bool) -> Self {
+    let b64_cleaner = OwnedB64Cleaner::new(reader.into_inner());
+    let decoder = DecoderReader::new(b64_cleaner, &general_purpose::STANDARD);
+    // Get schema
+    let schema: Vec<Schema> = votable.resources[0].tables[0]
+      .elems
+      .iter()
+      .filter_map(|table_elem| match table_elem {
+        TableElem::Field(field) => Some(field.into()),
+        _ => None,
+      })
+      .collect();
+    let reader = if is_binary2 {
+      OwnedBulkBinaryRowDeserializer::new_binary2(decoder, schema.as_slice())
+    } else {
+      OwnedBulkBinaryRowDeserializer::new_binary(decoder, schema.as_slice())
+    };
+    Self { votable, reader }
+  }
+}
+
 /// Structure made to iterate on the raw rows of a "simple" VOTable.
 /// By "simple", we mean a VOTable containing a single resource containing itself a single table.  
 pub struct SimpleVOTableRowIterator<R: BufRead> {
-  reader: Reader<R>,
-  reader_buff: Vec<u8>,
-  votable: VOTable<VoidTableDataContent>,
-  data_type: TableOrBinOrBin2,
+  pub reader: Reader<R>,
+  pub reader_buff: Vec<u8>,
+  pub votable: VOTable<VoidTableDataContent>,
+  pub data_type: TableOrBinOrBin2,
 }
 
 impl SimpleVOTableRowIterator<BufReader<File>> {
@@ -297,6 +370,20 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
   /// * `</BINARY2>` for `<BINARY2>`
   pub fn borrow_mut_reader_and_buff(&mut self) -> (&mut Reader<R>, &mut Vec<u8>) {
     (&mut self.reader, &mut self.reader_buff)
+  }
+
+  /// Before calling this method, you **must** ensure that `self.data_type()` returns `TableOrBinOrBin2::TableData`
+  pub fn to_owned_tabledata_row_iterator(self) -> OwnedTabledataRowIterator<R> {
+    OwnedTabledataRowIterator {
+      reader: self.reader,
+      reader_buff: self.reader_buff,
+      votable: self.votable,
+    }
+  }
+
+  /// Before calling this method, you **must** ensure that `self.data_type()` returns `TableOrBinOrBin2::TableData`
+  pub fn to_owned_binary_row_iterator(self) -> OwnedBinary1or2RowIterator<R> {
+    OwnedBinary1or2RowIterator::new(self.reader, self.votable, false)
   }
 
   /// You can call this method only if you have not yet consumed:
@@ -632,6 +719,28 @@ mod tests {
       );
     }
     let votable = svor.read_to_end().unwrap();
+    println!("VOTable: {}", votable.wrap().to_toml_string(true).unwrap());
+
+    assert!(true)
+  }
+
+  #[test]
+  fn test_simple_votable_read_iter_tabledata_owned() {
+    println!();
+    println!("-- next_table_row_value_iter dss12.vot --");
+    println!();
+
+    let svor =
+      SimpleVOTableRowIterator::open_file_and_read_to_data("resources/sdss12.vot").unwrap();
+    assert!(matches!(svor.data_type(), &TableOrBinOrBin2::TableData));
+    let mut raw_row_it = svor.to_owned_tabledata_row_iterator();
+    while let Some(raw_row_res) = raw_row_it.next() {
+      eprintln!(
+        "ROW: {:?}",
+        std::str::from_utf8(&raw_row_res.unwrap()).unwrap()
+      );
+    }
+    let votable = raw_row_it.read_to_end().unwrap();
     println!("VOTable: {}", votable.wrap().to_toml_string(true).unwrap());
 
     assert!(true)
