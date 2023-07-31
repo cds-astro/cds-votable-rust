@@ -16,7 +16,9 @@ use crate::{
   },
   error::VOTableError,
   impls::{
-    b64::read::{B64Cleaner, BulkBinaryRowDeserializer},
+    b64::read::{
+      B64Cleaner, BulkBinaryRowDeserializer, OwnedB64Cleaner, OwnedBulkBinaryRowDeserializer,
+    },
     mem::VoidTableDataContent,
     Schema, VOTableValue,
   },
@@ -225,20 +227,18 @@ impl<'a, R: BufRead> Iterator for Binary1or2RowIterator<'a, R> {
   }
 }
 
-/*
 pub struct OwnedBinary1or2RowIterator<R: BufRead> {
-  pub reader: Reader<R>,
-  pub reader_buff: Vec<u8>,
   pub votable: VOTable<VoidTableDataContent>,
-  bulk_reader: BulkBinaryRowDeserializer<'static, R>,
+  pub reader: OwnedBulkBinaryRowDeserializer<R>,
 }
 
 impl<R: BufRead> OwnedBinary1or2RowIterator<R> {
-  pub fn new(mut reader: Reader<R>, context: &[TableElem], is_binary2: bool) -> Self {
-    let b64_cleaner = B64Cleaner::new(reader.get_mut());
+  pub fn new(reader: Reader<R>, votable: VOTable<VoidTableDataContent>, is_binary2: bool) -> Self {
+    let b64_cleaner = OwnedB64Cleaner::new(reader.into_inner());
     let decoder = DecoderReader::new(b64_cleaner, &general_purpose::STANDARD);
     // Get schema
-    let schema: Vec<Schema> = context
+    let schema: Vec<Schema> = votable.resources[0].tables[0]
+      .elems
       .iter()
       .filter_map(|table_elem| match table_elem {
         TableElem::Field(field) => Some(field.into()),
@@ -246,14 +246,13 @@ impl<R: BufRead> OwnedBinary1or2RowIterator<R> {
       })
       .collect();
     let reader = if is_binary2 {
-      BulkBinaryRowDeserializer::new_binary2(decoder, schema.as_slice())
+      OwnedBulkBinaryRowDeserializer::new_binary2(decoder, schema.as_slice())
     } else {
-      BulkBinaryRowDeserializer::new_binary(decoder, schema.as_slice())
+      OwnedBulkBinaryRowDeserializer::new_binary(decoder, schema.as_slice())
     };
-    Self { reader }
+    Self { votable, reader }
   }
 }
-*/
 
 /// Structure made to iterate on the raw rows of a "simple" VOTable.
 /// By "simple", we mean a VOTable containing a single resource containing itself a single table.  
@@ -380,6 +379,11 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
       reader_buff: self.reader_buff,
       votable: self.votable,
     }
+  }
+
+  /// Before calling this method, you **must** ensure that `self.data_type()` returns `TableOrBinOrBin2::TableData`
+  pub fn to_owned_binary_row_iterator(self) -> OwnedBinary1or2RowIterator<R> {
+    OwnedBinary1or2RowIterator::new(self.reader, self.votable, false)
   }
 
   /// You can call this method only if you have not yet consumed:
