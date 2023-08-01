@@ -254,6 +254,23 @@ impl<R: BufRead> OwnedBinary1or2RowIterator<R> {
   }
 }
 
+impl<R: BufRead> Iterator for OwnedBinary1or2RowIterator<R> {
+  type Item = Result<Vec<u8>, VOTableError>;
+
+  fn next(&mut self) -> Option<Self::Item> {
+    // TODO: ask the exact max binary size?!
+    if self.reader.has_data_left().unwrap_or(false) {
+      let mut row = Vec::with_capacity(512);
+      Some(self.reader.read_raw_row(&mut row).map(|_| {
+        row.shrink_to_fit();
+        row
+      }))
+    } else {
+      None
+    }
+  }
+}
+
 /// Structure made to iterate on the raw rows of a "simple" VOTable.
 /// By "simple", we mean a VOTable containing a single resource containing itself a single table.  
 pub struct SimpleVOTableRowIterator<R: BufRead> {
