@@ -73,7 +73,9 @@ impl<'a, R: BufRead> TabledataRowIterator<'a, R> {
     needle_finder: &Finder,
     buf: &mut Vec<u8>,
   ) -> Result<usize, VOTableError> {
+    let l = needle_finder.needle().len();
     let r = self.reader.get_mut();
+    let mut ending_pattern: Option<(&[u8], &[u8])> = None;
     let mut read = 0;
     loop {
       let (done, used) = {
@@ -82,18 +84,45 @@ impl<'a, R: BufRead> TabledataRowIterator<'a, R> {
           Err(ref e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
           Err(e) => return Err(VOTableError::Io(e)),
         };
+        if let Some((start, end)) = ending_pattern {
+          if available.starts_with(end) {
+            r.consume(end.len());
+            read += end.len();
+            return Ok(read);
+          } else {
+            // not the right pattern, starting part to be added!!
+            buf.extend_from_slice(start);
+            ending_pattern = None;
+          }
+        }
         match needle_finder.find(available) {
           Some(i) => {
             buf.extend_from_slice(&available[..i]);
-            (true, i + 1)
+            (true, i + l)
           }
           None => {
-            buf.extend_from_slice(available);
-            (false, available.len())
+            let len = available.len();
+            if available.ends_with(b"<") {
+              ending_pattern = Some((b"<", b"/TR>"));
+              buf.extend_from_slice(&available[..len - 1]);
+            } else if available.ends_with(b"</") {
+              ending_pattern = Some((b"</", b"TR>"));
+              buf.extend_from_slice(&available[..len - 2]);
+            } else if available.ends_with(b"</T") {
+              ending_pattern = Some((b"</T", b"R>"));
+              buf.extend_from_slice(&available[..len - 3]);
+            } else if available.ends_with(b"</TR") {
+              ending_pattern = Some((b"</TR", b">"));
+              buf.extend_from_slice(&available[..len - 4]);
+            } else {
+              // regular case
+              buf.extend_from_slice(available);
+            }
+            (false, len)
           }
         }
       };
-      r.consume(used + needle_finder.needle().len());
+      r.consume(used);
       read += used;
       if done || used == 0 {
         return Ok(read);
@@ -108,11 +137,12 @@ impl<'a, R: BufRead> Iterator for TabledataRowIterator<'a, R> {
   type Item = Result<Vec<u8>, VOTableError>;
 
   fn next(&mut self) -> Option<Self::Item> {
+    self.reader_buff.clear();
     loop {
       let event = self.reader.read_event(self.reader_buff);
       match event {
         Ok(Event::Start(ref e)) if e.name() == b"TR" => {
-          let mut raw_row: Vec<u8> = Vec::with_capacity(228);
+          let mut raw_row: Vec<u8> = Vec::with_capacity(256);
           return Some(
             self
               .read_until_with_finder(&TR_END_FINDER, &mut raw_row)
@@ -120,7 +150,7 @@ impl<'a, R: BufRead> Iterator for TabledataRowIterator<'a, R> {
           );
         }
         Ok(Event::End(ref e)) if e.name() == TableData::<VoidTableDataContent>::TAG_BYTES => {
-          return None
+          return None;
         }
         Err(e) => return Some(Err(VOTableError::Read(e))),
         Ok(Event::Eof) => return Some(Err(VOTableError::PrematureEOF("reading rows"))),
@@ -129,11 +159,10 @@ impl<'a, R: BufRead> Iterator for TabledataRowIterator<'a, R> {
             .trim()
             .is_empty() =>
         {
-          continue
+          continue;
         }
         _ => eprintln!("Discarded event reading rows: {:?}", event),
       }
-      self.reader_buff.clear();
     }
   }
 }
@@ -751,17 +780,47 @@ mod tests {
       SimpleVOTableRowIterator::open_file_and_read_to_data("resources/sdss12.vot").unwrap();
     assert!(matches!(svor.data_type(), &TableOrBinOrBin2::TableData));
     let mut raw_row_it = svor.to_owned_tabledata_row_iterator();
+    let mut n_row = 0_u32;
     while let Some(raw_row_res) = raw_row_it.next() {
       eprintln!(
         "ROW: {:?}",
         std::str::from_utf8(&raw_row_res.unwrap()).unwrap()
       );
+      n_row += 1;
     }
     let votable = raw_row_it.read_to_end().unwrap();
     println!("VOTable: {}", votable.wrap().to_toml_string(true).unwrap());
 
-    assert!(true)
+    assert_eq!(n_row, 50)
   }
+
+  /*
+  #[test]
+  fn test_simple_votable_read_iter_tabledata_owned_local_fxp() {
+    println!();
+    println!("-- next_table_row_value_iter 1358_vlpv.vot --");
+    println!();
+
+    let svor = SimpleVOTableRowIterator::open_file_and_read_to_data(
+      "/home/pineau/Téléchargements/1358_vlpv.vot",
+    )
+    .unwrap();
+    assert!(matches!(svor.data_type(), &TableOrBinOrBin2::TableData));
+    let mut raw_row_it = svor.to_owned_tabledata_row_iterator();
+    let mut n_row = 0_u32;
+    while let Some(raw_row_res) = raw_row_it.next() {
+      let raw_row = raw_row_res.unwrap();
+      let row = std::str::from_utf8(&raw_row).unwrap();
+      if row.contains("TR") {
+        eprintln!("ROW: {:?}", row);
+      }
+      n_row += 1;
+    }
+    let votable = raw_row_it.read_to_end().unwrap();
+    println!("VOTable: {}", votable.wrap().to_toml_string(true).unwrap());
+
+    assert_eq!(n_row, 1720588)
+  }*/
 
   #[test]
   fn test_simple_votable_read_iter_binary1() {
