@@ -43,6 +43,7 @@ static TR_END_FINDER: Lazy<Finder<'static>> = Lazy::new(|| Finder::new("</TR>"))
 pub struct TabledataRowIterator<'a, R: BufRead> {
   reader: &'a mut Reader<R>,
   reader_buff: &'a mut Vec<u8>,
+  has_next: bool,
 }
 
 impl<'a, R: BufRead> TabledataRowIterator<'a, R> {
@@ -51,9 +52,11 @@ impl<'a, R: BufRead> TabledataRowIterator<'a, R> {
     Self {
       reader,
       reader_buff,
+      has_next: true,
     }
   }
 
+  /*
   /// Put the content of the reader in the given buffer until the given 'needle' is reached.
   /// The `needle` is not written in the buffer and is removed from the reader.
   ///
@@ -62,14 +65,15 @@ impl<'a, R: BufRead> TabledataRowIterator<'a, R> {
   /// # Info
   /// Adapted from [the Rust std.io code](https://doc.rust-lang.org/src/std/io/mod.rs.html#2151-2153)
   /// to look for an array and not just a byte.
-  pub fn read_until(&mut self, needle: &[u8], buf: &mut Vec<u8>) -> Result<usize, VOTableError> {
+  fn read_until(&mut self, needle: &[u8], buf: &mut Vec<u8>) -> Result<usize, VOTableError> {
     self.read_until_with_finder(&Finder::new(needle), buf)
   }
+  */
 
   /// Same as `read_until` but taking a `memchr::memmem::Finder` for better performances when
   /// a same `needle` has to be used several times.
   /// WARNING: NOT GENERIC, WORKS ONLY WITH THE '</TR>' needle!!!
-  pub fn read_until_with_finder(
+  fn read_until_with_finder(
     &mut self,
     needle_finder: &Finder,
     buf: &mut Vec<u8>,
@@ -130,40 +134,43 @@ impl<'a, R: BufRead> TabledataRowIterator<'a, R> {
       }
     }
   }
-
-  // skip_until ?
 }
 
 impl<'a, R: BufRead> Iterator for TabledataRowIterator<'a, R> {
   type Item = Result<Vec<u8>, VOTableError>;
 
   fn next(&mut self) -> Option<Self::Item> {
-    self.reader_buff.clear();
-    loop {
-      let event = self.reader.read_event(self.reader_buff);
-      match event {
-        Ok(Event::Start(ref e)) if e.name() == b"TR" => {
-          let mut raw_row: Vec<u8> = Vec::with_capacity(256);
-          return Some(
-            self
-              .read_until_with_finder(&TR_END_FINDER, &mut raw_row)
-              .map(move |_| raw_row),
-          );
+    if self.has_next {
+      self.reader_buff.clear();
+      loop {
+        let event = self.reader.read_event(self.reader_buff);
+        match event {
+          Ok(Event::Start(ref e)) if e.name() == b"TR" => {
+            let mut raw_row: Vec<u8> = Vec::with_capacity(256);
+            return Some(
+              self
+                .read_until_with_finder(&TR_END_FINDER, &mut raw_row)
+                .map(move |_| raw_row),
+            );
+          }
+          Ok(Event::End(ref e)) if e.name() == TableData::<VoidTableDataContent>::TAG_BYTES => {
+            self.has_next = false;
+            return None;
+          }
+          Err(e) => return Some(Err(VOTableError::Read(e))),
+          Ok(Event::Eof) => return Some(Err(VOTableError::PrematureEOF("reading rows"))),
+          Ok(Event::Text(ref e))
+            if unsafe { std::str::from_utf8_unchecked(e.escaped()) }
+              .trim()
+              .is_empty() =>
+          {
+            continue;
+          }
+          _ => eprintln!("Discarded event reading rows: {:?}", event),
         }
-        Ok(Event::End(ref e)) if e.name() == TableData::<VoidTableDataContent>::TAG_BYTES => {
-          return None;
-        }
-        Err(e) => return Some(Err(VOTableError::Read(e))),
-        Ok(Event::Eof) => return Some(Err(VOTableError::PrematureEOF("reading rows"))),
-        Ok(Event::Text(ref e))
-          if unsafe { std::str::from_utf8_unchecked(e.escaped()) }
-            .trim()
-            .is_empty() =>
-        {
-          continue;
-        }
-        _ => eprintln!("Discarded event reading rows: {:?}", event),
       }
+    } else {
+      None
     }
   }
 }
