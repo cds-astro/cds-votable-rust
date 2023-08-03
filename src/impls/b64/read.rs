@@ -3,6 +3,7 @@ use std::{
   mem::size_of,
 };
 
+use base64::engine::general_purpose;
 use base64::{engine::GeneralPurpose, read::DecoderReader};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use serde::{de::Visitor, Deserializer};
@@ -219,7 +220,7 @@ impl<R: BufRead> OwnedB64Cleaner<R> {
     self.is_over
   }
 
-  pub fn get(self) -> R {
+  pub fn into_inner(self) -> R {
     self.reader
   }
 }
@@ -264,6 +265,32 @@ impl<R: BufRead> Read for OwnedB64Cleaner<R> {
         }
       }
     }
+
+    /* Don't know if wa can do better than iterating char by char...
+    The best option may be to implement our own base64::read::DecoderReader ...
+    (to avoid a copy)
+    loop {
+      let mut available = match self.reader.fill_buf() {
+        Ok(n) => n,
+        Err(ref e) if e.kind() == ErrorKind::Interrupted => continue,
+        Err(e) => return Err(e),
+      };
+      if let Some(to) = memchr::memchr(b'<', available) {
+        available = available[..i];
+      };
+      // TO BE DONE!!
+      match memchr::memchr(b'<', available) {
+        Some(i) => {
+          buf.extend_from_slice(&available[..=i]);
+          (true, i + 1)
+        }
+        None => {
+          buf.extend_from_slice(available);
+          (false, available.len())
+        }
+      }
+    }*/
+
     Ok(buf.len())
   }
 }
@@ -295,12 +322,82 @@ impl<R: BufRead> OwnedBulkBinaryRowDeserializer<R> {
     }
   }
 
-  pub fn has_data_left(&mut self) -> Result<bool, io::Error> {
-    self.reader.fill_buf().map(|b| !b.is_empty())
+  pub fn has_data_left(&mut self) -> Result<bool, VOTableError> {
+    self
+      .reader
+      .fill_buf()
+      .map(|b| !b.is_empty())
+      .map_err(VOTableError::Io)
   }
 
   pub fn read_raw_row(&mut self, buf: &mut Vec<u8>) -> Result<usize, VOTableError> {
     BulkReaderElem::read_all(self.bulk_reader.as_slice(), &mut self.reader, buf)
+  }
+
+  pub fn skip_remaining_data(self) -> Result<Self, VOTableError> {
+    // Retrieve the inner most reader
+    let Self {
+      reader,
+      bulk_reader,
+    } = self;
+    let mut reader = reader.into_inner().into_inner().into_inner();
+    // Read (discarding content till '</STREAM>' is reached
+    // - Adapted from https://doc.rust-lang.org/src/std/io/mod.rs.html but discarding the read elements
+    fn read_until<R: BufRead>(r: &mut R, delim: u8) -> Result<usize, VOTableError> {
+      let mut read = 0;
+      loop {
+        let (done, used) = {
+          let available = match r.fill_buf() {
+            Ok(n) => n,
+            Err(ref e) if e.kind() == ErrorKind::Interrupted => continue,
+            Err(e) => return Err(VOTableError::Io(e)),
+          };
+          match memchr::memchr(delim, available) {
+            Some(i) => (true, i + 1),
+            None => (false, available.len()),
+          }
+        };
+        r.consume(used);
+        read += used;
+        if done || used == 0 {
+          return Ok(read);
+        }
+      }
+    }
+    // - Here we assumed we only have base64 characters or '\n', '\t', ... (no comments, CDSATA, ...)
+    //   before the </STREAM>
+    read_until(&mut reader, b'<').and_then(|_| {
+      let mut buf = [0_u8; 8];
+      reader
+        .read_exact(&mut buf)
+        .map_err(|e| VOTableError::Io(e))
+        .and_then(|()| {
+          if &buf == b"/STREAM>" {
+            Ok(())
+          } else {
+            Err(VOTableError::Custom(format!(
+              "Unexpected input. Expected: '/STREAM>'. Actual: {:?}'",
+              std::str::from_utf8(&buf)
+            )))
+          }
+        })
+    })?;
+    // Re-create the interenal reader, but with over=true
+    let reader = BufReader::new(DecoderReader::new(
+      OwnedB64Cleaner {
+        reader,
+        is_over: true,
+      },
+      &general_purpose::STANDARD,
+    ));
+    Ok(Self {
+      reader,
+      bulk_reader,
+    })
+  }
+
+  pub fn into_inner(self) -> R {
+    self.reader.into_inner().into_inner().into_inner()
   }
 }
 
