@@ -68,6 +68,7 @@ impl<'a, R: BufRead> TabledataRowIterator<'a, R> {
 
   /// Same as `read_until` but taking a `memchr::memmem::Finder` for better performances when
   /// a same `needle` has to be used several times.
+  /// WARNING: NOT GENERIC, WORKS ONLY WITH THE '</TR>' needle!!!
   pub fn read_until_with_finder(
     &mut self,
     needle_finder: &Finder,
@@ -259,6 +260,7 @@ impl<'a, R: BufRead> Iterator for Binary1or2RowIterator<'a, R> {
 pub struct OwnedBinary1or2RowIterator<R: BufRead> {
   pub votable: VOTable<VoidTableDataContent>,
   pub reader: OwnedBulkBinaryRowDeserializer<R>,
+  pub is_binary2: bool,
 }
 
 impl<R: BufRead> OwnedBinary1or2RowIterator<R> {
@@ -279,7 +281,63 @@ impl<R: BufRead> OwnedBinary1or2RowIterator<R> {
     } else {
       OwnedBulkBinaryRowDeserializer::new_binary(decoder, schema.as_slice())
     };
-    Self { votable, reader }
+    Self {
+      votable,
+      reader,
+      is_binary2,
+    }
+  }
+
+  pub fn skip_remaining_data(mut self) -> Result<Self, VOTableError> {
+    match self.reader.has_data_left() {
+      Ok(true) => {
+        let Self {
+          votable,
+          reader,
+          is_binary2,
+        } = self;
+        reader.skip_remaining_data().and_then(|reader| {
+          Ok(Self {
+            votable,
+            reader,
+            is_binary2,
+          })
+        })
+      }
+      Ok(false) => Ok(self),
+      Err(e) => Err(e),
+    }
+  }
+
+  pub fn read_to_end(self) -> Result<VOTable<VoidTableDataContent>, VOTableError> {
+    let Self {
+      mut votable,
+      reader,
+      is_binary2,
+    } = self;
+    // TODO: partly redundant code with SimpleVOTableRowIterator...
+    let mut reader = Reader::from_reader(reader.into_inner());
+    reader.check_end_names(false);
+    let mut reader_buff: Vec<u8> = Vec::with_capacity(512);
+    reader
+      .read_to_end(
+        if is_binary2 {
+          b"BINARY2".to_vec()
+        } else {
+          b"BINARY".to_vec()
+        },
+        &mut reader_buff,
+      )
+      .map_err(|e| VOTableError::Custom(format!("Reading to BINARY or BINARY2... {:?}", e)))?;
+    votable.resources[0].tables[0]
+      .data
+      .as_mut()
+      .unwrap()
+      .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &Vec::default())?;
+    votable.resources[0].tables[0].read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
+    votable.resources[0].read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
+    votable.read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
+    Ok(votable)
   }
 }
 
@@ -427,9 +485,14 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
     }
   }
 
-  /// Before calling this method, you **must** ensure that `self.data_type()` returns `TableOrBinOrBin2::TableData`
+  /// Before calling this method, you **must** ensure that `self.data_type()` returns `TableOrBinOrBin2::Binary`
   pub fn to_owned_binary_row_iterator(self) -> OwnedBinary1or2RowIterator<R> {
     OwnedBinary1or2RowIterator::new(self.reader, self.votable, false)
+  }
+
+  /// Before calling this method, you **must** ensure that `self.data_type()` returns `TableOrBinOrBin2::Binary2`
+  pub fn to_owned_binary2_row_iterator(self) -> OwnedBinary1or2RowIterator<R> {
+    OwnedBinary1or2RowIterator::new(self.reader, self.votable, true)
   }
 
   /// You can call this method only if you have not yet consumed:
@@ -794,34 +857,6 @@ mod tests {
     assert_eq!(n_row, 50)
   }
 
-  /*
-  #[test]
-  fn test_simple_votable_read_iter_tabledata_owned_local_fxp() {
-    println!();
-    println!("-- next_table_row_value_iter 1358_vlpv.vot --");
-    println!();
-
-    let svor = SimpleVOTableRowIterator::open_file_and_read_to_data(
-      "/home/pineau/Téléchargements/1358_vlpv.vot",
-    )
-    .unwrap();
-    assert!(matches!(svor.data_type(), &TableOrBinOrBin2::TableData));
-    let mut raw_row_it = svor.to_owned_tabledata_row_iterator();
-    let mut n_row = 0_u32;
-    while let Some(raw_row_res) = raw_row_it.next() {
-      let raw_row = raw_row_res.unwrap();
-      let row = std::str::from_utf8(&raw_row).unwrap();
-      if row.contains("TR") {
-        eprintln!("ROW: {:?}", row);
-      }
-      n_row += 1;
-    }
-    let votable = raw_row_it.read_to_end().unwrap();
-    println!("VOTable: {}", votable.wrap().to_toml_string(true).unwrap());
-
-    assert_eq!(n_row, 1720588)
-  }*/
-
   #[test]
   fn test_simple_votable_read_iter_binary1() {
     println!();
@@ -919,4 +954,150 @@ mod tests {
 
     assert!(true)
   }
+
+  /*
+  #[test]
+  fn test_simple_votable_read_iter_tabledata_owned_local_fxp() {
+    println!();
+    println!("-- next_table_row_value_iter 1358_vlpv.vot --");
+    println!();
+
+    let svor = SimpleVOTableRowIterator::open_file_and_read_to_data(
+      "/home/pineau/Téléchargements/1358_vlpv.vot",
+    )
+    .unwrap();
+    assert!(matches!(svor.data_type(), &TableOrBinOrBin2::TableData));
+    let mut raw_row_it = svor.to_owned_tabledata_row_iterator();
+    let mut n_row = 0_u32;
+    while let Some(raw_row_res) = raw_row_it.next() {
+      let raw_row = raw_row_res.unwrap();
+      let row = std::str::from_utf8(&raw_row).unwrap();
+      if row.contains("TR") {
+        eprintln!("ROW: {:?}", row);
+      }
+      n_row += 1;
+    }
+    let votable = raw_row_it.read_to_end().unwrap();
+    println!("VOTable: {}", votable.wrap().to_toml_string(true).unwrap());
+
+    assert_eq!(n_row, 1720588)
+  }*/
+
+  /*#[test]
+  fn test_simple_votable_read_iter_binary1_owned_local_fxp() {
+    println!();
+    println!("-- next_table_row_value_iter 1358_vlpv.b64.vot --");
+    println!();
+
+    let svor = SimpleVOTableRowIterator::open_file_and_read_to_data(
+      "/home/pineau/Téléchargements/1358_vlpv.b64.vot",
+    )
+    .unwrap();
+    assert!(matches!(svor.data_type(), &TableOrBinOrBin2::Binary));
+    let mut raw_row_it = svor.to_owned_binary_row_iterator();
+    let mut n_row = 0_u32;
+    while let Some(_raw_row_res) = raw_row_it.next() {
+      n_row += 1;
+    }
+    let votable = raw_row_it.read_to_end().unwrap();
+    println!("VOTable: {}", votable.wrap().to_toml_string(true).unwrap());
+
+    assert_eq!(n_row, 1720588)
+  }
+
+  #[test]
+  fn test_simple_votable_read_iter_binary1_owned_local_fxp_t2() {
+    println!();
+    println!("-- next_table_row_value_iter 1358_vlpv.b64.vot --");
+    println!();
+
+    let svor = SimpleVOTableRowIterator::open_file_and_read_to_data(
+      "/home/pineau/Téléchargements/1358_vlpv.b64.vot",
+    )
+    .unwrap();
+    assert!(matches!(svor.data_type(), &TableOrBinOrBin2::Binary));
+    let mut raw_row_it = svor.to_owned_binary_row_iterator();
+    let mut n_row = 0_u32;
+    // Only read the first line
+    if let Some(_raw_row_res) = raw_row_it.next() {
+      n_row += 1;
+    }
+    let raw_row_it = raw_row_it.skip_remaining_data().unwrap();
+    let votable = raw_row_it.read_to_end().unwrap();
+    println!("VOTable: {}", votable.wrap().to_toml_string(true).unwrap());
+
+    assert_eq!(n_row, 1)
+  }*/
+
+  /*
+  #[test]
+  fn test_simple_votable_read_iter_binary2_owned_local_fxp() {
+    println!();
+    println!("-- next_table_row_value_iter 1358_vlpv.b64v2.vot --");
+    println!();
+
+    let svor = SimpleVOTableRowIterator::open_file_and_read_to_data(
+      "/home/pineau/Téléchargements/1358_vlpv.b64v2.vot",
+    )
+    .unwrap();
+    assert!(matches!(svor.data_type(), &TableOrBinOrBin2::Binary2));
+    let mut raw_row_it = svor.to_owned_binary2_row_iterator();
+    let mut n_row = 0_u32;
+    while let Some(_raw_row_res) = raw_row_it.next() {
+      n_row += 1;
+    }
+
+    let votable = raw_row_it.read_to_end().unwrap();
+    println!("VOTable: {}", votable.wrap().to_toml_string(true).unwrap());
+
+    assert_eq!(n_row, 1720588)
+  }*/
+
+  /*
+  #[test]
+  fn test_simple_votable_read_iter_binary2_owned_local_fxp_2() {
+    println!();
+    println!("-- next_table_row_value_iter async_20190630210155.ungzip.vot --");
+    println!();
+
+    let svor = SimpleVOTableRowIterator::open_file_and_read_to_data(
+      "/home/pineau/Téléchargements/async_20190630210155.ungzip.vot",
+    )
+    .unwrap();
+    assert!(matches!(svor.data_type(), &TableOrBinOrBin2::Binary2));
+    let mut raw_row_it = svor.to_owned_binary2_row_iterator();
+    let mut n_row = 0_u32;
+    while let Some(_raw_row_res) = raw_row_it.next() {
+      n_row += 1;
+    }
+
+    let votable = raw_row_it.read_to_end().unwrap();
+    println!("VOTable: {}", votable.wrap().to_toml_string(true).unwrap());
+
+    assert_eq!(n_row, 3000000);
+  }
+
+  #[test]
+  fn test_simple_votable_read_iter_binary2_owned_local_fxp_2_t2() {
+    println!();
+    println!("-- next_table_row_value_iter async_20190630210155.ungzip.vot --");
+    println!();
+
+    let svor = SimpleVOTableRowIterator::open_file_and_read_to_data(
+      "/home/pineau/Téléchargements/async_20190630210155.ungzip.vot",
+    )
+    .unwrap();
+    assert!(matches!(svor.data_type(), &TableOrBinOrBin2::Binary2));
+    let mut raw_row_it = svor.to_owned_binary2_row_iterator();
+    let mut n_row = 0_u32;
+    if let Some(_raw_row_res) = raw_row_it.next() {
+      n_row += 1;
+    }
+
+    let raw_row_it = raw_row_it.skip_remaining_data().unwrap();
+    let votable = raw_row_it.read_to_end().unwrap();
+    println!("VOTable: {}", votable.wrap().to_toml_string(true).unwrap());
+
+    assert_eq!(n_row, 1);
+  }*/
 }
