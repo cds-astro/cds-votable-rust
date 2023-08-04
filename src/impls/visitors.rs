@@ -7,7 +7,7 @@ use std::{
 use serde::{
   de::{Error, SeqAccess, Unexpected, Visitor},
   Deserialize,
-  __private::{from_utf8_lossy, size_hint},
+  __private::from_utf8_lossy,
 };
 
 use crate::error::VOTableError;
@@ -279,7 +279,7 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for VariableLengthArrayVisitor<'de, 
     let mut v: Vec<T> = Vec::with_capacity(
       self
         .upper_n_elems
-        .unwrap_or_else(|| size_hint::cautious::<T>(seq.size_hint())),
+        .unwrap_or_else(|| seq.size_hint().unwrap_or(16)),
     );
     while let Some(value) = seq.next_element()? {
       v.push(value);
