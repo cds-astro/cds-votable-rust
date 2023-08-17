@@ -1,2 +1,2 @@
 <!-- Test Case 11.3: dmtype only; must have ref or value -->
-<PRIMARY\_KEY dmtype="fffff" />
+<PRIMARY_KEY dmtype="fffff" />

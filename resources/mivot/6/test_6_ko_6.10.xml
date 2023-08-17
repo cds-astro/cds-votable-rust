@@ -2,5 +2,5 @@
 
 <!-- Test Case 6.10:  dmrole + empty sourceref; if sourceref, must not be empty -->
 <REFERENCE dmrole="aaaa" sourceref="">
-	<FOREIGN\_KEY ref="zzzzz" />
+	<FOREIGN_KEY ref="zzzzz" />
 </REFERENCE>

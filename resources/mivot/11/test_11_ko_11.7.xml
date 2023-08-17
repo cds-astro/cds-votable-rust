@@ -1,2 +1,2 @@
 <!-- Test Case 11.7: ref must not be empty -->
-<PRIMARY\_KEY dmtype="fffff" ref="" />
+<PRIMARY_KEY dmtype="fffff" ref="" />

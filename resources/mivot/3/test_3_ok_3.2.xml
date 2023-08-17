@@ -2,10 +2,10 @@
 <GLOBALS >
 	<COLLECTION dmid="_coordsys" dmrole="" >
 		<INSTANCE dmid="_timesys" dmrole="" dmtype="model:TimeSys" >
-			<PRIMARY\_KEY dmtype="ivoa:string" ref="TCB"/>
+			<PRIMARY_KEY dmtype="ivoa:string" ref="TCB"/>
 		</INSTANCE>
 		<INSTANCE dmid="_spacesys" dmrole="" dmtype="model:SpaceSys" >
-			<PRIMARY\_KEY dmtype="ivoa:string" ref="ICRS"/>
+			<PRIMARY_KEY dmtype="ivoa:string" ref="ICRS"/>
 		</INSTANCE>
 	</COLLECTION>
 </GLOBALS>
