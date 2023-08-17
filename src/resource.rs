@@ -20,7 +20,8 @@ use crate::{
 
 use super::{
   coosys::CooSys, desc::Description, error::VOTableError, group::Group, info::Info, is_empty,
-  link::Link, param::Param, table::Table, timesys::TimeSys, QuickXmlReadWrite, TableDataContent,
+  link::Link, mivot::vodml::Vodml, param::Param, table::Table, timesys::TimeSys, QuickXmlReadWrite,
+  TableDataContent,
 };
 
 #[derive(Debug)]
@@ -72,6 +73,8 @@ pub struct Resource<C: TableDataContent> {
   pub elems: Vec<ResourceElem>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub links: Vec<Link>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub vodml: Option<Vodml>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub tables: Vec<Table<C>>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -102,6 +105,9 @@ impl<C: TableDataContent> Resource<C> {
   impl_builder_push_elem!(Param, ResourceElem);
 
   impl_builder_push!(Link);
+
+  impl_builder_opt_attr!(vodml, Vodml);
+
   impl_builder_push!(Table, C);
   impl_builder_push!(Resource, C);
 
@@ -150,6 +156,9 @@ impl<C: TableDataContent> Resource<C> {
             self
               .links
               .push(from_event_start_by_ref!(Link, reader, reader_buff, e))
+          }
+          Vodml::TAG_BYTES => {
+            from_event_start_vodml_by_ref!(self, Vodml, reader, reader_buff, e)
           }
           Table::<C>::TAG_BYTES => {
             let table = Table::<C>::from_attributes(e.attributes())?;
@@ -295,6 +304,9 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
             self
               .links
               .push(from_event_start_by_ref!(Link, reader, reader_buff, e))
+          }
+          Vodml::TAG_BYTES => {
+            from_event_start_vodml_by_ref!(self, Vodml, reader, reader_buff, e)
           }
           Table::<C>::TAG_BYTES => {
             self

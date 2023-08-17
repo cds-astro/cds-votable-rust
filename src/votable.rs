@@ -981,4 +981,33 @@ mod tests {
       }
     }
   }
+
+  #[test]
+  fn test_votable_read_mivot_from_file() {
+    let votable =
+      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/mivot_appendix_A.xml")
+        .unwrap()
+        .unwrap();
+    let votable = votable.wrap();
+
+    println!("\n\n#### JSON ####\n");
+
+    match serde_json::ser::to_string_pretty(&votable) {
+      Ok(_content) => println!("\nOK"), //println!("{}", &content),
+      Err(error) => {
+        println!("{:?}", &error);
+        assert!(false);
+      }
+    }
+
+    println!("\n\n#### TOML ####\n");
+
+    match toml::ser::to_string_pretty(&votable) {
+      Ok(_content) => println!("\nOK"), // println!("{}", &content),
+      Err(error) => {
+        println!("{:?}", &error);
+        assert!(false);
+      }
+    }
+  }
 }
