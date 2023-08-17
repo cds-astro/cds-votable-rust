@@ -447,3 +447,15 @@ macro_rules! from_event_start_desc_by_ref {
     }
   };
 }
+
+macro_rules! from_event_start_vodml_by_ref {
+  ($self:ident, $elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {{
+    let mut vodml = $elem::from_attributes($e.attributes())?;
+    vodml.read_sub_elements_and_clean_by_ref(&mut $reader, &mut $reader_buff, &())?;
+    if $self.vodml.replace(vodml).is_some() {
+      eprintln!(
+        "WARNING: multiple occurrence of VODML in VOTable. All but the last one are discarded."
+      );
+    }
+  }};
+}

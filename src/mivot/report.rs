@@ -76,13 +76,14 @@ impl QuickXmlReadWrite for Report {
       let value = std::str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
       report = match attr.key {
         b"status" => {
-          if value.is_empty() {
+          if !value.is_empty() {
             report.status = Status::from_str(value);
             report
           } else {
-            return Err(VOTableError::Custom(
-              "Attribute status is mandatory it musn't be empty".to_owned(),
-            ));
+            return Err(VOTableError::Custom(format!(
+              "Attributes 'status' is mandatory in tag '{}'",
+              Self::TAG
+            )));
           }
         }
         _ => {

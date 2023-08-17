@@ -101,7 +101,8 @@ impl QuickXmlReadWrite for Vodml {
     Ok(vodml)
   }
 
-  non_empty_read_sub!(read_vodml_sub_elem);
+  non_empty_read_sub!(read_vodml_sub_elem_by_ref);
+  // non_empty_read_sub!(read_vodml_sub_elem, read_vodml_sub_elem_by_ref);
 
   fn write<W: std::io::Write>(
     &mut self,
@@ -127,7 +128,7 @@ impl QuickXmlReadWrite for Vodml {
 // UTILITY FUNCTIONS //
 
 /*
-    function read_vodml_sub_elem
+    function read_vodml_sub_elem_by_ref
     Description:
     *   reads the children of Vodml
     @generic R: BufRead; a struct that implements the std::io::BufRead trait.
@@ -136,27 +137,26 @@ impl QuickXmlReadWrite for Vodml {
     @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
 */
-fn read_vodml_sub_elem<R: std::io::BufRead>(
+fn read_vodml_sub_elem_by_ref<R: std::io::BufRead>(
   vodml: &mut Vodml,
   _context: &(),
-  mut reader: quick_xml::Reader<R>,
+  mut reader: &mut quick_xml::Reader<R>,
   mut reader_buff: &mut Vec<u8>,
-) -> Result<quick_xml::Reader<R>, VOTableError> {
+) -> Result<(), VOTableError> {
   loop {
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
-    println!("{:?}", event);
     match &mut event {
       Event::Start(ref e) => match e.local_name() {
         Report::TAG_BYTES => {
           if vodml.report.is_none() {
-            vodml.report = Some(from_event_start!(Report, reader, reader_buff, e))
+            vodml.report = Some(from_event_start_by_ref!(Report, reader, reader_buff, e))
           }
         }
         Globals::TAG_BYTES => {
           if vodml.globals.is_empty() {
             vodml
               .globals
-              .push(from_event_start!(Globals, reader, reader_buff, e))
+              .push(from_event_start_by_ref!(Globals, reader, reader_buff, e))
           } else {
             return Err(VOTableError::Custom(
               "Only one <GLOBALS> tag should be present".to_owned(),
@@ -166,7 +166,7 @@ fn read_vodml_sub_elem<R: std::io::BufRead>(
         Templates::TAG_BYTES => {
           vodml
             .templates
-            .push(from_event_start!(Templates, reader, reader_buff, e))
+            .push(from_event_start_by_ref!(Templates, reader, reader_buff, e))
         }
         _ => {
           return Err(VOTableError::UnexpectedStartTag(
@@ -202,7 +202,7 @@ fn read_vodml_sub_elem<R: std::io::BufRead>(
       Event::Text(e) if is_empty(e) => {}
       Event::End(e) if e.local_name() == Vodml::TAG_BYTES => {
         if !vodml.models.is_empty() {
-          return Ok(reader);
+          return Ok(());
         } else {
           return Err(VOTableError::Custom(
             "Expected a <MODEL> tag, none was found".to_owned(),

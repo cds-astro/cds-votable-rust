@@ -44,14 +44,14 @@ impl Templates {
   }
 }
 impl_quickrw_not_e!(
-  [],                     // MANDATORY ATTRIBUTES
-  [tableref],             // OPTIONAL ATTRIBUTES
-  "TEMPLATES",            // TAG, here : <INSTANCE>
-  Templates,              // Struct on which to impl
-  (),                     // Context type
-  [wheres, instances],    // Ordered elements
-  read_template_sub_elem, // Sub elements reader
-  []                      // Empty context writables
+  [],                            // MANDATORY ATTRIBUTES
+  [tableref],                    // OPTIONAL ATTRIBUTES
+  "TEMPLATES",                   // TAG, here : <INSTANCE>
+  Templates,                     // Struct on which to impl
+  (),                            // Context type
+  [wheres, instances],           // Ordered elements
+  read_template_sub_elem_by_ref, // Sub elements reader
+  []                             // Empty context writables
 );
 
 ///////////////////////
@@ -67,21 +67,22 @@ impl_quickrw_not_e!(
     @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
 */
-fn read_template_sub_elem<R: std::io::BufRead>(
+fn read_template_sub_elem_by_ref<R: std::io::BufRead>(
   template: &mut Templates,
   _context: &(),
-  mut reader: quick_xml::Reader<R>,
+  mut reader: &mut quick_xml::Reader<R>,
   mut reader_buff: &mut Vec<u8>,
-) -> Result<quick_xml::Reader<R>, VOTableError> {
+) -> Result<(), VOTableError> {
   loop {
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
       Event::Start(ref e) => match e.local_name() {
-        NoRoleInstance::TAG_BYTES => {
-          template
-            .instances
-            .push(from_event_start!(NoRoleInstance, reader, reader_buff, e))
-        }
+        NoRoleInstance::TAG_BYTES => template.instances.push(from_event_start_by_ref!(
+          NoRoleInstance,
+          reader,
+          reader_buff,
+          e
+        )),
         _ => {
           return Err(VOTableError::UnexpectedStartTag(
             e.local_name().to_vec(),
@@ -108,7 +109,7 @@ fn read_template_sub_elem<R: std::io::BufRead>(
             "At least one instance should be present in a templates tag.".to_owned(),
           ));
         } else {
-          return Ok(reader);
+          return Ok(());
         }
       }
       Event::Eof => return Err(VOTableError::PrematureEOF(Templates::TAG)),

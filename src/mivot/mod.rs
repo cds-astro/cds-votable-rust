@@ -4,7 +4,7 @@ use crate::error::VOTableError;
 use quick_xml::Writer;
 use std::io::Write;
 
-use self::{foreignkey::ForeignKey, primarykey::PrimaryKeyA};
+use self::{foreignkey::ForeignKey, primarykey::PrimaryKeyInTemplate};
 
 #[macro_use]
 pub mod macros;
@@ -29,11 +29,11 @@ pub trait ElemType {
   fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError>;
 }
 pub trait ElemImpl<T: ElemType> {
-  fn push_elems(&mut self, elem: T) ;
+  fn push_elems(&mut self, elem: T);
 }
 
 pub trait InstanceType {
-  fn push_pk(&mut self, pk: PrimaryKeyA) ;
+  fn push_pk(&mut self, pk: PrimaryKeyInTemplate);
 }
 
 pub trait ReferenceType {

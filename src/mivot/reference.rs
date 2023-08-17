@@ -61,7 +61,7 @@ impl QuickXmlReadWrite for DynRef {
 
   impl_builder_from_attr!([dmrole, sourceref], []);
 
-  non_empty_read_sub!(read_dynref_sub_elem);
+  non_empty_read_sub!(read_dynref_sub_elem_by_ref);
 
   fn write<W: std::io::Write>(
     &mut self,
@@ -104,12 +104,12 @@ impl QuickXmlReadWrite for DynRef {
     @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
 */
-fn read_dynref_sub_elem<R: std::io::BufRead>(
+fn read_dynref_sub_elem_by_ref<R: std::io::BufRead>(
   reference: &mut DynRef,
   _context: &(),
-  mut reader: quick_xml::Reader<R>,
+  reader: &mut quick_xml::Reader<R>,
   reader_buff: &mut Vec<u8>,
-) -> Result<quick_xml::Reader<R>, VOTableError> {
+) -> Result<(), VOTableError> {
   loop {
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
@@ -132,7 +132,7 @@ fn read_dynref_sub_elem<R: std::io::BufRead>(
       "A dynamic reference should have 1 or more foreign keys".to_owned(),
     ))
   } else {
-    Ok(reader)
+    Ok(())
   }
 }
 

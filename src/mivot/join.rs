@@ -55,14 +55,14 @@ impl ElemImpl<JoinWhereElem> for Join {
   }
 }
 impl_quickrw_not_e!(
-  [dmref],            // MANDATORY ATTRIBUTES
-  [sourceref],        // OPTIONAL ATTRIBUTES
-  "JOIN",             // TAG, here : <INSTANCE>
-  Join,               // Struct on which to impl
-  (),                 // Context type
-  [],                 // Ordered elements
-  read_join_sub_elem, // Sub elements reader
-  [wheres]            // Empty context writables
+  [dmref],                   // MANDATORY ATTRIBUTES
+  [sourceref],               // OPTIONAL ATTRIBUTES
+  "JOIN",                    // TAG, here : <INSTANCE>
+  Join,                      // Struct on which to impl
+  (),                        // Context type
+  [],                        // Ordered elements
+  read_join_sub_elem_by_ref, // Sub elements reader
+  [wheres]                   // Empty context writables
 );
 
 /*
@@ -90,21 +90,21 @@ impl ElemImpl<JoinWhereElem> for SrcJoin {
   }
 }
 impl_quickrw_not_e!(
-  [sourceref],        // MANDATORY ATTRIBUTES
-  [dmref],            // OPTIONAL ATTRIBUTES
-  "JOIN",             // TAG, here : <INSTANCE>
-  SrcJoin,            // Struct on which to impl
-  (),                 // Context type
-  [],                 // Ordered elements
-  read_join_sub_elem, // Sub elements reader
-  [wheres]            // Empty context writables
+  [sourceref],               // MANDATORY ATTRIBUTES
+  [dmref],                   // OPTIONAL ATTRIBUTES
+  "JOIN",                    // TAG, here : <INSTANCE>
+  SrcJoin,                   // Struct on which to impl
+  (),                        // Context type
+  [],                        // Ordered elements
+  read_join_sub_elem_by_ref, // Sub elements reader
+  [wheres]                   // Empty context writables
 );
 
 ///////////////////////
 // UTILITY FUNCTIONS //
 
 /*
-    function read_join_sub_elem
+    function read_join_sub_elem_by_ref
     Description:
     *   reads the children of Join
     @generic R: BufRead; a struct that implements the std::io::BufRead trait.
@@ -114,12 +114,15 @@ impl_quickrw_not_e!(
     @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
 */
-fn read_join_sub_elem<R: std::io::BufRead, T: QuickXmlReadWrite + ElemImpl<JoinWhereElem>>(
+fn read_join_sub_elem_by_ref<
+  R: std::io::BufRead,
+  T: QuickXmlReadWrite + ElemImpl<JoinWhereElem>,
+>(
   join: &mut T,
   _context: &(),
-  mut reader: quick_xml::Reader<R>,
+  reader: &mut quick_xml::Reader<R>,
   reader_buff: &mut Vec<u8>,
-) -> Result<quick_xml::Reader<R>, VOTableError> {
+) -> Result<(), VOTableError> {
   loop {
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
@@ -148,7 +151,7 @@ fn read_join_sub_elem<R: std::io::BufRead, T: QuickXmlReadWrite + ElemImpl<JoinW
         }
       },
       Event::Text(e) if is_empty(e) => {}
-      Event::End(e) if e.local_name() == T::TAG_BYTES => return Ok(reader),
+      Event::End(e) if e.local_name() == T::TAG_BYTES => return Ok(()),
       Event::Eof => return Err(VOTableError::PrematureEOF(T::TAG)),
       _ => eprintln!("Discarded event in {}: {:?}", T::TAG, event),
     }

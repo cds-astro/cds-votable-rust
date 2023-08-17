@@ -9,13 +9,13 @@ quick_error! {
   #[derive(Debug)]
   pub enum VOTableError {
     UnexpectedAttr(attr: Vec<u8>, tag: &'static str) {
-      display("Unexpected attribute {} in tag {}", String::from_utf8_lossy(attr), tag)
+      display("Unexpected attribute {} in tag {}", String::from_utf8_lossy(attr.as_slice()), tag)
     }
     UnexpectedEmptyTag(tag: Vec<u8>, context_tag: &'static str) {
-      display("Unexpected empty tag {} in tag {}", String::from_utf8_lossy(tag), context_tag)
+      display("Unexpected empty tag {} in tag {}", String::from_utf8_lossy(tag.as_slice()), context_tag)
     }
     UnexpectedStartTag(tag: Vec<u8>, context_tag: &'static str) {
-      display("Unexpected start tag {} in tag {}", &String::from_utf8_lossy(tag), context_tag)
+      display("Unexpected start tag {} in tag {}", String::from_utf8_lossy(tag.as_slice()), context_tag)
     }
     Variant(err: String) {
       display("Error parsing variant: {}", err)

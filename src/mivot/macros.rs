@@ -380,33 +380,24 @@ macro_rules! impl_write_not_e {
 }
 
 macro_rules! non_empty_read_sub {
-  ($readfn:ident) => {
+  ($readfn_by_ref:ident) => {
     paste! {
-      /*
-          function read_sub_elements
-          Description:
-          *   see function read_sub_elem from caller
-        */
         fn read_sub_elements<R: std::io::BufRead>(
           &mut self,
-          reader: Reader<R>,
+          mut reader: Reader<R>,
           reader_buff: &mut Vec<u8>,
           context: &Self::Context,
       ) -> Result<Reader<R>, crate::error::VOTableError> {
-          $readfn(self, context, reader, reader_buff)
+        self.read_sub_elements_by_ref(&mut reader, reader_buff, context).map(|()| reader)
       }
 
-      /*
-          function read_sub_elements_by_ref
-          todo UNIMPLEMENTED
-      */
       fn read_sub_elements_by_ref<R: std::io::BufRead>(
           &mut self,
-          __reader: &mut Reader<R>,
-          __reader_buff: &mut Vec<u8>,
-          __context: &Self::Context,
+          reader: &mut Reader<R>,
+          reader_buff: &mut Vec<u8>,
+          context: &Self::Context,
       ) -> Result<(), crate::error::VOTableError> {
-          todo!()
+          $readfn_by_ref(self, context, reader, reader_buff)
       }
     }
   };

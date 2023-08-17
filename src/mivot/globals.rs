@@ -49,7 +49,14 @@ impl ElemImpl<GlobalsElem> for Globals {
     self.elems.push(elem);
   }
 }
-impl_quickrw_not_e_no_a!("GLOBALS", Globals, (), [], read_globals_sub_elem, [elems]);
+impl_quickrw_not_e_no_a!(
+  "GLOBALS",
+  Globals,
+  (),
+  [],
+  read_globals_sub_elem_by_ref,
+  [elems]
+);
 
 ///////////////////////
 // UTILITY FUNCTIONS //
@@ -65,21 +72,24 @@ impl_quickrw_not_e_no_a!("GLOBALS", Globals, (), [], read_globals_sub_elem, [ele
     @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
 */
-fn read_globals_sub_elem<R: std::io::BufRead, T: QuickXmlReadWrite + ElemImpl<GlobalsElem>>(
+fn read_globals_sub_elem_by_ref<
+  R: std::io::BufRead,
+  T: QuickXmlReadWrite + ElemImpl<GlobalsElem>,
+>(
   globals: &mut T,
   _context: &(),
-  mut reader: quick_xml::Reader<R>,
+  mut reader: &mut quick_xml::Reader<R>,
   mut reader_buff: &mut Vec<u8>,
-) -> Result<quick_xml::Reader<R>, crate::error::VOTableError> {
+) -> Result<(), crate::error::VOTableError> {
   loop {
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
       Event::Start(ref e) => match e.local_name() {
         NoRoleInstance::TAG_BYTES => globals.push_elems(GlobalsElem::Instance(
-          from_event_start!(NoRoleInstance, reader, reader_buff, e),
+          from_event_start_by_ref!(NoRoleInstance, reader, reader_buff, e),
         )),
         CollectionPatB::TAG_BYTES => globals.push_elems(GlobalsElem::Collection(
-          from_event_start!(CollectionPatB, reader, reader_buff, e),
+          from_event_start_by_ref!(CollectionPatB, reader, reader_buff, e),
         )),
         _ => {
           return Err(VOTableError::UnexpectedStartTag(
@@ -103,7 +113,7 @@ fn read_globals_sub_elem<R: std::io::BufRead, T: QuickXmlReadWrite + ElemImpl<Gl
         }
       },
       Event::Text(e) if is_empty(e) => {}
-      Event::End(e) if e.local_name() == T::TAG_BYTES => return Ok(reader),
+      Event::End(e) if e.local_name() == T::TAG_BYTES => return Ok(()),
       Event::Eof => return Err(VOTableError::PrematureEOF(T::TAG)),
       _ => eprintln!("Discarded event in {}: {:?}", T::TAG, event),
     }

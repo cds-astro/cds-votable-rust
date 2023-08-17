@@ -11,8 +11,10 @@ use std::{io::Write, str};
 use super::reference::{DynRef, StaticRef};
 use super::InstanceType;
 use super::{
-  attribute_a::AttributePatA, collection::CollectionPatA, primarykey::PrimaryKeyA, ElemImpl,
-  ElemType,
+  attribute_a::AttributePatA,
+  collection::CollectionPatA,
+  primarykey::{PrimaryKeyInCollection, PrimaryKeyInTemplate},
+  ElemImpl, ElemType,
 };
 use quick_xml::events::attributes::Attributes;
 
@@ -70,7 +72,7 @@ pub struct NoRoleInstance {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  pub primary_keys: Vec<PrimaryKeyA>,
+  pub primary_keys: Vec<PrimaryKeyInTemplate>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub elems: Vec<InstanceElem>,
 }
@@ -83,7 +85,7 @@ impl NoRoleInstance {
   impl_builder_opt_string_attr!(dmid);
 }
 impl InstanceType for NoRoleInstance {
-  fn push_pk(&mut self, pk: PrimaryKeyA) {
+  fn push_pk(&mut self, pk: PrimaryKeyInTemplate) {
     self.primary_keys.push(pk);
   }
 }
@@ -101,15 +103,15 @@ impl ElemImpl<InstanceElem> for NoRoleInstance {
   }
 }
 impl_quickrw_not_e!(
-  [dmtype],               // MANDATORY ATTRIBUTES
-  [dmid],                 // OPTIONAL ATTRIBUTES
-  [dmrole],               // potential empty tag
-  "INSTANCE",             // TAG, here : <INSTANCE>
-  NoRoleInstance,         // Struct on which to impl
-  (),                     // Context type
-  [primary_keys],         // Ordered elements
-  read_instance_sub_elem, // Sub elements reader
-  [elems]                 // Empty context writables
+  [dmtype],                      // MANDATORY ATTRIBUTES
+  [dmid],                        // OPTIONAL ATTRIBUTES
+  [dmrole],                      // potential empty tag
+  "INSTANCE",                    // TAG, here : <INSTANCE>
+  NoRoleInstance,                // Struct on which to impl
+  (),                            // Context type
+  [primary_keys],                // Ordered elements
+  read_instance_sub_elem_by_ref, // Sub elements reader
+  [elems]                        // Empty context writables
 );
 
 /////////////////////////////////
@@ -131,7 +133,7 @@ pub struct MandPKInstance {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  pub primary_keys: Vec<PrimaryKeyA>,
+  pub primary_keys: Vec<PrimaryKeyInTemplate>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub elems: Vec<InstanceElem>,
 }
@@ -144,7 +146,7 @@ impl MandPKInstance {
   impl_builder_opt_string_attr!(dmid);
 }
 impl InstanceType for MandPKInstance {
-  fn push_pk(&mut self, pk: PrimaryKeyA) {
+  fn push_pk(&mut self, pk: PrimaryKeyInTemplate) {
     self.primary_keys.push(pk);
   }
 }
@@ -162,15 +164,15 @@ impl ElemImpl<InstanceElem> for MandPKInstance {
   }
 }
 impl_quickrw_not_e!(
-  [dmtype],                       // MANDATORY ATTRIBUTES
-  [dmid],                         // OPTIONAL ATTRIBUTES
-  [dmrole],                       // potential empty tag
-  "INSTANCE",                     // TAG, here : <INSTANCE>
-  MandPKInstance,                 // Struct on which to impl
-  (),                             // Context type
-  [primary_keys],                 // Ordered elements
-  read_mand_pk_instance_sub_elem, // Sub elements reader
-  [elems]                         // Empty context writables
+  [dmtype],                              // MANDATORY ATTRIBUTES
+  [dmid],                                // OPTIONAL ATTRIBUTES
+  [dmrole],                              // potential empty tag
+  "INSTANCE",                            // TAG, here : <INSTANCE>
+  MandPKInstance,                        // Struct on which to impl
+  (),                                    // Context type
+  [primary_keys],                        // Ordered elements
+  read_mand_pk_instance_sub_elem_by_ref, // Sub elements reader
+  [elems]                                // Empty context writables
 );
 
 /////////////////////////
@@ -194,7 +196,7 @@ pub struct Instance {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  pub primary_keys: Vec<PrimaryKeyA>,
+  pub primary_keys: Vec<PrimaryKeyInTemplate>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub elems: Vec<InstanceElem>,
 }
@@ -204,7 +206,7 @@ impl Instance {
   impl_builder_opt_string_attr!(dmid);
 }
 impl InstanceType for Instance {
-  fn push_pk(&mut self, pk: PrimaryKeyA) {
+  fn push_pk(&mut self, pk: PrimaryKeyInTemplate) {
     self.primary_keys.push(pk);
   }
 }
@@ -228,7 +230,7 @@ impl_quickrw_not_e!(
   Instance,         // Struct on which to impl
   (),               // Context type
   [primary_keys],
-  read_instance_sub_elem,
+  read_instance_sub_elem_by_ref,
   [elems]
 );
 
@@ -245,19 +247,19 @@ impl_quickrw_not_e!(
     @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
 */
-fn read_mand_pk_instance_sub_elem<R: std::io::BufRead>(
+fn read_mand_pk_instance_sub_elem_by_ref<R: std::io::BufRead>(
   instance: &mut MandPKInstance,
   _context: &(),
-  reader: quick_xml::Reader<R>,
+  reader: &mut quick_xml::Reader<R>,
   reader_buff: &mut Vec<u8>,
-) -> Result<quick_xml::Reader<R>, VOTableError> {
-  let reader = read_instance_sub_elem(instance, _context, reader, reader_buff)?;
+) -> Result<(), VOTableError> {
+  read_instance_sub_elem_by_ref(instance, _context, reader, reader_buff)?;
   if instance.primary_keys.is_empty() {
     Err(VOTableError::Custom(
       "When a collection is child of globals then its instances need a primary key.".to_owned(),
     ))
   } else {
-    Ok(reader)
+    Ok(())
   }
 }
 
@@ -272,41 +274,38 @@ fn read_mand_pk_instance_sub_elem<R: std::io::BufRead>(
     @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
 */
-fn read_instance_sub_elem<
+fn read_instance_sub_elem_by_ref<
   R: std::io::BufRead,
   T: QuickXmlReadWrite + ElemImpl<InstanceElem> + InstanceType,
 >(
   instance: &mut T,
   _context: &(),
-  mut reader: quick_xml::Reader<R>,
+  mut reader: &mut quick_xml::Reader<R>,
   mut reader_buff: &mut Vec<u8>,
-) -> Result<quick_xml::Reader<R>, VOTableError> {
+) -> Result<(), VOTableError> {
   loop {
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
       Event::Start(ref e) => match e.local_name() {
         AttributePatA::TAG_BYTES => instance.push_elems(InstanceElem::AttributePatA(
-          from_event_start!(AttributePatA, reader, reader_buff, e),
+          from_event_start_by_ref!(AttributePatA, reader, reader_buff, e),
         )),
-        Instance::TAG_BYTES => instance.push_elems(InstanceElem::Instance(from_event_start!(
-          Instance,
-          reader,
-          reader_buff,
-          e
-        ))),
+        Instance::TAG_BYTES => instance.push_elems(InstanceElem::Instance(
+          from_event_start_by_ref!(Instance, reader, reader_buff, e),
+        )),
         DynRef::TAG_BYTES => {
           if e
             .attributes()
             .any(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
           {
-            instance.push_elems(InstanceElem::DynRef(from_event_start!(
+            instance.push_elems(InstanceElem::DynRef(from_event_start_by_ref!(
               DynRef,
               reader,
               reader_buff,
               e
             )))
           } else {
-            instance.push_elems(InstanceElem::StaticRef(from_event_start!(
+            instance.push_elems(InstanceElem::StaticRef(from_event_start_by_ref!(
               StaticRef,
               reader,
               reader_buff,
@@ -315,7 +314,7 @@ fn read_instance_sub_elem<
           }
         }
         CollectionPatA::TAG_BYTES => instance.push_elems(InstanceElem::Collection(
-          from_event_start!(CollectionPatA, reader, reader_buff, e),
+          from_event_start_by_ref!(CollectionPatA, reader, reader_buff, e),
         )),
         _ => {
           return Err(VOTableError::UnexpectedStartTag(
@@ -344,7 +343,9 @@ fn read_instance_sub_elem<
         CollectionPatA::TAG_BYTES => instance.push_elems(InstanceElem::Collection(
           CollectionPatA::from_event_empty(e)?,
         )),
-        PrimaryKeyA::TAG_BYTES => instance.push_pk(PrimaryKeyA::from_event_empty(e)?),
+        PrimaryKeyInCollection::TAG_BYTES => {
+          instance.push_pk(PrimaryKeyInTemplate::from_event_empty(e)?)
+        }
         _ => {
           return Err(VOTableError::UnexpectedEmptyTag(
             e.local_name().to_vec(),
@@ -353,7 +354,7 @@ fn read_instance_sub_elem<
         }
       },
       Event::Text(e) if is_empty(e) => {}
-      Event::End(e) if e.local_name() == T::TAG_BYTES => return Ok(reader),
+      Event::End(e) if e.local_name() == T::TAG_BYTES => return Ok(()),
       Event::Eof => return Err(VOTableError::PrematureEOF(T::TAG)),
       _ => eprintln!("Discarded event in {}: {:?}", T::TAG, event),
     }

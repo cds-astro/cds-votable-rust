@@ -13,7 +13,9 @@ use super::instance::{MandPKInstance, NoRoleInstance};
 use super::join::SrcJoin;
 use super::reference::{DynRef, StaticRef};
 use super::CollectionType;
-use super::{attribute_c::AttributePatC, join::Join, primarykey::PrimaryKeyB, ElemImpl, ElemType};
+use super::{
+  attribute_c::AttributePatC, join::Join, primarykey::PrimaryKeyInCollection, ElemImpl, ElemType,
+};
 
 /*
     enum CollectionElem
@@ -65,7 +67,7 @@ pub struct CollectionPatA {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  pub primary_keys: Vec<PrimaryKeyB>,
+  pub primary_keys: Vec<PrimaryKeyInCollection>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub elems: Vec<CollectionElem>,
   pub checker: Vec<String>,
@@ -75,7 +77,7 @@ impl CollectionPatA {
   impl_empty_new!([dmrole], [dmid], [primary_keys, elems, checker]);
   impl_builder_opt_string_attr!(dmid);
 
-  pub fn push_pk(mut self, pk: PrimaryKeyB) -> Self {
+  pub fn push_pk(mut self, pk: PrimaryKeyInCollection) -> Self {
     self.primary_keys.push(pk);
     self
   }
@@ -107,7 +109,7 @@ impl_quickrw_not_e!(
   CollectionPatA, // Struct on which to impl
   (),             // Context type
   [primary_keys],
-  read_collection_sub_elem,
+  read_collection_sub_elem_by_ref,
   [elems]
 );
 
@@ -127,7 +129,7 @@ pub struct CollectionPatB {
   dmid: String,
   // OPTIONAL
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  primary_keys: Vec<PrimaryKeyB>,
+  primary_keys: Vec<PrimaryKeyInCollection>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   elems: Vec<CollectionElem>,
   checker: Vec<String>,
@@ -136,7 +138,7 @@ impl CollectionPatB {
   impl_new!([dmid], [], [primary_keys, elems, checker]);
   impl_empty_new!([dmid], [], [primary_keys, elems, checker]);
 
-  pub fn push_pk(mut self, pk: PrimaryKeyB) -> Self {
+  pub fn push_pk(mut self, pk: PrimaryKeyInCollection) -> Self {
     self.primary_keys.push(pk);
     self
   }
@@ -172,7 +174,7 @@ impl_quickrw_not_e!(
   CollectionPatB, // Struct on which to impl
   (),             // Context type
   [primary_keys],
-  read_collection_b_sub_elem,
+  read_collection_b_sub_elem_by_ref,
   [elems]
 );
 
@@ -192,7 +194,7 @@ pub struct CollectionPatC {
   #[serde(skip_serializing_if = "Option::is_none")]
   dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  primary_keys: Vec<PrimaryKeyB>,
+  primary_keys: Vec<PrimaryKeyInCollection>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   elems: Vec<CollectionElem>,
   checker: Vec<String>,
@@ -201,7 +203,7 @@ impl CollectionPatC {
   impl_empty_new!([], [dmid], [primary_keys, elems, checker]);
   impl_builder_opt_string_attr!(dmid);
 
-  pub fn push_pk(mut self, pk: PrimaryKeyB) -> Self {
+  pub fn push_pk(mut self, pk: PrimaryKeyInCollection) -> Self {
     self.primary_keys.push(pk);
     self
   }
@@ -234,7 +236,7 @@ impl_quickrw_not_e!(
   CollectionPatC, // Struct on which to impl
   (),             // Context type
   [primary_keys],
-  read_collection_sub_elem,
+  read_collection_sub_elem_by_ref,
   [elems]
 );
 
@@ -253,22 +255,22 @@ impl_quickrw_not_e!(
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
 */
 
-fn read_collection_sub_elem<
+fn read_collection_sub_elem_by_ref<
   R: std::io::BufRead,
   T: QuickXmlReadWrite + ElemImpl<CollectionElem> + CollectionType,
 >(
   collection: &mut T,
   _context: &(),
-  mut reader: quick_xml::Reader<R>,
+  mut reader: &mut quick_xml::Reader<R>,
   mut reader_buff: &mut Vec<u8>,
-) -> Result<quick_xml::Reader<R>, crate::error::VOTableError> {
+) -> Result<(), crate::error::VOTableError> {
   loop {
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
       Event::Start(ref e) => match e.local_name() {
         AttributePatC::TAG_BYTES => {
           collection.push_to_checker("attribute".to_owned());
-          collection.push_elems(CollectionElem::Attribute(from_event_start!(
+          collection.push_elems(CollectionElem::Attribute(from_event_start_by_ref!(
             AttributePatC,
             reader,
             reader_buff,
@@ -277,7 +279,7 @@ fn read_collection_sub_elem<
         }
         NoRoleInstance::TAG_BYTES => {
           collection.push_to_checker("instance".to_owned());
-          collection.push_elems(CollectionElem::Instance(from_event_start!(
+          collection.push_elems(CollectionElem::Instance(from_event_start_by_ref!(
             NoRoleInstance,
             reader,
             reader_buff,
@@ -290,7 +292,7 @@ fn read_collection_sub_elem<
             .attributes()
             .any(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
           {
-            collection.push_elems(CollectionElem::DynRef(from_event_start!(
+            collection.push_elems(CollectionElem::DynRef(from_event_start_by_ref!(
               DynRef,
               reader,
               reader_buff,
@@ -304,7 +306,7 @@ fn read_collection_sub_elem<
         }
         CollectionPatC::TAG_BYTES => {
           collection.push_to_checker("collection".to_owned());
-          collection.push_elems(CollectionElem::Collection(from_event_start!(
+          collection.push_elems(CollectionElem::Collection(from_event_start_by_ref!(
             CollectionPatC,
             reader,
             reader_buff,
@@ -313,7 +315,7 @@ fn read_collection_sub_elem<
         }
         Join::TAG_BYTES => {
           collection.push_to_checker("join".to_owned());
-          collection.push_elems(CollectionElem::Join(from_event_start!(
+          collection.push_elems(CollectionElem::Join(from_event_start_by_ref!(
             Join,
             reader,
             reader_buff,
@@ -377,7 +379,7 @@ fn read_collection_sub_elem<
             "A collection cannot have items of diffrent types".to_owned(),
           ));
         } else {
-          return Ok(reader);
+          return Ok(());
         }
       }
       Event::Eof => return Err(VOTableError::PrematureEOF(T::TAG)),
@@ -398,19 +400,19 @@ fn read_collection_sub_elem<
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
 */
 
-fn read_collection_b_sub_elem<R: std::io::BufRead>(
+fn read_collection_b_sub_elem_by_ref<R: std::io::BufRead>(
   collection: &mut CollectionPatB,
   _context: &(),
-  mut reader: quick_xml::Reader<R>,
+  mut reader: &mut quick_xml::Reader<R>,
   mut reader_buff: &mut Vec<u8>,
-) -> Result<quick_xml::Reader<R>, crate::error::VOTableError> {
+) -> Result<(), crate::error::VOTableError> {
   loop {
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
       Event::Start(ref e) => match e.local_name() {
         MandPKInstance::TAG_BYTES => {
           collection.push_to_checker("instance".to_owned());
-          collection.push_elems(CollectionElem::PKInstance(from_event_start!(
+          collection.push_elems(CollectionElem::PKInstance(from_event_start_by_ref!(
             MandPKInstance,
             reader,
             reader_buff,
@@ -423,7 +425,7 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
             .attributes()
             .any(|attribute| attribute.as_ref().unwrap().key == "sourceref".as_bytes())
           {
-            collection.push_elems(CollectionElem::DynRef(from_event_start!(
+            collection.push_elems(CollectionElem::DynRef(from_event_start_by_ref!(
               DynRef,
               reader,
               reader_buff,
@@ -437,7 +439,7 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
         }
         CollectionPatC::TAG_BYTES => {
           collection.push_to_checker("collection".to_owned());
-          collection.push_elems(CollectionElem::Collection(from_event_start!(
+          collection.push_elems(CollectionElem::Collection(from_event_start_by_ref!(
             CollectionPatC,
             reader,
             reader_buff,
@@ -446,7 +448,7 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
         }
         SrcJoin::TAG_BYTES => {
           collection.push_to_checker("join".to_owned());
-          collection.push_elems(CollectionElem::SrcJoin(from_event_start!(
+          collection.push_elems(CollectionElem::SrcJoin(from_event_start_by_ref!(
             SrcJoin,
             reader,
             reader_buff,
@@ -498,7 +500,7 @@ fn read_collection_b_sub_elem<R: std::io::BufRead>(
             "A collection cannot have items of diffrent types".to_owned(),
           ));
         } else {
-          return Ok(reader);
+          return Ok(());
         }
       }
       Event::Eof => return Err(VOTableError::PrematureEOF(CollectionPatB::TAG)),
