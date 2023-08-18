@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::is_empty;
+use crate::table::Table;
 
 use super::{
   coosys::CooSys, definitions::Definitions, desc::Description, error::VOTableError, group::Group,
@@ -459,6 +460,26 @@ impl<C: TableDataContent> VOTable<C> {
   impl_builder_push!(Resource, C);
 
   impl_builder_push_post_info!();
+
+  pub fn get_first_table(&self) -> Option<&Table<C>> {
+    for resource in self.resources.iter() {
+      let first_table = resource.get_first_table();
+      if first_table.is_some() {
+        return first_table;
+      }
+    }
+    None
+  }
+
+  pub fn get_first_table_mut(&mut self) -> Option<&mut Table<C>> {
+    for resource in self.resources.iter_mut() {
+      let first_table = resource.get_first_table_mut();
+      if first_table.is_some() {
+        return first_table;
+      }
+    }
+    None
+  }
 
   pub fn read_till_next_resource_by_ref<R: BufRead>(
     &mut self,
@@ -984,28 +1005,34 @@ mod tests {
 
   #[test]
   fn test_votable_read_mivot_from_file() {
-    let votable =
-      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/mivot_appendix_A.xml")
-        .unwrap()
-        .unwrap();
-    let votable = votable.wrap();
+    let votable_res_res =
+      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/mivot_appendix_A.xml");
+    match votable_res_res {
+      Ok(votable_res) => {
+        let votable = votable_res.unwrap();
 
-    println!("\n\n#### JSON ####\n");
+        println!("\n\n#### JSON ####\n");
 
-    match serde_json::ser::to_string_pretty(&votable) {
-      Ok(_content) => println!("\nOK"), //println!("{}", &content),
-      Err(error) => {
-        println!("{:?}", &error);
-        assert!(false);
+        match serde_json::ser::to_string_pretty(&votable) {
+          Ok(_content) => println!("\nOK"), //println!("{}", &content),
+          Err(error) => {
+            println!("{:?}", &error);
+            assert!(false);
+          }
+        }
+
+        println!("\n\n#### TOML ####\n");
+
+        match toml::ser::to_string_pretty(&votable) {
+          Ok(_content) => println!("\nOK"), // println!("{}", &content),
+          Err(error) => {
+            println!("{:?}", &error);
+            assert!(false);
+          }
+        }
       }
-    }
-
-    println!("\n\n#### TOML ####\n");
-
-    match toml::ser::to_string_pretty(&votable) {
-      Ok(_content) => println!("\nOK"), // println!("{}", &content),
-      Err(error) => {
-        println!("{:?}", &error);
+      Err(e) => {
+        eprintln!("Error: {}", e.to_string());
         assert!(false);
       }
     }

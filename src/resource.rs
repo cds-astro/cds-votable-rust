@@ -113,6 +113,34 @@ impl<C: TableDataContent> Resource<C> {
 
   impl_builder_push_post_info!();
 
+  pub fn get_first_table(&self) -> Option<&Table<C>> {
+    if !self.tables.is_empty() {
+      self.tables.first()
+    } else {
+      for resource in self.resources.iter() {
+        let first_table = resource.get_first_table();
+        if first_table.is_some() {
+          return first_table;
+        }
+      }
+      None
+    }
+  }
+
+  pub fn get_first_table_mut(&mut self) -> Option<&mut Table<C>> {
+    if !self.tables.is_empty() {
+      self.tables.first_mut()
+    } else {
+      for resource in self.resources.iter_mut() {
+        let first_table = resource.get_first_table_mut();
+        if first_table.is_some() {
+          return first_table;
+        }
+      }
+      None
+    }
+  }
+
   pub(crate) fn read_till_next_resource_or_table_by_ref<R: BufRead>(
     &mut self,
     mut reader: &mut Reader<R>,
