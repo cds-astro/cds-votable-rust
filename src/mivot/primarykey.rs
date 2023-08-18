@@ -10,15 +10,15 @@ use std::str;
     @elem dmtype String: Modeled node related => MAND
 */
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub struct PrimaryKeyInCollection {
+pub struct PrimaryKeyStatic {
   pub dmtype: String,
   pub value: String,
 }
-impl PrimaryKeyInCollection {
+impl PrimaryKeyStatic {
   impl_new!([dmtype, value], []);
   impl_empty_new!([dmtype, value], []);
 }
-impl QuickXmlReadWrite for PrimaryKeyInCollection {
+impl QuickXmlReadWrite for PrimaryKeyStatic {
   const TAG: &'static str = "PRIMARY_KEY";
   type Context = ();
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
@@ -82,7 +82,7 @@ impl_quickrw_e!(
 mod tests {
   use crate::{
     mivot::{
-      primarykey::{PrimaryKeyInCollection, PrimaryKeyInTemplate},
+      primarykey::{PrimaryKeyInTemplate, PrimaryKeyStatic},
       test::{get_xml, test_error},
     },
     tests::test_read,
@@ -96,26 +96,26 @@ mod tests {
     test_read::<PrimaryKeyInTemplate>(&xml);
     let xml = get_xml("./resources/mivot/11/test_11_ok_11.2.xml");
     println!("testing 11.2");
-    test_read::<PrimaryKeyInCollection>(&xml);
+    test_read::<PrimaryKeyStatic>(&xml);
     let xml = get_xml("./resources/mivot/11/test_11_ok_11.8.xml");
     println!("testing 11.8");
-    test_read::<PrimaryKeyInCollection>(&xml);
+    test_read::<PrimaryKeyStatic>(&xml);
 
     // KO MODELS
     let xml = get_xml("./resources/mivot/11/test_11_ko_11.3.xml");
     println!("testing 11.3"); // Name required.
-    test_error::<PrimaryKeyInCollection>(&xml, false);
+    test_error::<PrimaryKeyStatic>(&xml, false);
     let xml = get_xml("./resources/mivot/11/test_11_ko_11.4.xml");
     println!("testing 11.4"); // Name required.
-    test_error::<PrimaryKeyInCollection>(&xml, false);
+    test_error::<PrimaryKeyStatic>(&xml, false);
     let xml = get_xml("./resources/mivot/11/test_11_ko_11.5.xml");
     println!("testing 11.5"); // Name required.
-    test_error::<PrimaryKeyInCollection>(&xml, false);
+    test_error::<PrimaryKeyStatic>(&xml, false);
     let xml = get_xml("./resources/mivot/11/test_11_ko_11.6.xml");
     println!("testing 11.6"); // Name required.
-    test_error::<PrimaryKeyInCollection>(&xml, false);
+    test_error::<PrimaryKeyStatic>(&xml, false);
     let xml = get_xml("./resources/mivot/11/test_11_ko_11.7.xml");
     println!("testing 11.7"); // Name required.
-    test_error::<PrimaryKeyInCollection>(&xml, false);
+    test_error::<PrimaryKeyStatic>(&xml, false);
   }
 }

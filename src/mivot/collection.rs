@@ -14,7 +14,7 @@ use super::join::SrcJoin;
 use super::reference::{DynRef, StaticRef};
 use super::CollectionType;
 use super::{
-  attribute_c::AttributePatC, join::Join, primarykey::PrimaryKeyInCollection, ElemImpl, ElemType,
+  attribute_c::AttributePatC, join::Join, primarykey::PrimaryKeyStatic, ElemImpl, ElemType,
 };
 
 /*
@@ -30,7 +30,7 @@ pub enum CollectionElem {
   PKInstance(MandPKInstance),
   StaticRef(StaticRef),
   DynRef(DynRef),
-  Collection(CollectionPatC),
+  Collection(CollectionInCollection),
   Join(Join),
   SrcJoin(SrcJoin),
 }
@@ -60,34 +60,34 @@ impl ElemType for CollectionElem {
     @elem elems: different elems defined in enum InstanceElem that can appear in any order
 */
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub struct CollectionPatA {
+pub struct CollectionInInstance {
   // MANDATORY
   pub dmrole: String,
   // OPTIONAL
   #[serde(skip_serializing_if = "Option::is_none")]
   pub dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  pub primary_keys: Vec<PrimaryKeyInCollection>,
+  pub primary_keys: Vec<PrimaryKeyStatic>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub elems: Vec<CollectionElem>,
   pub checker: Vec<String>,
 }
-impl CollectionPatA {
+impl CollectionInInstance {
   impl_new!([dmrole], [dmid], [primary_keys, elems, checker]);
   impl_empty_new!([dmrole], [dmid], [primary_keys, elems, checker]);
   impl_builder_opt_string_attr!(dmid);
 
-  pub fn push_pk(mut self, pk: PrimaryKeyInCollection) -> Self {
+  pub fn push_pk(mut self, pk: PrimaryKeyStatic) -> Self {
     self.primary_keys.push(pk);
     self
   }
 }
-impl ElemImpl<CollectionElem> for CollectionPatA {
+impl ElemImpl<CollectionElem> for CollectionInInstance {
   fn push_elems(&mut self, elem: CollectionElem) {
     self.elems.push(elem);
   }
 }
-impl CollectionType for CollectionPatA {
+impl CollectionType for CollectionInInstance {
   fn push_to_checker(&mut self, str: String) {
     self.checker.push(str);
   }
@@ -103,11 +103,11 @@ impl CollectionType for CollectionPatA {
   }
 }
 impl_quickrw_not_e!(
-  [dmrole],       // MANDATORY ATTRIBUTES
-  [dmid],         // OPTIONAL ATTRIBUTES
-  "COLLECTION",   // TAG, here : <COLLECTION>
-  CollectionPatA, // Struct on which to impl
-  (),             // Context type
+  [dmrole],             // MANDATORY ATTRIBUTES
+  [dmid],               // OPTIONAL ATTRIBUTES
+  "COLLECTION",         // TAG, here : <COLLECTION>
+  CollectionInInstance, // Struct on which to impl
+  (),                   // Context type
   [primary_keys],
   read_collection_sub_elem_by_ref,
   [elems]
@@ -123,32 +123,33 @@ impl_quickrw_not_e!(
     @elem primary_keys: identification key to an INSTANCE (at least one)
     @elem elems: different elems defined in enum InstanceElem that can appear in any order
 */
+/// Collections that are in Globals are collections without role.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub struct CollectionPatB {
+pub struct CollectionInGlobals {
   // MANDATORY
   dmid: String,
   // OPTIONAL
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  primary_keys: Vec<PrimaryKeyInCollection>,
+  primary_keys: Vec<PrimaryKeyStatic>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   elems: Vec<CollectionElem>,
   checker: Vec<String>,
 }
-impl CollectionPatB {
+impl CollectionInGlobals {
   impl_new!([dmid], [], [primary_keys, elems, checker]);
   impl_empty_new!([dmid], [], [primary_keys, elems, checker]);
 
-  pub fn push_pk(mut self, pk: PrimaryKeyInCollection) -> Self {
+  pub fn push_pk(mut self, pk: PrimaryKeyStatic) -> Self {
     self.primary_keys.push(pk);
     self
   }
 }
-impl ElemImpl<CollectionElem> for CollectionPatB {
+impl ElemImpl<CollectionElem> for CollectionInGlobals {
   fn push_elems(&mut self, elem: CollectionElem) {
     self.elems.push(elem);
   }
 }
-impl CollectionType for CollectionPatB {
+impl CollectionType for CollectionInGlobals {
   fn push_to_checker(&mut self, str: String) {
     self.checker.push(str);
   }
@@ -167,12 +168,12 @@ impl CollectionType for CollectionPatB {
   }
 }
 impl_quickrw_not_e!(
-  [dmid],         // MANDATORY ATTRIBUTES
-  [],             // OPTIONAL ATTRIBUTES
-  [dmrole],       // Potential empty attributes
-  "COLLECTION",   // TAG, here : <COLLECTION>
-  CollectionPatB, // Struct on which to impl
-  (),             // Context type
+  [dmid],              // MANDATORY ATTRIBUTES
+  [],                  // OPTIONAL ATTRIBUTES
+  [dmrole],            // Potential empty attributes
+  "COLLECTION",        // TAG, here : <COLLECTION>
+  CollectionInGlobals, // Struct on which to impl
+  (),                  // Context type
   [primary_keys],
   read_collection_b_sub_elem_by_ref,
   [elems]
@@ -189,31 +190,31 @@ impl_quickrw_not_e!(
     @elem elems: different elems defined in enum InstanceElem that can appear in any order
 */
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub struct CollectionPatC {
+pub struct CollectionInCollection {
   // OPTIONAL
   #[serde(skip_serializing_if = "Option::is_none")]
   dmid: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  primary_keys: Vec<PrimaryKeyInCollection>,
+  primary_keys: Vec<PrimaryKeyStatic>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   elems: Vec<CollectionElem>,
   checker: Vec<String>,
 }
-impl CollectionPatC {
+impl CollectionInCollection {
   impl_empty_new!([], [dmid], [primary_keys, elems, checker]);
   impl_builder_opt_string_attr!(dmid);
 
-  pub fn push_pk(mut self, pk: PrimaryKeyInCollection) -> Self {
+  pub fn push_pk(mut self, pk: PrimaryKeyStatic) -> Self {
     self.primary_keys.push(pk);
     self
   }
 }
-impl ElemImpl<CollectionElem> for CollectionPatC {
+impl ElemImpl<CollectionElem> for CollectionInCollection {
   fn push_elems(&mut self, elem: CollectionElem) {
     self.elems.push(elem);
   }
 }
-impl CollectionType for CollectionPatC {
+impl CollectionType for CollectionInCollection {
   fn push_to_checker(&mut self, str: String) {
     self.checker.push(str);
   }
@@ -229,12 +230,12 @@ impl CollectionType for CollectionPatC {
   }
 }
 impl_quickrw_not_e!(
-  [],             // MANDATORY ATTRIBUTES
-  [dmid],         // OPTIONAL ATTRIBUTES
-  [dmrole],       //Potential empty attributes
-  "COLLECTION",   // TAG, here : <COLLECTION>
-  CollectionPatC, // Struct on which to impl
-  (),             // Context type
+  [],                     // MANDATORY ATTRIBUTES
+  [dmid],                 // OPTIONAL ATTRIBUTES
+  [dmrole],               //Potential empty attributes
+  "COLLECTION",           // TAG, here : <COLLECTION>
+  CollectionInCollection, // Struct on which to impl
+  (),                     // Context type
   [primary_keys],
   read_collection_sub_elem_by_ref,
   [elems]
@@ -249,7 +250,7 @@ impl_quickrw_not_e!(
     *   reads the children of Collection
     @generic R: BufRead; a struct that implements the std::io::BufRead trait.
     @generic T: QuickXMLReadWrite + ElemImpl<CollectionElem>; a struct that implements the quickXMLReadWrite and ElemImpl for CollectionElem traits.
-    @param instance &mut T: an instance of T (here CollectionPatA, CollectionPatB or CollectionPatC)
+    @param instance &mut T: an instance of T (here CollectionPatA, CollectionInGlobals or CollectionPatC)
     @param reader &mut quick_xml::Reader<R>: the reader used to read the elements
     @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
@@ -304,10 +305,10 @@ fn read_collection_sub_elem_by_ref<
             ));
           }
         }
-        CollectionPatC::TAG_BYTES => {
+        CollectionInCollection::TAG_BYTES => {
           collection.push_to_checker("collection".to_owned());
           collection.push_elems(CollectionElem::Collection(from_event_start_by_ref!(
-            CollectionPatC,
+            CollectionInCollection,
             reader,
             reader_buff,
             e
@@ -325,7 +326,7 @@ fn read_collection_sub_elem_by_ref<
         _ => {
           return Err(VOTableError::UnexpectedStartTag(
             e.local_name().to_vec(),
-            CollectionPatA::TAG,
+            CollectionInInstance::TAG,
           ))
         }
       },
@@ -349,10 +350,10 @@ fn read_collection_sub_elem_by_ref<
             ));
           }
         }
-        CollectionPatC::TAG_BYTES => {
+        CollectionInCollection::TAG_BYTES => {
           collection.push_to_checker("collection".to_owned());
           collection.push_elems(CollectionElem::Collection(
-            CollectionPatC::from_event_empty(e)?,
+            CollectionInCollection::from_event_empty(e)?,
           ))
         }
         NoRoleInstance::TAG_BYTES => {
@@ -394,14 +395,14 @@ fn read_collection_sub_elem_by_ref<
     *   reads the children of Collection
     @generic R: BufRead; a struct that implements the std::io::BufRead trait.
     @generic T: QuickXMLReadWrite + ElemImpl<CollectionElem>; a struct that implements the quickXMLReadWrite and ElemImpl for CollectionElem traits.
-    @param instance &mut T: an instance of CollectionPatB
+    @param instance &mut T: an instance of CollectionInGlobals
     @param reader &mut quick_xml::Reader<R>: the reader used to read the elements
     @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
     #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
 */
 
 fn read_collection_b_sub_elem_by_ref<R: std::io::BufRead>(
-  collection: &mut CollectionPatB,
+  collection: &mut CollectionInGlobals,
   _context: &(),
   mut reader: &mut quick_xml::Reader<R>,
   mut reader_buff: &mut Vec<u8>,
@@ -437,10 +438,10 @@ fn read_collection_b_sub_elem_by_ref<R: std::io::BufRead>(
             ));
           }
         }
-        CollectionPatC::TAG_BYTES => {
+        CollectionInCollection::TAG_BYTES => {
           collection.push_to_checker("collection".to_owned());
           collection.push_elems(CollectionElem::Collection(from_event_start_by_ref!(
-            CollectionPatC,
+            CollectionInCollection,
             reader,
             reader_buff,
             e
@@ -458,7 +459,7 @@ fn read_collection_b_sub_elem_by_ref<R: std::io::BufRead>(
         _ => {
           return Err(VOTableError::UnexpectedStartTag(
             e.local_name().to_vec(),
-            CollectionPatA::TAG,
+            CollectionInGlobals::TAG,
           ))
         }
       },
@@ -480,21 +481,21 @@ fn read_collection_b_sub_elem_by_ref<R: std::io::BufRead>(
           collection.push_to_checker("join".to_owned());
           collection.push_elems(CollectionElem::SrcJoin(SrcJoin::from_event_empty(e)?))
         }
-        CollectionPatC::TAG_BYTES => {
+        CollectionInCollection::TAG_BYTES => {
           collection.push_to_checker("collection".to_owned());
           collection.push_elems(CollectionElem::Collection(
-            CollectionPatC::from_event_empty(e)?,
+            CollectionInCollection::from_event_empty(e)?,
           ))
         }
         _ => {
           return Err(VOTableError::UnexpectedEmptyTag(
             e.local_name().to_vec(),
-            CollectionPatB::TAG,
+            CollectionInGlobals::TAG,
           ))
         }
       },
       Event::Text(e) if is_empty(e) => {}
-      Event::End(e) if e.local_name() == CollectionPatB::TAG_BYTES => {
+      Event::End(e) if e.local_name() == CollectionInGlobals::TAG_BYTES => {
         if collection.check_elems() {
           return Err(VOTableError::Custom(
             "A collection cannot have items of diffrent types".to_owned(),
@@ -503,8 +504,12 @@ fn read_collection_b_sub_elem_by_ref<R: std::io::BufRead>(
           return Ok(());
         }
       }
-      Event::Eof => return Err(VOTableError::PrematureEOF(CollectionPatB::TAG)),
-      _ => eprintln!("Discarded event in {}: {:?}", CollectionPatB::TAG, event),
+      Event::Eof => return Err(VOTableError::PrematureEOF(CollectionInGlobals::TAG)),
+      _ => eprintln!(
+        "Discarded event in {}: {:?}",
+        CollectionInGlobals::TAG,
+        event
+      ),
     }
   }
 }
@@ -513,7 +518,7 @@ fn read_collection_b_sub_elem_by_ref<R: std::io::BufRead>(
 mod tests {
   use crate::{
     mivot::{
-      collection::{CollectionPatA, CollectionPatB},
+      collection::{CollectionInGlobals, CollectionInInstance},
       test::{get_xml, test_error},
     },
     tests::test_read,
@@ -524,38 +529,38 @@ mod tests {
     // OK MODELS
     let xml = get_xml("./resources/mivot/8/test_8_ok_8.1.xml");
     println!("testing 8.1");
-    test_read::<CollectionPatB>(&xml);
+    test_read::<CollectionInGlobals>(&xml);
     let xml = get_xml("./resources/mivot/8/test_8_ok_8.4.xml");
     println!("testing 8.4");
-    test_read::<CollectionPatB>(&xml);
+    test_read::<CollectionInGlobals>(&xml);
     let xml = get_xml("./resources/mivot/8/test_8_ok_8.6.xml");
     println!("testing 8.6");
-    test_read::<CollectionPatB>(&xml);
+    test_read::<CollectionInGlobals>(&xml);
     let xml = get_xml("./resources/mivot/8/test_8_ok_8.7.xml");
     println!("testing 8.7");
-    test_read::<CollectionPatB>(&xml);
+    test_read::<CollectionInGlobals>(&xml);
     // KO MODELS
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.2.xml");
     println!("testing 8.2"); // must have dmid
-    test_error::<CollectionPatB>(&xml, false);
+    test_error::<CollectionInGlobals>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.3.xml");
     println!("testing 8.3"); // dmid must not be empty
-    test_error::<CollectionPatB>(&xml, false);
+    test_error::<CollectionInGlobals>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.5.xml");
     println!("testing 8.5"); // must have empty or no dmrole. (parser can overlook this and write it correctly later)
-    test_read::<CollectionPatB>(&xml); // Should read correctly
+    test_read::<CollectionInGlobals>(&xml); // Should read correctly
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.8.xml");
     println!("testing 8.8"); // contains other than INSTANCE.
-    test_error::<CollectionPatB>(&xml, false);
+    test_error::<CollectionInGlobals>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.9.xml");
     println!("testing 8.9"); // with invalid child
-    test_error::<CollectionPatB>(&xml, false);
+    test_error::<CollectionInGlobals>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.25.xml");
     println!("testing 8.25"); // Collection of globals cannot have an instance without a PK
-    test_error::<CollectionPatB>(&xml, false);
+    test_error::<CollectionInGlobals>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.25.xml");
     println!("testing 8.26"); // Collection of globals cannot have an instance without a PK
-    test_error::<CollectionPatB>(&xml, false);
+    test_error::<CollectionInGlobals>(&xml, false);
   }
 
   #[test]
@@ -563,49 +568,49 @@ mod tests {
     // OK MODELS
     let xml = get_xml("./resources/mivot/8/test_8_ok_8.15.xml");
     println!("testing 8.15");
-    test_read::<CollectionPatA>(&xml);
+    test_read::<CollectionInInstance>(&xml);
     let xml = get_xml("./resources/mivot/8/test_8_ok_8.16.xml");
     println!("testing 8.16");
-    test_read::<CollectionPatA>(&xml);
+    test_read::<CollectionInInstance>(&xml);
     let xml = get_xml("./resources/mivot/8/test_8_ok_8.17.xml");
     println!("testing 8.17");
-    test_read::<CollectionPatA>(&xml);
+    test_read::<CollectionInInstance>(&xml);
     let xml = get_xml("./resources/mivot/8/test_8_ok_8.18.xml");
     println!("testing 8.18");
-    test_read::<CollectionPatA>(&xml);
+    test_read::<CollectionInInstance>(&xml);
     let xml = get_xml("./resources/mivot/8/test_8_ok_8.19.xml");
     println!("testing 8.19");
-    test_read::<CollectionPatA>(&xml);
+    test_read::<CollectionInInstance>(&xml);
     // KO MODELS
     // let xml = get_xml("./resources/mivot/8/test_8_ko_8.10.xml");
     // println!("testing 8.10"); // must not have dmid
     // test_error::<CollectionPatA>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.11.xml");
     println!("testing 8.11"); // dmid if present shouldn't be empty
-    test_error::<CollectionPatA>(&xml, false);
+    test_error::<CollectionInInstance>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.12.xml");
     println!("testing 8.12"); // must have dmrole
-    test_error::<CollectionPatA>(&xml, false);
+    test_error::<CollectionInInstance>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.13.xml");
     println!("testing 8.13"); // dmrole must not be empty.
-    test_error::<CollectionPatA>(&xml, false);
+    test_error::<CollectionInInstance>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.13.xml");
     println!("testing 8.14"); // dmrole must not be blank.
-    test_error::<CollectionPatA>(&xml, false);
+    test_error::<CollectionInInstance>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.20.xml");
     println!("testing 8.20"); // COLLECTION of INSTANCE + JOIN (local and external instances)
-    test_error::<CollectionPatA>(&xml, false);
+    test_error::<CollectionInInstance>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.21.xml");
     println!("testing 8.21"); // COLLECTION of ATTRIBUTE + (other)
-    test_error::<CollectionPatA>(&xml, false);
+    test_error::<CollectionInInstance>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.22.xml");
     println!("testing 8.22"); // COLLECTION of REFERENCE + (other)
-    test_error::<CollectionPatA>(&xml, false);
+    test_error::<CollectionInInstance>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.23.xml");
     println!("testing 8.23"); // COLLECTION of INSTANCE + (other)
-    test_error::<CollectionPatA>(&xml, false);
+    test_error::<CollectionInInstance>(&xml, false);
     let xml = get_xml("./resources/mivot/8/test_8_ko_8.24.xml");
     println!("testing 8.24"); // COLLECTION of other
-    test_error::<CollectionPatA>(&xml, false);
+    test_error::<CollectionInInstance>(&xml, false);
   }
 }

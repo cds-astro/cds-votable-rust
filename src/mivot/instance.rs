@@ -12,8 +12,8 @@ use super::reference::{DynRef, StaticRef};
 use super::InstanceType;
 use super::{
   attribute_a::AttributePatA,
-  collection::CollectionPatA,
-  primarykey::{PrimaryKeyInCollection, PrimaryKeyInTemplate},
+  collection::CollectionInInstance,
+  primarykey::{PrimaryKeyInTemplate, PrimaryKeyStatic},
   ElemImpl, ElemType,
 };
 use quick_xml::events::attributes::Attributes;
@@ -30,7 +30,7 @@ pub enum InstanceElem {
   Instance(Instance),
   StaticRef(StaticRef),
   DynRef(DynRef),
-  Collection(CollectionPatA),
+  Collection(CollectionInInstance),
 }
 impl ElemType for InstanceElem {
   /*
@@ -313,8 +313,8 @@ fn read_instance_sub_elem_by_ref<
             )))
           }
         }
-        CollectionPatA::TAG_BYTES => instance.push_elems(InstanceElem::Collection(
-          from_event_start_by_ref!(CollectionPatA, reader, reader_buff, e),
+        CollectionInInstance::TAG_BYTES => instance.push_elems(InstanceElem::Collection(
+          from_event_start_by_ref!(CollectionInInstance, reader, reader_buff, e),
         )),
         _ => {
           return Err(VOTableError::UnexpectedStartTag(
@@ -340,12 +340,10 @@ fn read_instance_sub_elem_by_ref<
             instance.push_elems(InstanceElem::StaticRef(StaticRef::from_event_empty(e)?))
           }
         }
-        CollectionPatA::TAG_BYTES => instance.push_elems(InstanceElem::Collection(
-          CollectionPatA::from_event_empty(e)?,
+        CollectionInInstance::TAG_BYTES => instance.push_elems(InstanceElem::Collection(
+          CollectionInInstance::from_event_empty(e)?,
         )),
-        PrimaryKeyInCollection::TAG_BYTES => {
-          instance.push_pk(PrimaryKeyInTemplate::from_event_empty(e)?)
-        }
+        PrimaryKeyStatic::TAG_BYTES => instance.push_pk(PrimaryKeyInTemplate::from_event_empty(e)?),
         _ => {
           return Err(VOTableError::UnexpectedEmptyTag(
             e.local_name().to_vec(),
