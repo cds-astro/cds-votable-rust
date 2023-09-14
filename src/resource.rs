@@ -113,6 +113,35 @@ impl<C: TableDataContent> Resource<C> {
 
   impl_builder_push_post_info!();
 
+  pub fn get_first_resource_containing_a_table(&self) -> Option<&Self> {
+    if !self.tables.is_empty() {
+      Some(self)
+    } else {
+      for resource in self.resources.iter() {
+        let first_resource_containing_a_table = resource.get_first_resource_containing_a_table();
+        if first_resource_containing_a_table.is_some() {
+          return first_resource_containing_a_table;
+        }
+      }
+      None
+    }
+  }
+
+  pub fn get_first_resource_containing_a_table_mut(&mut self) -> Option<&mut Self> {
+    if !self.tables.is_empty() {
+      Some(self)
+    } else {
+      for resource in self.resources.iter_mut() {
+        let first_resource_containing_a_table =
+          resource.get_first_resource_containing_a_table_mut();
+        if first_resource_containing_a_table.is_some() {
+          return first_resource_containing_a_table;
+        }
+      }
+      None
+    }
+  }
+
   pub fn get_first_table(&self) -> Option<&Table<C>> {
     if !self.tables.is_empty() {
       self.tables.first()
@@ -250,6 +279,93 @@ impl<C: TableDataContent> Resource<C> {
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+      }
+    }
+  }
+
+  /// Returns `true` if a table has been found.
+  pub(crate) fn write_to_data_beginning<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+    context: &(),
+  ) -> Result<bool, VOTableError> {
+    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    // Write tag + attributes
+    push2write_opt_string_attr!(self, tag, ID);
+    push2write_opt_string_attr!(self, tag, name);
+    push2write_opt_string_attr!(self, tag, type_, type);
+    push2write_opt_string_attr!(self, tag, utype);
+    push2write_extra!(self, tag);
+    writer
+      .write_event(Event::Start(tag.to_borrowed()))
+      .map_err(VOTableError::Write)?;
+    // Write sub-elements
+    write_elem!(self, description, writer, context);
+    write_elem_vec!(self, infos, writer, context);
+    write_elem_vec_no_context!(self, elems, writer);
+    write_elem_vec!(self, links, writer, context);
+
+    if self.tables.len() > 1 {
+      Err(VOTableError::Custom(String::from(
+        "In resource, more than one table not adapted for write_to_data_beginning!",
+      )))
+    } else if let Some(table) = self.tables.first_mut() {
+      table.write_to_data_beginning(writer, &()).map(|()| true)
+    } else {
+      for resource in self.resources.iter_mut() {
+        if resource.write_to_data_beginning(writer, &())? {
+          return Ok(true);
+        }
+      }
+      // No table found, so write everything
+      write_elem_vec!(self, post_infos, writer, context);
+      // Close tag
+      writer
+        .write_event(Event::End(tag.to_end()))
+        .map_err(VOTableError::Write)
+        .map(|()| false)
+    }
+  }
+
+  /// Returns `true` if the resource contained a table (so that other resources have not been written)
+  pub(crate) fn write_from_data_end<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+    context: &(),
+  ) -> Result<bool, VOTableError> {
+    let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    if self.tables.len() > 1 {
+      Err(VOTableError::Custom(String::from(
+        "In resource, more than one table not adapted for write_to_data_beginning!",
+      )))
+    } else if let Some(table) = self.tables.first_mut() {
+      table.write_from_data_end(writer, &())?;
+      // Here we assume no table in sub-ressources!!
+      write_elem_vec!(self, resources, writer, context);
+      write_elem_vec!(self, post_infos, writer, context);
+      // Close tag
+      writer
+        .write_event(Event::End(tag.to_end()))
+        .map_err(VOTableError::Write)
+        .map(|()| true)
+    } else {
+      let mut write = false;
+      for resource in self.resources.iter_mut() {
+        if write {
+          resource.write(writer, context)?;
+        } else {
+          write = resource.write_from_data_end(writer, &())?;
+        }
+      }
+      if write {
+        write_elem_vec!(self, post_infos, writer, context);
+        // Close tag
+        writer
+          .write_event(Event::End(tag.to_end()))
+          .map_err(VOTableError::Write)
+          .map(|()| true)
+      } else {
+        Ok(false)
       }
     }
   }
@@ -416,6 +532,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
     write_elem_vec!(self, infos, writer, context);
     write_elem_vec_no_context!(self, elems, writer);
     write_elem_vec!(self, links, writer, context);
+    write_elem_vec!(self, vodml, writer, context);
     write_elem_vec!(self, tables, writer, context);
     write_elem_vec!(self, resources, writer, context);
     write_elem_vec!(self, post_infos, writer, context);

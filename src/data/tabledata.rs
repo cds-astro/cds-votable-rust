@@ -22,6 +22,24 @@ impl<C: TableDataContent> TableData<C> {
   pub fn new(content: C) -> Self {
     Self { content }
   }
+
+  pub(crate) fn write_to_data_beginning<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+  ) -> Result<(), VOTableError> {
+    writer
+      .write_event(Event::Start(BytesStart::borrowed_name(Self::TAG_BYTES)))
+      .map_err(VOTableError::Write)
+  }
+
+  pub(crate) fn write_from_data_end<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+  ) -> Result<(), VOTableError> {
+    writer
+      .write_event(Event::End(BytesEnd::borrowed(Self::TAG_BYTES)))
+      .map_err(VOTableError::Write)
+  }
 }
 
 impl<C: TableDataContent> QuickXmlReadWrite for TableData<C> {
@@ -52,13 +70,13 @@ impl<C: TableDataContent> QuickXmlReadWrite for TableData<C> {
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
-    mut reader: &mut Reader<R>,
+    reader: &mut Reader<R>,
     reader_buff: &mut Vec<u8>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
     self
       .content
-      .read_datatable_content(&mut reader, reader_buff, context)
+      .read_datatable_content(reader, reader_buff, context)
   }
 
   fn write<W: Write>(
@@ -66,12 +84,9 @@ impl<C: TableDataContent> QuickXmlReadWrite for TableData<C> {
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    writer
-      .write_event(Event::Start(BytesStart::borrowed_name(Self::TAG_BYTES)))
-      .map_err(VOTableError::Write)?;
-    self.content.write_in_datatable(writer, context)?;
-    writer
-      .write_event(Event::End(BytesEnd::borrowed(Self::TAG_BYTES)))
-      .map_err(VOTableError::Write)
+    self
+      .write_to_data_beginning(writer)
+      .and_then(|()| self.content.write_in_datatable(writer, context))
+      .and_then(|()| self.write_from_data_end(writer))
   }
 }

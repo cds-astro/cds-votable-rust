@@ -127,7 +127,7 @@ impl<'a, R: BufRead> Iterator for DataTableFieldValueIterator<'a, R> {
               let event = self.reader.read_event(self.reader_buff);
               match event {
                 Err(e) => return Some(Err(VOTableError::Read(e))),
-                Ok(Event::Text(e)) => match e.unescape_and_decode(&self.reader) {
+                Ok(Event::Text(e)) => match e.unescape_and_decode(self.reader) {
                   Err(e) => return Some(Err(VOTableError::Read(e))),
                   Ok(s) => match self.it_schema.next() {
                     Some(schema) => return Some(schema.value_from_str(s.trim())),

@@ -2,13 +2,15 @@
 
 ## 0.3.0
 
-Released 2023-XX-XX
+Released 2023-09-14
 
 ### Added
 
-* 'SimpleVOTableRowIterator' to make external parser taking charge
-   of parsing rows
+* `SimpleVOTableRowIterator` with `OwnedTabledataRowIterator` and `OwnedBinary1or2RowIterator` 
+   to make external parsers taking charge of parsing rows
+* Add methods `get_first_table` and `get_first_table_mut` in votable
 * More atrributes/sub-elements made public
+* First attempt to suppoer Mivot!!
 
 ### Changed
 
@@ -16,9 +18,9 @@ Released 2023-XX-XX
 
 ### Bug correction
 
-* Better handling of arrays
-
-
+* Better handling of arrays (please provide us with examples so we can test and debug)
+* Fix unicode char bug
+* Fix breaking change introduced in `serde.__private`
 
 ## 0.2.3
 

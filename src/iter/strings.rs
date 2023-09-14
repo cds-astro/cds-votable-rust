@@ -112,7 +112,7 @@ impl<'a, R: BufRead> Iterator for FieldStringIterator<'a, R> {
                 Err(e) => return Some(Err(e)),
                 Ok(Event::Text(e)) => {
                   return Some(
-                    e.unescape_and_decode(&self.reader)
+                    e.unescape_and_decode(self.reader)
                       .map_err(VOTableError::Read),
                   )
                 }

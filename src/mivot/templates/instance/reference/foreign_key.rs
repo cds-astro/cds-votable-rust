@@ -1,15 +1,16 @@
-use crate::{error::VOTableError, mivot::value_checker, QuickXmlReadWrite};
+use std::str;
+
 use bstringify::bstringify;
 use paste::paste;
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
-use std::str;
 
-/*
-    struct ForeignKey
-    @elem ref_ String: Identifier of the FIELD that must match the primary key of the referenced collection => MAND
-*/
+use crate::{error::VOTableError, mivot::value_checker, QuickXmlReadWrite};
+
+/// Only used in `REFERENCE` in `TEMPLATE`.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ForeignKey {
+  /// Identifier of the `FIELD` (in a table of the `VOTable`) that must match the primary key of
+  /// the referenced collection.
   #[serde(rename = "ref")]
   pub ref_: String,
 }
@@ -28,11 +29,9 @@ impl_quickrw_e!(
 
 #[cfg(test)]
 mod tests {
+  use super::ForeignKey;
   use crate::{
-    mivot::{
-      foreignkey::ForeignKey,
-      test::{get_xml, test_error},
-    },
+    mivot::test::{get_xml, test_error},
     tests::test_read,
   };
 

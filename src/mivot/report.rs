@@ -1,50 +1,50 @@
-use crate::{error::VOTableError, QuickXmlReadWrite};
+use std::str::{self, FromStr};
+
 use paste::paste;
+
 use quick_xml::{
   events::{attributes::Attributes, BytesText, Event},
   Reader, Writer,
 };
-use std::str;
 
-/*
-    enum Status
-    Description
-    *    Enum of the status that can be applied to the <REPORT>.
-*/
+use crate::{error::VOTableError, QuickXmlReadWrite};
+
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Status {
   OK,
   FAILED,
-  NULL,
 }
-impl Status {
-  pub fn from_str(str: &str) -> Status {
+impl FromStr for Status {
+  type Err = String;
+
+  fn from_str(str: &str) -> Result<Self, Self::Err> {
     match str {
-      "OK" => Self::OK,
-      "FAILED" => Self::FAILED,
-      _ => Self::NULL,
+      "OK" => Ok(Self::OK),
+      "FAILED" => Ok(Self::FAILED),
+      _ => Err(format!(
+        "Attribute 'status' error in 'REPORT'. Expected: either 'OK' or 'FAILED'. Actual: '{}'.",
+        str
+      )),
     }
   }
 }
+
 impl ToString for Status {
   fn to_string(&self) -> String {
     match self {
       Self::OK => "OK".to_owned(),
       Self::FAILED => "FAILED".to_owned(),
-      Self::NULL => "NULL".to_owned(),
     }
   }
 }
 
-/*
-    struct Report
-    @elem status Status: Status of the annotation process; must be either OK or FAILED, NULL is an error => MAND
-    @elem content Option<String>: Other annotations => OPT
-*/
+/// Structure storing the content of the `REPORT` tag.
+/// Tells the client whether the annotation process succeeded or not.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Report {
+  /// Status of the annotation process.
   pub status: Status,
-  // content
+  /// Report content.
   #[serde(skip_serializing_if = "Option::is_none")]
   pub content: Option<String>,
 }
@@ -56,12 +56,7 @@ impl Report {
       content: None,
     }
   }
-  fn new_empty() -> Self {
-    Report {
-      status: Status::NULL,
-      content: None,
-    }
-  }
+
   impl_builder_opt_string_attr!(content);
 }
 
@@ -69,36 +64,21 @@ impl QuickXmlReadWrite for Report {
   const TAG: &'static str = "REPORT";
   type Context = ();
 
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut report = Self::new_empty();
-    for attr_res in attrs {
+  fn from_attributes(mut attrs: Attributes) -> Result<Self, VOTableError> {
+    if let Some(attr_res) = attrs.next() {
       let attr = attr_res.map_err(VOTableError::Attr)?;
       let value = std::str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
-      report = match attr.key {
-        b"status" => {
-          if !value.is_empty() {
-            report.status = Status::from_str(value);
-            report
-          } else {
-            return Err(VOTableError::Custom(format!(
-              "Attributes 'status' is mandatory in tag '{}'",
-              Self::TAG
-            )));
-          }
-        }
-        _ => {
-          return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
-        }
-      }
+      return match attr.key {
+        b"status" => Status::from_str(value)
+          .map(Report::new)
+          .map_err(VOTableError::Custom),
+        _ => Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG)),
+      };
     }
-    if report.status == Status::NULL {
-      Err(VOTableError::Custom(format!(
-        "Attribute status is mandatory in tag '{}'",
-        Self::TAG
-      )))
-    } else {
-      Ok(report)
-    }
+    Err(VOTableError::Custom(format!(
+      "Attribute 'status' is mandatory in tag '{}'",
+      Self::TAG
+    )))
   }
 
   fn read_sub_elements<R: std::io::BufRead>(
@@ -106,7 +86,7 @@ impl QuickXmlReadWrite for Report {
     mut reader: Reader<R>,
     reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
-  ) -> Result<Reader<R>, crate::error::VOTableError> {
+  ) -> Result<Reader<R>, VOTableError> {
     // I dot not like the fact that we first create an empty String that we replace here... :o/
     read_content!(Self, self, reader, reader_buff)
   }
@@ -116,7 +96,7 @@ impl QuickXmlReadWrite for Report {
     reader: &mut Reader<R>,
     reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
-  ) -> Result<(), crate::error::VOTableError> {
+  ) -> Result<(), VOTableError> {
     read_content_by_ref!(Self, self, reader, reader_buff)
   }
 
@@ -124,7 +104,7 @@ impl QuickXmlReadWrite for Report {
     &mut self,
     writer: &mut Writer<W>,
     _context: &Self::Context,
-  ) -> Result<(), crate::error::VOTableError> {
+  ) -> Result<(), VOTableError> {
     let mut elem_writer = writer.create_element(Self::TAG_BYTES);
     elem_writer = elem_writer.with_attribute(("status", self.status.to_string().as_str()));
     write_content!(self, elem_writer);

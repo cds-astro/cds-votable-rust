@@ -1,30 +1,19 @@
 extern crate core;
 
 use crate::error::VOTableError;
-use quick_xml::Writer;
-use std::io::Write;
-
-use self::{foreignkey::ForeignKey, primarykey::PrimaryKeyInTemplate};
 
 #[macro_use]
 pub mod macros;
 
-pub mod attribute_a;
-pub mod attribute_b;
-pub mod attribute_c;
-pub mod collection;
-pub mod foreignkey;
+pub mod attribute;
 pub mod globals;
-pub mod instance;
 pub mod join;
 pub mod model;
-pub mod primarykey;
-pub mod reference;
 pub mod report;
 pub mod templates;
 pub mod vodml;
-pub mod r#where;
 
+/*
 pub trait ElemType {
   fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError>;
 }
@@ -33,22 +22,19 @@ pub trait ElemImpl<T: ElemType> {
 }
 
 pub trait InstanceType {
-  fn push_pk(&mut self, pk: PrimaryKeyInTemplate);
-}
-
-pub trait ReferenceType {
-  fn push_fk(&mut self, fk: ForeignKey);
+  fn push_pk(&mut self, pk: PrimaryKeyDyn);
 }
 
 pub trait CollectionType {
   fn push_to_checker(&mut self, str: String);
   fn check_elems(&mut self) -> bool;
 }
+*/
 
 pub(crate) fn value_checker(value: &str, attribute: &str) -> Result<(), VOTableError> {
   if value.is_empty() {
     Err(VOTableError::Custom(format!(
-      "If attribute {} is present it musn't be empty",
+      "If attribute {} is present it cannot be empty",
       attribute
     )))
   } else {

@@ -180,6 +180,51 @@ impl<C: TableDataContent> Table<C> {
       }
     }
   }
+
+  pub(crate) fn write_to_data_beginning<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+    context: &(),
+  ) -> Result<(), VOTableError> {
+    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    // Write tag + attributes
+    push2write_opt_string_attr!(self, tag, ID);
+    push2write_opt_string_attr!(self, tag, name);
+    push2write_opt_string_attr!(self, tag, ucd);
+    push2write_opt_string_attr!(self, tag, utype);
+    push2write_opt_string_attr!(self, tag, ref_, ref);
+    push2write_opt_tostring_attr!(self, tag, nrows);
+    push2write_extra!(self, tag);
+    writer
+      .write_event(Event::Start(tag.to_borrowed()))
+      .map_err(VOTableError::Write)?;
+    // Write sub-elems
+    write_elem!(self, description, writer, context);
+    write_elem_vec_no_context!(self, elems, writer);
+    write_elem_vec!(self, links, writer, context);
+    if let Some(elem) = &mut self.data {
+      elem.write_to_data_beginning(writer)?;
+    }
+    Ok(())
+  }
+
+  pub (crate) fn write_from_data_end<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+    context: &(),
+  ) -> Result<(), VOTableError> {
+    let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+
+    if let Some(elem) = &mut self.data {
+      elem.write_from_data_end(writer)?;
+    }
+
+    write_elem_vec!(self, infos, writer, context);
+    // Close tag
+    writer
+      .write_event(Event::End(tag.to_end()))
+      .map_err(VOTableError::Write)
+  }
 }
 
 impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {

@@ -59,15 +59,10 @@ impl QuickXmlReadWrite for Definitions {
   const TAG: &'static str = "DEFINITIONS";
   type Context = ();
 
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
+  fn from_attributes(mut attrs: Attributes) -> Result<Self, VOTableError> {
     let definitions = Self::new();
-    for attr_res in attrs {
+    if let Some(attr_res) = attrs.next() {
       let attr = attr_res.map_err(VOTableError::Attr)?;
-      /*let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
-      definitions = match attr.key {
-        b"ID" => definitions.set_id(value),
-        _ => { return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG)); }
-      }*/
       return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
     }
     Ok(definitions)

@@ -70,6 +70,18 @@ macro_rules! impl_builder_push_elem {
       }
     }
   };
+  ($t: ident, $e: expr, $a: ident) => {
+    paste! {
+      pub fn [<push_ $t:lower>](mut self, [<$t:lower>]: $a) -> Self {
+        self.elems.push($e::$t([<$t:lower>]));
+        self
+      }
+
+      pub fn [<push_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $a) {
+        self.elems.push($e::$t([<$t:lower>]));
+      }
+    }
+  };
 }
 
 /// E.g. `impl_builder_push(Info)` leads to
@@ -101,6 +113,33 @@ macro_rules! impl_builder_push {
 
       pub fn [<push_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $t<$c>) {
         self.[<$t:lower s>].push([<$t:lower>]);
+      }
+    }
+  };
+}
+
+macro_rules! impl_builder_push_no_s {
+  ($t: ident) => {
+    paste! {
+      pub fn [<push_ $t:lower>](mut self, [<$t:lower>]: $t) -> Self {
+        self.[<$t:lower>].push([<$t:lower>]);
+        self
+      }
+
+      pub fn [<push_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $t) {
+        self.[<$t:lower>].push([<$t:lower>]);
+      }
+    }
+  };
+  ($t: ident, $c: ident) => {
+    paste! {
+      pub fn [<push_ $t:lower>](mut self, [<$t:lower>]: $t<$c>) -> Self {
+        self.[<$t:lower>].push([<$t:lower>]);
+        self
+      }
+
+      pub fn [<push_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $t<$c>) {
+        self.[<$t:lower>].push([<$t:lower>]);
       }
     }
   };

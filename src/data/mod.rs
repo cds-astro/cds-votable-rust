@@ -77,6 +77,30 @@ impl<C: TableDataContent> DataElem<C> {
       DataElem::Fits(elem) => elem.write(writer, &()),
     }
   }
+
+  pub(crate) fn write_to_data_beginning<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+  ) -> Result<(), VOTableError> {
+    match self {
+      DataElem::TableData(elem) => elem.write_to_data_beginning(writer),
+      DataElem::Binary(elem) => elem.write_to_data_beginning(writer),
+      DataElem::Binary2(elem) => elem.write_to_data_beginning(writer),
+      DataElem::Fits(elem) => elem.write(writer, &()),
+    }
+  }
+
+  pub(crate) fn write_from_data_end<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+  ) -> Result<(), VOTableError> {
+    match self {
+      DataElem::TableData(elem) => elem.write_from_data_end(writer),
+      DataElem::Binary(elem) => elem.write_from_data_end(writer),
+      DataElem::Binary2(elem) => elem.write_from_data_end(writer),
+      DataElem::Fits(_) => Ok(()),
+    }
+  }
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -115,7 +139,7 @@ impl<C: TableDataContent> Data<C> {
   impl_builder_push!(Info);
 }
 
-impl Data<VoidTableDataContent> {
+impl<C: TableDataContent> Data<C> {
   pub(crate) fn read_till_table_bin_or_bin2_or_fits_by_ref<R: BufRead>(
     &mut self,
     mut reader: &mut Reader<R>,
@@ -198,6 +222,38 @@ impl Data<VoidTableDataContent> {
       }
     }
   }*/
+
+  /// Write the content of the `<DATA ...>` tag till (including) the tags:
+  /// * `<TABLEDATA ...>`: for `TABLEDATA`
+  /// * `<STREAM ...>`: for `BINARY` or `BINARY2`
+  pub(crate) fn write_to_data_beginning<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+  ) -> Result<(), VOTableError> {
+    let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    writer
+      .write_event(Event::Start(tag.to_borrowed()))
+      .map_err(VOTableError::Write)?;
+    // Write sub-element
+    self.data.write_to_data_beginning(writer)
+  }
+
+  /// Write the content of the `<DATA ...>` starting at (including) the tags:
+  /// * `</TABLEDATA ...>`: for `TABLEDATA`
+  /// * `</STREAM ...>`: for `BINARY` or `BINARY2`
+  pub(crate) fn write_from_data_end<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+  ) -> Result<(), VOTableError> {
+    let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    // Write sub-element
+    self.data.write_from_data_end(writer)?;
+    write_elem_vec_empty_context!(self, infos, writer);
+    // Close tag
+    writer
+      .write_event(Event::End(tag.to_end()))
+      .map_err(VOTableError::Write)
+  }
 }
 
 impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {

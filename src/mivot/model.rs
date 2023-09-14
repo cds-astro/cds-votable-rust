@@ -1,18 +1,17 @@
-use crate::{error::VOTableError, mivot::value_checker, QuickXmlReadWrite};
-use bstringify::bstringify;
-use paste::paste;
-use quick_xml::events::attributes::Attributes;
-use quick_xml::{Reader, Writer};
 use std::str;
 
-/*
-    struct Model
-    @elem name String: Name of the mapped model as declared in the VO-DML/XML model serialization. => MAND
-    @elem url Option<String>: URL to the VO-DML/XML serialization of the model. If present, this attribute MUST not be empty. => OPT
-*/
+use bstringify::bstringify;
+use paste::paste;
+use quick_xml::{events::attributes::Attributes, Reader, Writer};
+
+use crate::{error::VOTableError, mivot::value_checker, QuickXmlReadWrite};
+
+/// Structure storing the content of the `MODEL` tag.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Model {
+  ///  Name of the mapped model as declared in the VO-DML/XML model serialization
   pub name: String,
+  /// URL to the VO-DML/XML serialization of the model (optional, but **must not** be empty if present).
   #[serde(skip_serializing_if = "Option::is_none")]
   pub url: Option<String>,
 }

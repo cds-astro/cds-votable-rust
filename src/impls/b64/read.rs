@@ -370,7 +370,7 @@ impl<R: BufRead> OwnedBulkBinaryRowDeserializer<R> {
       let mut buf = [0_u8; 8];
       reader
         .read_exact(&mut buf)
-        .map_err(|e| VOTableError::Io(e))
+        .map_err(VOTableError::Io)
         .and_then(|()| {
           if &buf == b"/STREAM>" {
             Ok(())
@@ -409,36 +409,15 @@ pub struct BinaryDeserializer<R: BufRead> {
   reader: R,
 }
 
-/*impl<'de, 'a, R: BufRead> BinaryDeserializer<'a, R> {
-pub fn new(reader: DecoderReader<'static, GeneralPurpose, B64Cleaner<'a, R>>) -> Self {
-  Self {
-    reader: BufReader::new(reader),
-  }
-}*/
-
-impl<'de, R: BufRead> BinaryDeserializer<R> {
+impl<R: BufRead> BinaryDeserializer<R> {
   pub fn new(reader: R) -> Self {
     Self { reader }
   }
   pub fn has_data_left(&mut self) -> Result<bool, io::Error> {
     self.reader.fill_buf().map(|b| !b.is_empty())
   }
-
-  /*
-  pub fn deserialize_row(&'a mut self, row_schema: &[Schema]) -> Result<Vec<VOTableValue>, VOTableError> {
-    let mut row: Vec<VOTableValue> = Vec::with_capacity(row_schema.len());
-    for field_schema in row_schema {
-      let field = field_schema.deserialize(&mut *self)?;
-      row.push(field);
-    }
-    Ok(row)
-  }
-  */
 }
 
-// <'de, 'a: 'de, R: BufRead>
-//   'a lasts at least as long as 'de
-// impl<'de, 'b, 'a: 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializer<'a, R> {
 impl<'de, 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializer<R> {
   type Error = VOTableError;
 

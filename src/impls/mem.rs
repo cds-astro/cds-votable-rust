@@ -133,7 +133,7 @@ impl TableDataContent for InMemTableDataStringRows {
             let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
             match &mut event {
               Event::Text(e) => {
-                row.push(e.unescape_and_decode(&reader).map_err(VOTableError::Read)?)
+                row.push(e.unescape_and_decode(reader).map_err(VOTableError::Read)?)
               }
               _ => eprintln!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
             }
@@ -260,7 +260,7 @@ impl TableDataContent for InMemTableDataRows {
             let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
             match &mut event {
               Event::Text(e) => {
-                let s = e.unescape_and_decode(&reader).map_err(VOTableError::Read)?;
+                let s = e.unescape_and_decode(reader).map_err(VOTableError::Read)?;
                 let value = schema[row.len()].value_from_str(s.trim())?;
                 // eprintln!("Value: {}", s);
                 /* let value = serde_json::from_str(s.as_str().trim())

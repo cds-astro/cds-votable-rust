@@ -29,6 +29,41 @@ impl<C: TableDataContent> Binary<C> {
   pub fn from_stream(stream: Stream<C>) -> Self {
     Self { stream }
   }
+
+  pub(crate) fn write_to_data_beginning<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+  ) -> Result<(), VOTableError> {
+    writer
+      .write_event(Event::Start(BytesStart::borrowed_name(Self::TAG_BYTES)))
+      .map_err(VOTableError::Write)
+      .and_then(|()| {
+        if self.stream.content.is_some() {
+          self
+            .stream
+            .write_start(writer)
+            .and_then(|()| writer.write(b"\n").map_err(VOTableError::Write))
+        } else {
+          self.stream.write(writer, &())
+        }
+      })
+  }
+
+  pub(crate) fn write_from_data_end<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+  ) -> Result<(), VOTableError> {
+    if self.stream.content.is_some() {
+      self.stream.write_end(writer)
+    } else {
+      self.stream.write(writer, &())
+    }
+    .and_then(|()| {
+      writer
+        .write_event(Event::End(BytesEnd::borrowed(Self::TAG_BYTES)))
+        .map_err(VOTableError::Write)
+    })
+  }
 }
 
 impl<C: TableDataContent> QuickXmlReadWrite for Binary<C> {
@@ -115,7 +150,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary<C> {
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    writer
+    /*writer
       .write_event(Event::Start(BytesStart::borrowed_name(Self::TAG_BYTES)))
       .map_err(VOTableError::Write)?;
     if self.stream.content.is_some() {
@@ -130,6 +165,17 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary<C> {
     }
     writer
       .write_event(Event::End(BytesEnd::borrowed(Self::TAG_BYTES)))
-      .map_err(VOTableError::Write)
+      .map_err(VOTableError::Write)*/
+    self
+      .write_to_data_beginning(writer)
+      .and_then(|()| {
+        self
+          .stream
+          .content
+          .as_mut()
+          .unwrap()
+          .write_in_binary(writer, context)
+      })
+      .and_then(|()| self.write_from_data_end(writer))
   }
 }

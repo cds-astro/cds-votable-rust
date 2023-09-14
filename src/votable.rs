@@ -420,18 +420,16 @@ impl<C: TableDataContent> VOTable<C> {
 
   pub(crate) fn from_reader_till_next_resource<R: BufRead>(
     reader: R,
-    mut reader_buff: &mut Vec<u8>,
+    reader_buff: &mut Vec<u8>,
   ) -> Result<(VOTable<C>, Resource<C>, Reader<R>), VOTableError> {
     let mut reader = Reader::from_reader(reader);
     loop {
-      let mut event = reader
-        .read_event(&mut reader_buff)
-        .map_err(VOTableError::Read)?;
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Decl(ref e) => check_declaration(e),
         Event::Start(ref mut e) if e.local_name() == VOTable::<C>::TAG_BYTES => {
           let mut votable = VOTable::<C>::from_attributes(e.attributes())?;
-          let (resource, reader) = votable.read_till_next_resource(reader, &mut reader_buff)?;
+          let (resource, reader) = votable.read_till_next_resource(reader, reader_buff)?;
           reader_buff.clear();
           return Ok((votable, resource, reader));
         }
@@ -460,6 +458,26 @@ impl<C: TableDataContent> VOTable<C> {
   impl_builder_push!(Resource, C);
 
   impl_builder_push_post_info!();
+
+  pub fn get_first_resource_containing_a_table(&self) -> Option<&Resource<C>> {
+    for resource in self.resources.iter() {
+      let first_resource_containing_a_table = resource.get_first_resource_containing_a_table();
+      if first_resource_containing_a_table.is_some() {
+        return first_resource_containing_a_table;
+      }
+    }
+    None
+  }
+
+  pub fn get_first_resource_containing_a_table_mut(&mut self) -> Option<&mut Resource<C>> {
+    for resource in self.resources.iter_mut() {
+      let first_resource_containing_a_table = resource.get_first_resource_containing_a_table_mut();
+      if first_resource_containing_a_table.is_some() {
+        return first_resource_containing_a_table;
+      }
+    }
+    None
+  }
 
   pub fn get_first_table(&self) -> Option<&Table<C>> {
     for resource in self.resources.iter() {
@@ -571,6 +589,70 @@ impl<C: TableDataContent> VOTable<C> {
       None => Err(VOTableError::Custom(String::from(
         "No resource found in the VOTable",
       ))),
+    }
+  }
+
+  /// Returns `true` if a table has been found
+  pub fn write_to_data_beginning<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+    context: &(),
+  ) -> Result<bool, VOTableError> {
+    writer
+      .write(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+"#
+        .as_bytes(),
+      )
+      .map_err(VOTableError::Write)?;
+    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    // Write tag + attributes
+    push2write_opt_string_attr!(self, tag, ID);
+    push2write_opt_into_attr!(self, tag, version);
+    push2write_extra!(self, tag);
+    writer
+      .write_event(Event::Start(tag.to_borrowed()))
+      .map_err(VOTableError::Write)?;
+    // Write sub-elems
+    write_elem!(self, description, writer, context);
+    write_elem_vec_no_context!(self, elems, writer);
+    for resource in self.resources.iter_mut() {
+      if resource.write_to_data_beginning(writer, &())? {
+        return Ok(true);
+      }
+    }
+    // Reach this point only if no table has been found
+    write_elem_vec!(self, post_infos, writer, context);
+    // Close tag
+    writer
+      .write_event(Event::End(tag.to_end()))
+      .map_err(VOTableError::Write)
+      .map(|()| false)
+  }
+
+  pub fn write_from_data_end<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+    context: &(),
+  ) -> Result<(), VOTableError> {
+    let mut write = false;
+    for resource in self.resources.iter_mut() {
+      if write {
+        resource.write(writer, context)?;
+      } else {
+        write = resource.write_from_data_end(writer, &())?;
+      }
+    }
+    if write {
+      write_elem_vec!(self, resources, writer, context);
+      write_elem_vec!(self, post_infos, writer, context);
+      // Close tag
+      let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+      writer
+        .write_event(Event::End(tag.to_end()))
+        .map_err(VOTableError::Write)
+    } else {
+      Ok(())
     }
   }
 }
@@ -881,7 +963,25 @@ mod tests {
         assert!(false);
       }
     }
-    // assert!(votable.is_ok())
+  }
+
+  #[test]
+  fn test_votable_read_simbad_unicodechar_file() {
+    match VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file(
+      "resources/simbad_unicodechar.xml",
+    ) {
+      Ok(votable_wrapper) => match serde_json::ser::to_string_pretty(&votable_wrapper.unwrap()) {
+        Ok(content) => println!("{}", &content),
+        Err(error) => {
+          println!("{:?}", &error);
+          assert!(false)
+        }
+      },
+      Err(e) => {
+        eprintln!("Error: {:?}", e);
+        assert!(false);
+      }
+    }
   }
 
   #[test]
@@ -1009,12 +1109,15 @@ mod tests {
       VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/mivot_appendix_A.xml");
     match votable_res_res {
       Ok(votable_res) => {
-        let votable = votable_res.unwrap();
+        let mut votable = votable_res.unwrap();
 
         println!("\n\n#### JSON ####\n");
 
         match serde_json::ser::to_string_pretty(&votable) {
-          Ok(_content) => println!("\nOK"), //println!("{}", &content),
+          Ok(content) => {
+            println!("{}", &content);
+            println!("\nOK");
+          } //,
           Err(error) => {
             println!("{:?}", &error);
             assert!(false);
@@ -1024,7 +1127,26 @@ mod tests {
         println!("\n\n#### TOML ####\n");
 
         match toml::ser::to_string_pretty(&votable) {
-          Ok(_content) => println!("\nOK"), // println!("{}", &content),
+          Ok(content) => {
+            println!("{}", &content);
+            println!("\nOK")
+          }
+          Err(error) => {
+            println!("{:?}", &error);
+            assert!(false);
+          }
+        }
+
+        println!("\n\n#### XML ####\n");
+
+        let mut votable2: Vec<u8> = Vec::new();
+        let mut write = Writer::new_with_indent(&mut votable2, b' ', 4);
+        match votable.write(&mut write, &()) {
+          Ok(content) => {
+            let votable2 = String::from_utf8(votable2).unwrap();
+            println!("{}", votable2);
+            println!("\nOK")
+          }
           Err(error) => {
             println!("{:?}", &error);
             assert!(false);

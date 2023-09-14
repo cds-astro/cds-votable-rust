@@ -85,7 +85,7 @@ impl Serialize for VOTableValue {
       VOTableValue::Double(v) => serializer.serialize_f64(*v),
       VOTableValue::ComplexFloat((l, r)) => [l, r].serialize(serializer),
       VOTableValue::ComplexDouble((l, r)) => [l, r].serialize(serializer),
-      VOTableValue::CharASCII(v) => serializer.serialize_char(*v as char),
+      VOTableValue::CharASCII(v) => serializer.serialize_char(*v),
       VOTableValue::CharUnicode(v) => serializer.serialize_char(*v),
       VOTableValue::String(v) => v.serialize(serializer), //serializer.serialize_str(v.as_str()),
       VOTableValue::BitArray(v) => v.serialize(serializer),
@@ -1125,14 +1125,14 @@ impl<'de> DeserializeSeed<'de> for &Schema {
           .map(VOTableValue::String)
       }
       Schema::VariableLengthStringASCII { n_chars_max } => {
-        let visitor = VariableLengthArrayVisitor::new(n_chars_max.clone());
+        let visitor = VariableLengthArrayVisitor::new(*n_chars_max);
         let bytes: Vec<u8> = deserializer.deserialize_seq(visitor)?;
         String::from_utf8(bytes)
           .map_err(D::Error::custom)
           .map(VOTableValue::String)
       }
       Schema::VariableLengthStringUnicode { n_chars_max } => {
-        let visitor = VariableLengthArrayVisitor::new(n_chars_max.clone());
+        let visitor = VariableLengthArrayVisitor::new(*n_chars_max);
         let bytes: Vec<u16> = deserializer.deserialize_seq(visitor)?;
         decode_ucs2(bytes)
           .map_err(D::Error::custom)
@@ -1201,49 +1201,49 @@ impl<'de> DeserializeSeed<'de> for &Schema {
         elem_schema,
       } => match elem_schema.as_ref() {
         Schema::Byte { .. } => {
-          let visitor = VariableLengthArrayVisitor::<u8>::new(n_elems_max.clone());
+          let visitor = VariableLengthArrayVisitor::<u8>::new(*n_elems_max);
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::ByteArray)
         }
         Schema::Short { .. } => {
-          let visitor = VariableLengthArrayVisitor::<i16>::new(n_elems_max.clone());
+          let visitor = VariableLengthArrayVisitor::<i16>::new(*n_elems_max);
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::ShortArray)
         }
         Schema::Int { .. } => {
-          let visitor = VariableLengthArrayVisitor::<i32>::new(n_elems_max.clone());
+          let visitor = VariableLengthArrayVisitor::<i32>::new(*n_elems_max);
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::IntArray)
         }
         Schema::Long { .. } => {
-          let visitor = VariableLengthArrayVisitor::<i64>::new(n_elems_max.clone());
+          let visitor = VariableLengthArrayVisitor::<i64>::new(*n_elems_max);
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::LongArray)
         }
         Schema::Float => {
-          let visitor = VariableLengthArrayVisitor::<f32>::new(n_elems_max.clone());
+          let visitor = VariableLengthArrayVisitor::<f32>::new(*n_elems_max);
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::FloatArray)
         }
         Schema::Double => {
-          let visitor = VariableLengthArrayVisitor::<f64>::new(n_elems_max.clone());
+          let visitor = VariableLengthArrayVisitor::<f64>::new(*n_elems_max);
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::DoubleArray)
         }
         Schema::ComplexFloat => {
-          let visitor = VariableLengthArrayVisitor::<(f32, f32)>::new(n_elems_max.clone());
+          let visitor = VariableLengthArrayVisitor::<(f32, f32)>::new(*n_elems_max);
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::ComplexFloatArray)
         }
         Schema::ComplexDouble => {
-          let visitor = VariableLengthArrayVisitor::<(f64, f64)>::new(n_elems_max.clone());
+          let visitor = VariableLengthArrayVisitor::<(f64, f64)>::new(*n_elems_max);
           deserializer
             .deserialize_seq(visitor)
             .map(VOTableValue::ComplexDoubleArray)
@@ -1261,7 +1261,7 @@ impl<'de> DeserializeSeed<'de> for &Schema {
       }
       Schema::VariableLengthBitArray { n_bits_max } => {
         let visitor =
-          VariableLengthArrayVisitor::<u8>::new(n_bits_max.clone().map(|n_bits| (n_bits + 7) / 8));
+          VariableLengthArrayVisitor::<u8>::new((*n_bits_max).map(|n_bits| (n_bits + 7) / 8));
         let bytes: Vec<u8> = deserializer.deserialize_seq(visitor)?;
         Ok(VOTableValue::BitArray(BitVec(BV::from_vec(bytes))))
       }

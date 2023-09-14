@@ -64,10 +64,7 @@ impl ArraySize {
   }
 
   pub fn is_fixed(&self) -> bool {
-    match self {
-      Self::Fixed1D { size: _ } | Self::FixedND { sizes: _ } => true,
-      _ => false,
-    }
+    matches!(self, Self::Fixed1D { size: _ } | Self::FixedND { sizes: _ })
   }
 
   pub fn is_variable(&self) -> bool {
@@ -75,14 +72,14 @@ impl ArraySize {
   }
 
   pub fn has_upper_limit(&self) -> bool {
-    match self {
+    matches!(
+      self,
       Self::VariableWithUpperLimit1D { upper_limit: _ }
-      | Self::VariableWithUpperLimitND {
-        sizes: _,
-        upper_limit: _,
-      } => true,
-      _ => false,
-    }
+        | Self::VariableWithUpperLimitND {
+          sizes: _,
+          upper_limit: _,
+        }
+    )
   }
 
   /// Returns:
@@ -141,7 +138,7 @@ impl FromStr for ArraySize {
       let upper_limit = elems.pop().unwrap_or(0);
       Self::VariableWithUpperLimitND {
         sizes: elems,
-        upper_limit: upper_limit,
+        upper_limit,
       }
     })
   }

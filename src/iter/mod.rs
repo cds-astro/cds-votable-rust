@@ -266,7 +266,9 @@ impl<R: BufRead> OwnedBinary1or2RowIterator<R> {
     let b64_cleaner = OwnedB64Cleaner::new(reader.into_inner());
     let decoder = DecoderReader::new(b64_cleaner, &general_purpose::STANDARD);
     // Get schema
-    let schema: Vec<Schema> = votable.resources[0].tables[0]
+    let schema: Vec<Schema> = votable
+      .get_first_table()
+      .unwrap() // .resources[0].tables[0]
       .elems
       .iter()
       .filter_map(|table_elem| match table_elem {
@@ -294,12 +296,10 @@ impl<R: BufRead> OwnedBinary1or2RowIterator<R> {
           reader,
           is_binary2,
         } = self;
-        reader.skip_remaining_data().and_then(|reader| {
-          Ok(Self {
-            votable,
-            reader,
-            is_binary2,
-          })
+        reader.skip_remaining_data().map(|reader| Self {
+          votable,
+          reader,
+          is_binary2,
         })
       }
       Ok(false) => Ok(self),
@@ -327,13 +327,17 @@ impl<R: BufRead> OwnedBinary1or2RowIterator<R> {
         &mut reader_buff,
       )
       .map_err(|e| VOTableError::Custom(format!("Reading to BINARY or BINARY2... {:?}", e)))?;
-    votable.resources[0].tables[0]
+    let first_table_mut = votable.get_first_table_mut().unwrap();
+    first_table_mut
       .data
       .as_mut()
       .unwrap()
       .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &Vec::default())?;
-    votable.resources[0].tables[0].read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
-    votable.resources[0].read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
+    first_table_mut.read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
+    votable
+      .get_first_resource_containing_a_table_mut()
+      .unwrap()
+      .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
     votable.read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
     Ok(votable)
   }
@@ -404,12 +408,12 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
               table.set_data_by_ref(data);
               resource.push_table_by_ref(table);
               votable.push_resource_by_ref(resource);
-              return Ok(SimpleVOTableRowIterator {
+              Ok(SimpleVOTableRowIterator {
                 reader,
                 reader_buff,
                 votable,
                 data_type: TableOrBinOrBin2::TableData,
-              });
+              })
             }
             Some(TableOrBinOrBin2::Binary) => {
               let stream = Stream::open_stream(&mut reader, &mut reader_buff)?;
@@ -418,12 +422,12 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
               table.set_data_by_ref(data);
               resource.push_table_by_ref(table);
               votable.push_resource_by_ref(resource);
-              return Ok(SimpleVOTableRowIterator {
+              Ok(SimpleVOTableRowIterator {
                 reader,
                 reader_buff,
                 votable,
                 data_type: TableOrBinOrBin2::Binary,
-              });
+              })
             }
             Some(TableOrBinOrBin2::Binary2) => {
               let stream = Stream::open_stream(&mut reader, &mut reader_buff)?;
@@ -432,12 +436,12 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
               table.set_data_by_ref(data);
               resource.push_table_by_ref(table);
               votable.push_resource_by_ref(resource);
-              return Ok(SimpleVOTableRowIterator {
+              Ok(SimpleVOTableRowIterator {
                 reader,
                 reader_buff,
                 votable,
                 data_type: TableOrBinOrBin2::Binary2,
-              });
+              })
             }
             Some(TableOrBinOrBin2::Fits(_)) => Err(VOTableError::Custom(String::from(
               "FITS data not supported",
@@ -586,7 +590,7 @@ impl VOTableIterator<BufReader<File>> {
     let mut reader_buff: Vec<u8> = Vec::with_capacity(1024);
     let (votable, resource, reader) =
       VOTableWrapper::<VoidTableDataContent>::manual_from_ivoa_xml_file(path, &mut reader_buff)?;
-    let mut resource_stack = Vec::default();
+    let mut resource_stack = Vec::with_capacity(4);
     resource_stack.push(resource);
     Ok(VOTableIterator::<BufReader<File>> {
       reader,

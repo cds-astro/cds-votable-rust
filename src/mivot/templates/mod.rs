@@ -1,28 +1,32 @@
-use crate::{error::VOTableError, is_empty, mivot::value_checker, QuickXmlReadWrite};
-use bstringify::bstringify;
-use paste::paste;
-use quick_xml::events::attributes::Attributes;
-use quick_xml::events::{BytesStart, Event};
-use quick_xml::{Reader, Writer};
+//! The `TEMPLATES` block maps data model instances on the rows of a table in the VOTable.
+
 use std::str;
 
-use super::r#where::NoFkWhere;
-use super::{instance::NoRoleInstance, r#where::Where};
+use bstringify::bstringify;
 
-/*
-    struct Templates
-    @elem tableref Option<String>:  => OPT
-    @elem wheres:
-    @elem instances:
-*/
+use paste::paste;
+
+use quick_xml::{
+  events::{attributes::Attributes, BytesStart, Event},
+  Reader, Writer,
+};
+
+use crate::{error::VOTableError, is_empty, mivot::value_checker, QuickXmlReadWrite};
+
+pub mod instance;
+use instance::Instance;
+pub mod r#where;
+use r#where::Where;
+
+/// Structure storing the content of the `TEMPLATES` tag.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Templates {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub tableref: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  pub wheres: Vec<NoFkWhere>,
+  pub wheres: Vec<Where>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  pub instances: Vec<NoRoleInstance>,
+  pub instances: Vec<Instance>,
 }
 impl Templates {
   fn new_empty() -> Self {
@@ -34,11 +38,11 @@ impl Templates {
   }
   impl_builder_opt_string_attr!(tableref);
 
-  pub fn push_where(mut self, where_: NoFkWhere) -> Self {
+  pub fn push_where(mut self, where_: Where) -> Self {
     self.wheres.push(where_);
     self
   }
-  pub fn push_instance(mut self, instance: NoRoleInstance) -> Self {
+  pub fn push_instance(mut self, instance: Instance) -> Self {
     self.instances.push(instance);
     self
   }
@@ -77,12 +81,11 @@ fn read_template_sub_elem_by_ref<R: std::io::BufRead>(
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
       Event::Start(ref e) => match e.local_name() {
-        NoRoleInstance::TAG_BYTES => template.instances.push(from_event_start_by_ref!(
-          NoRoleInstance,
-          reader,
-          reader_buff,
-          e
-        )),
+        Instance::TAG_BYTES => {
+          template
+            .instances
+            .push(from_event_start_by_ref!(Instance, reader, reader_buff, e))
+        }
         _ => {
           return Err(VOTableError::UnexpectedStartTag(
             e.local_name().to_vec(),
@@ -91,10 +94,8 @@ fn read_template_sub_elem_by_ref<R: std::io::BufRead>(
         }
       },
       Event::Empty(ref e) => match e.local_name() {
-        Where::TAG_BYTES => template.wheres.push(NoFkWhere::from_event_empty(e)?),
-        NoRoleInstance::TAG_BYTES => template
-          .instances
-          .push(NoRoleInstance::from_event_empty(e)?),
+        Where::TAG_BYTES => template.wheres.push(Where::from_event_empty(e)?),
+        Instance::TAG_BYTES => template.instances.push(Instance::from_event_empty(e)?),
         _ => {
           return Err(VOTableError::UnexpectedEmptyTag(
             e.local_name().to_vec(),
