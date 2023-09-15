@@ -37,6 +37,8 @@ pub enum Version {
   V1_3,
   #[serde(rename = "1.4")]
   V1_4,
+  #[serde(rename = "1.5")]
+  V1_5,
 }
 
 impl FromStr for Version {
@@ -49,8 +51,9 @@ impl FromStr for Version {
       "1.2" => Ok(Version::V1_2),
       "1.3" => Ok(Version::V1_3),
       "1.4" => Ok(Version::V1_4),
+      "1.5" => Ok(Version::V1_5),
       _ => Err(format!(
-        "Unrecognized version. Actual: '{}'. Expected: '1.1', '1.2', '1.3' or '1.4'",
+        "Unrecognized version. Actual: '{}'. Expected: '1.1', '1.2', '1.3', '1.4' or '1.5'",
         s
       )),
     }
@@ -65,6 +68,7 @@ impl From<&Version> for &'static str {
       Version::V1_2 => "1.2",
       Version::V1_3 => "1.3",
       Version::V1_4 => "1.4",
+      Version::V1_5 => "1.5",
     }
   }
 }

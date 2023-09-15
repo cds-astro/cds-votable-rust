@@ -193,6 +193,14 @@ impl<C: TableDataContent> Resource<C> {
               .infos
               .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
           }
+          CooSys::TAG_BYTES => self
+            .elems
+            .push(ResourceElem::CooSys(from_event_start_by_ref!(
+              CooSys,
+              reader,
+              reader_buff,
+              e
+            ))),
           Group::TAG_BYTES => self
             .elems
             .push(ResourceElem::Group(from_event_start_by_ref!(

@@ -4,13 +4,35 @@ use std::{
   str::{self, FromStr},
 };
 
-use quick_xml::{events::attributes::Attributes, ElementWriter, Reader, Writer};
+use quick_xml::{
+  events::{attributes::Attributes, BytesStart, Event},
+  ElementWriter, Reader, Writer,
+};
+
+use paste::paste;
 
 use serde;
 
-use super::{error::VOTableError, QuickXmlReadWrite};
+use super::{
+  error::VOTableError, fieldref::FieldRef, paramref::ParamRef, timesys::RefPosition,
+  QuickXmlReadWrite,
+};
 
-// https://ned.ipac.caltech.edu/Documents/Guides/Calculations/calcdoc
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "elem_type")]
+pub enum CooSysElem {
+  FieldRef(FieldRef),
+  ParamRef(ParamRef),
+}
+
+impl CooSysElem {
+  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+    match self {
+      CooSysElem::FieldRef(elem) => elem.write(writer, &()),
+      CooSysElem::ParamRef(elem) => elem.write(writer, &()),
+    }
+  }
+}
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct CooSys {
@@ -18,6 +40,13 @@ pub struct CooSys {
   pub id: String,
   #[serde(flatten)]
   pub coosys: System,
+  /// We so far put `refposition` as Optional to stay compatible with VOTable 1.4
+  /// (and since it is not yet clear if `refposition` is mandatory or not).
+  /// See [the IVOA doc](https://www.ivoa.net/documents/VOTable/20230913/WD-VOTable-1.5-20230913.html#elem:COOSYS).
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub refposition: Option<RefPosition>,
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub elems: Vec<CooSysElem>,
 }
 
 impl CooSys {
@@ -25,8 +54,12 @@ impl CooSys {
     Self {
       id: id.into(),
       coosys,
+      refposition: None,
+      elems: Default::default(),
     }
   }
+
+  impl_builder_opt_attr!(refposition, RefPosition);
 }
 
 impl QuickXmlReadWrite for CooSys {
@@ -38,6 +71,7 @@ impl QuickXmlReadWrite for CooSys {
     let mut system: Option<String> = None;
     let mut equinox: Option<String> = None;
     let mut epoch: Option<String> = None;
+    let mut refposition: Option<RefPosition> = None;
     // Look for attributes
     for attr_res in attrs {
       let attr = attr_res.map_err(VOTableError::Attr)?;
@@ -48,6 +82,7 @@ impl QuickXmlReadWrite for CooSys {
         b"system" => system = Some(value),
         b"equinox" => equinox = Some(value),
         b"epoch" => epoch = Some(value),
+        b"refposition" => refposition = Some(value.parse().map_err(VOTableError::Variant)?),
         _ => {
           eprintln!(
             "WARNING: attribute {:?} in {} is ignored",
@@ -124,7 +159,13 @@ impl QuickXmlReadWrite for CooSys {
           .set_epoch_from_str(epoch.as_str())
           .map_err(VOTableError::ParseYear)?;
       }
-      Ok(CooSys::new(id, system))
+      // Create CooSys
+      let mut coosys = CooSys::new(id, system);
+      // Add refposition if any
+      if let Some(refposition) = refposition {
+        coosys = coosys.set_refposition(refposition);
+      }
+      Ok(coosys)
     } else {
       Err(VOTableError::Custom(format!(
         "Attributes 'ID' and 'system' are mandatory in tag '{}'",
@@ -135,20 +176,67 @@ impl QuickXmlReadWrite for CooSys {
 
   fn read_sub_elements<R: BufRead>(
     &mut self,
-    _reader: Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
+    mut reader: Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    context: &Self::Context,
   ) -> Result<Reader<R>, VOTableError> {
-    unreachable!()
+    self
+      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
+      .map(|()| reader)
   }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
+    mut reader: &mut Reader<R>,
+    mut reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    unreachable!()
+    loop {
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      match &mut event {
+        Event::Start(ref e) => match e.local_name() {
+          FieldRef::TAG_BYTES => self
+            .elems
+            .push(CooSysElem::FieldRef(from_event_start_by_ref!(
+              FieldRef,
+              reader,
+              reader_buff,
+              e
+            ))),
+          ParamRef::TAG_BYTES => self
+            .elems
+            .push(CooSysElem::ParamRef(from_event_start_by_ref!(
+              ParamRef,
+              reader,
+              reader_buff,
+              e
+            ))),
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Empty(ref e) => match e.local_name() {
+          FieldRef::TAG_BYTES => self
+            .elems
+            .push(CooSysElem::FieldRef(FieldRef::from_event_empty(e)?)),
+          ParamRef::TAG_BYTES => self
+            .elems
+            .push(CooSysElem::ParamRef(ParamRef::from_event_empty(e)?)),
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
+        Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
+        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+      }
+    }
   }
 
   fn write<W: Write>(
@@ -156,11 +244,29 @@ impl QuickXmlReadWrite for CooSys {
     writer: &mut Writer<W>,
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-    elem_writer = elem_writer.with_attribute(("ID", self.id.as_str()));
-    elem_writer = self.coosys.with_attributes(elem_writer);
-    elem_writer.write_empty().map_err(VOTableError::Write)?;
-    Ok(())
+    if self.elems.is_empty() {
+      let mut elem_writer = writer.create_element(Self::TAG_BYTES);
+      elem_writer = elem_writer.with_attribute(("ID", self.id.as_str()));
+      elem_writer = self.coosys.with_attributes(elem_writer);
+      write_opt_tostring_attr!(self, elem_writer, refposition);
+      elem_writer.write_empty().map_err(VOTableError::Write)?;
+      Ok(())
+    } else {
+      let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+      // Write tag + attributes
+      tag.push_attribute(("ID", self.id.as_str()));
+      self.coosys.push_attributes(&mut tag);
+      push2write_opt_tostring_attr!(self, tag, refposition);
+      writer
+        .write_event(Event::Start(tag.to_borrowed()))
+        .map_err(VOTableError::Write)?;
+      // Write sub-elems
+      write_elem_vec_no_context!(self, elems, writer);
+      // Close tag
+      writer
+        .write_event(Event::End(tag.to_end()))
+        .map_err(VOTableError::Write)
+    }
   }
 }
 
@@ -458,6 +564,57 @@ impl System {
       }
     };
     writer
+  }
+
+  pub fn push_attributes(&self, tag: &mut BytesStart) {
+    match self {
+      System::EquatorialFK4 { equinox, epoch } => {
+        tag.push_attribute(("system", "eq_FK4"));
+        tag.push_attribute(("equinox", format!("B{:}", equinox.0).as_str()));
+        if let Some(epoch) = epoch {
+          tag.push_attribute(("epoch", format!("B{:}", epoch.0).as_str()));
+        }
+      }
+      System::EcliptiqueFK4 { equinox, epoch } => {
+        tag.push_attribute(("system", "ecl_FK4"));
+        tag.push_attribute(("equinox", format!("B{:}", equinox.0).as_str()));
+        if let Some(epoch) = epoch {
+          tag.push_attribute(("epoch", format!("B{:}", epoch.0).as_str()));
+        }
+      }
+      System::EquatorialFK5 { equinox, epoch } => {
+        tag.push_attribute(("system", "eq_FK5"));
+        tag.push_attribute(("equinox", format!("J{:}", equinox.0).as_str()));
+        if let Some(epoch) = epoch {
+          tag.push_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
+        }
+      }
+      System::EcliptiqueFK5 { equinox, epoch } => {
+        tag.push_attribute(("system", "ecl_FK5"));
+        tag.push_attribute(("equinox", format!("J{:}", equinox.0).as_str()));
+        if let Some(epoch) = epoch {
+          tag.push_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
+        }
+      }
+      System::ICRS { epoch } => {
+        tag.push_attribute(("system", "ICRS"));
+        if let Some(epoch) = epoch {
+          tag.push_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
+        }
+      }
+      System::Galactic { epoch } => {
+        tag.push_attribute(("system", "galactic"));
+        if let Some(epoch) = epoch {
+          tag.push_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
+        }
+      }
+      System::SuperGalactic { epoch } => {
+        tag.push_attribute(("system", "supergalactic"));
+        if let Some(epoch) = epoch {
+          tag.push_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
+        }
+      }
+    }
   }
 }
 
