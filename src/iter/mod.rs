@@ -32,6 +32,7 @@ use crate::{
 pub mod elems;
 pub mod strings;
 
+use crate::resource::ResourceSubElem;
 use elems::DataTableRowValueIterator;
 // use strings::RowStringIterator;
 
@@ -90,16 +91,22 @@ impl<R: BufRead> OwnedTabledataRowIterator<R> {
       mut votable,
       has_next: _,
     } = self;
-    // TODO: redundant code with SimpleVOTableRowIterator...
-    votable.resources[0].tables[0]
-      .data
-      .as_mut()
+    /*// TODO: redundant code with SimpleVOTableRowIterator...
+    votable.resources[0]
+      .get_first_table_mut()
+      .and_then(|table| table.data.as_mut())
       .unwrap()
       .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &Vec::default())?;
-    votable.resources[0].tables[0].read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
+    votable.resources[0]
+      .get_first_table_mut()
+      .unwrap()
+      .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
     votable.resources[0].read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
     votable.read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
-    Ok(votable)
+    Ok(votable)*/
+    votable
+      .read_from_data_end_to_end(&mut reader, &mut reader_buff)
+      .map(|()| votable)
   }
 }
 
@@ -327,19 +334,23 @@ impl<R: BufRead> OwnedBinary1or2RowIterator<R> {
         &mut reader_buff,
       )
       .map_err(|e| VOTableError::Custom(format!("Reading to BINARY or BINARY2... {:?}", e)))?;
-    let first_table_mut = votable.get_first_table_mut().unwrap();
+    /*let first_table_mut = votable.get_first_table_mut().unwrap();
     first_table_mut
       .data
       .as_mut()
       .unwrap()
       .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &Vec::default())?;
     first_table_mut.read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
+    ERROR WE SHOULD GET THE STACK!!
     votable
       .get_first_resource_containing_a_table_mut()
       .unwrap()
       .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
     votable.read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
-    Ok(votable)
+    Ok(votable)*/
+    votable
+      .read_from_data_end_to_end(&mut reader, &mut reader_buff)
+      .map(|()| votable)
   }
 }
 
@@ -370,7 +381,7 @@ pub struct SimpleVOTableRowIterator<R: BufRead> {
 }
 
 impl SimpleVOTableRowIterator<BufReader<File>> {
-  /// Starts parsing the VOTable till (includive):
+  /// Starts parsing the VOTable till (inclusive):
   /// * `TABLEDATA` for the `TABLEDATA` tag
   /// * `STREAM` for `BINARY` and `BINARY2` tags
   pub fn open_file_and_read_to_data<P: AsRef<Path>>(path: P) -> Result<Self, VOTableError> {
@@ -400,13 +411,24 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
     mut reader: Reader<R>,
     mut reader_buff: Vec<u8>,
   ) -> Result<Self, VOTableError> {
-    match resource.read_till_next_resource_or_table_by_ref(&mut reader, &mut reader_buff)? {
-      Some(ResourceOrTable::<_>::Table(mut table)) => {
+    let mut sub_elem = resource
+      .read_till_next_table_by_ref(&mut reader, &mut reader_buff)
+      .and_then(|opt_sub_elem| {
+        opt_sub_elem.ok_or_else(|| {
+          VOTableError::Custom(String::from("No table found in the VOTable resource!"))
+        })
+      })?;
+    match &mut sub_elem {
+      ResourceSubElem {
+        links: _,
+        resource_or_table: ResourceOrTable::<_>::Table(ref mut table),
+        ..
+      } => {
         if let Some(mut data) = table.read_till_data_by_ref(&mut reader, &mut reader_buff)? {
           match data.read_till_table_bin_or_bin2_or_fits_by_ref(&mut reader, &mut reader_buff)? {
             Some(TableOrBinOrBin2::TableData) => {
               table.set_data_by_ref(data);
-              resource.push_table_by_ref(table);
+              resource.push_sub_elem_by_ref(sub_elem);
               votable.push_resource_by_ref(resource);
               Ok(SimpleVOTableRowIterator {
                 reader,
@@ -420,7 +442,7 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
               let binary = Binary::from_stream(stream);
               data.set_binary_by_ref(binary);
               table.set_data_by_ref(data);
-              resource.push_table_by_ref(table);
+              resource.push_sub_elem_by_ref(sub_elem);
               votable.push_resource_by_ref(resource);
               Ok(SimpleVOTableRowIterator {
                 reader,
@@ -434,7 +456,7 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
               let binary2 = Binary2::from_stream(stream);
               data.set_binary2_by_ref(binary2);
               table.set_data_by_ref(data);
-              resource.push_table_by_ref(table);
+              resource.push_sub_elem_by_ref(sub_elem);
               votable.push_resource_by_ref(resource);
               Ok(SimpleVOTableRowIterator {
                 reader,
@@ -456,9 +478,7 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
           )))
         }
       }
-      _ => Err(VOTableError::Custom(String::from(
-        "No table found in the first VOTable resource",
-      ))),
+      _ => Err(VOTableError::Custom(String::from("Not a table?!"))),
     }
   }
 
@@ -554,16 +574,21 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
       mut votable,
       data_type: _,
     } = self;
-
-    votable.resources[0].tables[0]
-      .data
-      .as_mut()
+    votable
+      .read_from_data_end_to_end(&mut reader, &mut reader_buff)
+      .map(|()| votable)
+    /*votable.resources[0]
+      .get_first_table_mut()
+      .and_then(|table| table.data.as_mut())
       .unwrap()
       .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &Vec::default())?;
-    votable.resources[0].tables[0].read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
+    votable.resources[0]
+      .get_first_table_mut()
+      .unwrap()
+      .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
     votable.resources[0].read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
     votable.read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
-    Ok(votable)
+    Ok(votable)*/
   }
 }
 
@@ -577,10 +602,9 @@ pub trait TableIter: Iterator<Item = Result<Vec<VOTableValue>, VOTableError>> {
 pub struct VOTableIterator<R: BufRead> {
   reader: Reader<R>,
   reader_buff: Vec<u8>,
-  // fn next_table -> (&votable, &resource, &table, &rows, Enum)
-  //
   votable: VOTable<VoidTableDataContent>,
   resource_stack: Vec<Resource<VoidTableDataContent>>,
+  resource_sub_elems_stack: Vec<ResourceSubElem<VoidTableDataContent>>,
 }
 
 impl VOTableIterator<BufReader<File>> {
@@ -597,6 +621,7 @@ impl VOTableIterator<BufReader<File>> {
       reader_buff,
       votable,
       resource_stack,
+      resource_sub_elems_stack: Vec::with_capacity(10),
     })
   }
 
@@ -610,15 +635,30 @@ impl<R: BufRead> VOTableIterator<R> {
     &'a mut self,
   ) -> Result<Option<Box<dyn 'a + TableIter>>, VOTableError> {
     loop {
-      if let Some(mut resource) = self.resource_stack.pop() {
-        match resource
-          .read_till_next_resource_or_table_by_ref(&mut self.reader, &mut self.reader_buff)?
-        {
-          Some(ResourceOrTable::<_>::Resource(sub_resource)) => {
-            self.resource_stack.push(resource);
-            self.resource_stack.push(sub_resource);
+      if let Some(mut sub_resource) = self.resource_sub_elems_stack.pop() {
+        match &mut sub_resource.resource_or_table {
+          ResourceOrTable::<_>::Resource(r) => {
+            match r
+              .read_till_next_resource_or_table_by_ref(&mut self.reader, &mut self.reader_buff)?
+            {
+              Some(s) => {
+                self.resource_sub_elems_stack.push(sub_resource);
+                self.resource_sub_elems_stack.push(s);
+              }
+              None => {
+                if let Some(last) = self.resource_sub_elems_stack.last_mut() {
+                  last.push_sub_elem_by_ref(sub_resource)?;
+                } else if let Some(last) = self.resource_stack.last_mut() {
+                  last.push_sub_elem_by_ref(sub_resource);
+                } else {
+                  return Err(VOTableError::Custom(String::from(
+                    "No more RESOURCE in the stack :o/",
+                  )));
+                }
+              }
+            }
           }
-          Some(ResourceOrTable::<_>::Table(mut table)) => {
+          ResourceOrTable::<_>::Table(table) => {
             if let Some(mut data) =
               table.read_till_data_by_ref(&mut self.reader, &mut self.reader_buff)?
             {
@@ -638,8 +678,16 @@ impl<R: BufRead> VOTableIterator<R> {
                     })
                     .collect();
 
-                  resource.push_table_by_ref(table);
-                  self.resource_stack.push(resource);
+                  if let Some(last) = self.resource_sub_elems_stack.last_mut() {
+                    last.push_sub_elem_by_ref(sub_resource)?;
+                  } else if let Some(last) = self.resource_stack.last_mut() {
+                    last.push_sub_elem_by_ref(sub_resource);
+                  } else {
+                    return Err(VOTableError::Custom(String::from(
+                      "No more RESOURCE in the stack :o/",
+                    )));
+                  }
+
                   let row_it = DataTableRowValueIterator::new(
                     &mut self.reader,
                     &mut self.reader_buff,
@@ -647,8 +695,7 @@ impl<R: BufRead> VOTableIterator<R> {
                       .resource_stack
                       .last_mut()
                       .unwrap()
-                      .tables
-                      .last_mut()
+                      .get_last_table_mut()
                       .unwrap(),
                     schema,
                   );
@@ -669,16 +716,23 @@ impl<R: BufRead> VOTableIterator<R> {
                     })
                     .collect();
 
-                  resource.push_table_by_ref(table);
-                  self.resource_stack.push(resource);
+                  if let Some(last) = self.resource_sub_elems_stack.last_mut() {
+                    last.push_sub_elem_by_ref(sub_resource)?;
+                  } else if let Some(last) = self.resource_stack.last_mut() {
+                    last.push_sub_elem_by_ref(sub_resource);
+                  } else {
+                    return Err(VOTableError::Custom(String::from(
+                      "No more RESOURCE in the stack :o/",
+                    )));
+                  }
+
                   let row_it = BinaryRowValueIterator::new(
                     &mut self.reader,
                     self
                       .resource_stack
                       .last_mut()
                       .unwrap()
-                      .tables
-                      .last_mut()
+                      .get_last_table_mut()
                       .unwrap(),
                     schema,
                   );
@@ -699,16 +753,23 @@ impl<R: BufRead> VOTableIterator<R> {
                     })
                     .collect();
 
-                  resource.push_table_by_ref(table);
-                  self.resource_stack.push(resource);
+                  if let Some(last) = self.resource_sub_elems_stack.last_mut() {
+                    last.push_sub_elem_by_ref(sub_resource)?;
+                  } else if let Some(last) = self.resource_stack.last_mut() {
+                    last.push_sub_elem_by_ref(sub_resource);
+                  } else {
+                    return Err(VOTableError::Custom(String::from(
+                      "No more RESOURCE in the stack :o/",
+                    )));
+                  }
+
                   let row_it = Binary2RowValueIterator::new(
                     &mut self.reader,
                     self
                       .resource_stack
                       .last_mut()
                       .unwrap()
-                      .tables
-                      .last_mut()
+                      .get_last_table_mut()
                       .unwrap(),
                     schema,
                   );
@@ -717,21 +778,53 @@ impl<R: BufRead> VOTableIterator<R> {
                 Some(TableOrBinOrBin2::Fits(fits)) => {
                   data.set_fits_by_ref(fits);
                   table.set_data_by_ref(data);
-                  resource.push_table_by_ref(table);
-                  self.resource_stack.push(resource);
+
+                  if let Some(last) = self.resource_sub_elems_stack.last_mut() {
+                    last.push_sub_elem_by_ref(sub_resource)?;
+                  } else if let Some(last) = self.resource_stack.last_mut() {
+                    last.push_sub_elem_by_ref(sub_resource);
+                  } else {
+                    return Err(VOTableError::Custom(String::from(
+                      "No more RESOURCE in the stack :o/",
+                    )));
+                  }
                 }
                 None => {
                   return Err(VOTableError::Custom(String::from("Unexpected empty DATA")));
                 }
               }
             } else {
-              resource.push_table_by_ref(table);
-              self.resource_stack.push(resource);
+              if let Some(last) = self.resource_sub_elems_stack.last_mut() {
+                last.push_sub_elem_by_ref(sub_resource)?;
+              } else if let Some(last) = self.resource_stack.last_mut() {
+                last.push_sub_elem_by_ref(sub_resource);
+              } else {
+                return Err(VOTableError::Custom(String::from(
+                  "No more RESOURCE in the stack :o/",
+                )));
+              }
             }
           }
+        }
+        // Check the kind of sub-resource
+        // - if table, good, return
+        // - if resource, try to read sub-resource
+        //    - if no sub-resource, add to the prev- sub-resource (to the resource if no more thing in the stack)
+      } else if let Some(mut resource) = self.resource_stack.pop() {
+        // No more sub-resource in the stack, try to read sub-resource.
+        match resource
+          .read_till_next_resource_or_table_by_ref(&mut self.reader, &mut self.reader_buff)?
+        {
+          // If sub-resource found, add it to the stack
+          Some(resource_sub_elem) => {
+            self.resource_sub_elems_stack.push(resource_sub_elem);
+            self.resource_stack.push(resource);
+          }
+          // Else no more element to read in the resource, add it to the votable
           None => self.votable.push_resource_by_ref(resource),
         }
       } else {
+        // No more resource in the stack, try to read next resource.
         match self
           .votable
           .read_till_next_resource_by_ref(&mut self.reader, &mut self.reader_buff)?
@@ -817,7 +910,7 @@ mod tests {
       SimpleVOTableRowIterator::open_file_and_read_to_data("resources/binary.b64").unwrap();
     assert!(matches!(svor.data_type(), &TableOrBinOrBin2::Binary));
 
-    let context = svor.votable.resources[0].tables[0].elems.as_slice();
+    let context = svor.votable.get_first_table().unwrap().elems.as_slice();
     // svor.skip_remaining_data().unwrap();
     let raw_row_it = Binary1or2RowIterator::new(&mut svor.reader, context, false);
     let schema: Vec<Schema> = context
@@ -860,7 +953,11 @@ mod tests {
       SimpleVOTableRowIterator::open_file_and_read_to_data("resources/gaia_dr3.b264").unwrap();
     assert!(matches!(svor.data_type(), &TableOrBinOrBin2::Binary2));
 
-    let context = svor.votable.resources[0].tables[0].elems.as_slice();
+    let context = svor.votable.resources[0]
+      .get_first_table()
+      .unwrap()
+      .elems
+      .as_slice();
     // svor.skip_remaining_data().unwrap();
     let schema: Vec<Schema> = context
       .iter()

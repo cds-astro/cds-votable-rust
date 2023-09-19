@@ -1,7 +1,7 @@
 use std::{
   collections::HashMap,
   io::{BufRead, Write},
-  str,
+  mem, str,
 };
 
 use paste::paste;
@@ -24,12 +24,6 @@ use super::{
   TableDataContent,
 };
 
-#[derive(Debug)]
-pub enum ResourceOrTable<C: TableDataContent> {
-  Resource(Resource<C>),
-  Table(Table<C>),
-}
-
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum ResourceElem {
@@ -50,9 +44,93 @@ impl ResourceElem {
   }
 }
 
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "elem_type")]
+pub enum ResourceOrTable<C: TableDataContent> {
+  Resource(Resource<C>),
+  Table(Table<C>),
+}
+impl<C: TableDataContent> ResourceOrTable<C> {
+  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+    match self {
+      ResourceOrTable::Resource(elem) => elem.write(writer, &()),
+      ResourceOrTable::Table(elem) => elem.write(writer, &()),
+    }
+  }
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct ResourceSubElem<C: TableDataContent> {
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub links: Vec<Link>,
+  pub resource_or_table: ResourceOrTable<C>,
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub infos: Vec<Info>,
+}
+impl<C: TableDataContent> ResourceSubElem<C> {
+  pub fn from_resource(resource: Resource<C>) -> Self {
+    Self {
+      links: Default::default(),
+      resource_or_table: ResourceOrTable::Resource(resource),
+      infos: Default::default(),
+    }
+  }
+
+  pub fn from_table(table: Table<C>) -> Self {
+    Self {
+      links: Default::default(),
+      resource_or_table: ResourceOrTable::Table(table),
+      infos: Default::default(),
+    }
+  }
+
+  impl_builder_push!(Link);
+  impl_builder_push!(Info);
+
+  pub fn set_links(mut self, links: Vec<Link>) -> Self {
+    self.links = links;
+    self
+  }
+
+  pub fn is_table(&self) -> bool {
+    matches!(self.resource_or_table, ResourceOrTable::Table(_))
+  }
+
+  pub(crate) fn push_sub_elem_by_ref(
+    &mut self,
+    resource_sub_elem: ResourceSubElem<C>,
+  ) -> Result<(), VOTableError> {
+    match &mut self.resource_or_table {
+      ResourceOrTable::Resource(resource_ref_mut) => {
+        resource_ref_mut.push_sub_elem_by_ref(resource_sub_elem);
+        Ok(())
+      }
+      ResourceOrTable::Table(_) => Err(VOTableError::Custom(String::from(
+        "Algo error: not supposed to try to put a resource in a table!",
+      ))),
+    }
+  }
+
+  /*pub(crate) fn get_table_mut(&mut self) -> Result<&mut Table<C>, VOTableError> {
+    match &mut self.resource_or_table {
+      ResourceOrTable::Table(table) => Ok(table),
+      ResourceOrTable::Resource(_) => Err(VOTableError::Custom(String::from(
+        "Algo error: is a resource, not a table!",
+      ))),
+    }
+  }*/
+
+  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+    write_elem_vec_empty_context!(self, links, writer);
+    self.resource_or_table.write(writer)?;
+    write_elem_vec_empty_context!(self, infos, writer);
+    Ok(())
+  }
+}
+
 #[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Resource<C: TableDataContent> {
-  // attributes
+  // Attributes
   #[serde(rename = "ID", default, skip_serializing_if = "Option::is_none")]
   pub id: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -61,26 +139,38 @@ pub struct Resource<C: TableDataContent> {
   pub type_: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub utype: Option<String>,
-  // extra attributes
+  /// Extra attributes implemented here to support this piece of `xsd` in
+  /// [the VOTable standard](https://www.ivoa.net/documents/VOTable/20191021/REC-VOTable-1.4-20191021.html):
+  /// ```xml
+  ///   <!-- Suggested Doug Tody, to include new RESOURCE attributes -->
+  ///   <xs:anyAttribute namespace="##other" processContents="lax"/>
+  /// ```
   #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
   pub extra: HashMap<String, Value>,
-  // sub elements
+  // Sequence elements
   #[serde(skip_serializing_if = "Option::is_none")]
   pub description: Option<Description>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub infos: Vec<Info>,
+  // - choice elements
+  /// Elements in the XSD `choice`
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub elems: Vec<ResourceElem>,
+  // - sub-sequence elements
+  /// Elements in the XSD sub-`sequence`
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  pub links: Vec<Link>,
+  pub sub_elems: Vec<ResourceSubElem<C>>,
+  // - optional extra element
+  /// The VODML tag is here so that a VOTable with a VODML section pass the VOTable validator.
+  /// Thanks to this `xsd` piece in
+  /// [the VOTable standard](https://www.ivoa.net/documents/VOTable/20191021/REC-VOTable-1.4-20191021.html):
+  /// allowing to create arbitrary `RESSOURCE`s.
+  /// ```xml
+  ///    <!-- Suggested Doug Tody, to include new RESOURCE types -->
+  ///    <xs:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>`
+  /// ```
   #[serde(skip_serializing_if = "Option::is_none")]
   pub vodml: Option<Vodml>,
-  #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  pub tables: Vec<Table<C>>,
-  #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  pub resources: Vec<Resource<C>>,
-  #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  pub post_infos: Vec<Info>,
 }
 
 impl<C: TableDataContent> Resource<C> {
@@ -88,93 +178,165 @@ impl<C: TableDataContent> Resource<C> {
     Default::default()
   }
 
+  // Optional attributes
   impl_builder_opt_string_attr!(id);
   impl_builder_opt_string_attr!(name);
   impl_builder_opt_string_attr!(type_, type);
   impl_builder_opt_string_attr!(utype);
-
-  impl_builder_opt_attr!(description, Description);
-
+  // - extra attributes
   impl_builder_insert_extra!();
-
+  // Sequence elements
+  impl_builder_opt_attr!(description, Description);
   impl_builder_push!(Info);
-
+  // - choice elements
   impl_builder_push_elem!(CooSys, ResourceElem);
   impl_builder_push_elem!(TimeSys, ResourceElem);
   impl_builder_push_elem!(Group, ResourceElem);
   impl_builder_push_elem!(Param, ResourceElem);
-
-  impl_builder_push!(Link);
-
+  // - sub-sequence elements
+  pub fn push_sub_elem(mut self, sub_elem: ResourceSubElem<C>) -> Self {
+    self.sub_elems.push(sub_elem);
+    self
+  }
+  pub fn push_sub_elem_by_ref(&mut self, sub_elem: ResourceSubElem<C>) {
+    self.sub_elems.push(sub_elem);
+  }
+  // - extra optional element
   impl_builder_opt_attr!(vodml, Vodml);
 
-  impl_builder_push!(Table, C);
-  impl_builder_push!(Resource, C);
-
-  impl_builder_push_post_info!();
-
   pub fn get_first_resource_containing_a_table(&self) -> Option<&Self> {
-    if !self.tables.is_empty() {
-      Some(self)
-    } else {
-      for resource in self.resources.iter() {
-        let first_resource_containing_a_table = resource.get_first_resource_containing_a_table();
-        if first_resource_containing_a_table.is_some() {
-          return first_resource_containing_a_table;
+    for elem in &self.sub_elems {
+      match &elem.resource_or_table {
+        ResourceOrTable::Table(_) => return Some(&self),
+        ResourceOrTable::Resource(resource) => {
+          let first_resource_containing_a_table = resource.get_first_resource_containing_a_table();
+          if first_resource_containing_a_table.is_some() {
+            return first_resource_containing_a_table;
+          }
         }
       }
-      None
     }
+    None
   }
 
-  pub fn get_first_resource_containing_a_table_mut(&mut self) -> Option<&mut Self> {
-    if !self.tables.is_empty() {
-      Some(self)
-    } else {
-      for resource in self.resources.iter_mut() {
-        let first_resource_containing_a_table =
-          resource.get_first_resource_containing_a_table_mut();
-        if first_resource_containing_a_table.is_some() {
-          return first_resource_containing_a_table;
+  /*pub fn get_first_resource_containing_a_table_mut(&mut self) -> Option<&mut Self> {
+    for elem in self.sub_elems.iter_mut() {
+      match elem.resource_or_table {
+        ResourceOrTable::Table(_) => return Some(self),
+        ResourceOrTable::Resource(ref mut resource) => {
+          let first_resource_containing_a_table =
+            resource.get_first_resource_containing_a_table_mut();
+          if first_resource_containing_a_table.is_some() {
+            return first_resource_containing_a_table;
+          }
         }
       }
-      None
     }
-  }
+    None
+  }*/
 
   pub fn get_first_table(&self) -> Option<&Table<C>> {
-    if !self.tables.is_empty() {
-      self.tables.first()
-    } else {
-      for resource in self.resources.iter() {
-        let first_table = resource.get_first_table();
-        if first_table.is_some() {
-          return first_table;
+    for elem in self.sub_elems.iter() {
+      match &elem.resource_or_table {
+        ResourceOrTable::Table(table) => return Some(table),
+        ResourceOrTable::Resource(resource) => {
+          let first_table = resource.get_first_table();
+          if first_table.is_some() {
+            return first_table;
+          }
         }
       }
-      None
     }
+    None
   }
 
   pub fn get_first_table_mut(&mut self) -> Option<&mut Table<C>> {
-    if !self.tables.is_empty() {
-      self.tables.first_mut()
-    } else {
-      for resource in self.resources.iter_mut() {
-        let first_table = resource.get_first_table_mut();
-        if first_table.is_some() {
-          return first_table;
+    for elem in self.sub_elems.iter_mut() {
+      match &mut elem.resource_or_table {
+        ResourceOrTable::Table(table) => return Some(table),
+        ResourceOrTable::Resource(resource) => {
+          let first_table = resource.get_first_table_mut();
+          if first_table.is_some() {
+            return first_table;
+          }
         }
       }
-      None
+    }
+    None
+  }
+
+  pub fn get_last_table(&self) -> Option<&Table<C>> {
+    for elem in self.sub_elems.iter().rev() {
+      match &elem.resource_or_table {
+        ResourceOrTable::Table(table) => return Some(table),
+        ResourceOrTable::Resource(resource) => {
+          let last_table = resource.get_last_table();
+          if last_table.is_some() {
+            return last_table;
+          }
+        }
+      }
+    }
+    None
+  }
+
+  pub fn get_last_table_mut(&mut self) -> Option<&mut Table<C>> {
+    for elem in self.sub_elems.iter_mut().rev() {
+      match &mut elem.resource_or_table {
+        ResourceOrTable::Table(table) => return Some(table),
+        ResourceOrTable::Resource(resource) => {
+          let last_table = resource.get_last_table_mut();
+          if last_table.is_some() {
+            return last_table;
+          }
+        }
+      }
+    }
+    None
+  }
+
+  /// Assume the input stream has been read till (including) the end of a
+  /// `TABLEDATA` or `BINARY` or `BINARY2` tag.
+  /// Then continue reading (and storing) the remaining of the VOTable (assuming
+  /// it will not contains another table).
+  /// If no table is encountered, return `false`.
+  pub(crate) fn read_from_data_end_to_end<R: BufRead>(
+    &mut self,
+    reader: &mut Reader<R>,
+    reader_buff: &mut Vec<u8>,
+  ) -> Result<bool, VOTableError> {
+    if let Some(sub_elem) = self.sub_elems.last_mut() {
+      match &mut sub_elem.resource_or_table {
+        ResourceOrTable::Table(table) => table
+          .data
+          .as_mut()
+          .unwrap()
+          .read_sub_elements_by_ref(reader, reader_buff, &Vec::default())
+          .map(|()| true),
+        ResourceOrTable::Resource(resource) => {
+          resource.read_from_data_end_to_end(reader, reader_buff)
+        }
+      }
+      .and_then(|table_found| {
+        if table_found {
+          self
+            .read_sub_elements_by_ref(reader, reader_buff, &())
+            .map(|()| true)
+        } else {
+          Ok(false)
+        }
+      })
+    } else {
+      Ok(false)
     }
   }
 
-  pub(crate) fn read_till_next_resource_or_table_by_ref<R: BufRead>(
+  pub(crate) fn read_till_next_table_by_ref<R: BufRead>(
     &mut self,
     mut reader: &mut Reader<R>,
     mut reader_buff: &mut Vec<u8>,
-  ) -> Result<Option<ResourceOrTable<C>>, VOTableError> {
+  ) -> Result<Option<ResourceSubElem<C>>, VOTableError> {
+    let mut links: Vec<Link> = Default::default();
     reader = reader.check_end_names(false);
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
@@ -183,15 +345,13 @@ impl<C: TableDataContent> Resource<C> {
           Description::TAG_BYTES => {
             from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
           }
-          Info::TAG_BYTES
-            if self.elems.is_empty()
-              && self.links.is_empty()
-              && self.tables.is_empty()
-              && self.resources.is_empty() =>
-          {
-            self
-              .infos
-              .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
+          Info::TAG_BYTES => {
+            let info = from_event_start_by_ref!(Info, reader, reader_buff, e);
+            if let Some(sub_elem) = self.sub_elems.last_mut() {
+              sub_elem.push_info_by_ref(info)
+            } else {
+              self.infos.push(info)
+            }
           }
           CooSys::TAG_BYTES => self
             .elems
@@ -217,26 +377,23 @@ impl<C: TableDataContent> Resource<C> {
               reader_buff,
               e
             ))),
-          Link::TAG_BYTES => {
-            self
-              .links
-              .push(from_event_start_by_ref!(Link, reader, reader_buff, e))
-          }
+          Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
           Vodml::TAG_BYTES => {
             from_event_start_vodml_by_ref!(self, Vodml, reader, reader_buff, e)
           }
           Table::<C>::TAG_BYTES => {
             let table = Table::<C>::from_attributes(e.attributes())?;
-            return Ok(Some(ResourceOrTable::Table(table)));
+            return Ok(Some(
+              ResourceSubElem::from_table(table)
+                .set_links(mem::replace(&mut links, Default::default())),
+            ));
           }
           Resource::<C>::TAG_BYTES => {
-            let resource = Resource::<C>::from_attributes(e.attributes())?;
-            return Ok(Some(ResourceOrTable::Resource(resource)));
-          }
-          Info::TAG_BYTES => {
-            self
-              .post_infos
-              .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
+            let resource = from_event_start_by_ref!(Resource, reader, reader_buff, e);
+            self.sub_elems.push(
+              ResourceSubElem::from_resource(resource)
+                .set_links(mem::replace(&mut links, Default::default())),
+            );
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -246,13 +403,13 @@ impl<C: TableDataContent> Resource<C> {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Info::TAG_BYTES
-            if self.elems.is_empty()
-              && self.links.is_empty()
-              && self.tables.is_empty()
-              && self.resources.is_empty() =>
-          {
-            self.infos.push(Info::from_event_empty(e)?)
+          Info::TAG_BYTES => {
+            let info = Info::from_event_empty(e)?;
+            if let Some(sub_elem) = self.sub_elems.last_mut() {
+              sub_elem.push_info_by_ref(info)
+            } else {
+              self.infos.push(info)
+            }
           }
           TimeSys::TAG_BYTES => self
             .elems
@@ -266,8 +423,123 @@ impl<C: TableDataContent> Resource<C> {
           Param::TAG_BYTES => self
             .elems
             .push(ResourceElem::Param(Param::from_event_empty(e)?)),
-          Link::TAG_BYTES => self.links.push(Link::from_event_empty(e)?),
-          Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
+          Link::TAG_BYTES => links.push(Link::from_event_empty(e)?),
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Text(e) if is_empty(e) => {}
+        Event::End(e)
+          if e.local_name() == Binary::<VoidTableDataContent>::TAG_BYTES
+            || e.local_name() == Binary2::<VoidTableDataContent>::TAG_BYTES
+            || e.local_name() == Data::<VoidTableDataContent>::TAG_BYTES
+            || e.local_name() == Table::<VoidTableDataContent>::TAG_BYTES =>
+        {
+          return Ok(None)
+        }
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
+        Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
+        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+      }
+    }
+  }
+
+  pub(crate) fn read_till_next_resource_or_table_by_ref<R: BufRead>(
+    &mut self,
+    mut reader: &mut Reader<R>,
+    mut reader_buff: &mut Vec<u8>,
+  ) -> Result<Option<ResourceSubElem<C>>, VOTableError> {
+    let mut links: Vec<Link> = Default::default();
+    reader = reader.check_end_names(false);
+    loop {
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      match &mut event {
+        Event::Start(ref e) => match e.local_name() {
+          Description::TAG_BYTES => {
+            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
+          }
+          Info::TAG_BYTES => {
+            let info = from_event_start_by_ref!(Info, reader, reader_buff, e);
+            if let Some(sub_elem) = self.sub_elems.last_mut() {
+              sub_elem.push_info_by_ref(info)
+            } else {
+              self.infos.push(info)
+            }
+          }
+          CooSys::TAG_BYTES => self
+            .elems
+            .push(ResourceElem::CooSys(from_event_start_by_ref!(
+              CooSys,
+              reader,
+              reader_buff,
+              e
+            ))),
+          Group::TAG_BYTES => self
+            .elems
+            .push(ResourceElem::Group(from_event_start_by_ref!(
+              Group,
+              reader,
+              reader_buff,
+              e
+            ))),
+          Param::TAG_BYTES => self
+            .elems
+            .push(ResourceElem::Param(from_event_start_by_ref!(
+              Param,
+              reader,
+              reader_buff,
+              e
+            ))),
+          Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
+          Vodml::TAG_BYTES => {
+            from_event_start_vodml_by_ref!(self, Vodml, reader, reader_buff, e)
+          }
+          Table::<C>::TAG_BYTES => {
+            let table = Table::<C>::from_attributes(e.attributes())?;
+            return Ok(Some(
+              ResourceSubElem::from_table(table)
+                .set_links(mem::replace(&mut links, Default::default())),
+            ));
+          }
+          Resource::<C>::TAG_BYTES => {
+            let resource = Resource::<C>::from_attributes(e.attributes())?;
+            return Ok(Some(
+              ResourceSubElem::from_resource(resource)
+                .set_links(mem::replace(&mut links, Default::default())),
+            ));
+          }
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Empty(ref e) => match e.local_name() {
+          Info::TAG_BYTES => {
+            let info = Info::from_event_empty(e)?;
+            if let Some(sub_elem) = self.sub_elems.last_mut() {
+              sub_elem.push_info_by_ref(info)
+            } else {
+              self.infos.push(info)
+            }
+          }
+          TimeSys::TAG_BYTES => self
+            .elems
+            .push(ResourceElem::TimeSys(TimeSys::from_event_empty(e)?)),
+          CooSys::TAG_BYTES => self
+            .elems
+            .push(ResourceElem::CooSys(CooSys::from_event_empty(e)?)),
+          Group::TAG_BYTES => self
+            .elems
+            .push(ResourceElem::Group(Group::from_event_empty(e)?)),
+          Param::TAG_BYTES => self
+            .elems
+            .push(ResourceElem::Param(Param::from_event_empty(e)?)),
+          Link::TAG_BYTES => links.push(Link::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -311,28 +583,28 @@ impl<C: TableDataContent> Resource<C> {
     write_elem!(self, description, writer, context);
     write_elem_vec!(self, infos, writer, context);
     write_elem_vec_no_context!(self, elems, writer);
-    write_elem_vec!(self, links, writer, context);
-
-    if self.tables.len() > 1 {
-      Err(VOTableError::Custom(String::from(
-        "In resource, more than one table not adapted for write_to_data_beginning!",
-      )))
-    } else if let Some(table) = self.tables.first_mut() {
-      table.write_to_data_beginning(writer, &()).map(|()| true)
-    } else {
-      for resource in self.resources.iter_mut() {
-        if resource.write_to_data_beginning(writer, &())? {
-          return Ok(true);
+    for se in self.sub_elems.iter_mut() {
+      for link in se.links.iter_mut() {
+        link.write(writer, context)?;
+      }
+      match &mut se.resource_or_table {
+        ResourceOrTable::Resource(resource) => {
+          if resource.write_to_data_beginning(writer, &())? {
+            return Ok(true);
+          }
+        }
+        ResourceOrTable::Table(table) => {
+          return table.write_to_data_beginning(writer, &()).map(|()| true)
         }
       }
-      // No table found, so write everything
-      write_elem_vec!(self, post_infos, writer, context);
-      // Close tag
-      writer
-        .write_event(Event::End(tag.to_end()))
-        .map_err(VOTableError::Write)
-        .map(|()| false)
+      for info in se.infos.iter_mut() {
+        info.write(writer, context)?;
+      }
     }
+    writer
+      .write_event(Event::End(tag.to_end()))
+      .map_err(VOTableError::Write)
+      .map(|()| false)
   }
 
   /// Returns `true` if the resource contained a table (so that other resources have not been written)
@@ -342,39 +614,33 @@ impl<C: TableDataContent> Resource<C> {
     context: &(),
   ) -> Result<bool, VOTableError> {
     let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-    if self.tables.len() > 1 {
-      Err(VOTableError::Custom(String::from(
-        "In resource, more than one table not adapted for write_to_data_beginning!",
-      )))
-    } else if let Some(table) = self.tables.first_mut() {
-      table.write_from_data_end(writer, &())?;
-      // Here we assume no table in sub-ressources!!
-      write_elem_vec!(self, resources, writer, context);
-      write_elem_vec!(self, post_infos, writer, context);
+    let mut iter = self.sub_elems.iter_mut();
+    let mut table_found = false;
+    while !table_found {
+      if let Some(se) = iter.next() {
+        if match &mut se.resource_or_table {
+          ResourceOrTable::Resource(resource) => resource.write_from_data_end(writer, &()),
+          ResourceOrTable::Table(table) => table.write_from_data_end(writer, &()).map(|()| true),
+        }? {
+          table_found = true;
+          for info in se.infos.iter_mut() {
+            info.write(writer, context)?;
+          }
+        }
+      }
+    }
+    for se in iter {
+      se.write(writer)?;
+    }
+    if table_found {
       // Close tag
       writer
         .write_event(Event::End(tag.to_end()))
         .map_err(VOTableError::Write)
         .map(|()| true)
     } else {
-      let mut write = false;
-      for resource in self.resources.iter_mut() {
-        if write {
-          resource.write(writer, context)?;
-        } else {
-          write = resource.write_from_data_end(writer, &())?;
-        }
-      }
-      if write {
-        write_elem_vec!(self, post_infos, writer, context);
-        // Close tag
-        writer
-          .write_event(Event::End(tag.to_end()))
-          .map_err(VOTableError::Write)
-          .map(|()| true)
-      } else {
-        Ok(false)
-      }
+      // Tag has already been closed by the call to write_to_data_beginning
+      Ok(false)
     }
   }
 }
@@ -419,6 +685,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
     mut reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
+    let mut links: Vec<Link> = Default::default();
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
@@ -426,15 +693,13 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
           Description::TAG_BYTES => {
             from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
           }
-          Info::TAG_BYTES
-            if self.elems.is_empty()
-              && self.links.is_empty()
-              && self.tables.is_empty()
-              && self.resources.is_empty() =>
-          {
-            self
-              .infos
-              .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
+          Info::TAG_BYTES => {
+            let info = from_event_start_by_ref!(Info, reader, reader_buff, e);
+            if let Some(sub_elem) = self.sub_elems.last_mut() {
+              sub_elem.push_info_by_ref(info)
+            } else {
+              self.infos.push(info)
+            }
           }
           Group::TAG_BYTES => self
             .elems
@@ -452,29 +717,22 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
               reader_buff,
               e
             ))),
-          Link::TAG_BYTES => {
-            self
-              .links
-              .push(from_event_start_by_ref!(Link, reader, reader_buff, e))
-          }
-          Vodml::TAG_BYTES => {
-            from_event_start_vodml_by_ref!(self, Vodml, reader, reader_buff, e)
-          }
+          Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
           Table::<C>::TAG_BYTES => {
-            self
-              .tables
-              .push(from_event_start_by_ref!(Table, reader, reader_buff, e))
+            let table = from_event_start_by_ref!(Table, reader, reader_buff, e);
+            self.sub_elems.push(
+              ResourceSubElem::from_table(table)
+                .set_links(mem::replace(&mut links, Default::default())),
+            );
           }
           Resource::<C>::TAG_BYTES => {
-            self
-              .resources
-              .push(from_event_start_by_ref!(Resource, reader, reader_buff, e))
+            let resource = from_event_start_by_ref!(Resource, reader, reader_buff, e);
+            self.sub_elems.push(
+              ResourceSubElem::from_resource(resource)
+                .set_links(mem::replace(&mut links, Default::default())),
+            );
           }
-          Info::TAG_BYTES => {
-            self
-              .post_infos
-              .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
-          }
+          Vodml::TAG_BYTES => from_event_start_vodml_by_ref!(self, Vodml, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -483,13 +741,13 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Info::TAG_BYTES
-            if self.elems.is_empty()
-              && self.links.is_empty()
-              && self.tables.is_empty()
-              && self.resources.is_empty() =>
-          {
-            self.infos.push(Info::from_event_empty(e)?)
+          Info::TAG_BYTES => {
+            let info = Info::from_event_empty(e)?;
+            if let Some(sub_elem) = self.sub_elems.last_mut() {
+              sub_elem.push_info_by_ref(info)
+            } else {
+              self.infos.push(info)
+            }
           }
           TimeSys::TAG_BYTES => self
             .elems
@@ -503,8 +761,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
           Param::TAG_BYTES => self
             .elems
             .push(ResourceElem::Param(Param::from_event_empty(e)?)),
-          Link::TAG_BYTES => self.links.push(Link::from_event_empty(e)?),
-          Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
+          Link::TAG_BYTES => links.push(Link::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -513,7 +770,13 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
           }
         },
         Event::Text(e) if is_empty(e) => {}
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => {
+          return if links.is_empty() {
+            Ok(())
+          } else {
+            Err(VOTableError::Custom(String::from("Link list not emtpy!")))
+          };
+        }
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
       }
@@ -539,11 +802,8 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
     write_elem!(self, description, writer, context);
     write_elem_vec!(self, infos, writer, context);
     write_elem_vec_no_context!(self, elems, writer);
-    write_elem_vec!(self, links, writer, context);
+    write_elem_vec_no_context!(self, sub_elems, writer);
     write_elem_vec!(self, vodml, writer, context);
-    write_elem_vec!(self, tables, writer, context);
-    write_elem_vec!(self, resources, writer, context);
-    write_elem_vec!(self, post_infos, writer, context);
     // Close tag
     writer
       .write_event(Event::End(tag.to_end()))
@@ -569,7 +829,7 @@ mod tests {
       resource.description.as_ref().unwrap().0,
       "The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)"
     );
-    assert_eq!(resource.tables.len(), 2);
+    assert_eq!(resource.sub_elems.len(), 2);
     assert_eq!(resource.infos.get(0).unwrap().name, "matches");
     assert_eq!(resource.infos.get(1).unwrap().name, "warning");
     // Test write
@@ -580,7 +840,7 @@ mod tests {
   fn test_resource_read_write_w_end_info() {
     let xml = r#"<RESOURCE ID="yCat_5147" name="V/147"><DESCRIPTION>The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)</DESCRIPTION><TABLE ID="V_148_sdss12" name="V/148/sdss12"><FIELD name="DE_ICRS" datatype="char" ucd="pos.eq.dec;meta.main"></FIELD><DATA><TABLEDATA><TR><TD>b</TD></TR></TABLEDATA></DATA></TABLE><INFO name="matches" value="50">matching records</INFO><INFO name="warning" value="No center provided++++"/></RESOURCE>"#; // Test read
     let resource = test_read::<Resource<InMemTableDataRows>>(xml);
-    assert_eq!(resource.post_infos.get(0).unwrap().name, "matches");
-    assert_eq!(resource.post_infos.get(1).unwrap().name, "warning");
+    assert_eq!(resource.sub_elems[0].infos[0].name, "matches");
+    assert_eq!(resource.sub_elems[0].infos[1].name, "warning");
   }
 }

@@ -51,6 +51,8 @@ pub struct Table<C: TableDataContent> {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub nrows: Option<u64>,
   // extra attributes
+  /// Warning: using extra attributes in `Table` is not compatible with the VOTable schema.
+  ///   use at your own risks.
   #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
   pub extra: HashMap<String, Value>,
   // sub-elements
@@ -208,7 +210,7 @@ impl<C: TableDataContent> Table<C> {
     Ok(())
   }
 
-  pub (crate) fn write_from_data_end<W: Write>(
+  pub(crate) fn write_from_data_end<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &(),

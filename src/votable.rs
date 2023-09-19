@@ -99,7 +99,7 @@ impl VOTableElem {
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct VOTableWrapper<C: TableDataContent> {
-  votable: VOTable<C>,
+  pub votable: VOTable<C>,
 }
 
 impl<C: TableDataContent> VOTableWrapper<C> {
@@ -422,6 +422,8 @@ impl<C: TableDataContent> VOTable<C> {
     }
   }
 
+  /// Read (and store) the content of the VOTable till it encounters the first `RESOURCE`.
+  /// It then build the `RESOURCE` from its attributes, without adding it to the VOTable, and returns.
   pub(crate) fn from_reader_till_next_resource<R: BufRead>(
     reader: R,
     reader_buff: &mut Vec<u8>,
@@ -473,7 +475,7 @@ impl<C: TableDataContent> VOTable<C> {
     None
   }
 
-  pub fn get_first_resource_containing_a_table_mut(&mut self) -> Option<&mut Resource<C>> {
+  /*pub fn get_first_resource_containing_a_table_mut(&mut self) -> Option<&mut Resource<C>> {
     for resource in self.resources.iter_mut() {
       let first_resource_containing_a_table = resource.get_first_resource_containing_a_table_mut();
       if first_resource_containing_a_table.is_some() {
@@ -481,7 +483,7 @@ impl<C: TableDataContent> VOTable<C> {
       }
     }
     None
-  }
+  }*/
 
   pub fn get_first_table(&self) -> Option<&Table<C>> {
     for resource in self.resources.iter() {
@@ -503,6 +505,10 @@ impl<C: TableDataContent> VOTable<C> {
     None
   }
 
+  /// Read (and store) the content of the VOTable till it reaches a `RESOURCE` tag **child of** `VOTABLE`.
+  /// The newly encountered `RESOURCE` tag is built from its `attributes` but its content
+  /// (the sub-elements it contains) is to be read and the `RESOURCE` is not added to the VOTable
+  /// (`VOTable.push_resource` must be called externally).
   pub fn read_till_next_resource_by_ref<R: BufRead>(
     &mut self,
     mut reader: &mut Reader<R>,
@@ -581,9 +587,11 @@ impl<C: TableDataContent> VOTable<C> {
     }
   }
 
-  // * The Resource returned has only its attribute sets, not the sub-elements
-  // * The VOTable.push_resource it to be done externally
-  fn read_till_next_resource<R: BufRead>(
+  /// Read (and store) the content of the VOTable till it reaches a `RESOURCE` tag **child of** `VOTABLE`.
+  /// The newly encountered `RESOURCE` tag is built from its `attributes` but its content.
+  /// (the sub-elements it contains) are to be read.
+  /// The `VOTable.push_resource` has to be done externally.
+  pub(crate) fn read_till_next_resource<R: BufRead>(
     &mut self,
     mut reader: Reader<R>,
     reader_buff: &mut Vec<u8>,
@@ -596,7 +604,26 @@ impl<C: TableDataContent> VOTable<C> {
     }
   }
 
-  /// Returns `true` if a table has been found
+  /// Assume the input stream has been read till (including) the end of a
+  /// `TABLEDATA` or `BINARY` or `BINARY2` tag.
+  /// Then continue reading (and storing) the remaining of the VOTable (assuming
+  /// it will not contains another table).
+  pub(crate) fn read_from_data_end_to_end<R: BufRead>(
+    &mut self,
+    reader: &mut Reader<R>,
+    reader_buff: &mut Vec<u8>,
+  ) -> Result<(), VOTableError> {
+    if let Some(last_resource) = self.resources.last_mut() {
+      let data_found = last_resource.read_from_data_end_to_end(reader, reader_buff)?;
+      if data_found {
+        self.read_sub_elements_by_ref(reader, reader_buff, &())?;
+      }
+    }
+    Ok(())
+  }
+
+  /// Write the VOTable from the beggining till the first encountered `DATA` tag.
+  /// Returns `true` if a table has been found, else the full content of the VOTable is written.
   pub fn write_to_data_beginning<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
@@ -1146,7 +1173,7 @@ mod tests {
         let mut votable2: Vec<u8> = Vec::new();
         let mut write = Writer::new_with_indent(&mut votable2, b' ', 4);
         match votable.write(&mut write, &()) {
-          Ok(content) => {
+          Ok(()) => {
             let votable2 = String::from_utf8(votable2).unwrap();
             println!("{}", votable2);
             println!("\nOK")

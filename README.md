@@ -49,14 +49,15 @@ VOTable is an XML based format. Why other formats?
 * Store VizieR (large) catalogues rich metadata in a user friendly format (TOML) while
   being able to return the same VOTable header as VizieR (without using a database connexion).
     + for `qat2s`, `ExXmatch`, `progressive catalogue`
-* Add a Rust VOTable parsing and writting library for 
+* Add a Rust VOTable parsing and writing library for 
   [Aladin Lite V3](https://github.com/cds-astro/aladin-lite/tree/develop)
+* Ensure statically the in-memory built structure is compliant with a VOTable 
 * ...
 
 ## Design choices and problems
 
 The default provided implementation converting from JSON/YAML/TOML **does not
-focus on performancs** since we do not use the VOTable FIELDs information but 
+focus on performances** since we do not use the VOTable FIELDs information but 
 deserialize each table field in the first succeeding *VOTableValue* 
 (see `votable::impls::Schema.serialize_seed`).
 
@@ -84,7 +85,10 @@ attribute set to one of: *Info*, *Field*, *Coosys*, *Timesys*, *Group*, *Param*,
 
 Internally we make a difference (different struct/class) between GROUP
 in VOTABLE and RESOURCE from GROUP in TABLE since in the later case the
-GROUP may contain FIELDRef. 
+GROUP may contain FIELDRef.
+
+In a *RESOURCE*, we pack together *LINK*s, a sub-*RESOURCE* or a *TABLE* and *INFO*
+together in a *ResourceSubElem* structure.
 
 In JSON/TOML/YAML, there is no difference between attribute and sub-elements 
 names (all in camel case).
@@ -174,7 +178,7 @@ let table = Table::new()
   ).push_field(
     Field::new("m_SDSS12", Datatype::CharASCII)
       .set_ucd("meta.code.multip")
-      .set_arraysize("1")
+      .set_arraysize(ArraySize::new_fixed_1d(1))
       .set_width(10)
       .set_precision(Precision::new_dec(6))
       .set_description("[*] Multiple SDSS12 name".into())
@@ -195,8 +199,11 @@ let resource = Resource::default()
   .set_description(r#"Photometric and spectroscopic catalog of objects in the field around HE0226-4110"#.into())
   .push_coosys(CooSys::new("J2000", System::new_default_eq_fk5()))
   .push_coosys(CooSys::new("J2015.5", System::new_icrs().set_epoch(2015.5)))
-  .push_table(table)
-  .push_post_info(Info::new("QUERY_STATUS", "OVERFLOW").set_content("truncated result (maxtup=2)"));
+  .push_sub_elem(
+    ResourceSubElem::from_table(table)
+      .push_info(Info::new("QUERY_STATUS", "OVERFLOW").set_content("truncated result (maxtup=2)"))
+  )  
+);
 
 let mut votable = VOTable::new(resource)
   .set_id("my_votable")
@@ -213,42 +220,42 @@ only when serializing in `BINARY` or `BINARY2`.
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <VOTABLE ID="my_votable" version="1.4">
-    <DESCRIPTION>VizieR Astronomical Server vizier.u-strasbg.fr</DESCRIPTION>
-    <INFO ID="VERSION" name="votable-version" value="1.99+ (14-Oct-2013)"/>
-    <RESOURCE ID="yCat_17011219" name="J/ApJ/701/1219">
-        <DESCRIPTION>Photometric and spectroscopic catalog of objects in the field around HE0226-4110</DESCRIPTION>
-        <COOSYS ID="J2000" system="eq_FK4" equinox="B2000"/>
-        <COOSYS ID="J2015.5" system="ICRS" epoch="J2015.5"/>
-        <TABLE ID="V_147_sdss12" name="V/147/sdss12">
-            <DESCRIPTION>SDSS photometric catalog</DESCRIPTION>
-            <FIELD name="RA_ICRS" datatype="double" unit="deg" precision="6" width="10" ucd="pos.eq.ra;meta.main">
-                <DESCRIPTION>Right Ascension of the object (ICRS) (ra)</DESCRIPTION>
-            </FIELD>
-            <FIELD name="m_SDSS12" datatype="char" precision="6" width="10" ucd="meta.code.multip" arraysize="1">
-                <DESCRIPTION>[*] Multiple SDSS12 name</DESCRIPTION>
-                <LINK href="http://vizier.u-strasbg.fr/viz-bin/VizieR-4?-info=XML&amp;-out.add=.&amp;-source=V/147&amp;SDSS12=${SDSS12}"/>
-            </FIELD>
-            <FIELD name="umag" datatype="float" unit="mag" precision="3" width="6" ucd="phot.mag;em.opt.U">
-                <DESCRIPTION>[4/38]? Model magnitude in u filter, AB scale (u) (5)</DESCRIPTION>
-                <VALUES null="NaN"/>
-            </FIELD>
-            <DATA>
-                <TABLEDATA>
-                    <TR>
-                        <TD>NaN</TD>
-                        <TD>*</TD>
-                        <TD>14.52</TD>
-                    </TR>
-                    <TR>
-                        <TD>1.25</TD>
-                        <TD></TD>
-                        <TD>-1.2</TD>
-                    </TR>
-                </TABLEDATA>
-            </DATA>
-        </TABLE>
-        <INFO name="QUERY_STATUS" value="OVERFLOW">truncated result (maxtup=2)</INFO>
-    </RESOURCE>
+  <DESCRIPTION>VizieR Astronomical Server vizier.u-strasbg.fr</DESCRIPTION>
+  <INFO ID="VERSION" name="votable-version" value="1.99+ (14-Oct-2013)"/>
+  <RESOURCE ID="yCat_17011219" name="J/ApJ/701/1219">
+    <DESCRIPTION>Photometric and spectroscopic catalog of objects in the field around HE0226-4110</DESCRIPTION>
+    <COOSYS ID="J2000" system="eq_FK4" equinox="B2000"/>
+    <COOSYS ID="J2015.5" system="ICRS" epoch="J2015.5"/>
+    <TABLE ID="V_147_sdss12" name="V/147/sdss12">
+      <DESCRIPTION>SDSS photometric catalog</DESCRIPTION>
+      <FIELD name="RA_ICRS" datatype="double" unit="deg" precision="6" width="10" ucd="pos.eq.ra;meta.main">
+        <DESCRIPTION>Right Ascension of the object (ICRS) (ra)</DESCRIPTION>
+      </FIELD>
+      <FIELD name="m_SDSS12" datatype="char" precision="6" width="10" ucd="meta.code.multip" arraysize="1">
+        <DESCRIPTION>[*] Multiple SDSS12 name</DESCRIPTION>
+        <LINK href="http://vizier.u-strasbg.fr/viz-bin/VizieR-4?-info=XML&amp;-out.add=.&amp;-source=V/147&amp;SDSS12=${SDSS12}"/>
+      </FIELD>
+      <FIELD name="umag" datatype="float" unit="mag" precision="3" width="2" ucd="phot.mag;em.opt.U">
+        <DESCRIPTION>[4/38]? Model magnitude in u filter, AB scale (u) (5)</DESCRIPTION>
+        <VALUES null="NaN"/>
+      </FIELD>
+      <DATA>
+        <TABLEDATA>
+          <TR>
+            <TD>NaN</TD>
+            <TD>*</TD>
+            <TD>14.52</TD>
+          </TR>
+          <TR>
+            <TD>1.25</TD>
+            <TD></TD>
+            <TD>-1.2</TD>
+          </TR>
+        </TABLEDATA>
+      </DATA>
+    </TABLE>
+    <INFO name="QUERY_STATUS" value="OVERFLOW">truncated result (maxtup=2)</INFO>
+  </RESOURCE>
 </VOTABLE>
 ```
 
@@ -288,73 +295,76 @@ only when serializing in `BINARY` or `BINARY2`.
             "epoch": 2015.5
           }
         ],
-        "tables": [
+        "sub_elems": [
           {
-            "id": "V_147_sdss12",
-            "name": "V/147/sdss12",
-            "description": "SDSS photometric catalog",
-            "elems": [
-              {
-                "elem_type": "Field",
-                "name": "RA_ICRS",
-                "datatype": "double",
-                "unit": "deg",
-                "precision": "6",
-                "width": 10,
-                "ucd": "pos.eq.ra;meta.main",
-                "description": "Right Ascension of the object (ICRS) (ra)"
-              },
-              {
-                "elem_type": "Field",
-                "name": "m_SDSS12",
-                "datatype": "char",
-                "precision": "6",
-                "width": 10,
-                "ucd": "meta.code.multip",
-                "arraysize": "1",
-                "description": "[*] Multiple SDSS12 name",
-                "links": [
-                  {
-                    "href": "http://vizier.u-strasbg.fr/viz-bin/VizieR-4?-info=XML&-out.add=.&-source=V/147&SDSS12=${SDSS12}"
+            "resource_or_table": {
+              "elem_type": "Table",
+              "id": "V_147_sdss12",
+              "name": "V/147/sdss12",
+              "description": "SDSS photometric catalog",
+              "elems": [
+                {
+                  "elem_type": "Field",
+                  "name": "RA_ICRS",
+                  "datatype": "double",
+                  "unit": "deg",
+                  "precision": "6",
+                  "width": 10,
+                  "ucd": "pos.eq.ra;meta.main",
+                  "description": "Right Ascension of the object (ICRS) (ra)"
+                },
+                {
+                  "elem_type": "Field",
+                  "name": "m_SDSS12",
+                  "datatype": "char",
+                  "precision": "6",
+                  "width": 10,
+                  "ucd": "meta.code.multip",
+                  "arraysize": "1",
+                  "description": "[*] Multiple SDSS12 name",
+                  "links": [
+                    {
+                      "href": "http://vizier.u-strasbg.fr/viz-bin/VizieR-4?-info=XML&-out.add=.&-source=V/147&SDSS12=${SDSS12}"
+                    }
+                  ]
+                },
+                {
+                  "elem_type": "Field",
+                  "name": "umag",
+                  "datatype": "float",
+                  "unit": "mag",
+                  "precision": "3",
+                  "width": 2,
+                  "ucd": "phot.mag;em.opt.U",
+                  "description": "[4/38]? Model magnitude in u filter, AB scale (u) (5)",
+                  "values": {
+                    "null": "NaN"
                   }
-                ]
-              },
-              {
-                "elem_type": "Field",
-                "name": "umag",
-                "datatype": "float",
-                "unit": "mag",
-                "precision": "3",
-                "width": 6,
-                "ucd": "phot.mag;em.opt.U",
-                "description": "[4/38]? Model magnitude in u filter, AB scale (u) (5)",
-                "values": {
-                  "null": "NaN"
                 }
-              }
-            ],
-            "data": {
-              "data_type": "TableData",
-              "rows": [
-                [
-                  null,
-                  "*",
-                  14.52
-                ],
-                [
-                  1.25,
-                  null,
-                  -1.2
+              ],
+              "data": {
+                "data_type": "TableData",
+                "rows": [
+                  [
+                    null,
+                    "*",
+                    14.52
+                  ],
+                  [
+                    1.25,
+                    null,
+                    -1.2
+                  ]
                 ]
-              ]
-            }
-          }
-        ],
-        "post_infos": [
-          {
-            "name": "QUERY_STATUS",
-            "value": "OVERFLOW",
-            "content": "truncated result (maxtup=2)"
+              }
+            },
+            "infos": [
+              {
+                "name": "QUERY_STATUS",
+                "value": "OVERFLOW",
+                "content": "truncated result (maxtup=2)"
+              }
+            ]
           }
         ]
       }
@@ -362,7 +372,6 @@ only when serializing in `BINARY` or `BINARY2`.
   }
 }
 ```
-
 
 ### TOML
 
@@ -395,12 +404,14 @@ ID = 'J2015.5'
 system = 'ICRS'
 epoch = 2015.5
 
-[[votable.resources.tables]]
+[[votable.resources.sub_elems]]
+[votable.resources.sub_elems.resource_or_table]
+elem_type = 'Table'
 id = 'V_147_sdss12'
 name = 'V/147/sdss12'
 description = 'SDSS photometric catalog'
 
-[[votable.resources.tables.elems]]
+[[votable.resources.sub_elems.resource_or_table.elems]]
 elem_type = 'Field'
 name = 'RA_ICRS'
 datatype = 'double'
@@ -410,7 +421,7 @@ width = 10
 ucd = 'pos.eq.ra;meta.main'
 description = 'Right Ascension of the object (ICRS) (ra)'
 
-[[votable.resources.tables.elems]]
+[[votable.resources.sub_elems.resource_or_table.elems]]
 elem_type = 'Field'
 name = 'm_SDSS12'
 datatype = 'char'
@@ -420,23 +431,23 @@ ucd = 'meta.code.multip'
 arraysize = '1'
 description = '[*] Multiple SDSS12 name'
 
-[[votable.resources.tables.elems.links]]
+[[votable.resources.sub_elems.resource_or_table.elems.links]]
 href = 'http://vizier.u-strasbg.fr/viz-bin/VizieR-4?-info=XML&-out.add=.&-source=V/147&SDSS12=${SDSS12}'
 
-[[votable.resources.tables.elems]]
+[[votable.resources.sub_elems.resource_or_table.elems]]
 elem_type = 'Field'
 name = 'umag'
 datatype = 'float'
 unit = 'mag'
 precision = '3'
-width = 6
+width = 2
 ucd = 'phot.mag;em.opt.U'
 description = '[4/38]? Model magnitude in u filter, AB scale (u) (5)'
 
-[votable.resources.tables.elems.values]
+[votable.resources.sub_elems.resource_or_table.elems.values]
 null = 'NaN'
 
-[votable.resources.tables.data]
+[votable.resources.sub_elems.resource_or_table.data]
 data_type = 'TableData'
 rows = [
     [
@@ -451,12 +462,11 @@ rows = [
 ],
 ]
 
-[[votable.resources.post_infos]]
+[[votable.resources.sub_elems.infos]]
 name = 'QUERY_STATUS'
 value = 'OVERFLOW'
 content = 'truncated result (maxtup=2)'
 ```
-
 
 ### YAML
 
@@ -466,70 +476,71 @@ votable:
   version: '1.4'
   description: VizieR Astronomical Server vizier.u-strasbg.fr
   elems:
-  - elem_type: Info
-    ID: VERSION
-    name: votable-version
-    value: 1.99+ (14-Oct-2013)
+    - elem_type: Info
+      ID: VERSION
+      name: votable-version
+      value: 1.99+ (14-Oct-2013)
   resources:
-  - ID: yCat_17011219
-    name: J/ApJ/701/1219
-    description: Photometric and spectroscopic catalog of objects in the field around
-      HE0226-4110
-    elems:
-    - elem_type: CooSys
-      ID: J2000
-      system: eq_FK4
-      equinox: 2000.0
-    - elem_type: CooSys
-      ID: J2015.5
-      system: ICRS
-      epoch: 2015.5
-    tables:
-    - id: V_147_sdss12
-      name: V/147/sdss12
-      description: SDSS photometric catalog
+    - ID: yCat_17011219
+      name: J/ApJ/701/1219
+      description: Photometric and spectroscopic catalog of objects in the field around HE0226-4110
       elems:
-      - elem_type: Field
-        name: RA_ICRS
-        datatype: double
-        unit: deg
-        precision: '6'
-        width: 10
-        ucd: pos.eq.ra;meta.main
-        description: Right Ascension of the object (ICRS) (ra)
-      - elem_type: Field
-        name: m_SDSS12
-        datatype: char
-        precision: '6'
-        width: 10
-        ucd: meta.code.multip
-        arraysize: '1'
-        description: '[*] Multiple SDSS12 name'
-        links:
-        - href: http://vizier.u-strasbg.fr/viz-bin/VizieR-4?-info=XML&-out.add=.&-source=V/147&SDSS12=${SDSS12}
-      - elem_type: Field
-        name: umag
-        datatype: float
-        unit: mag
-        precision: '3'
-        width: 6
-        ucd: phot.mag;em.opt.U
-        description: '[4/38]? Model magnitude in u filter, AB scale (u) (5)'
-        values:
-          'null': NaN
-      data:
-        data_type: TableData
-        rows:
-        - - .nan
-          - '*'
-          - 14.52
-        - - 1.25
-          - null
-          - -1.2
-    post_infos:
-    - name: QUERY_STATUS
-      value: OVERFLOW
-      content: truncated result (maxtup=2)
+        - elem_type: CooSys
+          ID: J2000
+          system: eq_FK4
+          equinox: 2000.0
+        - elem_type: CooSys
+          ID: J2015.5
+          system: ICRS
+          epoch: 2015.5
+      sub_elems:
+        - resource_or_table:
+            elem_type: Table
+            id: V_147_sdss12
+            name: V/147/sdss12
+            description: SDSS photometric catalog
+            elems:
+              - elem_type: Field
+                name: RA_ICRS
+                datatype: double
+                unit: deg
+                precision: '6'
+                width: 10
+                ucd: pos.eq.ra;meta.main
+                description: Right Ascension of the object (ICRS) (ra)
+              - elem_type: Field
+                name: m_SDSS12
+                datatype: char
+                precision: '6'
+                width: 10
+                ucd: meta.code.multip
+                arraysize: '1'
+                description: '[*] Multiple SDSS12 name'
+                links:
+                  - href: http://vizier.u-strasbg.fr/viz-bin/VizieR-4?-info=XML&-out.add=.&-source=V/147&SDSS12=${SDSS12}
+              - elem_type: Field
+                name: umag
+                datatype: float
+                unit: mag
+                precision: '3'
+                width: 2
+                ucd: phot.mag;em.opt.U
+                description: '[4/38]? Model magnitude in u filter, AB scale (u) (5)'
+                values:
+                  'null': NaN
+            data:
+              data_type: TableData
+              rows:
+                - - .nan
+                  - '*'
+                  - 14.52
+                - - 1.25
+                  - null
+                  - -1.2
+          infos:
+            - name: QUERY_STATUS
+              value: OVERFLOW
+              content: truncated result (maxtup=2)
 ```
 
 ## Example: Iterate on both Tables and Rows of a VOTable
@@ -550,9 +561,10 @@ votable:
 
 ## To-do list
 
-* [X] Support `CDATA`?
+* [ ] Support `CDATA`
+    + [ ] Support `CDATA` in `<TD></TD>` 
 * [ ] Fill the doc for the Rust library (but I so far do not know people interested in such a lib since Rust is not very used in the astronomy community so far, so...)
-* [ ] Add a check method ensuring that user input VOTAbleValue (using the API to build a VOTable) 
+* [ ] Add a check method ensuring that user input VOTableValue (using the API to build a VOTable) 
       matches the table schema (or automatically converting in the right VOTableValue)
 * [ ] Add much more tests!
 * [ ] Add possibility to convert to/from `TABLEDATA`, `BINARY`, `BINARY2`

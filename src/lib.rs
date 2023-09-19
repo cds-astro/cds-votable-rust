@@ -220,31 +220,31 @@ mod tests {
     let data_content = InMemTableDataRows::new(rows);
 
     let table = Table::new()
-          .set_id("V_147_sdss12")
-          .set_name("V/147/sdss12")
-          .set_description("* output of the SDSS photometric catalog".into())
-          .push_field(
-              Field::new("RA_ICRS", Datatype::Double)
-                .set_unit("deg")
-                .set_ucd("pos.eq.ra;meta.main")
-                .set_ref("H")
-                .set_width(10)
-                .set_precision(Precision::new_dec(6))
-                .set_description("Right Ascension of the object (ICRS) (ra)".into())
-                .insert_extra("toto", Number::from_f64(0.5).map(Value::Number).unwrap_or(Value::Null))
-          ).push_field(
-            Field::new("m_SDSS12", Datatype::CharASCII)
-              .set_ucd("meta.code.multip")
-              .set_width(1)
-              .set_description("[*] The asterisk indicates that 2 different SDSS objects share the same SDSS12 name".into())
-              .push_link(Link::new().set_href("http://vizier.u-strasbg.fr/viz-bin/VizieR-4?-info=XML&amp;-out.add=.&amp;-source=V/147&amp;SDSS12=${SDSS12}"))
-        ).push_field(
-            Field::new("umag", Datatype::LongInt)
-              .set_unit("mag")
-              .set_ucd("phot.mag;em.opt.U")
-              .set_description("[4/38]? Model magnitude in u filter, AB scale (u) (5)".into())
-              .set_values(Values::new().set_null("NaN"))
-        ).set_data(Data::new_empty().set_tabledata(data_content));
+              .set_id("V_147_sdss12")
+              .set_name("V/147/sdss12")
+              .set_description("* output of the SDSS photometric catalog".into())
+              .push_field(
+                  Field::new("RA_ICRS", Datatype::Double)
+                    .set_unit("deg")
+                    .set_ucd("pos.eq.ra;meta.main")
+                    .set_ref("H")
+                    .set_width(10)
+                    .set_precision(Precision::new_dec(6))
+                    .set_description("Right Ascension of the object (ICRS) (ra)".into())
+                    .insert_extra("toto", Number::from_f64(0.5).map(Value::Number).unwrap_or(Value::Null))
+              ).push_field(
+                Field::new("m_SDSS12", Datatype::CharASCII)
+                  .set_ucd("meta.code.multip")
+                  .set_width(1)
+                  .set_description("[*] The asterisk indicates that 2 different SDSS objects share the same SDSS12 name".into())
+                  .push_link(Link::new().set_href("http://vizier.u-strasbg.fr/viz-bin/VizieR-4?-info=XML&amp;-out.add=.&amp;-source=V/147&amp;SDSS12=${SDSS12}"))
+            ).push_field(
+                Field::new("umag", Datatype::LongInt)
+                  .set_unit("mag")
+                  .set_ucd("phot.mag;em.opt.U")
+                  .set_description("[4/38]? Model magnitude in u filter, AB scale (u) (5)".into())
+                  .set_values(Values::new().set_null("NaN"))
+            ).set_data(Data::new_empty().set_tabledata(data_content));
 
     let resource = Resource::default()
       .set_id("yCat_17011219")
@@ -261,55 +261,57 @@ mod tests {
           .map(Value::Number)
           .unwrap_or(Value::Null),
       )
-      .push_table(table)
-      .push_post_info(Info::new("matches", "50").set_content("matching records"))
-      .push_post_info(Info::new("Warning", "No center provided++++"))
-      .push_post_info(Info::new("Warning", "truncated result (maxtup=50)"))
-      .push_post_info(
-        Info::new("QUERY_STATUS", "OVERFLOW").set_content("truncated result (maxtup=50)"),
+      .push_sub_elem(
+        ResourceSubElem::from_table(table)
+          .push_info(Info::new("matches", "50").set_content("matching records"))
+          .push_info(Info::new("Warning", "No center provided++++"))
+          .push_info(Info::new("Warning", "truncated result (maxtup=50)"))
+          .push_info(
+            Info::new("QUERY_STATUS", "OVERFLOW").set_content("truncated result (maxtup=50)"),
+          ),
       );
 
     let mut votable = VOTable::new(resource)
-          .set_id("my_votable")
-          .set_version(Version::V1_4)
-          .set_description(r#"
-VizieR Astronomical Server vizier.u-strasbg.fr
-Date: 2022-04-13T06:55:08 [V1.99+ (14-Oct-2013)]
-Explanations and Statistics of UCDs:			See LINK below
-In case of problem, please report to:	cds-question@unistra.fr
-In this version, NULL integer columns are written as an empty string
-&lt;TD&gt;&lt;/TD&gt;, explicitely possible from VOTable-1.3
-"#.into()
-          )
-          .push_info(Info::new("votable-version", "1.99+ (14-Oct-2013)").set_id("VERSION"))
-          .push_info(Info::new("queryParameters", "25")
-            .set_content(r#"
--oc.form=dec
--out.max=50
--out.all=2
--nav=cat:J/ApJ/701/1219&amp;tab:{J/ApJ/701/1219/table4}&amp;key:source=J/ApJ/701/1219&amp;HTTPPRM:&amp;
--c.eq=J2000
--c.r=  2
--c.u=arcmin
--c.geom=r
--source=J/ApJ/701/1219/table4
--order=I
--out=ID
--out=RAJ2000
--out=DEJ2000
--out=Sep
--out=Dist
--out=Bmag
--out=e_Bmag
--out=Rmag
--out=e_Rmag
--out=Imag
--out=e_Imag
--out=z
--out=Type
--out=RMag
--out.all=2
-    "#));
+              .set_id("my_votable")
+              .set_version(Version::V1_4)
+              .set_description(r#"
+    VizieR Astronomical Server vizier.u-strasbg.fr
+    Date: 2022-04-13T06:55:08 [V1.99+ (14-Oct-2013)]
+    Explanations and Statistics of UCDs:			See LINK below
+    In case of problem, please report to:	cds-question@unistra.fr
+    In this version, NULL integer columns are written as an empty string
+    &lt;TD&gt;&lt;/TD&gt;, explicitely possible from VOTable-1.3
+    "#.into()
+              )
+              .push_info(Info::new("votable-version", "1.99+ (14-Oct-2013)").set_id("VERSION"))
+              .push_info(Info::new("queryParameters", "25")
+                .set_content(r#"
+    -oc.form=dec
+    -out.max=50
+    -out.all=2
+    -nav=cat:J/ApJ/701/1219&amp;tab:{J/ApJ/701/1219/table4}&amp;key:source=J/ApJ/701/1219&amp;HTTPPRM:&amp;
+    -c.eq=J2000
+    -c.r=  2
+    -c.u=arcmin
+    -c.geom=r
+    -source=J/ApJ/701/1219/table4
+    -order=I
+    -out=ID
+    -out=RAJ2000
+    -out=DEJ2000
+    -out=Sep
+    -out=Dist
+    -out=Bmag
+    -out=e_Bmag
+    -out=Rmag
+    -out=e_Rmag
+    -out=Imag
+    -out=e_Imag
+    -out=z
+    -out=Type
+    -out=RMag
+    -out.all=2
+        "#));
 
     println!("\n\n#### JSON ####\n");
 
@@ -390,15 +392,23 @@ In this version, NULL integer columns are written as an empty string
     // AVRO ?
   }
 
-  /* not a test, used for the README.md
+  // not a test, used for the README.md
   #[test]
   fn test_create_in_mem_simple() {
-      let rows = vec![
-          vec![VOTableValue::Double(f64::NAN), VOTableValue::CharASCII('*'), VOTableValue::Float(14.52)],
-          vec![VOTableValue::Double(1.25), VOTableValue::Null, VOTableValue::Float(-1.2)],
-      ];
-      let data_content = InMemTableDataRows::new(rows);
-      let table = Table::new()
+    let rows = vec![
+      vec![
+        VOTableValue::Double(f64::NAN),
+        VOTableValue::CharASCII('*'),
+        VOTableValue::Float(14.52),
+      ],
+      vec![
+        VOTableValue::Double(1.25),
+        VOTableValue::Null,
+        VOTableValue::Float(-1.2),
+      ],
+    ];
+    let data_content = InMemTableDataRows::new(rows);
+    let table = Table::new()
         .set_id("V_147_sdss12")
         .set_name("V/147/sdss12")
         .set_description("SDSS photometric catalog".into())
@@ -410,9 +420,9 @@ In this version, NULL integer columns are written as an empty string
               .set_precision(Precision::new_dec(6))
               .set_description("Right Ascension of the object (ICRS) (ra)".into())
         ).push_field(
-          Field::new("m_SDSS12", Datatype::CharASsCII)
+          Field::new("m_SDSS12", Datatype::CharASCII)
             .set_ucd("meta.code.multip")
-            .set_arraysize("1")
+            .set_arraysize(ArraySize::new_fixed_1d(1))
             .set_width(10)
             .set_precision(Precision::new_dec(6))
             .set_description("[*] Multiple SDSS12 name".into())
@@ -427,63 +437,70 @@ In this version, NULL integer columns are written as an empty string
             .set_values(Values::new().set_null("NaN"))
       ).set_data(Data::new_empty().set_tabledata(data_content));
 
-      let resource = Resource::default()
-        .set_id("yCat_17011219")
-        .set_name("J/ApJ/701/1219")
-        .set_description(r#"Photometric and spectroscopic catalog of objects in the field around HE0226-4110"#.into())
-        .push_coosys(CooSys::new("J2000", System::new_default_eq_fk5()))
-        .push_coosys(CooSys::new("J2015.5", System::new_icrs().set_epoch(2015.5)))
-        .push_table(table)
-        .push_post_info(Info::new("QUERY_STATUS", "OVERFLOW").set_content("truncated result (maxtup=2)"));
+    let resource = Resource::default()
+      .set_id("yCat_17011219")
+      .set_name("J/ApJ/701/1219")
+      .set_description(
+        r#"Photometric and spectroscopic catalog of objects in the field around HE0226-4110"#
+          .into(),
+      )
+      .push_coosys(CooSys::new("J2000", System::new_default_eq_fk5()))
+      .push_coosys(CooSys::new("J2015.5", System::new_icrs().set_epoch(2015.5)))
+      .push_sub_elem(ResourceSubElem::from_table(table).push_info(
+        Info::new("QUERY_STATUS", "OVERFLOW").set_content("truncated result (maxtup=2)"),
+      ));
 
-      let mut votable = VOTable::new(resource)
-        .set_id("my_votable")
-        .set_version(Version::V1_4)
-        .set_description(r#"VizieR Astronomical Server vizier.u-strasbg.fr"#.into())
-        .push_info(Info::new("votable-version", "1.99+ (14-Oct-2013)").set_id("VERSION"))
-        .wrap();
+    let votable = VOTable::new(resource)
+      .set_id("my_votable")
+      .set_version(Version::V1_4)
+      .set_description(r#"VizieR Astronomical Server vizier.u-strasbg.fr"#.into())
+      .push_info(Info::new("votable-version", "1.99+ (14-Oct-2013)").set_id("VERSION"))
+      .wrap();
 
-      println!("\n\n#### JSON ####\n");
+    println!("\n\n#### JSON ####\n");
 
-      match serde_json::to_string_pretty(&votable) {
-          Ok(content) => {
-              println!("{}", &content);
-          },
-          Err(error) => println!("{:?}", &error),
+    match serde_json::to_string_pretty(&votable) {
+      Ok(content) => {
+        println!("{}", &content);
       }
+      Err(error) => println!("{:?}", &error),
+    }
 
-      println!("\n\n#### YAML ####\n");
+    println!("\n\n#### YAML ####\n");
 
-      match serde_yaml::to_string(&votable) {
-          Ok(content) => {
-              println!("{}", &content);
-          },
-          Err(error) => println!("{:?}", &error),
+    match serde_yaml::to_string(&votable) {
+      Ok(content) => {
+        println!("{}", &content);
       }
+      Err(error) => println!("{:?}", &error),
+    }
 
     println!("\n\n#### TOML ####\n");
-    
+
     match toml::ser::to_string_pretty(&votable) {
-        Ok(content) => {
-            println!("{}", &content);
-        },
-        Err(error) => println!("{:?}", &error),
+      Ok(content) => {
+        println!("{}", &content);
+      }
+      Err(error) => println!("{:?}", &error),
+    }
 
     println!("\n\n#### VOTABLE ####\n");
-      let mut write = Writer::new_with_indent(stdout(), b' ', 4);
-      match votable.unwrap().write(&mut write, &()) {
-          Ok(content) => println!("\nOK"),
-          Err(error) => println!("Error: {:?}", &error),
-      }
+    let mut write = Writer::new_with_indent(std::io::stdout(), b' ', 4);
+    match votable.unwrap().write(&mut write, &()) {
+      Ok(content) => println!("\nOK"),
+      Err(error) => println!("Error: {:?}", &error),
+    }
 
-    println!("\n\n#### XML ####\n");
-      match quick_xml::se::to_string(&votable) {
-        Ok(content) => println!("{}", &content),
-        Err(error) => println!("{:?}", &error),
-      }
-      // AVRO ?
-  }*/
+    /*println!("\n\n#### XML ####\n");
+    match quick_xml::se::to_string(&votable) {
+      Ok(content) => println!("{}", &content),
+      Err(error) => println!("{:?}", &error),
+    }*/
+    // AVRO ?
+  }
 
+  use crate::field::ArraySize;
+  use crate::resource::ResourceSubElem;
   use std::io::Cursor;
 
   pub(crate) fn test_read<X: QuickXmlReadWrite<Context = ()>>(xml: &str) -> X {
