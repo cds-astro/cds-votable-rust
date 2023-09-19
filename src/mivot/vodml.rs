@@ -82,8 +82,8 @@ pub struct Vodml {
   /// List of used data models.
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub models: Vec<Model>,
-  #[serde(skip_serializing_if = "Vec::is_empty")]
-  pub globals: Vec<Globals>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub globals: Option<Globals>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub templates: Vec<Templates>,
 }
@@ -93,7 +93,7 @@ impl Vodml {
       xmlns: None,
       report: None,
       models: vec![],
-      globals: vec![],
+      globals: None,
       templates: vec![],
       extra: HashMap::default(),
     }
@@ -106,7 +106,7 @@ impl Vodml {
   // Sub-elements
   impl_builder_opt_attr!(report, Report);
   impl_builder_push!(Model);
-  impl_builder_push_no_s!(Globals);
+  impl_builder_opt_attr!(globals, Globals);
   impl_builder_push_no_s!(Templates);
 }
 impl QuickXmlReadWrite for Vodml {
@@ -135,7 +135,7 @@ impl QuickXmlReadWrite for Vodml {
   fn write<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
-    _context: &Self::Context,
+    context: &Self::Context,
   ) -> Result<(), crate::error::VOTableError> {
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     push2write_opt_string_attr!(self, tag, xmlns);
@@ -143,10 +143,10 @@ impl QuickXmlReadWrite for Vodml {
     writer
       .write_event(Event::Start(tag.to_borrowed()))
       .map_err(VOTableError::Write)?;
-    write_elem_vec_empty_context!(self, report, writer);
-    write_elem_vec_empty_context!(self, models, writer);
-    write_elem_vec_empty_context!(self, globals, writer);
-    write_elem_vec_empty_context!(self, templates, writer);
+    write_elem!(self, report, writer, context);
+    write_elem_vec!(self, models, writer, context);
+    write_elem!(self, globals, writer, context);
+    write_elem_vec!(self, templates, writer, context);
     writer
       .write_event(Event::End(tag.to_end()))
       .map_err(VOTableError::Write)
@@ -167,18 +167,24 @@ fn read_vodml_sub_elem_by_ref<R: BufRead>(
     match &mut event {
       Event::Start(ref e) => match e.local_name() {
         Report::TAG_BYTES => {
-          if vodml.report.is_none() {
-            vodml.report = Some(from_event_start_by_ref!(Report, reader, reader_buff, e))
+          if vodml
+            .report
+            .replace(from_event_start_by_ref!(Report, reader, reader_buff, e))
+            .is_some()
+          {
+            return Err(VOTableError::Custom(
+              "Maximum one <REPORT> tag should be present".to_owned(),
+            ));
           }
         }
         Globals::TAG_BYTES => {
-          if vodml.globals.is_empty() {
-            vodml
-              .globals
-              .push(from_event_start_by_ref!(Globals, reader, reader_buff, e))
-          } else {
+          if vodml
+            .globals
+            .replace(from_event_start_by_ref!(Globals, reader, reader_buff, e))
+            .is_some()
+          {
             return Err(VOTableError::Custom(
-              "Only one <GLOBALS> tag should be present".to_owned(),
+              "Maximum one <GLOBALS> tag should be present".to_owned(),
             ));
           }
         }
@@ -196,17 +202,21 @@ fn read_vodml_sub_elem_by_ref<R: BufRead>(
       },
       Event::Empty(ref e) => match e.local_name() {
         Report::TAG_BYTES => {
-          if vodml.report.is_none() {
-            vodml.report = Some(Report::from_event_empty(e)?)
+          if vodml.report.replace(Report::from_event_empty(e)?).is_some() {
+            return Err(VOTableError::Custom(
+              "Maximum one <REPORT> tag should be present".to_owned(),
+            ));
           }
         }
         Model::TAG_BYTES => vodml.models.push(Model::from_event_empty(e)?),
         Globals::TAG_BYTES => {
-          if vodml.globals.is_empty() {
-            vodml.globals.push(Globals::from_event_empty(e)?)
-          } else {
+          if vodml
+            .globals
+            .replace(Globals::from_event_empty(e)?)
+            .is_some()
+          {
             return Err(VOTableError::Custom(
-              "Only one <GLOBALS> tag should be present".to_owned(),
+              "Maximum one <GLOBALS> tag should be present".to_owned(),
             ));
           }
         }

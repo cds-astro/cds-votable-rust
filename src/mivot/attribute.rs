@@ -350,7 +350,7 @@ mod tests {
     tests::test_read,
   };
 
-  use super::{AttributeChildOfCollection, AttributeChildOfInstance};
+  use super::AttributeChildOfInstance;
 
   #[test]
   fn test_attribute_a_read() {
