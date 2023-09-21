@@ -562,15 +562,17 @@ votable:
 ## To-do list
 
 * [ ] Support `CDATA`
+    + [X] Support in `Info`, `Description`, `Link`, `PARAMRef` and `FIELDRef`
     + [ ] Support `CDATA` in `<TD></TD>` 
 * [ ] Fill the doc for the Rust library (but I so far do not know people interested in such a lib since Rust is not very used in the astronomy community so far, so...)
 * [ ] Add a check method ensuring that user input VOTableValue (using the API to build a VOTable) 
       matches the table schema (or automatically converting in the right VOTableValue)
 * [ ] Add much more tests!
-* [ ] Add possibility to convert to/from `TABLEDATA`, `BINARY`, `BINARY2`
+* [X] Add possibility to convert to/from `TABLEDATA`, `BINARY`, `BINARY2`
+    + but still to implement streaming mode in CLI
 * [ ] Enrich `votable::impls::Schema.serialize_seed` (possible bugs when deserializing JSON/TOML/YAML arrays and converting to BINARY or BINARY2)
 * [ ] Write a custom deserializer for `VOTableValue` (look at cargo-expand output for a basis)
-* [ ] Implements `toCSV` (but not `fromCSV`)
+* [ ] Implements `toCSV` (but not `fromCSV`) in CLI
 * ...
 
 

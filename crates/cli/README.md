@@ -23,6 +23,7 @@ Please, provide us with VOTable examples!
 
 * [ ] Support `CDATA` in `TD` tags
 * [ ] Use the iterator to implement streaming transformations between DATATABLE/BINARY/BINARY2.
+* [ ] Also implement streaming conversion to CSV
 
 ## Install
 
