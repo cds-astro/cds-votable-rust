@@ -106,7 +106,7 @@ impl Display for VOTableValue {
     match self {
       VOTableValue::Null => fmt.write_str(""),
       VOTableValue::Bool(v) => fmt.write_fmt(format_args!("{}", v)),
-      VOTableValue::Byte(v) => fmt.write_fmt(format_args!("VOTableValue{}", v)),
+      VOTableValue::Byte(v) => fmt.write_fmt(format_args!("{}", v)),
       VOTableValue::Short(v) => fmt.write_fmt(format_args!("{}", v)),
       VOTableValue::Int(v) => fmt.write_fmt(format_args!("{}", v)),
       VOTableValue::Long(v) => fmt.write_fmt(format_args!("{}", v)),
