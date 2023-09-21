@@ -19,6 +19,11 @@ We are (reasonably) open to changes in the various format, e.g.:
 More testing is required, especially the bit type and arrays.
 Please, provide us with VOTable examples!
 
+## To-Do list
+
+* [ ] Support `CDATA` in `TD` tags
+* [ ] Use the iterator to implement streaming transformations between DATATABLE/BINARY/BINARY2.
+
 ## Install
 
 ### From pypi for python users
@@ -94,21 +99,20 @@ cargo install --path crates/cli
 
 ```bash
 > vot --help
-Command-line to convert IVOA VOTables in XML, JSON, YAML and TOML.
+Command-line to convert IVOA VOTables in XML, JSON, YAML and TOML
 
 Usage: vot [OPTIONS] <INPUT_FMT> <OUTPUT_FMT>
 
 Arguments:
   <INPUT_FMT>   Format of the input document ('xml', 'json', 'yaml' or 'toml')
-  <OUTPUT_FMT>  Format of the output document ('xml', 'json', 'yaml' or 'toml')
+  <OUTPUT_FMT>  Format of the output document ('xml', 'xml-td', 'xml-bin', 'xml-bin2', 'json', 'yaml' or 'toml')
 
 Options:
   -i, --input <FILE>   Input file (else read from stdin)
   -o, --output <FILE>  Output file (else write to stdout)
   -p, --pretty         Pretty print (for JSON and TOML)
-  -h, --help           Print help information
-  -V, --version        Print version information
-
+  -h, --help           Print help
+  -V, --version        Print version
 ```
 
 

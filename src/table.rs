@@ -227,6 +227,42 @@ impl<C: TableDataContent> Table<C> {
       .write_event(Event::End(tag.to_end()))
       .map_err(VOTableError::Write)
   }
+
+  /// Transforms the BINARY or BINARY2 tag in this TABLE into TABLEDATA.
+  /// Do nothing if it already contains a TABLEDATA or if it contains a FITS.
+  pub fn to_tabledata(&mut self) -> Result<(), VOTableError> {
+    if let Some(data) = self.data.take() {
+      data.to_tabledata().map(|data| {
+        self.data.replace(data);
+      })
+    } else {
+      Ok(())
+    }
+  }
+
+  /// Transforms the TABLEDATA or BINARY2 tag in this TABLE into BINARY.
+  /// Do nothing if it already contains a BINARY or if it contains a FITS.
+  pub fn to_binary(&mut self) -> Result<(), VOTableError> {
+    if let Some(data) = self.data.take() {
+      data.to_binary().map(|data| {
+        self.data.replace(data);
+      })
+    } else {
+      Ok(())
+    }
+  }
+
+  /// Transforms the TABLEDATA or BINARY tag in this TABLE into BINARY2.
+  /// Do nothing if it already contains a BINARY2 or if it contains a FITS.
+  pub fn to_binary2(&mut self) -> Result<(), VOTableError> {
+    if let Some(data) = self.data.take() {
+      data.to_binary2().map(|data| {
+        self.data.replace(data);
+      })
+    } else {
+      Ok(())
+    }
+  }
 }
 
 impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {

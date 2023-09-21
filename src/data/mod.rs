@@ -16,14 +16,18 @@ use super::{
   error::VOTableError, info::Info, table::TableElem, QuickXmlReadWrite, TableDataContent,
 };
 
+use crate::{
+  data::stream::{EncodingType, Stream},
+  impls::mem::VoidTableDataContent,
+  is_empty,
+};
+
 // Sub modules
 pub mod binary;
 pub mod binary2;
 pub mod fits;
 pub mod stream;
 pub mod tabledata;
-
-use crate::{impls::mem::VoidTableDataContent, is_empty};
 
 use self::{binary::Binary, binary2::Binary2, fits::Fits, tabledata::TableData};
 
@@ -137,6 +141,51 @@ impl<C: TableDataContent> Data<C> {
   }
 
   impl_builder_push!(Info);
+
+  /// Transforms the BINARY or BINARY2 tag in this DATA into TABLEDATA.
+  /// Do nothing if it already contains a TABLEDATA or if it contains a FITS.
+  pub fn to_tabledata(mut self) -> Result<Self, VOTableError> {
+    self.data = match self.data {
+      DataElem::Binary(b) => DataElem::TableData(TableData::new(
+        b.stream.content.unwrap_or_else(|| C::default()),
+      )),
+      DataElem::Binary2(b) => DataElem::TableData(TableData::new(
+        b.stream.content.unwrap_or_else(|| C::default()),
+      )),
+      _ => self.data,
+    };
+    Ok(self)
+  }
+
+  /// Transforms the TABLEDATA or BINARY2 tag in this DATA into BINARY.
+  /// Do nothing if it already contains a BINARY or if it contains a FITS.
+  pub fn to_binary(mut self) -> Result<Self, VOTableError> {
+    self.data = match self.data {
+      DataElem::TableData(t) => DataElem::Binary(Binary::from_stream(
+        Stream::new()
+          .set_encoding(EncodingType::Base64)
+          .set_content(t.content),
+      )),
+      DataElem::Binary2(b) => DataElem::Binary(Binary::from_stream(b.stream)),
+      _ => self.data,
+    };
+    Ok(self)
+  }
+
+  /// Transforms the TABLEDATA or BINARY tag in this DATA into BINARY2.
+  /// Do nothing if it already contains a BINARY2 or if it contains a FITS.
+  pub fn to_binary2(mut self) -> Result<Self, VOTableError> {
+    self.data = match self.data {
+      DataElem::TableData(t) => DataElem::Binary2(Binary2::from_stream(
+        Stream::new()
+          .set_encoding(EncodingType::Base64)
+          .set_content(t.content),
+      )),
+      DataElem::Binary(b) => DataElem::Binary2(Binary2::from_stream(b.stream)),
+      _ => self.data,
+    };
+    Ok(self)
+  }
 }
 
 impl<C: TableDataContent> Data<C> {

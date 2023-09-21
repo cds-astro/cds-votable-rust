@@ -5,25 +5,27 @@
 Released 2023-XX-XX
 
 ### Added
-
-* ⚠️  BREAKING: add a `ResourceSubElem` structure in `Resource` to pack together 
-  LINKS, RESOURCE or TABLE, INFO (the choice in the VOTable xsd, the figure is missleading)
-* Add support for VOTable 1.5: refposition, FIELDref and PARAMref allowed in CooSys
-* `SimpleVOTableRowIterator` with `OwnedTabledataRowIterator` and `OwnedBinary1or2RowIterator` 
+ 
+* Add conversions between TABLEDATA/BINARY/BINARY2
+* Add support for VOTable 1.5: `refposition`, `FIELDref` and `PARAMref` allowed in CooSys
+* Add `SimpleVOTableRowIterator` with `OwnedTabledataRowIterator` and `OwnedBinary1or2RowIterator` 
    to make external parsers taking charge of parsing rows
 * Add methods `get_first_table` and `get_first_table_mut` in votable
-* More atrributes/sub-elements made public
-* First attempt to support Mivot!!
+* More attributes/sub-elements are now public
+* First attempt to support Mivot (the VODML tag)!!
 
 ### Changed
 
-* Arraysize no more a String but a enum
+* ⚠️  BREAKING: add a `ResourceSubElem` structure in `Resource` to pack together
+  LINKS, RESOURCE or TABLE, INFO (the choice in the VOTable xsd, the figure is missleading)
+* ⚠️  BREAKING: Arraysize no more a String but a enum
 
 ### Bug correction
 
 * Better handling of arrays (please provide us with examples so we can test and debug)
 * Fix unicode char bug
 * Fix breaking change introduced in `serde.__private`
+
 
 ## 0.2.3
 

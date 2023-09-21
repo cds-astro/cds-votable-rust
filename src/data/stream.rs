@@ -198,6 +198,11 @@ impl<C: TableDataContent> Stream<C> {
   // extra attributes
   // impl_builder_insert_extra!();
 
+  pub fn set_content(mut self, content: C) -> Self {
+    self.content = Some(content);
+    self
+  }
+
   pub fn write_start<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     // Write tag + attributes

@@ -111,6 +111,33 @@ impl<C: TableDataContent> ResourceSubElem<C> {
     }
   }
 
+  /// Transforms the BINARY or BINARY2 tag in this element into TABLEDATA.
+  /// Do nothing if it already contains a TABLEDATA or if it contains a FITS.
+  pub fn to_tabledata(&mut self) -> Result<(), VOTableError> {
+    match &mut self.resource_or_table {
+      ResourceOrTable::Resource(_) => Ok(()),
+      ResourceOrTable::Table(table) => table.to_tabledata(),
+    }
+  }
+
+  /// Transforms the TABLEDATA or BINARY2 tag in this element into BINARY.
+  /// Do nothing if it already contains a BINARY or if it contains a FITS.
+  pub fn to_binary(&mut self) -> Result<(), VOTableError> {
+    match &mut self.resource_or_table {
+      ResourceOrTable::Resource(_) => Ok(()),
+      ResourceOrTable::Table(table) => table.to_binary(),
+    }
+  }
+
+  /// Transforms the TABLEDATA or BINARY tag in this element into BINARY2.
+  /// Do nothing if it already contains a BINARY2 or if it contains a FITS.
+  pub fn to_binary2(&mut self) -> Result<(), VOTableError> {
+    match &mut self.resource_or_table {
+      ResourceOrTable::Resource(_) => Ok(()),
+      ResourceOrTable::Table(table) => table.to_binary2(),
+    }
+  }
+
   /*pub(crate) fn get_table_mut(&mut self) -> Result<&mut Table<C>, VOTableError> {
     match &mut self.resource_or_table {
       ResourceOrTable::Table(table) => Ok(table),
@@ -204,10 +231,37 @@ impl<C: TableDataContent> Resource<C> {
   // - extra optional element
   impl_builder_opt_attr!(vodml, Vodml);
 
+  /// Transforms the BINARY or BINARY2 tag in this RESOURCE into TABLEDATA.
+  /// Do nothing if it already contains a TABLEDATA or if it contains a FITS.
+  pub fn to_tabledata(&mut self) -> Result<(), VOTableError> {
+    for sub_elem in self.sub_elems.iter_mut() {
+      sub_elem.to_tabledata()?;
+    }
+    Ok(())
+  }
+
+  /// Transforms the TABLEDATA or BINARY2 tag in this RESOURCE into BINARY.
+  /// Do nothing if it already contains a BINARY or if it contains a FITS.
+  pub fn to_binary(&mut self) -> Result<(), VOTableError> {
+    for sub_elem in self.sub_elems.iter_mut() {
+      sub_elem.to_binary()?;
+    }
+    Ok(())
+  }
+
+  /// Transforms the TABLEDATA or BINARY tag in this RESOURCE into BINARY2.
+  /// Do nothing if it already contains a BINARY2 or if it contains a FITS.
+  pub fn to_binary2(&mut self) -> Result<(), VOTableError> {
+    for sub_elem in self.sub_elems.iter_mut() {
+      sub_elem.to_binary2()?;
+    }
+    Ok(())
+  }
+
   pub fn get_first_resource_containing_a_table(&self) -> Option<&Self> {
     for elem in &self.sub_elems {
       match &elem.resource_or_table {
-        ResourceOrTable::Table(_) => return Some(&self),
+        ResourceOrTable::Table(_) => return Some(self),
         ResourceOrTable::Resource(resource) => {
           let first_resource_containing_a_table = resource.get_first_resource_containing_a_table();
           if first_resource_containing_a_table.is_some() {
@@ -384,16 +438,14 @@ impl<C: TableDataContent> Resource<C> {
           Table::<C>::TAG_BYTES => {
             let table = Table::<C>::from_attributes(e.attributes())?;
             return Ok(Some(
-              ResourceSubElem::from_table(table)
-                .set_links(mem::replace(&mut links, Default::default())),
+              ResourceSubElem::from_table(table).set_links(mem::take(&mut links)),
             ));
           }
           Resource::<C>::TAG_BYTES => {
             let resource = from_event_start_by_ref!(Resource, reader, reader_buff, e);
-            self.sub_elems.push(
-              ResourceSubElem::from_resource(resource)
-                .set_links(mem::replace(&mut links, Default::default())),
-            );
+            self
+              .sub_elems
+              .push(ResourceSubElem::from_resource(resource).set_links(mem::take(&mut links)));
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -500,15 +552,13 @@ impl<C: TableDataContent> Resource<C> {
           Table::<C>::TAG_BYTES => {
             let table = Table::<C>::from_attributes(e.attributes())?;
             return Ok(Some(
-              ResourceSubElem::from_table(table)
-                .set_links(mem::replace(&mut links, Default::default())),
+              ResourceSubElem::from_table(table).set_links(mem::take(&mut links)),
             ));
           }
           Resource::<C>::TAG_BYTES => {
             let resource = Resource::<C>::from_attributes(e.attributes())?;
             return Ok(Some(
-              ResourceSubElem::from_resource(resource)
-                .set_links(mem::replace(&mut links, Default::default())),
+              ResourceSubElem::from_resource(resource).set_links(mem::take(&mut links)),
             ));
           }
           _ => {
@@ -720,17 +770,15 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
           Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
           Table::<C>::TAG_BYTES => {
             let table = from_event_start_by_ref!(Table, reader, reader_buff, e);
-            self.sub_elems.push(
-              ResourceSubElem::from_table(table)
-                .set_links(mem::replace(&mut links, Default::default())),
-            );
+            self
+              .sub_elems
+              .push(ResourceSubElem::from_table(table).set_links(mem::take(&mut links)));
           }
           Resource::<C>::TAG_BYTES => {
             let resource = from_event_start_by_ref!(Resource, reader, reader_buff, e);
-            self.sub_elems.push(
-              ResourceSubElem::from_resource(resource)
-                .set_links(mem::replace(&mut links, Default::default())),
-            );
+            self
+              .sub_elems
+              .push(ResourceSubElem::from_resource(resource).set_links(mem::take(&mut links)));
           }
           Vodml::TAG_BYTES => from_event_start_vodml_by_ref!(self, Vodml, reader, reader_buff, e),
           _ => {

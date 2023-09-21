@@ -108,6 +108,24 @@ impl<C: TableDataContent> VOTableWrapper<C> {
     self.votable
   }
 
+  /// Transforms the BINARY or BINARY2 tag in this VOTABLE into TABLEDATA.
+  /// Do nothing if it already contains a TABLEDATA or if it contains a FITS.
+  pub fn to_tabledata(&mut self) -> Result<(), VOTableError> {
+    self.votable.to_tabledata()
+  }
+
+  /// Transforms the TABLEDATA or BINARY2 tag in this VOTABLE into BINARY.
+  /// Do nothing if it already contains a BINARY or if it contains a FITS.
+  pub fn to_binary(&mut self) -> Result<(), VOTableError> {
+    self.votable.to_binary()
+  }
+
+  /// Transforms the TABLEDATA or BINARY tag in this VOTABLE into BINARY2.
+  /// Do nothing if it already contains a BINARY2 or if it contains a FITS.
+  pub fn to_binary2(&mut self) -> Result<(), VOTableError> {
+    self.votable.to_binary2()
+  }
+
   // Manual parser
 
   pub fn manual_from_ivoa_xml_file<P: AsRef<Path>>(
@@ -464,6 +482,33 @@ impl<C: TableDataContent> VOTable<C> {
   impl_builder_push!(Resource, C);
 
   impl_builder_push_post_info!();
+
+  /// Transforms the BINARY or BINARY2 tag in this VOTABLE into TABLEDATA.
+  /// Do nothing if it already contains a TABLEDATA or if it contains a FITS.
+  pub fn to_tabledata(&mut self) -> Result<(), VOTableError> {
+    for resource in self.resources.iter_mut() {
+      resource.to_tabledata()?;
+    }
+    Ok(())
+  }
+
+  /// Transforms the TABLEDATA or BINARY2 tag in this VOTABLE into BINARY.
+  /// Do nothing if it already contains a BINARY or if it contains a FITS.
+  pub fn to_binary(&mut self) -> Result<(), VOTableError> {
+    for resource in self.resources.iter_mut() {
+      resource.to_binary()?;
+    }
+    Ok(())
+  }
+
+  /// Transforms the TABLEDATA or BINARY tag in this VOTABLE into BINARY2.
+  /// Do nothing if it already contains a BINARY2 or if it contains a FITS.
+  pub fn to_binary2(&mut self) -> Result<(), VOTableError> {
+    for resource in self.resources.iter_mut() {
+      resource.to_binary2()?;
+    }
+    Ok(())
+  }
 
   pub fn get_first_resource_containing_a_table(&self) -> Option<&Resource<C>> {
     for resource in self.resources.iter() {

@@ -1,11 +1,20 @@
 # `moc-cli` Change Log
 
+## 0.3.0
+
+Released 2023-XX-XX
+
+* Add conversions between TABLEDATA/BINARY/BINARY2
+* Supports VOTable 1.5
+* Add Mivot parsing (VODML tag)
+* For other changes/bug correction, see the `votable` crate changelog 
+
 ## 0.2.3
 
 Released 2023-05-01
 
-* Accept CDATA in 'Info', 'Desciption', 'Link', 'ParamRef' and 'FieldRef' content
-* Accepth empty 'precision' and 'width' attributes
+* Accept CDATA in 'Info', 'Description', 'Link', 'ParamRef' and 'FieldRef' content
+* Accept empty 'precision' and 'width' attributes
 
 ## 0.2.2
 
