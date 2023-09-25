@@ -26,7 +26,7 @@ pub mod collection;
 use crate::mivot::templates::instance::collection::collection::{
   create_collection_from_opt_dmid_and_reading_sub_elems, get_opt_dmid_from_atttributes,
 };
-use collection::{Collection as CollectionChildOfCollection, CollectionElems};
+use collection::{Collection as CollectionChildOfCollection, CollectionElems, InstanceOrRef};
 pub mod reference;
 use reference::Reference;
 
@@ -60,28 +60,6 @@ impl Collection {
     }
   }
 
-  pub fn from_references<S: Into<String>>(
-    dmrole: S,
-    references: Vec<Reference>,
-  ) -> Result<Self, VOTableError> {
-    let dmrole = dmrole.into();
-    if dmrole.is_empty() {
-      Err(VOTableError::Custom(String::from(
-        "Empty 'dmrole' in collection",
-      )))
-    } else if references.is_empty() {
-      Err(VOTableError::Custom(String::from(
-        "Empty list of reference in collection",
-      )))
-    } else {
-      Ok(Self {
-        dmrole,
-        dmid: None,
-        elems: CollectionElems::Reference(references),
-      })
-    }
-  }
-
   pub fn from_collections<S: Into<String>>(
     dmrole: S,
     collections: Vec<CollectionChildOfCollection>,
@@ -106,7 +84,7 @@ impl Collection {
 
   pub fn from_instances<S: Into<String>>(
     dmrole: S,
-    instances: Vec<Instance>,
+    mut instances: Vec<Instance>,
   ) -> Result<Self, VOTableError> {
     let dmrole = dmrole.into();
     if dmrole.is_empty() {
@@ -121,7 +99,29 @@ impl Collection {
       Ok(Self {
         dmrole,
         dmid: None,
-        elems: CollectionElems::Instance(instances),
+        elems: CollectionElems::InstanceOrRef(
+          instances.drain(..).map(InstanceOrRef::Instance).collect(),
+        ),
+      })
+    }
+  }
+
+  pub fn from_instance_or_reference_elems<S: Into<String>>(dmrole: S, instance_or_reference_elems: Vec<InstanceOrRef>,
+  ) -> Result<Self, VOTableError> {
+    let dmrole = dmrole.into();
+    if dmrole.is_empty() {
+      Err(VOTableError::Custom(String::from(
+        "Empty 'dmrole' in collection",
+      )))
+    } else if instance_or_reference_elems.is_empty() {
+      Err(VOTableError::Custom(String::from(
+        "Empty list of instance/reference in collection",
+      )))
+    } else {
+      Ok(Self {
+        dmrole,
+        dmid: None,
+        elems: CollectionElems::InstanceOrRef(instance_or_reference_elems),
       })
     }
   }
@@ -178,9 +178,8 @@ pub(crate) fn create_collection_from_dmrole_and_reading_sub_elems<R: BufRead>(
   mut reader_buff: &mut Vec<u8>,
 ) -> Result<Collection, VOTableError> {
   let mut attr_vec: Vec<Attribute> = Default::default();
-  let mut ref_vec: Vec<Reference> = Default::default();
   let mut col_vec: Vec<CollectionChildOfCollection> = Default::default();
-  let mut inst_vec: Vec<Instance> = Default::default();
+  let mut inst_or_ref_vec: Vec<InstanceOrRef> = Default::default();
   let mut join_vec: Vec<Join> = Default::default();
 
   loop {
@@ -191,7 +190,7 @@ pub(crate) fn create_collection_from_dmrole_and_reading_sub_elems<R: BufRead>(
           attr_vec.push(from_event_start_by_ref!(Attribute, reader, reader_buff, e))
         }
         Reference::TAG_BYTES => {
-          ref_vec.push(from_event_start_by_ref!(Reference, reader, reader_buff, e))
+          inst_or_ref_vec.push(InstanceOrRef::Reference(from_event_start_by_ref!(Reference, reader, reader_buff, e)))
         }
         Collection::TAG_BYTES => {
           let opt_dmid = get_opt_dmid_from_atttributes(e.attributes())?;
@@ -204,7 +203,7 @@ pub(crate) fn create_collection_from_dmrole_and_reading_sub_elems<R: BufRead>(
           col_vec.push(col)
         }
         Instance::TAG_BYTES => {
-          inst_vec.push(from_event_start_by_ref!(Instance, reader, reader_buff, e))
+          inst_or_ref_vec.push(InstanceOrRef::Instance(from_event_start_by_ref!(Instance, reader, reader_buff, e)))
         }
         Join::TAG_BYTES => join_vec.push(from_event_start_by_ref!(Join, reader, reader_buff, e)),
         _ => {
@@ -216,8 +215,8 @@ pub(crate) fn create_collection_from_dmrole_and_reading_sub_elems<R: BufRead>(
       },
       Event::Empty(ref e) => match e.local_name() {
         Attribute::TAG_BYTES => attr_vec.push(Attribute::from_event_empty(e)?),
-        Reference::TAG_BYTES => ref_vec.push(Reference::from_event_empty(e)?),
-        Instance::TAG_BYTES => inst_vec.push(Instance::from_event_empty(e)?),
+        Reference::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Reference(Reference::from_event_empty(e)?)),
+        Instance::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Instance(Instance::from_event_empty(e)?)),
         Join::TAG_BYTES => join_vec.push(Join::from_event_empty(e)?),
         _ => {
           return Err(VOTableError::UnexpectedEmptyTag(
@@ -228,16 +227,14 @@ pub(crate) fn create_collection_from_dmrole_and_reading_sub_elems<R: BufRead>(
       },
       Event::Text(e) if is_empty(e) => {}
       Event::End(e) if e.local_name() == Collection::TAG_BYTES => {
-        return match (((!attr_vec.is_empty()) as u8) << 4)
-          + (((!ref_vec.is_empty()) as u8) << 3)
+        return match (((!attr_vec.is_empty()) as u8) << 3)
           + (((!col_vec.is_empty()) as u8) << 2)
-          + (((!inst_vec.is_empty()) as u8) << 1)
+          + (((!inst_or_ref_vec.is_empty()) as u8) << 1)
           + ((!join_vec.is_empty()) as u8)
         {
-          16 => Collection::from_attribute(dmrole, attr_vec),
-          8 => Collection::from_references(dmrole, ref_vec),
+          8 => Collection::from_attribute(dmrole, attr_vec),
           4 => Collection::from_collections(dmrole, col_vec),
-          2 => Collection::from_instances(dmrole, inst_vec),
+          2 => Collection::from_instance_or_reference_elems(dmrole, inst_or_ref_vec),
           1 if join_vec.len() == 1 => {
             Collection::from_join(dmrole, join_vec.drain(..).next().unwrap())
           }

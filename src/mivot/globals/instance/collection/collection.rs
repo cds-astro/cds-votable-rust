@@ -26,13 +26,29 @@ use crate::{
 };
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "elem_type")]
+pub enum InstanceOrRef {
+  Instance(Instance),
+  /// Reference here is **child of** `COLLECTION` in `GLOBALS`
+  Reference(Reference),
+}
+impl InstanceOrRef {
+  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+    match self {
+      InstanceOrRef::Instance(elem) => elem.write(writer, &()),
+      InstanceOrRef::Reference(elem) => elem.write(writer, &()),
+    }
+  }
+}
+
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type", content = "content")]
 // #[serde(untagged)]
 pub enum CollectionElems {
   Attribute(Vec<Attribute>),
-  Reference(Vec<Reference>),
   Collection(Vec<Collection>),
-  Instance(Vec<Instance>),
+  InstanceOrRef(Vec<InstanceOrRef>),
   Join(Join),
 }
 
@@ -45,21 +61,15 @@ impl CollectionElems {
         }
         Ok(())
       }
-      CollectionElems::Reference(elems) => {
-        for elem in elems {
-          elem.write(writer, &())?;
-        }
-        Ok(())
-      }
       CollectionElems::Collection(elems) => {
         for elem in elems {
           elem.write(writer, &())?;
         }
         Ok(())
       }
-      CollectionElems::Instance(elems) => {
+      CollectionElems::InstanceOrRef(elems) => {
         for elem in elems {
-          elem.write(writer, &())?;
+          elem.write(writer)?;
         }
         Ok(())
       }
@@ -87,20 +97,7 @@ impl Collection {
       })
     }
   }
-
-  pub fn from_references(references: Vec<Reference>) -> Result<Self, VOTableError> {
-    if references.is_empty() {
-      Err(VOTableError::Custom(String::from(
-        "Empty list of reference in collection",
-      )))
-    } else {
-      Ok(Self {
-        dmid: None,
-        elems: CollectionElems::Reference(references),
-      })
-    }
-  }
-
+  
   pub fn from_collections(collections: Vec<Collection>) -> Result<Self, VOTableError> {
     if collections.is_empty() {
       Err(VOTableError::Custom(String::from(
@@ -114,7 +111,7 @@ impl Collection {
     }
   }
 
-  pub fn from_instances(instances: Vec<Instance>) -> Result<Self, VOTableError> {
+  pub fn from_instances(mut instances: Vec<Instance>) -> Result<Self, VOTableError> {
     if instances.is_empty() {
       Err(VOTableError::Custom(String::from(
         "Empty list of instance in collection",
@@ -122,7 +119,23 @@ impl Collection {
     } else {
       Ok(Self {
         dmid: None,
-        elems: CollectionElems::Instance(instances),
+        elems: CollectionElems::InstanceOrRef(
+          instances.drain(..).map(InstanceOrRef::Instance).collect(),
+        ),
+      })
+    }
+  }
+
+  pub fn from_instance_or_reference_elems(instance_or_reference_elems: Vec<InstanceOrRef>,
+  ) -> Result<Self, VOTableError> {
+    if instance_or_reference_elems.is_empty() {
+      Err(VOTableError::Custom(String::from(
+        "Empty list of instance/reference in collection",
+      )))
+    } else {
+      Ok(Self {
+        dmid: None,
+        elems: CollectionElems::InstanceOrRef(instance_or_reference_elems),
       })
     }
   }
@@ -168,9 +181,8 @@ pub(crate) fn create_collection_from_opt_dmid_and_reading_sub_elems<R: BufRead>(
   mut reader_buff: &mut Vec<u8>,
 ) -> Result<Collection, VOTableError> {
   let mut attr_vec: Vec<Attribute> = Default::default();
-  let mut ref_vec: Vec<Reference> = Default::default();
   let mut col_vec: Vec<Collection> = Default::default();
-  let mut inst_vec: Vec<Instance> = Default::default();
+  let mut inst_or_ref_vec: Vec<InstanceOrRef> = Default::default();
   let mut join_vec: Vec<Join> = Default::default();
 
   loop {
@@ -181,7 +193,7 @@ pub(crate) fn create_collection_from_opt_dmid_and_reading_sub_elems<R: BufRead>(
           attr_vec.push(from_event_start_by_ref!(Attribute, reader, reader_buff, e))
         }
         Reference::TAG_BYTES => {
-          ref_vec.push(from_event_start_by_ref!(Reference, reader, reader_buff, e))
+          inst_or_ref_vec.push(InstanceOrRef::Reference(from_event_start_by_ref!(Reference, reader, reader_buff, e)))
         }
         Collection::TAG_BYTES => {
           let opt_dmid = get_opt_dmid_from_atttributes(e.attributes())?;
@@ -194,7 +206,7 @@ pub(crate) fn create_collection_from_opt_dmid_and_reading_sub_elems<R: BufRead>(
           col_vec.push(col)
         }
         Instance::TAG_BYTES => {
-          inst_vec.push(from_event_start_by_ref!(Instance, reader, reader_buff, e))
+          inst_or_ref_vec.push(InstanceOrRef::Instance(from_event_start_by_ref!(Instance, reader, reader_buff, e)))
         }
         Join::TAG_BYTES => join_vec.push(from_event_start_by_ref!(Join, reader, reader_buff, e)),
         _ => {
@@ -206,8 +218,8 @@ pub(crate) fn create_collection_from_opt_dmid_and_reading_sub_elems<R: BufRead>(
       },
       Event::Empty(ref e) => match e.local_name() {
         Attribute::TAG_BYTES => attr_vec.push(Attribute::from_event_empty(e)?),
-        Reference::TAG_BYTES => ref_vec.push(Reference::from_event_empty(e)?),
-        Instance::TAG_BYTES => inst_vec.push(Instance::from_event_empty(e)?),
+        Reference::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Reference(Reference::from_event_empty(e)?)),
+        Instance::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Instance(Instance::from_event_empty(e)?)),
         Join::TAG_BYTES => join_vec.push(Join::from_event_empty(e)?),
         _ => {
           return Err(VOTableError::UnexpectedEmptyTag(
@@ -218,16 +230,14 @@ pub(crate) fn create_collection_from_opt_dmid_and_reading_sub_elems<R: BufRead>(
       },
       Event::Text(e) if is_empty(e) => {}
       Event::End(e) if e.local_name() == Collection::TAG_BYTES => {
-        return match (((!attr_vec.is_empty()) as u8) << 4)
-          + (((!ref_vec.is_empty()) as u8) << 3)
+        return match (((!attr_vec.is_empty()) as u8) << 3)
           + (((!col_vec.is_empty()) as u8) << 2)
-          + (((!inst_vec.is_empty()) as u8) << 1)
+          + (((!inst_or_ref_vec.is_empty()) as u8) << 1)
           + ((!join_vec.is_empty()) as u8)
         {
-          16 => Collection::from_attribute(attr_vec),
-          8 => Collection::from_references(ref_vec),
+          8 => Collection::from_attribute(attr_vec),
           4 => Collection::from_collections(col_vec),
-          2 => Collection::from_instances(inst_vec),
+          2 => Collection::from_instance_or_reference_elems(inst_or_ref_vec),
           1 if join_vec.len() == 1 => Collection::from_join(join_vec.drain(..).next().unwrap()),
           1 => Err(VOTableError::Custom(
             "A collection cannot have more than one join".to_owned(),

@@ -20,26 +20,34 @@ pub mod instance;
 use instance::Instance;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "elem_type")]
+pub enum InstanceOrRef {
+  Instance(Instance),
+  /// Reference here is **child of** `COLLECTION` in `GLOBALS`
+  Reference(Reference),
+}
+impl InstanceOrRef {
+  fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+    match self {
+      InstanceOrRef::Instance(elem) => elem.write(writer, &()),
+      InstanceOrRef::Reference(elem) => elem.write(writer, &()),
+    }
+  }
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type", content = "content")]
 enum CollectionElems {
-  /// Reference here is **child of** `COLLECTION` in `GLOBALS`
-  Reference(Vec<Reference>),
-  Instance(Vec<Instance>),
+  InstanceOrRef(Vec<InstanceOrRef>),
   Join(Join),
 }
 
 impl CollectionElems {
   fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
     match self {
-      CollectionElems::Reference(elems) => {
+      CollectionElems::InstanceOrRef(elems) => {
         for elem in elems {
-          elem.write(writer, &())?;
-        }
-        Ok(())
-      }
-      CollectionElems::Instance(elems) => {
-        for elem in elems {
-          elem.write(writer, &())?;
+          elem.write(writer)?;
         }
         Ok(())
       }
@@ -55,30 +63,9 @@ pub struct Collection {
   elems: CollectionElems,
 }
 impl Collection {
-  pub fn from_references<S: Into<String>>(
-    dmid: S,
-    references: Vec<Reference>,
-  ) -> Result<Self, VOTableError> {
-    let dmid = dmid.into();
-    if dmid.is_empty() {
-      Err(VOTableError::Custom(String::from(
-        "Empty 'dmid' in collection",
-      )))
-    } else if references.is_empty() {
-      Err(VOTableError::Custom(String::from(
-        "Empty list of reference in collection",
-      )))
-    } else {
-      Ok(Self {
-        dmid,
-        elems: CollectionElems::Reference(references),
-      })
-    }
-  }
-
   pub fn from_instances<S: Into<String>>(
     dmid: S,
-    instances: Vec<Instance>,
+    mut instances: Vec<Instance>,
   ) -> Result<Self, VOTableError> {
     let dmid = dmid.into();
     if dmid.is_empty() {
@@ -92,7 +79,30 @@ impl Collection {
     } else {
       Ok(Self {
         dmid,
-        elems: CollectionElems::Instance(instances),
+        elems: CollectionElems::InstanceOrRef(
+          instances.drain(..).map(InstanceOrRef::Instance).collect(),
+        ),
+      })
+    }
+  }
+
+  pub fn from_instance_or_reference_elems<S: Into<String>>(
+    dmid: S,
+    instance_or_reference_elems: Vec<InstanceOrRef>,
+  ) -> Result<Self, VOTableError> {
+    let dmid = dmid.into();
+    if dmid.is_empty() {
+      Err(VOTableError::Custom(String::from(
+        "Empty 'dmid' in collection",
+      )))
+    } else if instance_or_reference_elems.is_empty() {
+      Err(VOTableError::Custom(String::from(
+        "Empty list of instance/reference in collection",
+      )))
+    } else {
+      Ok(Self {
+        dmid,
+        elems: CollectionElems::InstanceOrRef(instance_or_reference_elems),
       })
     }
   }
@@ -140,20 +150,19 @@ pub(crate) fn create_collection_from_dmid_and_reading_sub_elems<R: BufRead>(
   mut reader: &mut Reader<R>,
   mut reader_buff: &mut Vec<u8>,
 ) -> Result<Collection, VOTableError> {
-  let mut ref_vec: Vec<Reference> = Default::default();
-  let mut inst_vec: Vec<Instance> = Default::default();
+  let mut inst_or_ref_vec: Vec<InstanceOrRef> = Default::default();
   let mut join_vec: Vec<Join> = Default::default();
 
   loop {
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
       Event::Start(ref e) => match e.local_name() {
-        Reference::TAG_BYTES => {
-          ref_vec.push(from_event_start_by_ref!(Reference, reader, reader_buff, e))
-        }
-        Instance::TAG_BYTES => {
-          inst_vec.push(from_event_start_by_ref!(Instance, reader, reader_buff, e))
-        }
+        Reference::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Reference(
+          from_event_start_by_ref!(Reference, reader, reader_buff, e),
+        )),
+        Instance::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Instance(
+          from_event_start_by_ref!(Instance, reader, reader_buff, e),
+        )),
         Join::TAG_BYTES => join_vec.push(from_event_start_by_ref!(Join, reader, reader_buff, e)),
         _ => {
           return Err(VOTableError::UnexpectedStartTag(
@@ -163,8 +172,12 @@ pub(crate) fn create_collection_from_dmid_and_reading_sub_elems<R: BufRead>(
         }
       },
       Event::Empty(ref e) => match e.local_name() {
-        Reference::TAG_BYTES => ref_vec.push(Reference::from_event_empty(e)?),
-        Instance::TAG_BYTES => inst_vec.push(Instance::from_event_empty(e)?),
+        Reference::TAG_BYTES => {
+          inst_or_ref_vec.push(InstanceOrRef::Reference(Reference::from_event_empty(e)?))
+        }
+        Instance::TAG_BYTES => {
+          inst_or_ref_vec.push(InstanceOrRef::Instance(Instance::from_event_empty(e)?))
+        }
         Join::TAG_BYTES => join_vec.push(Join::from_event_empty(e)?),
         _ => {
           return Err(VOTableError::UnexpectedEmptyTag(
@@ -175,12 +188,8 @@ pub(crate) fn create_collection_from_dmid_and_reading_sub_elems<R: BufRead>(
       },
       Event::Text(e) if is_empty(e) => {}
       Event::End(e) if e.local_name() == Collection::TAG_BYTES => {
-        return match (((!ref_vec.is_empty()) as u8) << 2)
-          + (((!inst_vec.is_empty()) as u8) << 1)
-          + ((!join_vec.is_empty()) as u8)
-        {
-          4 => Collection::from_references(dmid, ref_vec),
-          2 => Collection::from_instances(dmid, inst_vec),
+        return match (((!inst_or_ref_vec.is_empty()) as u8) << 1) + ((!join_vec.is_empty()) as u8) {
+          2 => Collection::from_instance_or_reference_elems(dmid, inst_or_ref_vec),
           1 if join_vec.len() == 1 => {
             Collection::from_join(dmid, join_vec.drain(..).next().unwrap())
           }
