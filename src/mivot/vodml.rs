@@ -65,6 +65,7 @@ use quick_xml::{
 use serde_json::Value;
 
 use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
+use crate::mivot::VodmlVisitor;
 
 use super::{globals::Globals, model::Model, report::Report, templates::Templates};
 
@@ -108,6 +109,23 @@ impl Vodml {
   impl_builder_push!(Model);
   impl_builder_opt_attr!(globals, Globals);
   impl_builder_push_no_s!(Templates);
+  
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_vodml(self)?;
+    if let Some(report) = self.report.as_mut() {
+      report.visit(visitor)?;
+    }
+    for model in self.models.iter_mut() {
+      model.visit(visitor)?;
+    }
+    if let Some(globals) = self.globals.as_mut() {
+      globals.visit(visitor)?;
+    }
+    for template in self.templates.iter_mut() {
+      template.visit(visitor)?;
+    }
+    Ok(())
+  }
 }
 impl QuickXmlReadWrite for Vodml {
   const TAG: &'static str = "VODML";

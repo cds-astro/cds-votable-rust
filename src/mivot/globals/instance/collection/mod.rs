@@ -17,6 +17,7 @@ use crate::{
   error::VOTableError,
   is_empty,
   mivot::{
+    VodmlVisitor,
     attribute::AttributeChildOfCollection as Attribute,
     globals::{collection::reference::Reference, instance::Instance},
     join::Join,
@@ -144,6 +145,11 @@ impl Collection {
   }
 
   impl_builder_opt_string_attr!(dmid);
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_collection_childof_instance_in_globals(self)?;
+    self.elems.visit(visitor)
+  }
 }
 
 pub(crate) fn get_dmrole_opt_dmid_from_atttributes(

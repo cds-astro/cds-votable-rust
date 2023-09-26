@@ -16,7 +16,7 @@ use quick_xml::{
 };
 
 use crate::{
-  error::VOTableError, is_empty, mivot::attribute::AttributeChildOfInstance as Attribute,
+  error::VOTableError, is_empty, mivot::{VodmlVisitor, attribute::AttributeChildOfInstance as Attribute},
   QuickXmlReadWrite,
 };
 
@@ -64,6 +64,17 @@ impl Instance {
   impl_builder_push_elem!(Instance, InstanceElem, InstanceChildOfInstance);
   impl_builder_push_elem!(Reference, InstanceElem);
   impl_builder_push_elem!(Collection, InstanceElem);
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_instance_childof_collection_in_globals(self)?;
+    for pk in self.primarykeys.iter_mut() {
+      pk.visit(visitor)?;
+    }
+    for elem in self.elems.iter_mut() {
+      elem.visit(visitor)?;
+    }
+    Ok(())
+  }
 }
 
 impl QuickXmlReadWrite for Instance {

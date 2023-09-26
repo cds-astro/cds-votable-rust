@@ -13,7 +13,7 @@ use quick_xml::{
   Reader, Writer,
 };
 
-use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
+use crate::{error::VOTableError, is_empty, QuickXmlReadWrite, mivot::VodmlVisitor};
 
 pub mod collection;
 use collection::Collection;
@@ -35,6 +35,13 @@ impl GlobalsElem {
       GlobalsElem::Collection(elem) => elem.write(writer, &()),
     }
   }
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    match self {
+      GlobalsElem::Instance(elem) => elem.visit(visitor),
+      GlobalsElem::Collection(elem) => elem.visit(visitor),
+    }
+  }
 }
 
 /// Structure storing the content of the `GLOABLS` tag.
@@ -53,6 +60,14 @@ impl Globals {
 
   impl_builder_push_elem!(Instance, GlobalsElem);
   impl_builder_push_elem!(Collection, GlobalsElem);
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_globals(self)?;
+    for elem in self.elems.iter_mut() {
+      elem.visit(visitor)?;
+    }
+    Ok(())
+  }
 }
 
 impl_quickrw_not_e_no_a!(

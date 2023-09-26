@@ -10,7 +10,7 @@ use quick_xml::{
   Reader, Writer,
 };
 
-use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
+use crate::{error::VOTableError, is_empty, QuickXmlReadWrite, mivot::VodmlVisitor};
 
 pub mod r#where;
 use r#where::Where;
@@ -70,6 +70,14 @@ impl Join {
 
   pub fn push_where_by_ref(&mut self, r#where: Where) {
     self.wheres.push(r#where);
+  }
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_join(self)?;
+    for w in self.wheres.iter_mut() {
+      w.visit(visitor)?;
+    } 
+    Ok(())
   }
 }
 

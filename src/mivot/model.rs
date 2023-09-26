@@ -4,7 +4,7 @@ use bstringify::bstringify;
 use paste::paste;
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
-use crate::{error::VOTableError, mivot::value_checker, QuickXmlReadWrite};
+use crate::{error::VOTableError, mivot::{VodmlVisitor, value_checker}, QuickXmlReadWrite};
 
 /// Structure storing the content of the `MODEL` tag.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -19,6 +19,10 @@ impl Model {
   impl_new!([name], [url]);
   impl_empty_new!([name], [url]);
   impl_builder_opt_string_attr!(url);
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_model(self)
+  }
 }
 impl_quickrw_e!(
   [name],  // MANDATORY ATTRIBUTES

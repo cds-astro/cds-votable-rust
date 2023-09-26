@@ -7,7 +7,7 @@ use paste::paste;
 
 use quick_xml::{events::attributes::Attributes, ElementWriter, Reader, Writer};
 
-use crate::{error::VOTableError, QuickXmlReadWrite};
+use crate::{error::VOTableError, QuickXmlReadWrite, mivot::VodmlVisitor};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
@@ -68,6 +68,7 @@ impl RefOrValueOrBoth {
         .with_attribute(("value", value.as_str())),
     }
   }
+  
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -135,6 +136,10 @@ impl AttributeChildOfInstance {
 
   impl_builder_opt_attr!(arrayindex, u32);
   impl_builder_opt_string_attr!(unit);
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_attribute_childof_instance(self)
+  }
 }
 impl QuickXmlReadWrite for AttributeChildOfInstance {
   const TAG: &'static str = "ATTRIBUTE";
@@ -270,6 +275,10 @@ impl AttributeChildOfCollection {
 
   impl_builder_opt_attr!(arrayindex, u32);
   impl_builder_opt_string_attr!(unit);
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_attribute_childof_collection(self)
+  }
 }
 impl QuickXmlReadWrite for AttributeChildOfCollection {
   const TAG: &'static str = "ATTRIBUTE";

@@ -10,8 +10,8 @@ use paste::paste;
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
 use crate::{
-  error::VOTableError, mivot::globals::instance::primary_key::PrimaryKeyStatic,
-  mivot::value_checker, QuickXmlReadWrite,
+  error::VOTableError, mivot::{value_checker, VodmlVisitor, globals::instance::primary_key::PrimaryKeyStatic},
+  QuickXmlReadWrite,
 };
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -19,6 +19,15 @@ use crate::{
 pub enum PrimaryKey {
   Static(PrimaryKeyStatic),
   Dynamic(PrimaryKeyDyn),
+}
+
+impl PrimaryKey {
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    match self {
+      PrimaryKey::Static(pk) => pk.visit(visitor),
+      PrimaryKey::Dynamic(pk) => pk.visit(visitor),
+    }
+  }
 }
 
 impl QuickXmlReadWrite for PrimaryKey {
@@ -110,6 +119,10 @@ pub struct PrimaryKeyDyn {
 impl PrimaryKeyDyn {
   impl_new!([dmtype, ref_], []);
   impl_empty_new!([dmtype, ref_], []);
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_primarykey_dynamic(self)
+  }
 }
 impl_quickrw_e!(
   [dmtype, "dmtype", ref_, "ref"], // MANDATORY ATTRIBUTES

@@ -8,7 +8,7 @@ use paste::paste;
 
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
-use crate::{error::VOTableError, mivot::value_checker, QuickXmlReadWrite};
+use crate::{error::VOTableError, mivot::{value_checker, VodmlVisitor}, QuickXmlReadWrite};
 
 /// The `WHERE` when it is a **child of** `TEMPLATES`.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -19,6 +19,10 @@ pub struct Where {
 impl Where {
   impl_new!([primary_key, value], []);
   impl_empty_new!([primary_key, value], []);
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_where_childof_templates(self)
+  }
 }
 impl_quickrw_e!(
   [primary_key, "primarykey", value, "value"],

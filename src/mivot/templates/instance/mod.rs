@@ -14,7 +14,7 @@ use quick_xml::{
 };
 
 use crate::{
-  error::VOTableError, is_empty, mivot::attribute::AttributeChildOfInstance as Attribute,
+  error::VOTableError, is_empty, mivot::{VodmlVisitor, attribute::AttributeChildOfInstance as Attribute},
   QuickXmlReadWrite,
 };
 
@@ -47,6 +47,15 @@ impl InstanceElem {
       InstanceElem::Collection(elem) => elem.write(writer, &()),
     }
   }
+  
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    match self {
+      InstanceElem::Attribute(elem) => elem.visit(visitor),
+      InstanceElem::Instance(elem) => elem.visit(visitor),
+      InstanceElem::Reference(elem) => elem.visit(visitor),
+      InstanceElem::Collection(elem) => elem.visit(visitor),
+    }
+  }
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -71,6 +80,17 @@ impl Instance {
   impl_builder_push_elem!(Instance, InstanceElem, InstanceChildOfInstance);
   impl_builder_push_elem!(Reference, InstanceElem);
   impl_builder_push_elem!(Collection, InstanceElem);
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_instance_childof_templates(self)?;
+    for pk in self.primarykeys.iter_mut() {
+      pk.visit(visitor)?;
+    }
+    for elem in self.elems.iter_mut() {
+      elem.visit(visitor)?;
+    }
+    Ok(())
+  }
 }
 
 impl QuickXmlReadWrite for Instance {

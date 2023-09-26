@@ -11,7 +11,7 @@ use quick_xml::{
 };
 
 use crate::{
-  error::VOTableError, is_empty, mivot::globals::instance::reference::Reference as ReferenceStatic,
+  error::VOTableError, is_empty, mivot::{VodmlVisitor, globals::instance::reference::Reference as ReferenceStatic},
   QuickXmlReadWrite,
 };
 
@@ -23,6 +23,15 @@ use foreign_key::ForeignKey;
 pub enum Reference {
   Static(ReferenceStatic),
   Dynamic(ReferenceDyn),
+}
+
+impl Reference {
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    match self {
+      Reference::Static(r) => r.visit(visitor),
+      Reference::Dynamic(r) => r.visit(visitor),
+    }
+  }
 }
 
 impl QuickXmlReadWrite for Reference {
@@ -117,6 +126,14 @@ pub struct ReferenceDyn {
 impl ReferenceDyn {
   impl_new!([dmrole, sourceref], [], [foreignkeys]);
   impl_builder_push!(ForeignKey);
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_reference_dynamic_childof_instance_in_templates(self)?;
+    for fk in self.foreignkeys.iter_mut() {
+      fk.visit(visitor)?;
+    }
+    Ok(())
+  }
 }
 
 impl QuickXmlReadWrite for ReferenceDyn {

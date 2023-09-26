@@ -16,7 +16,7 @@ use quick_xml::{
 use crate::{
   error::VOTableError,
   is_empty,
-  mivot::{
+  mivot::{ VodmlVisitor,
     attribute::AttributeChildOfCollection as Attribute, join::Join, templates::instance::Instance,
   },
   QuickXmlReadWrite,
@@ -37,6 +37,7 @@ pub struct Collection {
   pub dmid: Option<String>,
   pub elems: CollectionElems,
 }
+
 impl Collection {
   pub fn from_attribute<S: Into<String>>(
     dmrole: S,
@@ -142,6 +143,11 @@ impl Collection {
   }
 
   impl_builder_opt_string_attr!(dmid);
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_collection_childof_instance_in_templates(self)?;
+    self.elems.visit(visitor)
+  }
 }
 
 pub(crate) fn get_dmrole_opt_dmid_from_atttributes(

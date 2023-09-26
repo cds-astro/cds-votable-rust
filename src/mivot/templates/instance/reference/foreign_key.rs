@@ -4,7 +4,7 @@ use bstringify::bstringify;
 use paste::paste;
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
-use crate::{error::VOTableError, mivot::value_checker, QuickXmlReadWrite};
+use crate::{error::VOTableError, mivot::{value_checker, VodmlVisitor}, QuickXmlReadWrite};
 
 /// Only used in `REFERENCE` in `TEMPLATE`.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -17,6 +17,10 @@ pub struct ForeignKey {
 impl ForeignKey {
   impl_new!([ref_], []);
   impl_empty_new!([ref_], []);
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_foreign_key(self)
+  }
 }
 
 impl_quickrw_e!(

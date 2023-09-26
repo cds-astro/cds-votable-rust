@@ -8,7 +8,7 @@ use paste::paste;
 
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
-use crate::{error::VOTableError, mivot::value_checker, QuickXmlReadWrite};
+use crate::{error::VOTableError, mivot::{value_checker, VodmlVisitor}, QuickXmlReadWrite};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 /// The `WHERE` when it is a **child of** `JOIN`.
@@ -20,6 +20,10 @@ pub struct Where {
 impl Where {
   impl_new!([primary_key, foreign_key], []);
   impl_empty_new!([primary_key, foreign_key], []);
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_where_childof_join(self)
+  }
 }
 
 impl_quickrw_e!(

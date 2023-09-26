@@ -7,7 +7,7 @@ use quick_xml::{
   Reader, Writer,
 };
 
-use crate::{error::VOTableError, QuickXmlReadWrite};
+use crate::{error::VOTableError, QuickXmlReadWrite, mivot::VodmlVisitor};
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Status {
@@ -58,6 +58,10 @@ impl Report {
   }
 
   impl_builder_opt_string_attr!(content);
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_report(self)
+  }
 }
 
 impl QuickXmlReadWrite for Report {

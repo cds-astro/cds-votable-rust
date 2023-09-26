@@ -11,7 +11,7 @@ use paste::paste;
 
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
-use crate::{error::VOTableError, mivot::value_checker, QuickXmlReadWrite};
+use crate::{error::VOTableError, mivot::{value_checker, VodmlVisitor}, QuickXmlReadWrite};
 
 /// Static `REFERENCE` **child of** `INSTANCE` in `GLOBALS`.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -25,6 +25,11 @@ pub struct Reference {
 impl Reference {
   impl_new!([dmrole, dmref], []);
   impl_empty_new!([dmrole, dmref], []);
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_reference_static_childof_instance(self)
+  }
+  
 }
 impl_quickrw_e! {
   [dmrole, dmref],

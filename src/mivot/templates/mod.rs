@@ -11,7 +11,7 @@ use quick_xml::{
   Reader, Writer,
 };
 
-use crate::{error::VOTableError, is_empty, mivot::value_checker, QuickXmlReadWrite};
+use crate::{error::VOTableError, is_empty, mivot::{value_checker, VodmlVisitor}, QuickXmlReadWrite};
 
 pub mod instance;
 use instance::Instance;
@@ -45,6 +45,17 @@ impl Templates {
   pub fn push_instance(mut self, instance: Instance) -> Self {
     self.instances.push(instance);
     self
+  }
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_templates(self)?;
+    for w in self.wheres.iter_mut() {
+      w.visit(visitor)?;
+    }
+    for elem in self.instances.iter_mut() {
+      elem.visit(visitor)?;
+    }
+    Ok(())
   }
 }
 impl_quickrw_not_e!(

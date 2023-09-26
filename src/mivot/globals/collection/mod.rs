@@ -11,7 +11,7 @@ use quick_xml::{
   Reader, Writer,
 };
 
-use crate::{error::VOTableError, is_empty, mivot::join::Join, QuickXmlReadWrite};
+use crate::{error::VOTableError, is_empty, mivot::{VodmlVisitor, join::Join}, QuickXmlReadWrite};
 
 pub mod reference;
 use reference::Reference;
@@ -31,6 +31,13 @@ impl InstanceOrRef {
     match self {
       InstanceOrRef::Instance(elem) => elem.write(writer, &()),
       InstanceOrRef::Reference(elem) => elem.write(writer, &()),
+    }
+  }
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    match self {
+      InstanceOrRef::Instance(elem) => elem.visit(visitor),
+      InstanceOrRef::Reference(elem) => elem.visit(visitor),
     }
   }
 }
@@ -53,6 +60,17 @@ impl CollectionElems {
       }
       CollectionElems::Join(elem) => elem.write(writer, &()),
     }
+  }
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    match self {
+      CollectionElems::InstanceOrRef(elems) =>
+        for elem in elems.iter_mut() {
+          elem.visit(visitor)?;
+        },
+      CollectionElems::Join(join) => join.visit(visitor)?,
+    };
+    Ok(())
   }
 }
 
@@ -119,6 +137,11 @@ impl Collection {
         elems: CollectionElems::Join(join),
       })
     }
+  }
+
+  pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_collection_childof_globals(self)?;
+    self.elems.visit(visitor)
   }
 }
 
