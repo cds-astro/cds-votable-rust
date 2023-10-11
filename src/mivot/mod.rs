@@ -58,10 +58,7 @@ pub trait VodmlVisitor {
   fn visit_globals(&mut self, globals: &mut Globals) -> Result<(), Self::E>;
   
   fn visit_templates(&mut self, templates: &mut Templates) -> Result<(), Self::E>;
-
-  fn visit_attribute_childof_instance(&mut self, attr: &mut AttributeChildOfInstance) -> Result<(), Self::E>;
-  fn visit_attribute_childof_collection(&mut self, attr: &mut AttributeChildOfCollection) -> Result<(), Self::E>;
-
+  
   // Globals
   fn visit_instance_childof_globals(&mut self, instance: &mut globals::instance::Instance) -> Result<(), Self::E>;
   fn visit_instance_childof_instance_in_globals(&mut self, instance: &mut globals::instance::instance::Instance) -> Result<(), Self::E>;
@@ -80,6 +77,11 @@ pub trait VodmlVisitor {
 
   fn visit_reference_dynamic_childof_instance_in_templates(&mut self, instance: &mut templates::instance::reference::ReferenceDyn) -> Result<(), Self::E>;
   fn visit_reference_dynamic_childof_collection_in_templates(&mut self, instance: &mut templates::instance::collection::reference::ReferenceDyn) -> Result<(), Self::E>;
+  
+  // Common 
+
+  fn visit_attribute_childof_instance(&mut self, attr: &mut AttributeChildOfInstance) -> Result<(), Self::E>;
+  fn visit_attribute_childof_collection(&mut self, attr: &mut AttributeChildOfCollection) -> Result<(), Self::E>;
   
   /// Either in globals or in templates
   fn visit_reference_static_childof_instance(&mut self, reference: &mut globals::instance::reference::Reference) -> Result<(), Self::E>;

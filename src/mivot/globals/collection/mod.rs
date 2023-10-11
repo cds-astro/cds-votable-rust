@@ -11,7 +11,12 @@ use quick_xml::{
   Reader, Writer,
 };
 
-use crate::{error::VOTableError, is_empty, mivot::{VodmlVisitor, join::Join}, QuickXmlReadWrite};
+use crate::{
+  error::VOTableError,
+  is_empty,
+  mivot::{join::Join, VodmlVisitor},
+  QuickXmlReadWrite,
+};
 
 pub mod reference;
 use reference::Reference;
@@ -44,7 +49,7 @@ impl InstanceOrRef {
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type", content = "content")]
-enum CollectionElems {
+pub enum CollectionElems {
   InstanceOrRef(Vec<InstanceOrRef>),
   Join(Join),
 }
@@ -64,10 +69,11 @@ impl CollectionElems {
 
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
     match self {
-      CollectionElems::InstanceOrRef(elems) =>
+      CollectionElems::InstanceOrRef(elems) => {
         for elem in elems.iter_mut() {
           elem.visit(visitor)?;
-        },
+        }
+      }
       CollectionElems::Join(join) => join.visit(visitor)?,
     };
     Ok(())
@@ -77,8 +83,8 @@ impl CollectionElems {
 /// `COLLECTION` is a **child of** `GLOBALS` (no `dmrole`, like `COLLECTION` **child of** `COLLECTION`).
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Collection {
-  dmid: String,
-  elems: CollectionElems,
+  pub dmid: String,
+  pub elems: CollectionElems,
 }
 impl Collection {
   pub fn from_instances<S: Into<String>>(

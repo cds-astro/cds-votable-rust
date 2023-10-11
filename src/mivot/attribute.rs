@@ -7,7 +7,7 @@ use paste::paste;
 
 use quick_xml::{events::attributes::Attributes, ElementWriter, Reader, Writer};
 
-use crate::{error::VOTableError, QuickXmlReadWrite, mivot::VodmlVisitor};
+use crate::{error::VOTableError, mivot::VodmlVisitor, QuickXmlReadWrite};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
@@ -68,7 +68,6 @@ impl RefOrValueOrBoth {
         .with_attribute(("value", value.as_str())),
     }
   }
-  
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
