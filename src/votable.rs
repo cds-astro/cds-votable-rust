@@ -667,6 +667,15 @@ impl<C: TableDataContent> VOTable<C> {
     Ok(())
   }
 
+  pub fn write_to_data_beginning_no_xml_writer<W: Write>(
+    &mut self,
+    writer: W,
+    context: &(),
+  ) -> Result<bool, VOTableError> {
+    let mut writer = quick_xml::Writer::new(writer);
+    self.write_to_data_beginning(&mut writer, context)
+  }
+
   /// Write the VOTable from the beggining till the first encountered `DATA` tag.
   /// Returns `true` if a table has been found, else the full content of the VOTable is written.
   pub fn write_to_data_beginning<W: Write>(
@@ -704,6 +713,15 @@ impl<C: TableDataContent> VOTable<C> {
       .write_event(Event::End(tag.to_end()))
       .map_err(VOTableError::Write)
       .map(|()| false)
+  }
+
+  pub fn write_from_data_end_no_xml_writer<W: Write>(
+    &mut self,
+    writer: W,
+    context: &(),
+  ) -> Result<(), VOTableError> {
+    let mut writer = quick_xml::Writer::new(writer);
+    self.write_from_data_end(&mut writer, context)
   }
 
   pub fn write_from_data_end<W: Write>(

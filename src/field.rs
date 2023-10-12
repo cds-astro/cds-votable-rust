@@ -246,7 +246,7 @@ impl<'de> Deserialize<'de> for Precision {
 }
 
 /// From the VOTable [official document](https://www.ivoa.net/documents/VOTable/20191021/REC-VOTable-1.4-20191021.html#sec:values),
-/// the 'null' attribute in VALUES is rserved to integer types:
+/// the 'null' attribute in VALUES is reserved to integer types:
 /// "This mechanism is only intended for use with integer types; it should not be used for floating point types, which can use NaN instead."
 /// "This mechanism for representing null values is required for integer columns in the BINARY serialization [but not in BINARY2]"
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
