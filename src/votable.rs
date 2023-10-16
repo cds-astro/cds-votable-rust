@@ -7,12 +7,11 @@ use std::{
 };
 
 use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  Reader, Writer,
+  events::{attributes::Attributes, BytesDecl},
+  Reader,
 };
 
 use paste::paste;
-use quick_xml::events::BytesDecl;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -24,6 +23,24 @@ use super::{
   info::Info, param::Param, resource::Resource, timesys::TimeSys, QuickXmlReadWrite,
   TableDataContent,
 };
+
+// Re-export the quick_xml elements
+pub use quick_xml::events::BytesEnd;
+pub use quick_xml::events::BytesStart;
+pub use quick_xml::events::Event;
+pub use quick_xml::Writer;
+
+pub fn new_xml_writer<W: Write>(
+  writer: W,
+  indent_char: Option<u8>,
+  indent_size: Option<usize>,
+) -> Writer<W> {
+  Writer::new_with_indent(
+    writer,
+    indent_char.unwrap_or(b' '),
+    indent_size.unwrap_or(4),
+  )
+}
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub enum Version {
@@ -667,16 +684,16 @@ impl<C: TableDataContent> VOTable<C> {
     Ok(())
   }
 
-  pub fn write_to_data_beginning_no_xml_writer<W: Write>(
+  /*pub fn write_to_data_beginning_no_xml_writer<W: Write>(
     &mut self,
     writer: W,
     context: &(),
   ) -> Result<bool, VOTableError> {
-    let mut writer = quick_xml::Writer::new(writer);
+    let mut writer = quick_xml::Writer::new_with_indent(writer, b' ', 4);
     self.write_to_data_beginning(&mut writer, context)
-  }
+  }*/
 
-  /// Write the VOTable from the beggining till the first encountered `DATA` tag.
+  /// Write the VOTable from the beginning till the first encountered `DATA` tag.
   /// Returns `true` if a table has been found, else the full content of the VOTable is written.
   pub fn write_to_data_beginning<W: Write>(
     &mut self,
@@ -715,14 +732,14 @@ impl<C: TableDataContent> VOTable<C> {
       .map(|()| false)
   }
 
-  pub fn write_from_data_end_no_xml_writer<W: Write>(
+  /*pub fn write_from_data_end_no_xml_writer<W: Write>(
     &mut self,
     writer: W,
     context: &(),
   ) -> Result<(), VOTableError> {
     let mut writer = quick_xml::Writer::new(writer);
     self.write_from_data_end(&mut writer, context)
-  }
+  }*/
 
   pub fn write_from_data_end<W: Write>(
     &mut self,
