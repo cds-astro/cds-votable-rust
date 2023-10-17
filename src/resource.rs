@@ -673,27 +673,26 @@ impl<C: TableDataContent> Resource<C> {
     let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     let mut iter = self.sub_elems.iter_mut();
     let mut table_found = false;
-    while !table_found {
-      if let Some(se) = iter.next() {
-        if match &mut se.resource_or_table {
-          ResourceOrTable::Resource(resource) => {
-            resource.write_from_data_end(writer, &(), start_after_data)
-          }
-          ResourceOrTable::Table(table) => table
-            .write_from_data_end(writer, &(), start_after_data)
-            .map(|()| true),
-        }? {
-          table_found = true;
-          for info in se.infos.iter_mut() {
-            info.write(writer, context)?;
-          }
+    while let Some(se) = iter.next() {
+      if match &mut se.resource_or_table {
+        ResourceOrTable::Resource(resource) => {
+          resource.write_from_data_end(writer, &(), start_after_data)
         }
+        ResourceOrTable::Table(table) => table
+          .write_from_data_end(writer, &(), start_after_data)
+          .map(|()| true),
+      }? {
+        table_found = true;
+        for info in se.infos.iter_mut() {
+          info.write(writer, context)?;
+        }
+        break;
       }
     }
-    for se in iter {
-      se.write(writer)?;
-    }
     if table_found {
+      for se in iter {
+        se.write(writer)?;
+      }
       // Close tag
       writer
         .write_event(Event::End(tag.to_end()))
