@@ -614,10 +614,14 @@ impl<C: TableDataContent> Resource<C> {
   }
 
   /// Returns `true` if a table has been found.
+  /// We may want to stop just before writting the  `<DATA>` tag in case:
+  /// * the table contains only metadata and no data (e.g. streamming mode)
+  /// * we want to convert from TABLEDATA to BINARY
   pub(crate) fn write_to_data_beginning<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &(),
+    stop_before_data: bool,
   ) -> Result<bool, VOTableError> {
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     // Write tag + attributes
@@ -639,12 +643,14 @@ impl<C: TableDataContent> Resource<C> {
       }
       match &mut se.resource_or_table {
         ResourceOrTable::Resource(resource) => {
-          if resource.write_to_data_beginning(writer, &())? {
+          if resource.write_to_data_beginning(writer, &(), stop_before_data)? {
             return Ok(true);
           }
         }
         ResourceOrTable::Table(table) => {
-          return table.write_to_data_beginning(writer, &()).map(|()| true)
+          return table
+            .write_to_data_beginning(writer, &(), stop_before_data)
+            .map(|()| true)
         }
       }
       for info in se.infos.iter_mut() {
@@ -662,6 +668,7 @@ impl<C: TableDataContent> Resource<C> {
     &mut self,
     writer: &mut Writer<W>,
     context: &(),
+    start_after_data: bool,
   ) -> Result<bool, VOTableError> {
     let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     let mut iter = self.sub_elems.iter_mut();
@@ -669,8 +676,12 @@ impl<C: TableDataContent> Resource<C> {
     while !table_found {
       if let Some(se) = iter.next() {
         if match &mut se.resource_or_table {
-          ResourceOrTable::Resource(resource) => resource.write_from_data_end(writer, &()),
-          ResourceOrTable::Table(table) => table.write_from_data_end(writer, &()).map(|()| true),
+          ResourceOrTable::Resource(resource) => {
+            resource.write_from_data_end(writer, &(), start_after_data)
+          }
+          ResourceOrTable::Table(table) => table
+            .write_from_data_end(writer, &(), start_after_data)
+            .map(|()| true),
         }? {
           table_found = true;
           for info in se.infos.iter_mut() {

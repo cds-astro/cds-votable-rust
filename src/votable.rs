@@ -684,21 +684,15 @@ impl<C: TableDataContent> VOTable<C> {
     Ok(())
   }
 
-  /*pub fn write_to_data_beginning_no_xml_writer<W: Write>(
-    &mut self,
-    writer: W,
-    context: &(),
-  ) -> Result<bool, VOTableError> {
-    let mut writer = quick_xml::Writer::new_with_indent(writer, b' ', 4);
-    self.write_to_data_beginning(&mut writer, context)
-  }*/
-
-  /// Write the VOTable from the beginning till the first encountered `DATA` tag.
   /// Returns `true` if a table has been found, else the full content of the VOTable is written.
+  /// Write the VOTable from the beginning till:
+  /// * either the first encountered `DATA` tag (without writing the `<DATA>` tag).
+  /// * or the end of the first encountered `TABLE`(without writing then `</TABLE` tag)
   pub fn write_to_data_beginning<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &(),
+    stop_before_data: bool,
   ) -> Result<bool, VOTableError> {
     writer
       .write(
@@ -719,7 +713,7 @@ impl<C: TableDataContent> VOTable<C> {
     write_elem!(self, description, writer, context);
     write_elem_vec_no_context!(self, elems, writer);
     for resource in self.resources.iter_mut() {
-      if resource.write_to_data_beginning(writer, &())? {
+      if resource.write_to_data_beginning(writer, &(), stop_before_data)? {
         return Ok(true);
       }
     }
@@ -732,26 +726,18 @@ impl<C: TableDataContent> VOTable<C> {
       .map(|()| false)
   }
 
-  /*pub fn write_from_data_end_no_xml_writer<W: Write>(
-    &mut self,
-    writer: W,
-    context: &(),
-  ) -> Result<(), VOTableError> {
-    let mut writer = quick_xml::Writer::new(writer);
-    self.write_from_data_end(&mut writer, context)
-  }*/
-
   pub fn write_from_data_end<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &(),
+    start_after_data: bool,
   ) -> Result<(), VOTableError> {
     let mut write = false;
     for resource in self.resources.iter_mut() {
       if write {
         resource.write(writer, context)?;
       } else {
-        write = resource.write_from_data_end(writer, &())?;
+        write = resource.write_from_data_end(writer, &(), start_after_data)?;
       }
     }
     if write {

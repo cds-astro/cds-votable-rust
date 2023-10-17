@@ -183,10 +183,14 @@ impl<C: TableDataContent> Table<C> {
     }
   }
 
+  /// We may want to stop just before writting the  `<DATA>` tag in case:
+  /// * the table contains only metadata and no data (e.g. streamming mode)
+  /// * we want to convert from TABLEDATA to BINARY
   pub(crate) fn write_to_data_beginning<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &(),
+    stop_before_data: bool,
   ) -> Result<(), VOTableError> {
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     // Write tag + attributes
@@ -204,21 +208,27 @@ impl<C: TableDataContent> Table<C> {
     write_elem!(self, description, writer, context);
     write_elem_vec_no_context!(self, elems, writer);
     write_elem_vec!(self, links, writer, context);
-    if let Some(elem) = &mut self.data {
-      elem.write_to_data_beginning(writer)?;
+    if !stop_before_data {
+      if let Some(elem) = &mut self.data {
+        elem.write_to_data_beginning(writer)?;
+      }
     }
     Ok(())
   }
 
+  /// In case we used `stop_before_data` in `write_to_data_beginning`.
   pub(crate) fn write_from_data_end<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &(),
+    start_after_data: bool,
   ) -> Result<(), VOTableError> {
     let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
 
-    if let Some(elem) = &mut self.data {
-      elem.write_from_data_end(writer)?;
+    if !start_after_data {
+      if let Some(elem) = &mut self.data {
+        elem.write_from_data_end(writer)?;
+      }
     }
 
     write_elem_vec!(self, infos, writer, context);
