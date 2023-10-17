@@ -755,7 +755,6 @@ impl<C: TableDataContent> VOTable<C> {
       }
     }
     if write {
-      write_elem_vec!(self, resources, writer, context);
       write_elem_vec!(self, post_infos, writer, context);
       // Close tag
       let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
