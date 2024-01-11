@@ -21,7 +21,7 @@ bench = false
 test = false
 
 [dependencies]
-votable = { package = "votable", path = "../.." }
+votable = { package = "votable", path = "../..", features = ["mivot"] }
 clap = { version = "4.0", features = ["derive"] }
 
 [package.metadata.deb]

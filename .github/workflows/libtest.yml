@@ -12,5 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Run lib tests
-      run: cargo test --workspace --verbose -- --nocapture
+      run: cargo test --workspace --verbose -- --nocapture 
+    - name: Run lib tests with MIVOT feature
+      run: cargo test --all-features --workspace --verbose -- --nocapture
 

@@ -487,6 +487,7 @@ macro_rules! from_event_start_desc_by_ref {
   };
 }
 
+#[cfg(feature = "mivot")]
 macro_rules! from_event_start_vodml_by_ref {
   ($self:ident, $elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {{
     let mut vodml = $elem::from_attributes($e.attributes())?;

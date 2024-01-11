@@ -1202,6 +1202,7 @@ mod tests {
     }
   }
 
+  #[cfg(feature = "mivot")]
   #[test]
   fn test_votable_read_mivot_from_file() {
     let votable_res_res =

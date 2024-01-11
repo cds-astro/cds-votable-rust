@@ -35,6 +35,7 @@ pub mod group;
 pub mod impls;
 pub mod info;
 pub mod link;
+#[cfg(feature = "mivot")]
 pub mod mivot;
 pub mod param;
 pub mod paramref;

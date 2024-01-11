@@ -54,6 +54,12 @@ ucs2 = "0.3"
 bitvec = { version = "1", features = ["std", "alloc", "serde"] }
 bstringify = "0.1"
 
+[features]
+default = []
+
+# Provides MIVOT parsing support 
+mivot = []
+
 # See opti here: https://github.com/johnthagen/min-sized-rust
 [profile.release]
 # strip = true  # Automatically strip symbols from the binary (nightly feature :o/ ).

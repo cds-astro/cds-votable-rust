@@ -18,10 +18,11 @@ use crate::{
   impls::mem::VoidTableDataContent,
 };
 
+#[cfg(feature = "mivot")]
+use super::mivot::vodml::Vodml;
 use super::{
   coosys::CooSys, desc::Description, error::VOTableError, group::Group, info::Info, is_empty,
-  link::Link, mivot::vodml::Vodml, param::Param, table::Table, timesys::TimeSys, QuickXmlReadWrite,
-  TableDataContent,
+  link::Link, param::Param, table::Table, timesys::TimeSys, QuickXmlReadWrite, TableDataContent,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -196,6 +197,7 @@ pub struct Resource<C: TableDataContent> {
   ///    <!-- Suggested Doug Tody, to include new RESOURCE types -->
   ///    <xs:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>`
   /// ```
+  #[cfg(feature = "mivot")]
   #[serde(skip_serializing_if = "Option::is_none")]
   pub vodml: Option<Vodml>,
 }
@@ -229,6 +231,7 @@ impl<C: TableDataContent> Resource<C> {
     self.sub_elems.push(sub_elem);
   }
   // - extra optional element
+  #[cfg(feature = "mivot")]
   impl_builder_opt_attr!(vodml, Vodml);
 
   /// Transforms the BINARY or BINARY2 tag in this RESOURCE into TABLEDATA.
@@ -432,6 +435,7 @@ impl<C: TableDataContent> Resource<C> {
               e
             ))),
           Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
+          #[cfg(feature = "mivot")]
           Vodml::TAG_BYTES => {
             from_event_start_vodml_by_ref!(self, Vodml, reader, reader_buff, e)
           }
@@ -546,6 +550,7 @@ impl<C: TableDataContent> Resource<C> {
               e
             ))),
           Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
+          #[cfg(feature = "mivot")]
           Vodml::TAG_BYTES => {
             from_event_start_vodml_by_ref!(self, Vodml, reader, reader_buff, e)
           }
@@ -790,6 +795,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
               .sub_elems
               .push(ResourceSubElem::from_resource(resource).set_links(mem::take(&mut links)));
           }
+          #[cfg(feature = "mivot")]
           Vodml::TAG_BYTES => from_event_start_vodml_by_ref!(self, Vodml, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -861,6 +867,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
     write_elem_vec!(self, infos, writer, context);
     write_elem_vec_no_context!(self, elems, writer);
     write_elem_vec_no_context!(self, sub_elems, writer);
+    #[cfg(feature = "mivot")]
     write_elem_vec!(self, vodml, writer, context);
     // Close tag
     writer
