@@ -11,10 +11,14 @@ use paste::paste;
 
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
-use crate::{error::VOTableError, mivot::{value_checker, VodmlVisitor}, QuickXmlReadWrite};
+use crate::{
+  error::VOTableError,
+  mivot::{value_checker, VodmlVisitor},
+  QuickXmlReadWrite,
+};
 
 /// Static `REFERENCE` **child of** `INSTANCE` in `GLOBALS`.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Reference {
   /// name of the referenced `INSTANCE` or `COLLECTION` in the data model.
   pub dmrole: String,
@@ -29,7 +33,6 @@ impl Reference {
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
     visitor.visit_reference_static_childof_instance(self)
   }
-  
 }
 impl_quickrw_e! {
   [dmrole, dmref],

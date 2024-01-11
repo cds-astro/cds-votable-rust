@@ -8,9 +8,13 @@ use paste::paste;
 
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
-use crate::{error::VOTableError, mivot::{value_checker, VodmlVisitor}, QuickXmlReadWrite};
+use crate::{
+  error::VOTableError,
+  mivot::{value_checker, VodmlVisitor},
+  QuickXmlReadWrite,
+};
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 /// The `WHERE` when it is a **child of** `JOIN`.
 pub struct Where {
   pub foreign_key: String,

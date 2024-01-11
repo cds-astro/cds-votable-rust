@@ -13,7 +13,7 @@ use quick_xml::{
   Reader, Writer,
 };
 
-use crate::{error::VOTableError, is_empty, QuickXmlReadWrite, mivot::VodmlVisitor};
+use crate::{error::VOTableError, is_empty, mivot::VodmlVisitor, QuickXmlReadWrite};
 
 pub mod collection;
 use collection::Collection;
@@ -22,7 +22,7 @@ pub mod instance;
 use instance::Instance;
 
 /// The two sub-elements `GLOBALS` may contains (in any order).
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum GlobalsElem {
   Instance(Instance),
@@ -45,7 +45,7 @@ impl GlobalsElem {
 }
 
 /// Structure storing the content of the `GLOABLS` tag.
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct Globals {
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub elems: Vec<GlobalsElem>,

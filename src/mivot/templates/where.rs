@@ -8,10 +8,14 @@ use paste::paste;
 
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
-use crate::{error::VOTableError, mivot::{value_checker, VodmlVisitor}, QuickXmlReadWrite};
+use crate::{
+  error::VOTableError,
+  mivot::{value_checker, VodmlVisitor},
+  QuickXmlReadWrite,
+};
 
 /// The `WHERE` when it is a **child of** `TEMPLATES`.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Where {
   pub primary_key: String,
   pub value: String,

@@ -16,7 +16,7 @@ use super::{
   stream::Stream,
 };
 
-#[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Binary<C: TableDataContent> {
   pub stream: Stream<C>,
 }

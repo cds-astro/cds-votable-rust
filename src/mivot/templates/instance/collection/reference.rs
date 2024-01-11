@@ -15,14 +15,13 @@ use crate::{
   error::VOTableError,
   is_empty,
   mivot::{
-    VodmlVisitor,
     globals::collection::reference::Reference as ReferenceStatic,
-    templates::instance::reference::foreign_key::ForeignKey, value_checker,
+    templates::instance::reference::foreign_key::ForeignKey, value_checker, VodmlVisitor,
   },
   QuickXmlReadWrite,
 };
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum Reference {
   Static(ReferenceStatic),
@@ -31,7 +30,7 @@ pub enum Reference {
 
 impl Reference {
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
-    match self { 
+    match self {
       Reference::Static(r) => r.visit(visitor),
       Reference::Dynamic(r) => r.visit(visitor),
     }
@@ -107,7 +106,7 @@ impl QuickXmlReadWrite for Reference {
   }
 }
 /// Dynamic `REFERENCE` **child of** `COLLECTION` in `TEMPLATES`.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ReferenceDyn {
   /// Reference to the `dmid` of the `COLLECTION` or `TEMPLATES` to be searches.
   pub sourceref: String,
@@ -119,7 +118,6 @@ impl ReferenceDyn {
   impl_empty_new!([sourceref], [], [foreignkeys]);
 
   impl_builder_push!(ForeignKey);
-
 
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
     visitor.visit_reference_dynamic_childof_collection_in_templates(self)?;

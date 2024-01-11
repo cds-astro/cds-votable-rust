@@ -42,7 +42,7 @@ pub fn new_xml_writer<W: Write>(
   )
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Version {
   #[serde(rename = "1.0")]
   V1_0,
@@ -90,7 +90,7 @@ impl From<&Version> for &'static str {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum VOTableElem {
   CooSys(CooSys),
@@ -114,7 +114,7 @@ impl VOTableElem {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct VOTableWrapper<C: TableDataContent> {
   pub votable: VOTable<C>,
 }
@@ -311,7 +311,10 @@ where
   }
 
   pub fn from_toml_bytes(s: &[u8]) -> Result<Self, VOTableError> {
-    toml::from_slice(s).map_err(VOTableError::TomlDe)
+    match str::from_utf8(s) {
+      Ok(s) => toml::from_str(s).map_err(VOTableError::TomlDe),
+      Err(e) => Err(VOTableError::Custom(e.to_string())),
+    }
   }
 
   pub fn from_toml_reader<R: BufRead>(mut reader: R) -> Result<Self, VOTableError> {
@@ -356,7 +359,7 @@ where
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct VOTable<C: TableDataContent> {
   // attributes
   #[serde(rename = "ID", skip_serializing_if = "Option::is_none")]

@@ -4,10 +4,14 @@ use bstringify::bstringify;
 use paste::paste;
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
-use crate::{error::VOTableError, mivot::{VodmlVisitor, value_checker}, QuickXmlReadWrite};
+use crate::{
+  error::VOTableError,
+  mivot::{value_checker, VodmlVisitor},
+  QuickXmlReadWrite,
+};
 
 /// Structure storing the content of the `MODEL` tag.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Model {
   ///  Name of the mapped model as declared in the VO-DML/XML model serialization
   pub name: String,

@@ -15,7 +15,7 @@ use super::{
   QuickXmlReadWrite,
 };
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum GroupElem {
   ParamRef(ParamRef),
@@ -33,7 +33,7 @@ impl GroupElem {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Group {
   // attributes
   #[serde(rename = "ID", skip_serializing_if = "Option::is_none")]
@@ -216,7 +216,7 @@ impl QuickXmlReadWrite for Group {
 
 /// The only difference with the Group than can be in a VOTable or in a Resource
 /// is that the TableGroup can contain FieldRef!
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum TableGroupElem {
   FieldRef(FieldRef),
@@ -236,7 +236,7 @@ impl TableGroupElem {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename = "Group")]
 pub struct TableGroup {
   // attributes

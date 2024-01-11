@@ -17,7 +17,7 @@ use crate::{
 };
 use serde;
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Type {
   Locator,
   Other,
@@ -46,7 +46,7 @@ impl fmt::Display for Type {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Actuate {
   OnLoad,
   OnRequest,
@@ -81,7 +81,7 @@ impl fmt::Display for Actuate {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum EncodingType {
   Gzip,
   Base64,
@@ -117,7 +117,7 @@ impl fmt::Display for EncodingType {
 }
 
 // Make 1 Stream for binary, 1 for binary2 and 1 for FTS??
-#[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Stream<C: TableDataContent> {
   #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
   pub type_: Option<Type>, // Locator by default

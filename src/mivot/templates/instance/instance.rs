@@ -14,14 +14,16 @@ use quick_xml::{
 };
 
 use crate::{
-  error::VOTableError, is_empty, mivot::{VodmlVisitor, attribute::AttributeChildOfInstance as Attribute},
+  error::VOTableError,
+  is_empty,
+  mivot::{attribute::AttributeChildOfInstance as Attribute, VodmlVisitor},
   QuickXmlReadWrite,
 };
 
 use super::{collection::Collection, primary_key::PrimaryKey, reference::Reference, InstanceElem};
 
 /// The same as `INSTANCE` **child of** `GLOBALS`, but with having a `dmrole`.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Instance {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub dmid: Option<String>,

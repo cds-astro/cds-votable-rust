@@ -31,6 +31,7 @@ pub mod tabledata;
 
 use self::{binary::Binary, binary2::Binary2, fits::Fits, tabledata::TableData};
 
+#[derive(Clone, Debug, PartialEq)]
 pub enum TableOrBinOrBin2 {
   TableData,
   Binary,
@@ -38,7 +39,7 @@ pub enum TableOrBinOrBin2 {
   Fits(Fits),
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "data_type")]
 pub enum DataElem<C: TableDataContent> {
   // AstroRes ??
@@ -107,7 +108,7 @@ impl<C: TableDataContent> DataElem<C> {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Data<C: TableDataContent> {
   #[serde(flatten)]
   data: DataElem<C>,

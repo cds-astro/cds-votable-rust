@@ -10,11 +10,12 @@ use paste::paste;
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
 use crate::{
-  error::VOTableError, mivot::{value_checker, VodmlVisitor, globals::instance::primary_key::PrimaryKeyStatic},
+  error::VOTableError,
+  mivot::{globals::instance::primary_key::PrimaryKeyStatic, value_checker, VodmlVisitor},
   QuickXmlReadWrite,
 };
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum PrimaryKey {
   Static(PrimaryKeyStatic),
@@ -109,7 +110,7 @@ impl QuickXmlReadWrite for PrimaryKey {
 }
 
 /// `Dynamic` primary key are only possible in `TEMPLATE` since
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PrimaryKeyDyn {
   /// Type of the key.
   pub dmtype: String,

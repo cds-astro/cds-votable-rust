@@ -24,7 +24,7 @@ use super::{
   TableDataContent,
 };
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum ResourceElem {
   CooSys(CooSys),
@@ -44,7 +44,7 @@ impl ResourceElem {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum ResourceOrTable<C: TableDataContent> {
   Resource(Resource<C>),
@@ -59,7 +59,7 @@ impl<C: TableDataContent> ResourceOrTable<C> {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ResourceSubElem<C: TableDataContent> {
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub links: Vec<Link>,
@@ -155,7 +155,7 @@ impl<C: TableDataContent> ResourceSubElem<C> {
   }
 }
 
-#[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Clone, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Resource<C: TableDataContent> {
   // Attributes
   #[serde(rename = "ID", default, skip_serializing_if = "Option::is_none")]

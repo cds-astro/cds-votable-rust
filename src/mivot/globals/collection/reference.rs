@@ -9,10 +9,14 @@ use bstringify::bstringify;
 use paste::paste;
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
-use crate::{error::VOTableError, mivot::{value_checker, VodmlVisitor}, QuickXmlReadWrite};
+use crate::{
+  error::VOTableError,
+  mivot::{value_checker, VodmlVisitor},
+  QuickXmlReadWrite,
+};
 
 /// Static `REFERENCE` **child of** `COLLECTION` in `GLOBALS`.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Reference {
   /// `dmid` of the referenced `INSTANCE` or `COLLECTION`.
   pub dmref: String,

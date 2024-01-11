@@ -25,7 +25,7 @@ use crate::{
   QuickXmlReadWrite,
 };
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum InstanceOrRef {
   Instance(Instance),
@@ -48,7 +48,7 @@ impl InstanceOrRef {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type", content = "content")]
 pub enum CollectionElems {
   Attribute(Vec<Attribute>),
@@ -105,7 +105,7 @@ impl CollectionElems {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Collection {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub dmid: Option<String>,

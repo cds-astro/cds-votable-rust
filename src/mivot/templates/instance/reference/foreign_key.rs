@@ -4,10 +4,14 @@ use bstringify::bstringify;
 use paste::paste;
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
-use crate::{error::VOTableError, mivot::{value_checker, VodmlVisitor}, QuickXmlReadWrite};
+use crate::{
+  error::VOTableError,
+  mivot::{value_checker, VodmlVisitor},
+  QuickXmlReadWrite,
+};
 
 /// Only used in `REFERENCE` in `TEMPLATE`.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ForeignKey {
   /// Identifier of the `FIELD` (in a table of the `VOTable`) that must match the primary key of
   /// the referenced collection.

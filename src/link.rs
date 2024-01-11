@@ -16,10 +16,10 @@ use serde_json::Value;
 
 use super::{error::VOTableError, QuickXmlReadWrite};
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ContentRole {
   Query,
-  Hint,
+  Hints,
   Doc,
   Location,
 }
@@ -30,10 +30,10 @@ impl FromStr for ContentRole {
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     match s {
       "query" => Ok(ContentRole::Query),
-      "hint" => Ok(ContentRole::Hint),
+      "hints" => Ok(ContentRole::Hints),
       "doc" => Ok(ContentRole::Doc),
       "location" => Ok(ContentRole::Location),
-      _ => Err(format!("Unknown content-role variant. Actual: '{}'. Expected: 'query', 'hint', 'doc' or 'location'.", s))
+      _ => Err(format!("Unknown content-role variant. Actual: '{}'. Expected: 'query', 'hints', 'doc' or 'location'.", s))
     }
   }
 }
@@ -42,7 +42,7 @@ impl From<&ContentRole> for &'static str {
   fn from(content_role: &ContentRole) -> Self {
     match content_role {
       ContentRole::Query => "query",
-      ContentRole::Hint => "hint",
+      ContentRole::Hints => "hints",
       ContentRole::Doc => "doc",
       ContentRole::Location => "location",
     }
@@ -55,7 +55,7 @@ impl fmt::Display for ContentRole {
   }
 }
 
-#[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Link {
   #[serde(rename = "ID", skip_serializing_if = "Option::is_none")]
   pub id: Option<String>,

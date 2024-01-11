@@ -21,7 +21,7 @@ use crate::field::ArraySize;
 use crate::impls::visitors::{FixedLengthArrayVisitor, VariableLengthArrayVisitor};
 use visitors::CharVisitor;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct BitVec(BV<u8, Msb0>);
 /*impl Serialize for BitVec {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
@@ -29,8 +29,8 @@ pub struct BitVec(BV<u8, Msb0>);
   }
 }*/
 
-// WARNING: THE ORDER IS IMPORTANT WHEn DESERIALIZING JSON, NOT TO LOOSE SIGNIFICANT DIGITS!!
-#[derive(Debug, serde::Deserialize)]
+// WARNING: THE ORDER IS IMPORTANT WHEN DESERIALIZING JSON, NOT TO LOOSE SIGNIFICANT DIGITS!!
+#[derive(Debug, PartialEq, serde::Deserialize)]
 #[serde(untagged)]
 pub enum VOTableValue {
   Null,
@@ -70,7 +70,10 @@ impl Serialize for VOTableValue {
       // In VOTable, we are supposed to know the value coding for NULL, so we should forbid
       // 'null' values in JSON/YAML/TOML!
       {
-        if std::any::type_name::<S>() == "&mut toml::ser::Serializer" {
+        let ser_name = std::any::type_name::<S>();
+        if ser_name == "&mut toml::ser::Serializer"
+          || ser_name == "toml_edit::ser::value::ValueSerializer"
+        {
           serializer.serialize_str("")
         } else {
           serializer.serialize_none()

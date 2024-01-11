@@ -15,7 +15,7 @@ use serde_json::Value;
 
 use super::{error::VOTableError, QuickXmlReadWrite};
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ParamRef {
   #[serde(rename = "ref")]
   pub ref_: String,

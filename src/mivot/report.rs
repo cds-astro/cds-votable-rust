@@ -7,9 +7,9 @@ use quick_xml::{
   Reader, Writer,
 };
 
-use crate::{error::VOTableError, QuickXmlReadWrite, mivot::VodmlVisitor};
+use crate::{error::VOTableError, mivot::VodmlVisitor, QuickXmlReadWrite};
 
-#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Status {
   OK,
   FAILED,
@@ -40,7 +40,7 @@ impl ToString for Status {
 
 /// Structure storing the content of the `REPORT` tag.
 /// Tells the client whether the annotation process succeeded or not.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Report {
   /// Status of the annotation process.
   pub status: Status,

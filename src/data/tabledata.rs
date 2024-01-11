@@ -12,7 +12,7 @@ use serde;
 
 use crate::{error::VOTableError, table::TableElem, QuickXmlReadWrite, TableDataContent};
 
-#[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct TableData<C: TableDataContent> {
   #[serde(flatten)]
   pub content: C,

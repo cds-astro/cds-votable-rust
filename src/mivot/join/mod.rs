@@ -10,12 +10,12 @@ use quick_xml::{
   Reader, Writer,
 };
 
-use crate::{error::VOTableError, is_empty, QuickXmlReadWrite, mivot::VodmlVisitor};
+use crate::{error::VOTableError, is_empty, mivot::VodmlVisitor, QuickXmlReadWrite};
 
 pub mod r#where;
 use r#where::Where;
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "attr_type")]
 pub enum JoinAttributes {
   DmRef { dmref: String },
@@ -27,7 +27,7 @@ pub enum JoinAttributes {
 /// iteration overs a `TEMPLATES`.
 /// * If at least one `where`, `sourceref` is mandatory because it is a join with another template
 ///   referenced by the sourceref.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Join {
   pub attr: JoinAttributes,
   #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -76,7 +76,7 @@ impl Join {
     visitor.visit_join(self)?;
     for w in self.wheres.iter_mut() {
       w.visit(visitor)?;
-    } 
+    }
     Ok(())
   }
 }

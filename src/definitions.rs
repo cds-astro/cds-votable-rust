@@ -12,7 +12,7 @@ use paste::paste;
 
 use super::{coosys::CooSys, error::VOTableError, param::Param, QuickXmlReadWrite};
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "def_type")]
 pub enum DefinitionsElem {
   CooSys(CooSys),
@@ -30,7 +30,7 @@ impl DefinitionsElem {
 
 /// Deprecated since VOTable 1.1, see
 /// [IVOA doc](https://www.ivoa.net/documents/VOTable/20040811/REC-VOTable-1.1-20040811.html#ToC19)
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Definitions {
   // no attributes
   // sub-elems

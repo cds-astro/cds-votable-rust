@@ -11,14 +11,16 @@ use quick_xml::{
 };
 
 use crate::{
-  error::VOTableError, is_empty, mivot::{VodmlVisitor, globals::instance::reference::Reference as ReferenceStatic},
+  error::VOTableError,
+  is_empty,
+  mivot::{globals::instance::reference::Reference as ReferenceStatic, VodmlVisitor},
   QuickXmlReadWrite,
 };
 
 pub mod foreign_key;
 use foreign_key::ForeignKey;
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum Reference {
   Static(ReferenceStatic),
@@ -114,7 +116,7 @@ impl QuickXmlReadWrite for Reference {
 }
 
 /// Static `REFERENCE` **child of** `INSTANCE` in `TEMPLATES`.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ReferenceDyn {
   /// Name of the referenced `INSTANCE` or `COLLECTION` in the data model.
   pub dmrole: String,

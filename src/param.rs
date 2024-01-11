@@ -20,7 +20,7 @@ use super::{
   QuickXmlReadWrite,
 };
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Param {
   #[serde(flatten)]
   pub field: Field,

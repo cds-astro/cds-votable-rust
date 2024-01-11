@@ -64,13 +64,13 @@ use quick_xml::{
 };
 use serde_json::Value;
 
-use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
 use crate::mivot::VodmlVisitor;
+use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
 
 use super::{globals::Globals, model::Model, report::Report, templates::Templates};
 
 /// Structure storing the content of the `VODML` tag.
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Vodml {
   pub xmlns: Option<String>,
   // extra attributes
@@ -109,7 +109,7 @@ impl Vodml {
   impl_builder_push!(Model);
   impl_builder_opt_attr!(globals, Globals);
   impl_builder_push_no_s!(Templates);
-  
+
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
     visitor.visit_vodml(self)?;
     if let Some(report) = self.report.as_mut() {

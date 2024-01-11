@@ -49,7 +49,7 @@ pub mod iter;
 use error::VOTableError;
 use table::TableElem;
 
-pub trait TableDataContent: Default + serde::Serialize {
+pub trait TableDataContent: Default + PartialEq + serde::Serialize {
   //+ serde::Deserialize<'de> {
 
   fn new() -> Self {
@@ -199,7 +199,7 @@ mod tests {
   use std::str::from_utf8;
 
   #[test]
-  fn test_create_in_mem() {
+  fn test_create_in_mem_1() {
     let rows = vec![
       vec![
         VOTableValue::Double(f64::NAN),
@@ -317,11 +317,15 @@ mod tests {
 
     match serde_json::to_string_pretty(&votable) {
       Ok(content) => {
-        // println!("{}", &content);
+        println!("{}", &content);
         let votable2 =
           serde_json::de::from_str::<VOTable<InMemTableDataRows>>(content.as_str()).unwrap();
         let content2 = serde_json::to_string_pretty(&votable2).unwrap();
         assert_eq!(content, content2);
+        // To solve this, we have to implement either:
+        // * a Deserialiser with Seed on Table::data from the table schema
+        // * a post processing replacing the FieldValue by the righ objects (given the table schema)
+        // assert_eq!(votable, votable2);
       }
       Err(error) => {
         println!("{:?}", &error);
@@ -333,7 +337,7 @@ mod tests {
 
     match serde_yaml::to_string(&votable) {
       Ok(content) => {
-        // println!("{}", &content);
+        println!("{}", &content);
         let votable2 =
           serde_yaml::from_str::<VOTable<InMemTableDataRows>>(content.as_str()).unwrap();
         let content2 = serde_yaml::to_string(&votable2).unwrap();
@@ -351,13 +355,15 @@ mod tests {
     let mut write = Writer::new_with_indent(/*stdout()*/ &mut content, b' ', 4);
     match votable.write(&mut write, &()) {
       Ok(_) => {
+        println!("{}", from_utf8(content.as_slice()).unwrap());
+
         let mut votable2 = VOTable::<InMemTableDataRows>::from_reader(content.as_slice()).unwrap();
         let mut content2 = Vec::new();
         let mut write2 = Writer::new_with_indent(&mut content2, b' ', 4);
         votable2.write(&mut write2, &()).unwrap();
 
-        eprintln!("CONTENT1:\n{}", from_utf8(content.as_slice()).unwrap());
-        eprintln!("CONTENT2:\n{}", from_utf8(content2.as_slice()).unwrap());
+        //eprintln!("CONTENT1:\n{}", from_utf8(content.as_slice()).unwrap());
+        //eprintln!("CONTENT2:\n{}", from_utf8(content2.as_slice()).unwrap());
 
         assert_eq!(content, content2);
       }
@@ -371,7 +377,7 @@ mod tests {
 
     match toml::ser::to_string_pretty(&votable) {
       Ok(content) => {
-        // println!("{}", &content);
+        println!("{}", &content);
         let votable2 = toml::de::from_str::<VOTable<InMemTableDataRows>>(content.as_str()).unwrap();
         let content2 = toml::ser::to_string_pretty(&votable2).unwrap();
         assert_eq!(content, content2);

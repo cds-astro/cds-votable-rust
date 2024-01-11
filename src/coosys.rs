@@ -18,7 +18,7 @@ use super::{
   QuickXmlReadWrite,
 };
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum CooSysElem {
   FieldRef(FieldRef),
@@ -34,7 +34,7 @@ impl CooSysElem {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct CooSys {
   #[serde(rename = "ID")]
   pub id: String,
@@ -281,7 +281,7 @@ enum JulianOrBesselianYear{
 }*/
 
 /// Besselian (= tropical) year, e.g. B1950
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct BesselianYear(pub f64);
 impl FromStr for BesselianYear {
   type Err = ParseFloatError;
@@ -297,7 +297,7 @@ impl FromStr for BesselianYear {
 }
 
 /// Julian year, e.g. J2000, J2015.5, ...
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct JulianYear(pub f64);
 impl FromStr for JulianYear {
   type Err = ParseFloatError;
@@ -342,7 +342,7 @@ pub struct JulianEpoch(pub f64);
 /// * xy
 /// * barycentric
 /// * geo_app
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "system")]
 pub enum System {
   #[serde(rename = "eq_FK4")]

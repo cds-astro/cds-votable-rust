@@ -32,7 +32,7 @@ use crate::{
 /// Do not parse/contains any data.
 /// Only made for VOTable parsers taking charge of parsing (and dealing with) the data part
 /// of the VOTable.
-#[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
 pub struct VoidTableDataContent(());
 
@@ -105,7 +105,7 @@ impl TableDataContent for VoidTableDataContent {
 /// Each row is itself a vector of field.
 /// Each field is a String (this is not memory efficient, if the full VOTable fits in memory,
 /// we should save each field as a `&str`).
-#[derive(Default, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct InMemTableDataStringRows {
   rows: Vec<Vec<String>>,
 }
@@ -225,7 +225,7 @@ impl TableDataContent for InMemTableDataStringRows {
 /// Save in memory all rows in a vector.
 /// Each row is itself a vector of field.
 /// Each field is `VOTableValue` parse according to the table schema.
-#[derive(Default, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct InMemTableDataRows {
   rows: Vec<Vec<VOTableValue>>,
 }

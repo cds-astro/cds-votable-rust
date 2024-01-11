@@ -15,7 +15,7 @@ use serde_json::Value;
 
 use super::{error::VOTableError, QuickXmlReadWrite};
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Info {
   // attributes
   #[serde(rename = "ID", skip_serializing_if = "Option::is_none")]

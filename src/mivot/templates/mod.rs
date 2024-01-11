@@ -11,7 +11,12 @@ use quick_xml::{
   Reader, Writer,
 };
 
-use crate::{error::VOTableError, is_empty, mivot::{value_checker, VodmlVisitor}, QuickXmlReadWrite};
+use crate::{
+  error::VOTableError,
+  is_empty,
+  mivot::{value_checker, VodmlVisitor},
+  QuickXmlReadWrite,
+};
 
 pub mod instance;
 use instance::Instance;
@@ -19,7 +24,7 @@ pub mod r#where;
 use r#where::Where;
 
 /// Structure storing the content of the `TEMPLATES` tag.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Templates {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub tableref: Option<String>,

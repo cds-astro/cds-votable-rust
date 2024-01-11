@@ -3,11 +3,11 @@ use std::str;
 use paste::paste;
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
-use crate::{error::VOTableError, QuickXmlReadWrite, mivot::VodmlVisitor};
+use crate::{error::VOTableError, mivot::VodmlVisitor, QuickXmlReadWrite};
 
 /// `Static` primary key can be both in `GLOBALS` or in `TEMPLATES`, but `GLOBALS` contains only
 /// static `PRIMARY_KEY`s
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PrimaryKeyStatic {
   pub dmtype: String,
   pub value: String,
@@ -17,7 +17,7 @@ impl PrimaryKeyStatic {
   impl_empty_new!([dmtype, value], []);
 
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
-    visitor.visit_primarykey_static(self)  
+    visitor.visit_primarykey_static(self)
   }
 }
 

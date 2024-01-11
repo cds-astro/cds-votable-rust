@@ -24,7 +24,7 @@ use reference::Reference;
 pub mod instance;
 use instance::Instance;
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum InstanceOrRef {
   Instance(Instance),
@@ -47,7 +47,7 @@ impl InstanceOrRef {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type", content = "content")]
 pub enum CollectionElems {
   InstanceOrRef(Vec<InstanceOrRef>),
@@ -81,7 +81,7 @@ impl CollectionElems {
 }
 
 /// `COLLECTION` is a **child of** `GLOBALS` (no `dmrole`, like `COLLECTION` **child of** `COLLECTION`).
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Collection {
   pub dmid: String,
   pub elems: CollectionElems,

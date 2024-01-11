@@ -189,7 +189,7 @@ impl<'de> Deserialize<'de> for ArraySize {
   }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Precision {
   /// Significant figures after the decimal (for the decimal notation)
   F { n_decimal: u8 },
@@ -249,7 +249,7 @@ impl<'de> Deserialize<'de> for Precision {
 /// the 'null' attribute in VALUES is reserved to integer types:
 /// "This mechanism is only intended for use with integer types; it should not be used for floating point types, which can use NaN instead."
 /// "This mechanism for representing null values is required for integer columns in the BINARY serialization [but not in BINARY2]"
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Field {
   // attributes
   #[serde(skip_serializing_if = "Option::is_none")]

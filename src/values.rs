@@ -12,7 +12,7 @@ use paste::paste;
 
 use super::{error::VOTableError, QuickXmlReadWrite};
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Min {
   pub value: String,
   pub inclusive: bool, // true by default
@@ -100,7 +100,7 @@ impl QuickXmlReadWrite for Min {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Max {
   pub value: String,
   pub inclusive: bool, // true by default
@@ -187,7 +187,7 @@ impl QuickXmlReadWrite for Max {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename = "OPTION")]
 pub struct Opt {
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -320,7 +320,7 @@ impl QuickXmlReadWrite for Opt {
   }
 }
 
-#[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Values {
   // attributes
   #[serde(skip_serializing_if = "Option::is_none")]

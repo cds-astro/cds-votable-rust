@@ -9,7 +9,7 @@ use quick_xml::{events::attributes::Attributes, ElementWriter, Reader, Writer};
 
 use crate::{error::VOTableError, mivot::VodmlVisitor, QuickXmlReadWrite};
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
 pub enum RefOrValueOrBoth {
   Ref {
@@ -70,7 +70,7 @@ impl RefOrValueOrBoth {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct AttributeChildOfInstance {
   /// Attribute name.
   pub dmrole: String,
@@ -220,7 +220,7 @@ impl QuickXmlReadWrite for AttributeChildOfInstance {
   }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct AttributeChildOfCollection {
   /// Attribute type.
   pub dmtype: String,

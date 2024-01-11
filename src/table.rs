@@ -18,7 +18,7 @@ use super::{
   link::Link, param::Param, QuickXmlReadWrite, TableDataContent,
 };
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum TableElem {
   Field(Field),
@@ -35,7 +35,7 @@ impl TableElem {
   }
 }
 
-#[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Table<C: TableDataContent> {
   // attributes
   #[serde(skip_serializing_if = "Option::is_none")]

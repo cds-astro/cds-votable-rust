@@ -16,8 +16,9 @@ use quick_xml::{
 use crate::{
   error::VOTableError,
   is_empty,
-  mivot::{ VodmlVisitor,
+  mivot::{
     attribute::AttributeChildOfCollection as Attribute, join::Join, templates::instance::Instance,
+    VodmlVisitor,
   },
   QuickXmlReadWrite,
 };
@@ -30,7 +31,7 @@ use collection::{Collection as CollectionChildOfCollection, CollectionElems, Ins
 pub mod reference;
 use reference::Reference;
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Collection {
   pub dmrole: String,
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -107,7 +108,9 @@ impl Collection {
     }
   }
 
-  pub fn from_instance_or_reference_elems<S: Into<String>>(dmrole: S, instance_or_reference_elems: Vec<InstanceOrRef>,
+  pub fn from_instance_or_reference_elems<S: Into<String>>(
+    dmrole: S,
+    instance_or_reference_elems: Vec<InstanceOrRef>,
   ) -> Result<Self, VOTableError> {
     let dmrole = dmrole.into();
     if dmrole.is_empty() {
@@ -195,9 +198,9 @@ pub(crate) fn create_collection_from_dmrole_and_reading_sub_elems<R: BufRead>(
         Attribute::TAG_BYTES => {
           attr_vec.push(from_event_start_by_ref!(Attribute, reader, reader_buff, e))
         }
-        Reference::TAG_BYTES => {
-          inst_or_ref_vec.push(InstanceOrRef::Reference(from_event_start_by_ref!(Reference, reader, reader_buff, e)))
-        }
+        Reference::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Reference(
+          from_event_start_by_ref!(Reference, reader, reader_buff, e),
+        )),
         Collection::TAG_BYTES => {
           let opt_dmid = get_opt_dmid_from_atttributes(e.attributes())?;
           let col = create_collection_from_opt_dmid_and_reading_sub_elems(
@@ -208,9 +211,9 @@ pub(crate) fn create_collection_from_dmrole_and_reading_sub_elems<R: BufRead>(
           )?;
           col_vec.push(col)
         }
-        Instance::TAG_BYTES => {
-          inst_or_ref_vec.push(InstanceOrRef::Instance(from_event_start_by_ref!(Instance, reader, reader_buff, e)))
-        }
+        Instance::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Instance(
+          from_event_start_by_ref!(Instance, reader, reader_buff, e),
+        )),
         Join::TAG_BYTES => join_vec.push(from_event_start_by_ref!(Join, reader, reader_buff, e)),
         _ => {
           return Err(VOTableError::UnexpectedStartTag(
@@ -221,8 +224,12 @@ pub(crate) fn create_collection_from_dmrole_and_reading_sub_elems<R: BufRead>(
       },
       Event::Empty(ref e) => match e.local_name() {
         Attribute::TAG_BYTES => attr_vec.push(Attribute::from_event_empty(e)?),
-        Reference::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Reference(Reference::from_event_empty(e)?)),
-        Instance::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Instance(Instance::from_event_empty(e)?)),
+        Reference::TAG_BYTES => {
+          inst_or_ref_vec.push(InstanceOrRef::Reference(Reference::from_event_empty(e)?))
+        }
+        Instance::TAG_BYTES => {
+          inst_or_ref_vec.push(InstanceOrRef::Instance(Instance::from_event_empty(e)?))
+        }
         Join::TAG_BYTES => join_vec.push(Join::from_event_empty(e)?),
         _ => {
           return Err(VOTableError::UnexpectedEmptyTag(
