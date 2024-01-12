@@ -51,11 +51,26 @@ use error::VOTableError;
 use table::TableElem;
 
 pub trait TableDataContent: Default + PartialEq + serde::Serialize {
-  //+ serde::Deserialize<'de> {
-
   fn new() -> Self {
     Self::default()
   }
+
+  /// When deserializing from JSON, TOML or YAML, we should implement a 'DeserializeSeed'
+  /// based on the table Schema. But:
+  /// * we have to implement `Deserialize` by hand on `Table`, `Data`, `DataElem`,
+  /// `TableData`, `Binary`, `Binary2` and `Stream`, which is daunting task, even using
+  /// `cargo expand`...
+  /// * even so, the metadata may be parsed after the data
+  /// (e.g. in JSON the key order is not guaranteed to be preserved)
+  ///
+  /// So, the result of the deserialization without knowing the table schema may result in
+  /// no-homogeneous datatype in a same column.
+  /// E.g `short` and `int`, or `char` and `string` may be mixed.
+  ///
+  /// So, we use this method to replace incorrect types by the porper ones as a post-parsing process.
+  /// This is not ideal on a performance point-of-view, but Serde usage to convert from JSON, TOML
+  /// and YAML **should be** limited to small tables (less than a few hundreds of megabytes).
+  fn ensures_consistency(&mut self, context: &[TableElem]) -> Result<(), String>;
 
   /// Called when Event::Start("DATATABLE") as been detected and **MUST**
   /// return after event Event::End("DATATABLE")
@@ -203,18 +218,18 @@ mod tests {
   fn test_create_in_mem_1() {
     let rows = vec![
       vec![
-        VOTableValue::Double(f64::NAN),
-        VOTableValue::String("*".to_owned()),
+        VOTableValue::Null, //VOTableValue::Double(f64::NAN),
+        VOTableValue::CharASCII('*'),
         VOTableValue::Long(i64::MAX),
       ],
       vec![
         VOTableValue::Double(0.4581e+38),
-        VOTableValue::String("".to_owned()),
+        VOTableValue::Null,
         VOTableValue::Long(i64::MIN),
       ],
       vec![
         VOTableValue::Null,
-        VOTableValue::String("*".to_owned()),
+        VOTableValue::CharASCII('*'),
         VOTableValue::Long(0),
       ],
     ];
@@ -319,14 +334,15 @@ mod tests {
     match serde_json::to_string_pretty(&votable) {
       Ok(content) => {
         println!("{}", &content);
-        let votable2 =
+        let mut votable2 =
           serde_json::de::from_str::<VOTable<InMemTableDataRows>>(content.as_str()).unwrap();
+        votable2.ensures_consistency().unwrap();
         let content2 = serde_json::to_string_pretty(&votable2).unwrap();
         assert_eq!(content, content2);
         // To solve this, we have to implement either:
         // * a Deserialiser with Seed on Table::data from the table schema
         // * a post processing replacing the FieldValue by the righ objects (given the table schema)
-        // assert_eq!(votable, votable2);
+        assert_eq!(votable, votable2);
       }
       Err(error) => {
         println!("{:?}", &error);

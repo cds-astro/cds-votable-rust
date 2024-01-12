@@ -13,6 +13,7 @@ use base64::{engine::general_purpose, read::DecoderReader, write::EncoderWriter}
 
 use serde::{de::DeserializeSeed, ser::SerializeTuple, Deserializer, Serializer};
 
+use crate::impls::TableSchema;
 use crate::{
   data::tabledata::TableData,
   error::VOTableError,
@@ -37,6 +38,10 @@ use crate::{
 pub struct VoidTableDataContent(());
 
 impl TableDataContent for VoidTableDataContent {
+  fn ensures_consistency(&mut self, _context: &[TableElem]) -> Result<(), String> {
+    Ok(())
+  }
+
   fn read_datatable_content<R: BufRead>(
     &mut self,
     _reader: &mut Reader<R>,
@@ -117,6 +122,11 @@ impl InMemTableDataStringRows {
 }
 
 impl TableDataContent for InMemTableDataStringRows {
+  fn ensures_consistency(&mut self, _context: &[TableElem]) -> Result<(), String> {
+    // No need to ensure consistency since everything is string...
+    Ok(())
+  }
+
   fn read_datatable_content<R: BufRead>(
     &mut self,
     reader: &mut Reader<R>,
@@ -226,6 +236,7 @@ impl TableDataContent for InMemTableDataStringRows {
 /// Each row is itself a vector of field.
 /// Each field is `VOTableValue` parse according to the table schema.
 #[derive(Default, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+// #[derive(Default, Debug, PartialEq, serde::Serialize)]
 pub struct InMemTableDataRows {
   rows: Vec<Vec<VOTableValue>>,
 }
@@ -236,20 +247,26 @@ impl InMemTableDataRows {
   }
 }
 
+// Implement Deserialize using the &[Schema] which implement DeserializeSeed...
+
 impl TableDataContent for InMemTableDataRows {
+  fn ensures_consistency(&mut self, context: &[TableElem]) -> Result<(), String> {
+    let table_schema = TableSchema::from(context);
+    for row in self.rows.iter_mut() {
+      for (schema, value) in table_schema.iter().zip(row.iter_mut()) {
+        schema.replace_by_proper_value_if_necessary(value)?;
+      }
+    }
+    Ok(())
+  }
+
   fn read_datatable_content<R: BufRead>(
     &mut self,
     reader: &mut Reader<R>,
     reader_buff: &mut Vec<u8>,
     context: &[TableElem],
   ) -> Result<(), VOTableError> {
-    let schema: Vec<Schema> = context
-      .iter()
-      .filter_map(|table_elem| match table_elem {
-        TableElem::Field(field) => Some(field.into()),
-        _ => None,
-      })
-      .collect();
+    let schema: Vec<Schema> = TableSchema::from(context).unwrap();
     let mut row: Vec<VOTableValue> = Vec::with_capacity(schema.len());
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
@@ -300,13 +317,7 @@ impl TableDataContent for InMemTableDataRows {
     let decoder = DecoderReader::new(b64_cleaner, &general_purpose::STANDARD);
     let mut binary_deser = BinaryDeserializer::new(BufReader::new(decoder));
     // Get schema
-    let schema: Vec<Schema> = context
-      .iter()
-      .filter_map(|table_elem| match table_elem {
-        TableElem::Field(field) => Some(field.into()),
-        _ => None,
-      })
-      .collect();
+    let schema: Vec<Schema> = TableSchema::from(context).unwrap();
     // Read rows
     while let Ok(true) = binary_deser.has_data_left() {
       let mut row: Vec<VOTableValue> = Vec::with_capacity(schema.len());
@@ -333,13 +344,7 @@ impl TableDataContent for InMemTableDataRows {
     let decoder = DecoderReader::new(b64_cleaner, &general_purpose::STANDARD);
     let mut binary_deser = BinaryDeserializer::new(BufReader::new(decoder));
     // Get schema
-    let schema: Vec<Schema> = context
-      .iter()
-      .filter_map(|table_elem| match table_elem {
-        TableElem::Field(field) => Some(field.into()),
-        _ => None,
-      })
-      .collect();
+    let schema: Vec<Schema> = TableSchema::from(context).unwrap();
     // Read rows
     let n_bytes = (schema.len() + 7) / 8;
     while let Ok(true) = binary_deser.has_data_left() {
@@ -391,13 +396,7 @@ impl TableDataContent for InMemTableDataRows {
     context: &[TableElem],
   ) -> Result<(), VOTableError> {
     // Get FIELD schema (ignoring PARAMS, ...)
-    let schema: Vec<Schema> = context
-      .iter()
-      .filter_map(|table_elem| match table_elem {
-        TableElem::Field(field) => Some(field.into()),
-        _ => None,
-      })
-      .collect();
+    let schema: Vec<Schema> = TableSchema::from(context).unwrap();
     // Create serializer
     let mut serializer = BinarySerializer::new(EncoderWriter::new(
       B64Formatter::new(writer.inner()),
@@ -418,13 +417,7 @@ impl TableDataContent for InMemTableDataRows {
     context: &[TableElem],
   ) -> Result<(), VOTableError> {
     // Get FIELD schema (ignoring PARAMS, ...)
-    let schema: Vec<Schema> = context
-      .iter()
-      .filter_map(|table_elem| match table_elem {
-        TableElem::Field(field) => Some(field.into()),
-        _ => None,
-      })
-      .collect();
+    let schema: Vec<Schema> = TableSchema::from(context).unwrap();
     // Compute size of null flags
     let n_null_flag_bytes = (schema.len() + 7) / 8;
     // Create serializer

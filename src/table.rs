@@ -101,6 +101,14 @@ impl<C: TableDataContent> Table<C> {
 
   impl_builder_push!(Info);
 
+  pub(crate) fn ensures_consistency(&mut self) -> Result<(), String> {
+    if let Some(data) = &mut self.data {
+      data.ensures_consistency(self.elems.as_slice())
+    } else {
+      Ok(())
+    }
+  }
+
   pub fn read_till_data_by_ref<R: BufRead>(
     &mut self,
     mut reader: &mut Reader<R>,

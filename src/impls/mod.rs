@@ -1,6 +1,7 @@
 use std::{
   fmt::{self, Display, Formatter, Write},
   mem::size_of,
+  slice::Iter,
 };
 
 use bitvec::{order::Msb0, vec::BitVec as BV};
@@ -11,14 +12,18 @@ use serde::{
   Deserialize, Deserializer, Serialize, Serializer,
 };
 
-use super::{datatype::Datatype, error::VOTableError, field::Field};
+use crate::{
+  datatype::Datatype,
+  error::VOTableError,
+  field::ArraySize,
+  field::Field,
+  impls::visitors::{FixedLengthArrayVisitor, VariableLengthArrayVisitor},
+  table::TableElem,
+};
 
 pub mod b64;
 pub mod mem;
 pub mod visitors;
-
-use crate::field::ArraySize;
-use crate::impls::visitors::{FixedLengthArrayVisitor, VariableLengthArrayVisitor};
 use visitors::CharVisitor;
 
 #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -28,6 +33,31 @@ pub struct BitVec(BV<u8, Msb0>);
     self.0.serialize(serializer) // TODO: check if the serialisation is in the right order, else do it ourself!
   }
 }*/
+
+pub struct TableSchema(Vec<Schema>);
+impl TableSchema {
+  pub fn unwrap(self) -> Vec<Schema> {
+    self.0
+  }
+  pub fn as_slice(&self) -> &[Schema] {
+    self.0.as_slice()
+  }
+  pub fn iter(&self) -> Iter<'_, Schema> {
+    self.0.iter()
+  }
+}
+impl<'a> From<&'a [TableElem]> for TableSchema {
+  fn from(context: &[TableElem]) -> Self {
+    let schema: Vec<Schema> = context
+      .iter()
+      .filter_map(|table_elem| match table_elem {
+        TableElem::Field(field) => Some(field.into()),
+        _ => None,
+      })
+      .collect();
+    Self(schema)
+  }
+}
 
 // WARNING: THE ORDER IS IMPORTANT WHEN DESERIALIZING JSON, NOT TO LOOSE SIGNIFICANT DIGITS!!
 #[derive(Debug, PartialEq, serde::Deserialize)]
@@ -689,6 +719,124 @@ impl Schema {
           _ => Err(S::Error::custom(format!("Wrong schema associated to ComplexDoubleArray. Actual: {:?}. Expected: FixedLengthArray(ComplexDouble) or VariableLengthArray(ComplexDouble).", &self)))
         },
     }
+  }
+
+  pub fn replace_by_proper_value_if_necessary(
+    &self,
+    value: &mut VOTableValue,
+  ) -> Result<(), String> {
+    let new_val = match value {
+      VOTableValue::Null => None,
+      VOTableValue::Bool(_) => None,
+      VOTableValue::Byte(v) => match self {
+        Schema::Byte { .. } => None,
+        Schema::Short { .. } => Some(VOTableValue::Short(*v as i16)),
+        Schema::Int { .. } => Some(VOTableValue::Int(*v as i32)),
+        Schema::Long { .. } => Some(VOTableValue::Long(*v as i64)),
+        Schema::Float => Some(VOTableValue::Float(*v as f32)),
+        Schema::Double => Some(VOTableValue::Double(*v as f64)),
+        _ => return Err(format!("Value of type Byte with schema: {:?}", self)),
+      },
+      VOTableValue::Short(v) => match self {
+        Schema::Short { .. } => None,
+        Schema::Int { .. } => Some(VOTableValue::Int(*v as i32)),
+        Schema::Long { .. } => Some(VOTableValue::Long(*v as i64)),
+        Schema::Float => Some(VOTableValue::Float(*v as f32)),
+        Schema::Double => Some(VOTableValue::Double(*v as f64)),
+        _ => return Err(format!("Value of type Short with schema: {:?}", self)),
+      },
+      VOTableValue::Int(v) => match self {
+        Schema::Int { .. } => None,
+        Schema::Long { .. } => Some(VOTableValue::Long(*v as i64)),
+        Schema::Float => Some(VOTableValue::Float(*v as f32)),
+        Schema::Double => Some(VOTableValue::Double(*v as f64)),
+        _ => return Err(format!("Value of type Int with schema: {:?}", self)),
+      },
+      VOTableValue::Long(v) => match self {
+        Schema::Long { .. } => None,
+        Schema::Float => Some(VOTableValue::Float(*v as f32)),
+        Schema::Double => Some(VOTableValue::Double(*v as f64)),
+        _ => return Err(format!("Value of type Long with schema: {:?}", self)),
+      },
+      VOTableValue::Float(v) => match self {
+        Schema::Float => None,
+        Schema::Double => Some(VOTableValue::Double(*v as f64)),
+        _ => return Err(format!("Value of type Float with schema: {:?}", self)),
+      },
+      VOTableValue::Double(v) => match self {
+        Schema::Float => Some(VOTableValue::Float(*v as f32)),
+        Schema::Double => None,
+        _ => return Err(format!("Value of type Double with schema: {:?}", self)),
+      },
+      VOTableValue::ComplexFloat((l, r)) => match self {
+        Schema::ComplexFloat => None,
+        Schema::ComplexDouble => Some(VOTableValue::ComplexDouble((*l as f64, *r as f64))),
+        _ => {
+          return Err(format!(
+            "Value of type ComplexDouble with schema: {:?}",
+            self
+          ))
+        }
+      },
+      VOTableValue::ComplexDouble((l, r)) => match self {
+        Schema::ComplexFloat => Some(VOTableValue::ComplexFloat((*l as f32, *r as f32))),
+        Schema::ComplexDouble => None,
+        _ => {
+          return Err(format!(
+            "Value of type ComplexDouble with schema: {:?}",
+            self
+          ))
+        }
+      },
+      VOTableValue::CharASCII(v) => match self {
+        Schema::CharASCII => None,
+        Schema::CharUnicode => Some(VOTableValue::CharUnicode(*v)),
+        Schema::FixedLengthStringASCII { n_chars: 1 }
+        | Schema::VariableLengthStringASCII { n_chars_max: _ }
+        | Schema::FixedLengthStringUnicode { n_chars: 1 }
+        | Schema::VariableLengthStringUnicode { n_chars_max: _ } => {
+          Some(VOTableValue::String(String::from(*v)))
+        }
+        _ => return Err(format!("Value of type CharASCII with schema: {:?}", self)),
+      },
+      VOTableValue::CharUnicode(v) => match self {
+        Schema::CharASCII => Some(VOTableValue::CharASCII(*v)),
+        Schema::CharUnicode => None,
+        Schema::FixedLengthStringASCII { n_chars: 1 }
+        | Schema::VariableLengthStringASCII { n_chars_max: _ }
+        | Schema::FixedLengthStringUnicode { n_chars: 1 }
+        | Schema::VariableLengthStringUnicode { n_chars_max: _ } => {
+          Some(VOTableValue::String(String::from(*v)))
+        }
+        _ => return Err(format!("Value of type CharUnicode with schema: {:?}", self)),
+      },
+      VOTableValue::String(s) => {
+        if s.is_empty() {
+          match &self {
+            Schema::FixedLengthStringASCII { .. }
+            | Schema::VariableLengthStringASCII { .. }
+            | Schema::FixedLengthStringUnicode { .. }
+            | Schema::VariableLengthStringUnicode { .. } => None,
+            _ => Some(VOTableValue::Null),
+          }
+        } else {
+          None
+        }
+      }
+      VOTableValue::BitArray(_) => None,
+      VOTableValue::ByteArray(_) => None, // TODO: convert array if not the right type...
+      VOTableValue::ShortArray(_) => None, // TODO: convert array if not the right type...
+      VOTableValue::IntArray(_) => None,  // TODO: convert array if not the right type...
+      VOTableValue::LongArray(_) => None, // TODO: convert array if not the right type...
+      VOTableValue::FloatArray(_) => None, // TODO: convert array if not the right type...
+      VOTableValue::DoubleArray(_) => None, // TODO: convert array if not the right type...
+      VOTableValue::ComplexFloatArray(_) => None, // TODO: convert array if not the right type...
+      VOTableValue::ComplexDoubleArray(_) => None, // TODO: convert array if not the right type...
+    };
+    if let Some(new_val) = new_val {
+      let _ = std::mem::replace(value, new_val);
+    }
+    Ok(())
   }
 }
 

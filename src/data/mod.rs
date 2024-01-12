@@ -124,6 +124,13 @@ impl<C: TableDataContent> Data<C> {
     }
   }
 
+  pub(crate) fn ensures_consistency(&mut self, context: &[TableElem]) -> Result<(), String> {
+    match &mut self.data {
+      DataElem::TableData(data) => data.ensures_consistency(context),
+      _ => Ok(()),
+    }
+  }
+
   pub fn set_tabledata(mut self, content: C) -> Self {
     self.data = DataElem::TableData(TableData::new(content));
     self

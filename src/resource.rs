@@ -234,6 +234,15 @@ impl<C: TableDataContent> Resource<C> {
   #[cfg(feature = "mivot")]
   impl_builder_opt_attr!(vodml, Vodml);
 
+  pub(crate) fn ensures_consistency(&mut self) -> Result<(), String> {
+    for elem in self.sub_elems.iter_mut() {
+      if let ResourceOrTable::Table(table) = &mut elem.resource_or_table {
+        table.ensures_consistency()?;
+      }
+    }
+    Ok(())
+  }
+
   /// Transforms the BINARY or BINARY2 tag in this RESOURCE into TABLEDATA.
   /// Do nothing if it already contains a TABLEDATA or if it contains a FITS.
   pub fn to_tabledata(&mut self) -> Result<(), VOTableError> {

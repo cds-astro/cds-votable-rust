@@ -143,6 +143,14 @@ impl<C: TableDataContent> VOTableWrapper<C> {
     self.votable.to_binary2()
   }
 
+  pub(crate) fn ensures_consistency(mut self) -> Result<Self, VOTableError> {
+    self
+      .votable
+      .ensures_consistency()
+      .map_err(|e| VOTableError::Custom(e))?;
+    Ok(self)
+  }
+
   // Manual parser
 
   pub fn manual_from_ivoa_xml_file<P: AsRef<Path>>(
@@ -210,15 +218,21 @@ where
   }
 
   pub fn from_json_str(s: &str) -> Result<Self, VOTableError> {
-    serde_json::from_str(s).map_err(VOTableError::Json)
+    serde_json::from_str(s)
+      .map_err(VOTableError::Json)
+      .and_then(|r: Self| r.ensures_consistency())
   }
 
   pub fn from_json_bytes(s: &[u8]) -> Result<Self, VOTableError> {
-    serde_json::from_slice(s).map_err(VOTableError::Json)
+    serde_json::from_slice(s)
+      .map_err(VOTableError::Json)
+      .and_then(|r: Self| r.ensures_consistency())
   }
 
   pub fn from_json_reader<R: BufRead>(reader: R) -> Result<Self, VOTableError> {
-    serde_json::from_reader(reader).map_err(VOTableError::Json)
+    serde_json::from_reader(reader)
+      .map_err(VOTableError::Json)
+      .and_then(|r: Self| r.ensures_consistency())
   }
 
   pub fn to_json_file<P: AsRef<Path>>(
@@ -267,15 +281,21 @@ where
   }
 
   pub fn from_yaml_str(s: &str) -> Result<Self, VOTableError> {
-    serde_yaml::from_str(s).map_err(VOTableError::Yaml)
+    serde_yaml::from_str(s)
+      .map_err(VOTableError::Yaml)
+      .and_then(|r: Self| r.ensures_consistency())
   }
 
   pub fn from_yaml_bytes(s: &[u8]) -> Result<Self, VOTableError> {
-    serde_yaml::from_slice(s).map_err(VOTableError::Yaml)
+    serde_yaml::from_slice(s)
+      .map_err(VOTableError::Yaml)
+      .and_then(|r: Self| r.ensures_consistency())
   }
 
   pub fn from_yaml_reader<R: BufRead>(reader: R) -> Result<Self, VOTableError> {
-    serde_yaml::from_reader(reader).map_err(VOTableError::Yaml)
+    serde_yaml::from_reader(reader)
+      .map_err(VOTableError::Yaml)
+      .and_then(|r: Self| r.ensures_consistency())
   }
 
   pub fn to_yaml_file<P: AsRef<Path>>(&mut self, path: P) -> Result<(), VOTableError> {
@@ -307,7 +327,9 @@ where
   }
 
   pub fn from_toml_str(s: &str) -> Result<Self, VOTableError> {
-    toml::from_str(s).map_err(VOTableError::TomlDe)
+    toml::from_str(s)
+      .map_err(VOTableError::TomlDe)
+      .and_then(|r: Self| r.ensures_consistency())
   }
 
   pub fn from_toml_bytes(s: &[u8]) -> Result<Self, VOTableError> {
@@ -315,6 +337,7 @@ where
       Ok(s) => toml::from_str(s).map_err(VOTableError::TomlDe),
       Err(e) => Err(VOTableError::Custom(e.to_string())),
     }
+    .and_then(|r: Self| r.ensures_consistency())
   }
 
   pub fn from_toml_reader<R: BufRead>(mut reader: R) -> Result<Self, VOTableError> {
@@ -424,6 +447,13 @@ impl<C: TableDataContent> VOTable<C> {
   pub fn new(resource: Resource<C>) -> Self {
     let votable = Self::new_empty();
     votable.push_resource(resource)
+  }
+
+  pub(crate) fn ensures_consistency(&mut self) -> Result<(), String> {
+    for ressource in self.resources.iter_mut() {
+      ressource.ensures_consistency()?;
+    }
+    Ok(())
   }
 
   /*pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, VOTableError>  {

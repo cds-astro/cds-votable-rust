@@ -23,6 +23,10 @@ impl<C: TableDataContent> TableData<C> {
     Self { content }
   }
 
+  pub(crate) fn ensures_consistency(&mut self, context: &[TableElem]) -> Result<(), String> {
+    self.content.ensures_consistency(context)
+  }
+
   pub(crate) fn write_to_data_beginning<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
