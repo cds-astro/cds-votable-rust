@@ -2,7 +2,7 @@
 
 ## 0.3.0
 
-Released 2023-XX-XX
+Released 2023-01-12
 
 * Add conversions between TABLEDATA/BINARY/BINARY2
 * Supports VOTable 1.5

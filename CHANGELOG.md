@@ -2,7 +2,7 @@
 
 ## 0.3.0
 
-Released 2023-XX-XX
+Released 2024-01-12
 
 ### Added
  
@@ -12,7 +12,10 @@ Released 2023-XX-XX
    to make external parsers taking charge of parsing rows
 * Add methods `get_first_table` and `get_first_table_mut` in votable
 * More attributes/sub-elements are now public
-* First attempt to support Mivot (the VODML tag)!!
+* Add Mivot support with feature "mivot"
+* Add PartialEq implementation
+* Add `ensures_consistency` after JSON/TOML/YAML deserialization to ensure that
+  type in memory are coherent with the table schema
 
 ### Changed
 
@@ -25,7 +28,7 @@ Released 2023-XX-XX
 * Better handling of arrays (please provide us with examples so we can test and debug)
 * Fix unicode char bug
 * Fix breaking change introduced in `serde.__private`
-
+* Fix "hint" --> "hints" in LINK attribute "content-role"
 
 ## 0.2.3
 
