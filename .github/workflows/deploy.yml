@@ -12,7 +12,7 @@ jobs:
     # CentOS 7 64 bits Docker Hub image that 'build-linux-wheels' executes in.
     # See https://github.com/pypa/manylinux for this particular container:
     # * CPython 3.5, 3.6, 3.7, 3.8, 3.9 and 3.10, installed in /opt/python/<python tag>-<abi tag>
-    container: quay.io/pypa/manylinux_2_28_x86_64
+  container: quay.io/pypa/manylinux_2_28_x86_64:latest
     steps:
      - name: "Checkout the full project"
        uses: actions/checkout@v1
@@ -28,7 +28,7 @@ jobs:
          cd crates/cli
          for PYBIN in /opt/python/cp38*/bin; do
            "${PYBIN}/pip" install maturin
-           "${PYBIN}/maturin" publish -b bin -i "${PYBIN}/python" --skip-existing --compatibility manylinux_2_2
+           "${PYBIN}/maturin" publish -b bin -i "${PYBIN}/python" --skip-existing --compatibility manylinux_2_28
          done
 
 
@@ -79,7 +79,7 @@ jobs:
            cd crates/cli && \
            for PYBIN in /opt/python/cp38*/bin; do
              "${PYBIN}/pip" install maturin
-             "${PYBIN}/maturin" publish -b bin -i "${PYBIN}/python" --no-dist --skip-existing --compatibility manylinux2014 --config "net.git-fetch-with-cli = true"
+             "${PYBIN}/maturin" publish -b bin -i "${PYBIN}/python" --skip-existing --compatibility manylinux2014 --config "net.git-fetch-with-cli = true"
            done'
 
 
