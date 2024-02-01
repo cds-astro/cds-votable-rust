@@ -64,10 +64,8 @@ use quick_xml::{
 };
 use serde_json::Value;
 
-use crate::mivot::VodmlVisitor;
+use super::{globals::Globals, model::Model, report::Report, templates::Templates, VodmlVisitor};
 use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
-
-use super::{globals::Globals, model::Model, report::Report, templates::Templates};
 
 /// Structure storing the content of the `VODML` tag.
 #[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
