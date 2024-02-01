@@ -38,6 +38,10 @@ macro_rules! impl_builder_opt_attr {
         self.$arg = Some($arg);
         self
       }
+
+      pub fn [<set_ $arg _by_ref>](&mut self, $arg: $t) {
+        self.$arg = Some($arg);
+      }
     }
   };
   ($arg: ident, $alt:ident, $t: ident) => {
@@ -45,6 +49,10 @@ macro_rules! impl_builder_opt_attr {
       pub fn [<set_ $alt>](mut self, $arg: $t) -> Self {
         self.$arg = Some($arg);
         self
+      }
+
+      pub fn [<set_ $alt _by_ref>](&mut self, $arg: $t) {
+        self.$arg = Some($arg);
       }
     }
   };
