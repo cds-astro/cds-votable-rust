@@ -13,9 +13,9 @@ use paste::paste;
 
 use serde;
 
-use super::{
+use crate::{
   error::VOTableError, fieldref::FieldRef, paramref::ParamRef, timesys::RefPosition,
-  QuickXmlReadWrite,
+  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -30,6 +30,16 @@ impl CooSysElem {
     match self {
       CooSysElem::FieldRef(elem) => elem.write(writer, &()),
       CooSysElem::ParamRef(elem) => elem.write(writer, &()),
+    }
+  }
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    match self {
+      CooSysElem::FieldRef(e) => e.visit(visitor),
+      CooSysElem::ParamRef(e) => e.visit(visitor),
     }
   }
 }
@@ -57,6 +67,18 @@ impl CooSys {
       refposition: None,
       elems: Default::default(),
     }
+  }
+
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_coosys_start(self)?;
+    for elem in &mut self.elems {
+      elem.visit(visitor)?;
+    }
+    visitor.visit_coosys_ended(self)
   }
 
   impl_builder_opt_attr!(refposition, RefPosition);

@@ -14,7 +14,10 @@ extern crate core;
 ///
 /// We used first the `VOTable` format to defined a `metadata` set, add other elements,
 /// plus a mechanism to allow for custom metadata.
-use std::io::{BufRead, Write};
+use std::{
+  error::Error,
+  io::{BufRead, Write},
+};
 
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, BytesText},
@@ -47,8 +50,31 @@ pub mod votable;
 
 pub mod iter;
 
-use error::VOTableError;
-use table::TableElem;
+#[cfg(feature = "mivot")]
+pub use self::mivot::VodmlVisitor;
+pub use self::{
+  coosys::CooSys,
+  data::{
+    binary::Binary, binary2::Binary2, fits::Fits, stream::Stream, tabledata::TableData, Data,
+  },
+  definitions::Definitions,
+  desc::Description,
+  error::VOTableError,
+  field::Field,
+  fieldref::FieldRef,
+  group::{Group, TableGroup},
+  impls::mem::VoidTableDataContent,
+  info::Info,
+  link::Link,
+  param::Param,
+  paramref::ParamRef,
+  resource::Resource,
+  table::Table,
+  table::TableElem,
+  timesys::TimeSys,
+  values::{Max, Min, Opt, Values},
+  votable::VOTable,
+};
 
 pub trait TableDataContent: Default + PartialEq + serde::Serialize {
   fn new() -> Self {
@@ -191,15 +217,93 @@ pub(crate) fn is_empty(text: &BytesText) -> bool {
   true
 }
 
+// We visit all sub elements, bu we retrieve attributes from objects
+// We kinf of added a part of the context by prefixing some visit methods with the name of the
+// TAG it is called from.
+pub trait VOTableVisitor<C: TableDataContent> {
+  type E: Error;
+
+  #[cfg(feature = "mivot")]
+  type M: VodmlVisitor<E = Self::E>;
+
+  fn visit_votable_start(&mut self, votable: &mut VOTable<C>) -> Result<(), Self::E>;
+  fn visit_votable_ended(&mut self, votable: &mut VOTable<C>) -> Result<(), Self::E>;
+
+  fn visit_description(&mut self, description: &mut Description) -> Result<(), Self::E>; // No start/end
+  fn visit_coosys_start(&mut self, coosys: &mut CooSys) -> Result<(), Self::E>;
+  fn visit_coosys_ended(&mut self, coosys: &mut CooSys) -> Result<(), Self::E>;
+  fn visit_timesys(&mut self, timesys: &mut TimeSys) -> Result<(), Self::E>; // No start/end
+  fn visit_group_start(&mut self, group: &mut Group) -> Result<(), Self::E>;
+  fn visit_group_ended(&mut self, group: &mut Group) -> Result<(), Self::E>;
+
+  #[cfg(feature = "mivot")]
+  fn get_mivot_visitor(&mut self) -> Self::M;
+
+  fn visit_table_group_start(&mut self, group: &mut TableGroup) -> Result<(), Self::E>;
+  fn visit_table_group_ended(&mut self, group: &mut TableGroup) -> Result<(), Self::E>;
+
+  fn visit_paramref(&mut self, paramref: &mut ParamRef) -> Result<(), Self::E>; // No start/end
+  fn visit_fieldref(&mut self, fieldref: &mut FieldRef) -> Result<(), Self::E>; // No start/end
+
+  fn visit_param_start(&mut self, param: &mut Param) -> Result<(), Self::E>;
+  fn visit_param_ended(&mut self, param: &mut Param) -> Result<(), Self::E>;
+
+  fn visit_field_start(&mut self, param: &mut Field) -> Result<(), Self::E>;
+  fn visit_field_ended(&mut self, param: &mut Field) -> Result<(), Self::E>;
+
+  fn visit_info(&mut self, info: &mut Info) -> Result<(), Self::E>; // No start/end
+  fn visit_definitions_start(&mut self, coosys: &mut Definitions) -> Result<(), Self::E>;
+  fn visit_definitions_ended(&mut self, coosys: &mut Definitions) -> Result<(), Self::E>;
+
+  fn visit_resource_start(&mut self, resource: &mut Resource<C>) -> Result<(), Self::E>;
+  fn visit_resource_ended(&mut self, resource: &mut Resource<C>) -> Result<(), Self::E>;
+
+  fn visit_post_info(&mut self, info: &mut Info) -> Result<(), Self::E>;
+
+  /// Resource sub-elems are purely virtual elements.
+  fn visit_resource_sub_elem_start(&mut self) -> Result<(), Self::E>;
+  fn visit_resource_sub_elem_ended(&mut self) -> Result<(), Self::E>;
+
+  fn visit_link(&mut self, link: &mut Link) -> Result<(), Self::E>; // No start/end
+
+  fn visit_table_start(&mut self, table: &mut Table<C>) -> Result<(), Self::E>;
+  fn visit_table_ended(&mut self, table: &mut Table<C>) -> Result<(), Self::E>;
+
+  fn visit_data_start(&mut self, table: &mut Data<C>) -> Result<(), Self::E>;
+  fn visit_data_ended(&mut self, table: &mut Data<C>) -> Result<(), Self::E>;
+
+  fn visit_tabledata(&mut self, table: &mut TableData<C>) -> Result<(), Self::E>;
+  fn visit_binary_stream(&mut self, stream: &mut Stream<C>) -> Result<(), Self::E>;
+  fn visit_binary2_stream(&mut self, stream: &mut Stream<C>) -> Result<(), Self::E>;
+  fn visit_fits_start(&mut self, fits: &mut Fits) -> Result<(), Self::E>;
+  fn visit_fits_stream(&mut self, stream: &mut Stream<VoidTableDataContent>)
+    -> Result<(), Self::E>;
+  fn visit_fits_ended(&mut self, fits: &mut Fits) -> Result<(), Self::E>;
+
+  fn visit_values_start(&mut self, values: &mut Values) -> Result<(), Self::E>;
+  fn visit_values_min(&mut self, min: &mut Min) -> Result<(), Self::E>; // No start/end
+  fn visit_values_max(&mut self, max: &mut Max) -> Result<(), Self::E>; // No start/end
+  fn visit_values_opt_start(&mut self, opt: &mut Opt) -> Result<(), Self::E>;
+  fn visit_values_opt_ended(&mut self, opt: &mut Opt) -> Result<(), Self::E>;
+  fn visit_values_ended(&mut self, values: &mut Values) -> Result<(), Self::E>;
+}
+
 // For Javascript, see https://rustwasm.github.io/wasm-bindgen/reference/arbitrary-data-with-serde.html
 
 #[cfg(test)]
 mod tests {
+  use std::{i64, str::from_utf8};
+
+  use quick_xml::{events::Event, Reader, Writer};
+  use serde_json::{Number, Value};
+
   use super::{
     coosys::{CooSys, System},
+    data::Data,
     datatype::Datatype,
     field::{Field, Precision},
     impls::mem::InMemTableDataRows,
+    impls::VOTableValue,
     info::Info,
     link::Link,
     resource::Resource,
@@ -208,11 +312,6 @@ mod tests {
     votable::{VOTable, Version},
     QuickXmlReadWrite,
   };
-  use crate::data::Data;
-  use crate::impls::VOTableValue;
-  use quick_xml::{events::Event, Reader, Writer};
-  use serde_json::{Number, Value};
-  use std::str::from_utf8;
 
   #[test]
   fn test_create_in_mem_1() {
@@ -220,12 +319,12 @@ mod tests {
       vec![
         VOTableValue::Null, //VOTableValue::Double(f64::NAN),
         VOTableValue::CharASCII('*'),
-        VOTableValue::Long(i64::MAX),
+        VOTableValue::Long(i64::max_value()),
       ],
       vec![
         VOTableValue::Double(0.4581e+38),
         VOTableValue::Null,
-        VOTableValue::Long(i64::MIN),
+        VOTableValue::Long(i64::min_value()),
       ],
       vec![
         VOTableValue::Null,
@@ -524,6 +623,7 @@ mod tests {
 
   use crate::field::ArraySize;
   use crate::resource::ResourceSubElem;
+  use bitvec::macros::internal::funty::Integral;
   use std::io::Cursor;
 
   pub(crate) fn test_read<X: QuickXmlReadWrite<Context = ()>>(xml: &str) -> X {

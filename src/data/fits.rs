@@ -14,7 +14,7 @@ use serde;
 use crate::impls::mem::VoidTableDataContent;
 
 use super::{
-  super::{error::VOTableError, QuickXmlReadWrite},
+  super::{error::VOTableError, QuickXmlReadWrite, TableDataContent, VOTableVisitor},
   stream::Stream,
 };
 
@@ -33,6 +33,16 @@ impl Fits {
   }
 
   impl_builder_opt_attr!(extnum, u32);
+
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_fits_start(self)?;
+    visitor.visit_fits_stream(&mut self.stream)?;
+    visitor.visit_fits_ended(self)
+  }
 }
 
 impl QuickXmlReadWrite for Fits {

@@ -10,7 +10,7 @@ use quick_xml::{
 
 use paste::paste;
 
-use super::{error::VOTableError, QuickXmlReadWrite};
+use super::{error::VOTableError, QuickXmlReadWrite, TableDataContent, VOTableVisitor};
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Min {
@@ -208,6 +208,18 @@ impl Opt {
 
   impl_builder_opt_string_attr!(name);
   impl_builder_push!(Opt);
+
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_values_opt_start(self)?;
+    for opt in &mut self.opts {
+      opt.visit(visitor)?;
+    }
+    visitor.visit_values_opt_ended(self)
+  }
 }
 
 impl QuickXmlReadWrite for Opt {
@@ -354,6 +366,24 @@ impl Values {
   impl_builder_opt_attr!(max, Max);
 
   impl_builder_push!(Opt);
+
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_values_start(self)?;
+    if let Some(min) = &mut self.min {
+      visitor.visit_values_min(min)?;
+    }
+    if let Some(max) = &mut self.max {
+      visitor.visit_values_max(max)?;
+    }
+    for opt in &mut self.opts {
+      opt.visit(visitor)?;
+    }
+    visitor.visit_values_ended(self)
+  }
 }
 
 impl QuickXmlReadWrite for Values {

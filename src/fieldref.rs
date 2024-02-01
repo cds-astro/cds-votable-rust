@@ -13,7 +13,7 @@ use paste::paste;
 
 use serde_json::Value;
 
-use super::{error::VOTableError, QuickXmlReadWrite};
+use super::{error::VOTableError, QuickXmlReadWrite, TableDataContent, VOTableVisitor};
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct FieldRef {
@@ -48,6 +48,14 @@ impl FieldRef {
   impl_builder_insert_extra!();
 
   impl_builder_opt_string_attr!(content);
+
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_fieldref(self)
+  }
 }
 
 impl QuickXmlReadWrite for FieldRef {

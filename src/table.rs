@@ -15,7 +15,7 @@ use serde_json::Value;
 
 use super::{
   data::Data, desc::Description, error::VOTableError, field::Field, group::TableGroup, info::Info,
-  link::Link, param::Param, QuickXmlReadWrite, TableDataContent,
+  link::Link, param::Param, QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -31,6 +31,17 @@ impl TableElem {
       TableElem::Field(elem) => elem.write(writer, &()),
       TableElem::Param(elem) => elem.write(writer, &()),
       TableElem::TableGroup(elem) => elem.write(writer, &()),
+    }
+  }
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    match self {
+      TableElem::Field(e) => e.visit(visitor),
+      TableElem::Param(e) => e.visit(visitor),
+      TableElem::TableGroup(e) => e.visit(visitor),
     }
   }
 }
@@ -100,6 +111,29 @@ impl<C: TableDataContent> Table<C> {
   }
 
   impl_builder_push!(Info);
+
+  pub fn visit<V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_table_start(self)?;
+    if let Some(description) = &mut self.description {
+      visitor.visit_description(description)?;
+    }
+    for e in &mut self.elems {
+      e.visit(visitor)?;
+    }
+    for l in &mut self.links {
+      visitor.visit_link(l)?;
+    }
+    if let Some(data) = &mut self.data {
+      data.visit(visitor)?;
+    }
+    for i in &mut self.infos {
+      visitor.visit_info(i)?;
+    }
+    visitor.visit_table_ended(self)
+  }
 
   pub(crate) fn ensures_consistency(&mut self) -> Result<(), String> {
     if let Some(data) = &mut self.data {

@@ -10,7 +10,10 @@ use quick_xml::{
 
 use paste::paste;
 
-use super::{coosys::CooSys, error::VOTableError, param::Param, QuickXmlReadWrite};
+use super::{
+  coosys::CooSys, error::VOTableError, param::Param, QuickXmlReadWrite, TableDataContent,
+  VOTableVisitor,
+};
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "def_type")]
@@ -24,6 +27,16 @@ impl DefinitionsElem {
     match self {
       DefinitionsElem::CooSys(elem) => elem.write(writer, &()),
       DefinitionsElem::Param(elem) => elem.write(writer, &()),
+    }
+  }
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    match self {
+      DefinitionsElem::CooSys(e) => e.visit(visitor),
+      DefinitionsElem::Param(e) => e.visit(visitor),
     }
   }
 }
@@ -53,6 +66,18 @@ impl Definitions {
 
   impl_builder_push_elem!(Param, DefinitionsElem);
   impl_builder_push_elem!(CooSys, DefinitionsElem);
+
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_definitions_start(self)?;
+    for e in &mut self.elems {
+      e.visit(visitor)?;
+    }
+    visitor.visit_definitions_ended(self)
+  }
 }
 
 impl QuickXmlReadWrite for Definitions {

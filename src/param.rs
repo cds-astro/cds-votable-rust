@@ -17,7 +17,7 @@ use super::{
   field::{ArraySize, Field, Precision},
   link::Link,
   values::Values,
-  QuickXmlReadWrite,
+  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -88,6 +88,24 @@ impl Param {
   pub fn push_link(mut self, link: Link) -> Self {
     self.field.links.push(link);
     self
+  }
+
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_param_start(self)?;
+    if let Some(description) = &mut self.field.description {
+      visitor.visit_description(description)?;
+    }
+    if let Some(values) = &mut self.field.values {
+      values.visit(visitor)?;
+    }
+    for l in &mut self.field.links {
+      visitor.visit_link(l)?;
+    }
+    visitor.visit_param_ended(self)
   }
 }
 

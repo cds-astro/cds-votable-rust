@@ -12,7 +12,7 @@ use paste::paste;
 
 use super::{
   desc::Description, error::VOTableError, fieldref::FieldRef, param::Param, paramref::ParamRef,
-  QuickXmlReadWrite,
+  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -29,6 +29,17 @@ impl GroupElem {
       GroupElem::ParamRef(elem) => elem.write(writer, &()),
       GroupElem::Param(elem) => elem.write(writer, &()),
       GroupElem::Group(elem) => elem.write(writer, &()),
+    }
+  }
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    match self {
+      GroupElem::ParamRef(e) => visitor.visit_paramref(e),
+      GroupElem::Param(e) => e.visit(visitor),
+      GroupElem::Group(e) => e.visit(visitor),
     }
   }
 }
@@ -81,6 +92,21 @@ impl Group {
   impl_builder_push_elem!(ParamRef, GroupElem);
   impl_builder_push_elem!(Param, GroupElem);
   impl_builder_push_elem!(Group, GroupElem);
+
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_group_start(self)?;
+    if let Some(descrition) = &mut self.description {
+      visitor.visit_description(descrition)?;
+    }
+    for elem in &mut self.elems {
+      elem.visit(visitor)?;
+    }
+    visitor.visit_group_ended(self)
+  }
 }
 
 impl QuickXmlReadWrite for Group {
@@ -234,6 +260,18 @@ impl TableGroupElem {
       TableGroupElem::TableGroup(elem) => elem.write(writer, &()),
     }
   }
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    match self {
+      TableGroupElem::FieldRef(e) => visitor.visit_fieldref(e),
+      TableGroupElem::ParamRef(e) => visitor.visit_paramref(e),
+      TableGroupElem::Param(e) => e.visit(visitor),
+      TableGroupElem::TableGroup(e) => e.visit(visitor),
+    }
+  }
 }
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -286,6 +324,21 @@ impl TableGroup {
   impl_builder_push_elem!(ParamRef, TableGroupElem);
   impl_builder_push_elem!(Param, TableGroupElem);
   impl_builder_push_elem!(TableGroup, TableGroupElem);
+
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_table_group_start(self)?;
+    if let Some(desc) = &mut self.description {
+      visitor.visit_description(desc)?;
+    }
+    for e in &mut self.elems {
+      e.visit(visitor)?;
+    }
+    visitor.visit_table_group_ended(self)
+  }
 }
 
 impl QuickXmlReadWrite for TableGroup {

@@ -13,16 +13,22 @@ use quick_xml::{
 
 use serde_json::Value;
 
-use crate::{
-  data::{binary::Binary, binary2::Binary2, Data},
-  impls::mem::VoidTableDataContent,
-};
-
 #[cfg(feature = "mivot")]
-use super::mivot::vodml::Vodml;
+use super::mivot::{vodml::Vodml, VodmlVisitor};
 use super::{
-  coosys::CooSys, desc::Description, error::VOTableError, group::Group, info::Info, is_empty,
-  link::Link, param::Param, table::Table, timesys::TimeSys, QuickXmlReadWrite, TableDataContent,
+  coosys::CooSys,
+  data::{binary::Binary, binary2::Binary2, Data},
+  desc::Description,
+  error::VOTableError,
+  group::Group,
+  impls::mem::VoidTableDataContent,
+  info::Info,
+  is_empty,
+  link::Link,
+  param::Param,
+  table::Table,
+  timesys::TimeSys,
+  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -43,6 +49,18 @@ impl ResourceElem {
       ResourceElem::Param(elem) => elem.write(writer, &()),
     }
   }
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    match self {
+      ResourceElem::CooSys(e) => e.visit(visitor),
+      ResourceElem::TimeSys(e) => visitor.visit_timesys(e),
+      ResourceElem::Group(e) => e.visit(visitor),
+      ResourceElem::Param(e) => e.visit(visitor),
+    }
+  }
 }
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -56,6 +74,15 @@ impl<C: TableDataContent> ResourceOrTable<C> {
     match self {
       ResourceOrTable::Resource(elem) => elem.write(writer, &()),
       ResourceOrTable::Table(elem) => elem.write(writer, &()),
+    }
+  }
+  pub fn visit<V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    V: VOTableVisitor<C>,
+  {
+    match self {
+      ResourceOrTable::Resource(e) => e.visit(visitor),
+      ResourceOrTable::Table(e) => e.visit(visitor),
     }
   }
 }
@@ -110,6 +137,21 @@ impl<C: TableDataContent> ResourceSubElem<C> {
         "Algo error: not supposed to try to put a resource in a table!",
       ))),
     }
+  }
+
+  pub fn visit<V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_resource_sub_elem_start()?;
+    for l in &mut self.links {
+      visitor.visit_link(l)?;
+    }
+    self.resource_or_table.visit(visitor)?;
+    for i in &mut self.infos {
+      visitor.visit_info(i)?;
+    }
+    visitor.visit_resource_sub_elem_ended()
   }
 
   /// Transforms the BINARY or BINARY2 tag in this element into TABLEDATA.
@@ -233,6 +275,30 @@ impl<C: TableDataContent> Resource<C> {
   // - extra optional element
   #[cfg(feature = "mivot")]
   impl_builder_opt_attr!(vodml, Vodml);
+
+  pub fn visit<V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_resource_start(self)?;
+    if let Some(desc) = &mut self.description {
+      visitor.visit_description(desc)?;
+    }
+    for i in &mut self.infos {
+      visitor.visit_info(i)?;
+    }
+    for e in self.elems.iter_mut() {
+      e.visit(visitor)?;
+    }
+    for e in self.sub_elems.iter_mut() {
+      e.visit(visitor)?;
+    }
+    #[cfg(feature = "mivot")]
+    if let Some(vodml) = &mut self.vodml {
+      visitor.get_mivot_visitor().visit_vodml(vodml)?;
+    }
+    visitor.visit_resource_ended(self)
+  }
 
   pub(crate) fn ensures_consistency(&mut self) -> Result<(), String> {
     for elem in self.sub_elems.iter_mut() {

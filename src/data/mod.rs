@@ -14,6 +14,7 @@ use serde;
 
 use super::{
   error::VOTableError, info::Info, table::TableElem, QuickXmlReadWrite, TableDataContent,
+  VOTableVisitor,
 };
 
 use crate::{
@@ -50,6 +51,18 @@ pub enum DataElem<C: TableDataContent> {
 }
 
 impl<C: TableDataContent> DataElem<C> {
+  pub fn visit<V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    V: VOTableVisitor<C>,
+  {
+    match self {
+      DataElem::TableData(e) => visitor.visit_tabledata(e),
+      DataElem::Binary(e) => visitor.visit_binary_stream(&mut e.stream),
+      DataElem::Binary2(e) => visitor.visit_binary2_stream(&mut e.stream),
+      DataElem::Fits(e) => e.visit(visitor),
+    }
+  }
+
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
     reader: &mut Reader<R>,
@@ -122,6 +135,18 @@ impl<C: TableDataContent> Data<C> {
       data: DataElem::TableData(TableData::default()),
       infos: vec![],
     }
+  }
+
+  pub fn visit<V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_data_start(self)?;
+    self.data.visit(visitor)?;
+    for info in &mut self.infos {
+      visitor.visit_info(info)?;
+    }
+    visitor.visit_data_ended(self)
   }
 
   pub(crate) fn ensures_consistency(&mut self, context: &[TableElem]) -> Result<(), String> {

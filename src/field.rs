@@ -19,7 +19,7 @@ use paste::paste;
 
 use super::{
   datatype::Datatype, desc::Description, error::VOTableError, link::Link, values::Values,
-  QuickXmlReadWrite,
+  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -328,6 +328,167 @@ impl Field {
   impl_builder_opt_attr!(description, Description);
   impl_builder_opt_attr!(values, Values);
   impl_builder_push!(Link);
+
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_field_start(self)?;
+    if let Some(description) = &mut self.description {
+      visitor.visit_description(description)?;
+    }
+    if let Some(values) = &mut self.values {
+      values.visit(visitor)?;
+    }
+    for l in &mut self.links {
+      visitor.visit_link(l)?;
+    }
+    visitor.visit_field_ended(self)
+  }
+
+  /// Enrich this Field filling its empty elements with the ones provided in the given `other` Field.
+  /// Returns an error is the datatypes and/or arraysize are not the same.
+  pub fn merge_enrich(&mut self, other: &Field) -> Result<(), String> {
+    if self.datatype != other.datatype {
+      Err(format!(
+        "Different datatypes: {} != {}",
+        self.datatype, other.datatype
+      ))
+    } else if self.arraysize != other.arraysize {
+      Err(format!(
+        "Different arraysizes: {:?} != {:?}",
+        self.arraysize, other.arraysize
+      ))
+    } else {
+      // Id
+      if let (None, Some(id)) = (&self.id, &other.id) {
+        self.id = Some(id.clone());
+      }
+      // Unit
+      if let (None, Some(unit)) = (&self.unit, &other.unit) {
+        self.unit = Some(unit.clone());
+      }
+      // Precision
+      if let (None, Some(precision)) = (&self.precision, &other.precision) {
+        self.precision = Some(precision.clone());
+      }
+      // width
+      if let (None, Some(width)) = (&self.width, &other.width) {
+        self.width = Some(width.clone());
+      }
+      // xtype
+      if let (None, Some(xtype)) = (&self.xtype, &other.xtype) {
+        self.xtype = Some(xtype.clone());
+      }
+      // ref
+      if let (None, Some(ref_)) = (&self.ref_, &other.ref_) {
+        self.ref_ = Some(ref_.clone());
+      }
+      // ucd
+      if let (None, Some(ucd)) = (&self.ucd, &other.ucd) {
+        self.ucd = Some(ucd.clone());
+      }
+      // utype
+      if let (None, Some(utype)) = (&self.utype, &other.utype) {
+        self.utype = Some(utype.clone());
+      }
+      // extra
+      for (k, v) in &other.extra {
+        if !self.extra.contains_key(k) {
+          self.extra.insert(k.clone(), v.clone());
+        }
+      }
+      // - description
+      if let (None, Some(description)) = (&self.description, &other.description) {
+        self.description = Some(description.clone());
+      }
+      // - values
+      if let (None, Some(values)) = (&self.values, &other.values) {
+        self.values = Some(values.clone());
+      }
+      // - links
+      let curr_size = self.links.len();
+      for l in &other.links {
+        if !self.links[0..curr_size].contains(&l) {
+          self.links.push(l.clone());
+        }
+      }
+      Ok(())
+    }
+  }
+
+  /// Enrich this Field filling its elements with the ones provided in the given `other` Field.
+  /// Returns an error is the datatypes and/or arraysize are not the same.
+  /// Elements already defined in thuis Field but also present in `other` are overwritten,
+  /// **including the name** (which is mandatory and thus always overwritten).
+  pub fn merge_overwrite(&mut self, other: &Field) -> Result<(), String> {
+    if self.datatype != other.datatype {
+      Err(format!(
+        "Different datatypes: {} != {}",
+        self.datatype, other.datatype
+      ))
+    } else if self.arraysize != other.arraysize {
+      Err(format!(
+        "Different arraysizes: {:?} != {:?}",
+        self.arraysize, other.arraysize
+      ))
+    } else {
+      // Id
+      if let Some(id) = &other.id {
+        self.id = Some(id.clone());
+      }
+      self.name = other.name.clone();
+      // Unit
+      if let Some(unit) = &other.unit {
+        self.unit = Some(unit.clone());
+      }
+      // Precision
+      if let Some(precision) = &other.precision {
+        self.precision = Some(precision.clone());
+      }
+      // width
+      if let Some(width) = &other.width {
+        self.width = Some(width.clone());
+      }
+      // xtype
+      if let Some(xtype) = &other.xtype {
+        self.xtype = Some(xtype.clone());
+      }
+      // ref
+      if let Some(ref_) = &other.ref_ {
+        self.ref_ = Some(ref_.clone());
+      }
+      // ucd
+      if let Some(ucd) = &other.ucd {
+        self.ucd = Some(ucd.clone());
+      }
+      // utype
+      if let Some(utype) = &other.utype {
+        self.utype = Some(utype.clone());
+      }
+      // extra
+      for (k, v) in &other.extra {
+        self.extra.insert(k.clone(), v.clone());
+      }
+      // - description
+      if let Some(description) = &other.description {
+        self.description = Some(description.clone());
+      }
+      // - values
+      if let Some(values) = &other.values {
+        self.values = Some(values.clone());
+      }
+      // - links
+      let curr_size = self.links.len();
+      for l in &other.links {
+        if !self.links[0..curr_size].contains(&l) {
+          self.links.push(l.clone());
+        }
+      }
+      Ok(())
+    }
+  }
 }
 
 impl QuickXmlReadWrite for Field {

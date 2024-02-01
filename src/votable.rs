@@ -6,29 +6,21 @@ use std::{
   str::{self, FromStr},
 };
 
-use quick_xml::{
-  events::{attributes::Attributes, BytesDecl},
-  Reader,
-};
-
 use paste::paste;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::is_empty;
-use crate::table::Table;
+// Re-export the quick_xml elements
+pub use quick_xml::{
+  events::{attributes::Attributes, BytesDecl, BytesEnd, BytesStart, Event},
+  Reader, Writer,
+};
 
 use super::{
   coosys::CooSys, definitions::Definitions, desc::Description, error::VOTableError, group::Group,
-  info::Info, param::Param, resource::Resource, timesys::TimeSys, QuickXmlReadWrite,
-  TableDataContent,
+  info::Info, is_empty, param::Param, resource::Resource, table::Table, timesys::TimeSys,
+  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
-
-// Re-export the quick_xml elements
-pub use quick_xml::events::BytesEnd;
-pub use quick_xml::events::BytesStart;
-pub use quick_xml::events::Event;
-pub use quick_xml::Writer;
 
 pub fn new_xml_writer<W: Write>(
   writer: W,
@@ -102,6 +94,20 @@ pub enum VOTableElem {
 }
 
 impl VOTableElem {
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    match self {
+      VOTableElem::CooSys(elem) => elem.visit(visitor),
+      VOTableElem::TimeSys(elem) => visitor.visit_timesys(elem),
+      VOTableElem::Group(elem) => elem.visit(visitor),
+      VOTableElem::Param(elem) => elem.visit(visitor),
+      VOTableElem::Info(elem) => visitor.visit_info(elem),
+      VOTableElem::Definitions(elem) => elem.visit(visitor),
+    }
+  }
   fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
     match self {
       VOTableElem::CooSys(elem) => elem.write(writer, &()),
@@ -402,6 +408,7 @@ pub struct VOTable<C: TableDataContent> {
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub post_infos: Vec<Info>,
 }
+
 /* A ajouter?!
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xmlns="http://www.ivoa.net/xml/VOTable/v1.3"
@@ -454,6 +461,23 @@ impl<C: TableDataContent> VOTable<C> {
       ressource.ensures_consistency()?;
     }
     Ok(())
+  }
+
+  pub fn visit<V: VOTableVisitor<C>>(&mut self, visitor: &mut V) -> Result<(), V::E> {
+    visitor.visit_votable_start(self)?;
+    if let Some(desc) = &mut self.description {
+      visitor.visit_description(desc)?;
+    }
+    for e in self.elems.iter_mut() {
+      e.visit(visitor)?;
+    }
+    for r in self.resources.iter_mut() {
+      r.visit(visitor)?;
+    }
+    for i in self.post_infos.iter_mut() {
+      visitor.visit_post_info(i)?;
+    }
+    visitor.visit_votable_ended(self)
   }
 
   /*pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, VOTableError>  {
