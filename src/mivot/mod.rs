@@ -13,6 +13,7 @@ pub mod join;
 pub mod model;
 pub mod report;
 pub mod templates;
+pub mod visitors;
 pub mod vodml;
 
 pub use self::{
@@ -30,7 +31,7 @@ pub use self::{
     },
     Globals,
   },
-  join::r#where::Where as WhereJ,
+  join::{r#where::Where as WhereJ, Join},
   model::Model,
   report::Report,
   templates::{

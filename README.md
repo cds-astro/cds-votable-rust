@@ -565,7 +565,7 @@ votable:
     + [X] Support in `Info`, `Description`, `Link`, `PARAMRef` and `FIELDRef`
     + [ ] Support `CDATA` in `<TD></TD>` 
 * [ ] Fill the doc for the Rust library (but I so far do not know people interested in such a lib since Rust is not very used in the astronomy community so far, so...)
-* [ ] Add a check method ensuring that user input VOTableValue (using the API to build a VOTable) 
+* [X] Add a check method ensuring that user input VOTableValue (using the API to build a VOTable) 
       matches the table schema (or automatically converting in the right VOTableValue)
 * [ ] Add much more tests!
 * [X] Add possibility to convert to/from `TABLEDATA`, `BINARY`, `BINARY2`

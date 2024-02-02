@@ -248,8 +248,8 @@ pub trait VOTableVisitor<C: TableDataContent> {
   fn visit_param_start(&mut self, param: &mut Param) -> Result<(), Self::E>;
   fn visit_param_ended(&mut self, param: &mut Param) -> Result<(), Self::E>;
 
-  fn visit_field_start(&mut self, param: &mut Field) -> Result<(), Self::E>;
-  fn visit_field_ended(&mut self, param: &mut Field) -> Result<(), Self::E>;
+  fn visit_field_start(&mut self, field: &mut Field) -> Result<(), Self::E>;
+  fn visit_field_ended(&mut self, field: &mut Field) -> Result<(), Self::E>;
 
   fn visit_info(&mut self, info: &mut Info) -> Result<(), Self::E>; // No start/end
   fn visit_definitions_start(&mut self, coosys: &mut Definitions) -> Result<(), Self::E>;
