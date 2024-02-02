@@ -1,9 +1,16 @@
 use crate::mivot::*;
+use std::marker::PhantomData;
 
-pub struct DoNothing;
+pub struct DoNothing<E: Error>(PhantomData<E>);
 
-impl VodmlVisitor for DoNothing {
-  type E = ();
+impl<E: Error> DoNothing<E> {
+  pub fn new() -> Self {
+    Self(PhantomData)
+  }
+}
+
+impl<E: Error> VodmlVisitor for DoNothing<E> {
+  type E = E;
 
   fn visit_vodml(&mut self, _: &mut Vodml) -> Result<(), Self::E> {
     Ok(())
@@ -100,11 +107,11 @@ impl VodmlVisitor for DoNothing {
     Ok(())
   }
 
-  fn visit_attribute_childof_instance(&mut self, attr: &mut AttributeI) -> Result<(), Self::E> {
+  fn visit_attribute_childof_instance(&mut self, _: &mut AttributeI) -> Result<(), Self::E> {
     Ok(())
   }
 
-  fn visit_attribute_childof_collection(&mut self, attr: &mut AttributeC) -> Result<(), Self::E> {
+  fn visit_attribute_childof_collection(&mut self, _: &mut AttributeC) -> Result<(), Self::E> {
     Ok(())
   }
 
