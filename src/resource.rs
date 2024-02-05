@@ -264,6 +264,13 @@ impl<C: TableDataContent> Resource<C> {
   impl_builder_push_elem!(TimeSys, ResourceElem);
   impl_builder_push_elem!(Group, ResourceElem);
   impl_builder_push_elem!(Param, ResourceElem);
+  pub fn push_elem(mut self, elem: ResourceElem) -> Self {
+    self.push_elem_by_ref(elem);
+    self
+  }
+  pub fn push_elem_by_ref(&mut self, elem: ResourceElem) {
+    self.elems.push(elem);
+  }
   // - sub-sequence elements
   pub fn push_sub_elem(mut self, sub_elem: ResourceSubElem<C>) -> Self {
     self.sub_elems.push(sub_elem);
