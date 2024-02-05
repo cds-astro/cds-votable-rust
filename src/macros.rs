@@ -12,6 +12,9 @@ macro_rules! impl_builder_opt_string_attr {
         self.$arg = Some($arg.into());
         self
       }
+      pub fn [<set_ $arg _by_ref>]<I: Into<String>>(&mut self, $arg: I) {
+        self.$arg = Some($arg.into());
+      }
     }
   };
   ($arg:ident, $alt:ident) => {
@@ -19,6 +22,9 @@ macro_rules! impl_builder_opt_string_attr {
       pub fn [<set_ $alt>]<I: Into<String>>(mut self, $arg: I) -> Self {
         self.$arg = Some($arg.into());
         self
+      }
+      pub fn [<set_ $alt _by_ref>]<I: Into<String>>(&mut self, $arg: I) {
+        self.$arg = Some($arg.into());
       }
     }
   };
@@ -163,8 +169,11 @@ macro_rules! impl_builder_push_no_s {
 macro_rules! impl_builder_push_post_info {
   () => {
     pub fn push_post_info(mut self, info: Info) -> Self {
-      self.post_infos.push(info);
+      self.push_post_info_by_ref(info);
       self
+    }
+    pub fn push_post_info_by_ref(&mut self, info: Info) {
+      self.post_infos.push(info);
     }
   };
 }
