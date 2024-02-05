@@ -552,6 +552,13 @@ impl<C: TableDataContent> VOTable<C> {
   impl_builder_push_elem!(Param, VOTableElem);
   impl_builder_push_elem!(Info, VOTableElem);
   impl_builder_push_elem!(Definitions, VOTableElem);
+  pub fn push_elem(mut self, elem: VOTableElem) -> Self {
+    self.push_elem_by_ref(elem);
+    self
+  }
+  pub fn push_elem_by_ref(&mut self, elem: VOTableElem) {
+    self.elems.push(elem);
+  }
 
   impl_builder_push!(Resource, C);
 
