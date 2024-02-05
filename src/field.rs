@@ -371,11 +371,11 @@ impl Field {
       }
       // Precision
       if let (None, Some(precision)) = (&self.precision, &other.precision) {
-        self.precision = Some(precision.clone());
+        self.precision = Some(*precision);
       }
       // width
       if let (None, Some(width)) = (&self.width, &other.width) {
-        self.width = Some(width.clone());
+        self.width = Some(*width);
       }
       // xtype
       if let (None, Some(xtype)) = (&self.xtype, &other.xtype) {
@@ -410,7 +410,7 @@ impl Field {
       // - links
       let curr_size = self.links.len();
       for l in &other.links {
-        if !self.links[0..curr_size].contains(&l) {
+        if !self.links[0..curr_size].contains(l) {
           self.links.push(l.clone());
         }
       }
@@ -445,11 +445,11 @@ impl Field {
       }
       // Precision
       if let Some(precision) = &other.precision {
-        self.precision = Some(precision.clone());
+        self.precision = Some(*precision);
       }
       // width
       if let Some(width) = &other.width {
-        self.width = Some(width.clone());
+        self.width = Some(*width);
       }
       // xtype
       if let Some(xtype) = &other.xtype {
@@ -482,7 +482,7 @@ impl Field {
       // - links
       let curr_size = self.links.len();
       for l in &other.links {
-        if !self.links[0..curr_size].contains(&l) {
+        if !self.links[0..curr_size].contains(l) {
           self.links.push(l.clone());
         }
       }

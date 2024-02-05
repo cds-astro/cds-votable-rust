@@ -1,3 +1,55 @@
+macro_rules! impl_builder_mandatory_string_attr {
+  ($arg:ident) => {
+    paste! {
+      pub fn [<set_ $arg>]<I: Into<String>>(mut self, $arg: I) -> Self {
+        self.$arg = $arg.into();
+        self
+      }
+      pub fn [<set_ $arg _by_ref>]<I: Into<String>>(&mut self, $arg: I) {
+        self.$arg = $arg.into();
+      }
+    }
+  };
+  ($arg:ident, $alt:ident) => {
+    paste! {
+      pub fn [<set_ $alt>]<I: Into<String>>(mut self, $arg: I) -> Self {
+        self.$arg = $arg.into();
+        self
+      }
+      pub fn [<set_ $alt _by_ref>]<I: Into<String>>(&mut self, $arg: I) {
+        self.$arg = $arg.into();
+      }
+    }
+  };
+}
+
+macro_rules! impl_builder_mandatory_attr {
+  ($arg: ident, $t: ident) => {
+    paste! {
+      pub fn [<set_ $arg>](mut self, $arg: $t) -> Self {
+        self.$arg = $arg;
+        self
+      }
+
+      pub fn [<set_ $arg _by_ref>](&mut self, $arg: $t) {
+        self.$arg = $arg;
+      }
+    }
+  };
+  ($arg: ident, $alt:ident, $t: ident) => {
+    paste! {
+      pub fn [<set_ $alt>](mut self, $arg: $t) -> Self {
+        self.$arg = $arg;
+        self
+      }
+
+      pub fn [<set_ $alt _by_ref>](&mut self, $arg: $t) {
+        self.$arg = $arg;
+      }
+    }
+  };
+}
+
 /// E.g. `impl_builder_opt_string_attr(id)` leads to
 /// ```ignore
 /// pub fn set_id<I: Into<String>>(mut self, id: I) -> Self {
@@ -188,8 +240,11 @@ macro_rules! impl_builder_push_post_info {
 macro_rules! impl_builder_insert_extra {
   () => {
     pub fn insert_extra<S: Into<String>>(mut self, key: S, value: Value) -> Self {
-      self.extra.insert(key.into(), value);
+      self.insert_extra_by_ref(key, value);
       self
+    }
+    pub fn insert_extra_by_ref<S: Into<String>>(&mut self, key: S, value: Value) {
+      self.extra.insert(key.into(), value);
     }
   };
 }
@@ -337,6 +392,45 @@ macro_rules! write_extra {
   ($self:ident, $elem_writer:ident) => {
     for (key, val) in &$self.extra {
       $elem_writer = $elem_writer.with_attribute((key.as_str(), val.to_string().as_str()));
+    }
+  };
+}
+
+macro_rules! push2write_mandatory_string_attr {
+  ($self:ident, $tag:ident, $arg:ident) => {
+    paste! {
+      $tag.push_attribute((stringify!($arg),  (&$self.[<$arg:lower>]).as_str()));
+    }
+  };
+  ($self:ident, $tag:ident, $arg:ident, $arg_str:ident) => {
+    paste! {
+      $tag.push_attribute((stringify!($arg_str),  (&$self.[<$arg:lower>]).as_str()));
+    }
+  };
+}
+
+macro_rules! push2write_mandatory_tostring_attr {
+  ($self:ident, $tag:ident, $arg:ident) => {
+    paste! {
+      $tag.push_attribute((stringify!($arg),  &$self.[<$arg:lower>].to_string().as_str()));
+    }
+  };
+  ($self:ident, $tag:ident, $arg:ident, $arg_str:ident) => {
+    paste! {
+      $tag.push_attribute((stringify!($arg_str),  &$self.[<$arg:lower>].to_string().as_str()));
+    }
+  };
+}
+
+macro_rules! push2write_mandatory_into_attr {
+  ($self:ident, $tag:ident, $arg:ident) => {
+    paste! {
+      $tag.push_attribute((stringify!($arg),  (&$self.[<$arg:lower>]).into()));
+    }
+  };
+  ($self:ident, $tag:ident, $arg:ident, $arg_str:ident) => {
+    paste! {
+      $tag.push_attribute((stringify!($arg_str),  (&$self.[<$arg:lower>]).into()));
     }
   };
 }

@@ -9,6 +9,13 @@ impl<E: Error> DoNothing<E> {
   }
 }
 
+impl<E: Error> Default for DoNothing<E> {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
+
 impl<E: Error> VodmlVisitor for DoNothing<E> {
   type E = E;
 

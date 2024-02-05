@@ -386,9 +386,8 @@ mod tests {
           ),
       );
 
-    let mut votable = VOTable::new(resource)
+    let mut votable = VOTable::new(Version::V1_4, resource)
               .set_id("my_votable")
-              .set_version(Version::V1_4)
               .set_description(r#"
     VizieR Astronomical Server vizier.u-strasbg.fr
     Date: 2022-04-13T06:55:08 [V1.99+ (14-Oct-2013)]
@@ -572,9 +571,8 @@ mod tests {
         Info::new("QUERY_STATUS", "OVERFLOW").set_content("truncated result (maxtup=2)"),
       ));
 
-    let votable = VOTable::new(resource)
+    let votable = VOTable::new(Version::V1_4, resource)
       .set_id("my_votable")
-      .set_version(Version::V1_4)
       .set_description(r#"VizieR Astronomical Server vizier.u-strasbg.fr"#.into())
       .push_info(Info::new("votable-version", "1.99+ (14-Oct-2013)").set_id("VERSION"))
       .wrap();

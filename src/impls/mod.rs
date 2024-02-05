@@ -612,8 +612,8 @@ impl Schema {
         match self {
           Schema::CharASCII => serializer.serialize_u8(*v as u8),
           Schema::CharUnicode => serializer.serialize_char(*v),
-          Schema::FixedLengthStringASCII { n_chars } => serialize_fixed_length_array(serializer, *n_chars, v.to_string().as_str().as_bytes()),
-          Schema::VariableLengthStringASCII { n_chars_max: _ } => serialize_variable_length_array(serializer, v.to_string().as_str().as_bytes()),
+          Schema::FixedLengthStringASCII { n_chars } => serialize_fixed_length_array(serializer, *n_chars, v.to_string().as_bytes()),
+          Schema::VariableLengthStringASCII { n_chars_max: _ } => serialize_variable_length_array(serializer, v.to_string().as_bytes()),
           Schema::FixedLengthStringUnicode { n_chars } => serialize_fixed_length_array(serializer, *n_chars, &encode_ucs2(v.to_string().as_str()).map_err(S::Error::custom)?),
           Schema::VariableLengthStringUnicode { n_chars_max: _ } => serialize_variable_length_array(serializer, &encode_ucs2(v.to_string().as_str()).map_err(S::Error::custom)?),
           _ => Err(S::Error::custom(format!("Value of type CharASCII with schema: {:?}", self)))
@@ -623,8 +623,8 @@ impl Schema {
         match self {
           Schema::CharASCII => serializer.serialize_u8(*v as u8),
           Schema::CharUnicode => serializer.serialize_char(*v),
-          Schema::FixedLengthStringASCII { n_chars } => serialize_fixed_length_array(serializer, *n_chars, v.to_string().as_str().as_bytes()),
-          Schema::VariableLengthStringASCII { n_chars_max: _ } => serialize_variable_length_array(serializer, v.to_string().as_str().as_bytes()),
+          Schema::FixedLengthStringASCII { n_chars } => serialize_fixed_length_array(serializer, *n_chars, v.to_string().as_bytes()),
+          Schema::VariableLengthStringASCII { n_chars_max: _ } => serialize_variable_length_array(serializer, v.to_string().as_bytes()),
           Schema::FixedLengthStringUnicode { n_chars } => serialize_fixed_length_array(serializer, *n_chars, &encode_ucs2(v.to_string().as_str()).map_err(S::Error::custom)?),
           Schema::VariableLengthStringUnicode { n_chars_max: _ } => serialize_variable_length_array(serializer, &encode_ucs2(v.to_string().as_str()).map_err(S::Error::custom)?),
           _ => Err(S::Error::custom(format!("Value of type CharUnicode with schema: {:?}", self)))

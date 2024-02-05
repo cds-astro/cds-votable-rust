@@ -49,6 +49,30 @@ pub enum Version {
   #[serde(rename = "1.5")]
   V1_5,
 }
+impl Version {
+  /// Returns the **XML** **N**ame**S**pace associated to this particular VOTable version.
+  pub fn get_xmlns(&self) -> &'static str {
+    match self {
+      Self::V1_0 => "http://www.ivoa.net/xml/VOTable/v1.0",
+      Self::V1_1 => "http://www.ivoa.net/xml/VOTable/v1.1",
+      Self::V1_2 => "http://www.ivoa.net/xml/VOTable/v1.2",
+      Self::V1_3 => "http://www.ivoa.net/xml/VOTable/v1.3",
+      Self::V1_4 => "http://www.ivoa.net/xml/VOTable/v1.4",
+      Self::V1_5 => "http://www.ivoa.net/xml/VOTable/v1.5",
+    }
+  }
+
+  pub fn get_xsi_schema_loc(&self) -> &'static str {
+    match self {
+      Self::V1_0 => "http://www.ivoa.net/xml/VOTable/v1.0",
+      Self::V1_1 => "http://www.ivoa.net/xml/VOTable/v1.1",
+      Self::V1_2 => "http://www.ivoa.net/xml/VOTable/v1.2",
+      Self::V1_3 => "http://www.ivoa.net/xml/VOTable/v1.3",
+      Self::V1_4 => "http://www.ivoa.net/xml/VOTable/v1.4",
+      Self::V1_5 => "http://www.ivoa.net/xml/VOTable/v1.5",
+    }
+  }
+}
 
 impl FromStr for Version {
   type Err = String;
@@ -153,7 +177,7 @@ impl<C: TableDataContent> VOTableWrapper<C> {
     self
       .votable
       .ensures_consistency()
-      .map_err(|e| VOTableError::Custom(e))?;
+      .map_err(VOTableError::Custom)?;
     Ok(self)
   }
 
@@ -393,8 +417,15 @@ pub struct VOTable<C: TableDataContent> {
   // attributes
   #[serde(rename = "ID", skip_serializing_if = "Option::is_none")]
   pub id: Option<String>,
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub version: Option<Version>,
+  pub version: Version,
+  /// E.g. "http://www.ivoa.net/xml/VOTable/v1.3", see method in the `Version` enum.
+  pub xmlns: String,
+  #[serde(rename = "xmlns:xsi", skip_serializing_if = "Option::is_none")]
+  /// E.g. "http://www.w3.org/2001/XMLSchema-instance"
+  pub xmlns_xsi: Option<String>,
+  /// E.g. ""http://www.ivoa.net/xml/VOTable/v1.3 http://www.ivoa.net/xml/VOTable/v1.3""
+  #[serde(rename = "xsi:schemaLocation", skip_serializing_if = "Option::is_none")]
+  pub xsi_schema_location: Option<String>,
   // extra attributes
   #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
   pub extra: HashMap<String, Value>,
@@ -408,12 +439,6 @@ pub struct VOTable<C: TableDataContent> {
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub post_infos: Vec<Info>,
 }
-
-/* A ajouter?!
-xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-xmlns="http://www.ivoa.net/xml/VOTable/v1.3"
-xsi:schemaLocation="http://www.ivoa.net/xml/VOTable/v1.3 http://www.ivoa.net/xml/VOTable/v1.3"
-*/
 
 /// Setters are here to simply the code (not having to create a `String` from a `&str`, to wrap
 /// in an `Option`, ...
@@ -439,10 +464,14 @@ impl<C: TableDataContent> VOTable<C> {
   }
 
   /// Not public because a VOTable is supposed to contains at least one Resource.
-  fn new_empty() -> Self {
+  fn new_empty(version: Version) -> Self {
+    let xmlns = version.get_xmlns().to_string();
     Self {
       id: None,
-      version: None,
+      version,
+      xmlns,
+      xmlns_xsi: None,
+      xsi_schema_location: None,
       extra: Default::default(),
       description: None,
       elems: Default::default(),
@@ -451,8 +480,11 @@ impl<C: TableDataContent> VOTable<C> {
     }
   }
 
-  pub fn new(resource: Resource<C>) -> Self {
-    let votable = Self::new_empty();
+  /// Create a new VOTable implementing the given `Version` and containing the given `Resource`.
+  /// # Note
+  /// * the `xmlns` attribute is automatically generated from the given `Version`.
+  pub fn new(version: Version, resource: Resource<C>) -> Self {
+    let votable = Self::new_empty(version);
     votable.push_resource(resource)
   }
 
@@ -479,20 +511,6 @@ impl<C: TableDataContent> VOTable<C> {
     }
     visitor.visit_votable_ended(self)
   }
-
-  /*pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, VOTableError>  {
-    let file = File::open(path).map_err(VOTableError::Io)?;
-    let reader = BufReader::new(file);
-    Self::from_reader(reader)
-  }
-
-  pub fn from_str(s: &str) -> Result<Self, VOTableError> {
-    Self::from_reader(s.as_bytes())
-  }
-
-  pub fn from_bytes(s: &[u8]) -> Result<Self, VOTableError> {
-    Self::from_reader(s)
-  }*/
 
   pub(crate) fn from_reader<R: BufRead>(reader: R) -> Result<Self, VOTableError> {
     let mut reader = Reader::from_reader(reader);
@@ -540,7 +558,10 @@ impl<C: TableDataContent> VOTable<C> {
 
   impl_builder_opt_string_attr!(id);
 
-  impl_builder_opt_attr!(version, Version);
+  impl_builder_mandatory_attr!(version, Version);
+  impl_builder_mandatory_string_attr!(xmlns);
+  impl_builder_opt_string_attr!(xmlns_xsi);
+  impl_builder_opt_string_attr!(xsi_schema_location);
 
   impl_builder_insert_extra!();
 
@@ -768,7 +789,10 @@ impl<C: TableDataContent> VOTable<C> {
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     // Write tag + attributes
     push2write_opt_string_attr!(self, tag, ID);
-    push2write_opt_into_attr!(self, tag, version);
+    push2write_mandatory_into_attr!(self, tag, version);
+    push2write_mandatory_string_attr!(self, tag, xmlns);
+    push2write_opt_string_attr!(self, tag, xmlns_xsi);
+    push2write_opt_string_attr!(self, tag, xsi_schema_location);
     push2write_extra!(self, tag);
     writer
       .write_event(Event::Start(tag.to_borrowed()))
@@ -847,20 +871,26 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
   type Context = ();
 
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut votable = Self::new_empty();
+    let mut votable = Self::new_empty(Version::V1_4);
     for attr_res in attrs {
       let attr = attr_res.map_err(VOTableError::Attr)?;
       let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
       let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      votable = match attr.key {
-        b"ID" => votable.set_id(value),
-        b"version" => votable.set_version(Version::from_str(value).map_err(VOTableError::Custom)?),
-        _ => votable.insert_extra(
+      match attr.key {
+        b"ID" => votable.set_id_by_ref(value),
+        b"version" => {
+          votable.set_version_by_ref(Version::from_str(value).map_err(VOTableError::Custom)?)
+        }
+        b"xmlns" => votable.set_xmlns_by_ref(value.to_string()),
+        b"xmlns:xsi" => votable.set_xmlns_xsi_by_ref(value.to_string()),
+        b"xsi:schemaLocation" => votable.set_xsi_schema_location_by_ref(value.to_string()),
+        _ => votable.insert_extra_by_ref(
           str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
           Value::String(value.into()),
         ),
       }
     }
+
     Ok(votable)
   }
 
@@ -999,7 +1029,10 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     // Write tag + attributes
     push2write_opt_string_attr!(self, tag, ID);
-    push2write_opt_into_attr!(self, tag, version);
+    push2write_mandatory_into_attr!(self, tag, version);
+    push2write_mandatory_string_attr!(self, tag, xmlns);
+    push2write_opt_string_attr!(self, tag, xmlns_xsi);
+    push2write_opt_string_attr!(self, tag, xsi_schema_location);
     push2write_extra!(self, tag);
     writer
       .write_event(Event::Start(tag.to_borrowed()))
