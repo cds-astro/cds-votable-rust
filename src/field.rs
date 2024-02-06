@@ -352,13 +352,13 @@ impl Field {
   pub fn merge_enrich(&mut self, other: &Field) -> Result<(), String> {
     if self.datatype != other.datatype {
       Err(format!(
-        "Different datatypes: {} != {}",
-        self.datatype, other.datatype
+        "Different datatypes: {} != {} for columns {} and {}.",
+        self.datatype, other.datatype, self.name, other.name
       ))
     } else if self.arraysize != other.arraysize {
       Err(format!(
-        "Different arraysizes: {:?} != {:?}",
-        self.arraysize, other.arraysize
+        "Different arraysizes: {:?} != {:?} for columns {} and {}.",
+        self.arraysize, other.arraysize, self.name, other.name
       ))
     } else {
       // Id
@@ -425,13 +425,13 @@ impl Field {
   pub fn merge_overwrite(&mut self, other: &Field) -> Result<(), String> {
     if self.datatype != other.datatype {
       Err(format!(
-        "Different datatypes: {} != {}",
-        self.datatype, other.datatype
+        "Different datatypes: {} != {} for columns {} and {}.",
+        self.datatype, other.datatype, self.name, other.name
       ))
     } else if self.arraysize != other.arraysize {
       Err(format!(
-        "Different arraysizes: {:?} != {:?}",
-        self.arraysize, other.arraysize
+        "Different arraysizes: {:?} != {:?} for columns {} and {}.",
+        self.arraysize, other.arraysize, self.name, other.name
       ))
     } else {
       // Id
