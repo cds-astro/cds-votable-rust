@@ -1,5 +1,23 @@
 # `votable` Change Log
 
+## 0.4.0
+
+Released 2024-02-06
+
+### Added
+
+* Enrich API with elements such as `push_elem` or `set_xxçby_ref` and re-export.
+* Provide with a MIVOT `DoNothing` visitor 
+* Provide with a `VOTableVisitor` trait and `visitor` methods on the ful VOTable
+* Add methods to merge together two `Fields`
+
+### Changed
+
+* `Version` and `xmlns` are now mandatory in VOTable (with v1.4 as edfault)
+* Add `xmlns:xsi` and `xsi:schemaLocation` in VOTable optional attributes (instead of extra)
+* Add logger to control stderr messages
+
+
 ## 0.3.0
 
 Released 2024-01-12

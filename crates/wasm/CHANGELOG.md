@@ -1,5 +1,12 @@
 # `vot-wasm` Change Log
 
+## 0.4.0
+
+Released 2023-02-06
+
+* Version and xmlns now mandatory in VOTable (with v1.4 as default)
+
+
 ## 0.3.0
 
 Released 2023-01-12

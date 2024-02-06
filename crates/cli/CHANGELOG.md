@@ -1,5 +1,13 @@
 # `moc-cli` Change Log
 
+## 0.4.0
+
+Released 2023-02-06
+
+* Add logger to control stderr messages
+* Version and xmlns now mandatory in VOTable (with v1.4 as default)
+
+
 ## 0.3.0
 
 Released 2023-01-12
@@ -9,12 +17,14 @@ Released 2023-01-12
 * Add Mivot parsing (VODML tag)
 * For other changes/bug correction, see the `votable` crate changelog 
 
+
 ## 0.2.3
 
 Released 2023-05-01
 
 * Accept CDATA in 'Info', 'Description', 'Link', 'ParamRef' and 'FieldRef' content
 * Accept empty 'precision' and 'width' attributes
+
 
 ## 0.2.2
 
