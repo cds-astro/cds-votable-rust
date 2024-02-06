@@ -409,7 +409,7 @@ macro_rules! push2write_mandatory_string_attr {
   };
 }
 
-macro_rules! push2write_mandatory_tostring_attr {
+/*macro_rules! push2write_mandatory_tostring_attr {
   ($self:ident, $tag:ident, $arg:ident) => {
     paste! {
       $tag.push_attribute((stringify!($arg),  &$self.[<$arg:lower>].to_string().as_str()));
@@ -420,7 +420,7 @@ macro_rules! push2write_mandatory_tostring_attr {
       $tag.push_attribute((stringify!($arg_str),  &$self.[<$arg:lower>].to_string().as_str()));
     }
   };
-}
+}*/
 
 macro_rules! push2write_mandatory_into_attr {
   ($self:ident, $tag:ident, $arg:ident) => {
@@ -469,7 +469,7 @@ macro_rules! push2write_opt_tostring_attr {
   };
 }
 
-macro_rules! push2write_opt_into_attr {
+/*macro_rules! push2write_opt_into_attr {
   ($self:ident, $tag:ident, $arg:ident) => {
     paste! {
       if let Some([<$arg:lower>]) = &$self.[<$arg:lower>] {
@@ -484,7 +484,7 @@ macro_rules! push2write_opt_into_attr {
       }
     }
   };
-}
+}*/
 
 macro_rules! push2write_extra {
   ($self:ident, $tag:ident) => {

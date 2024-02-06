@@ -11,20 +11,20 @@ use votable::{error::VOTableError, impls::mem::InMemTableDataRows, votable::VOTa
 
 #[derive(Debug, Copy, Clone)]
 pub enum InputFormat {
-  XML,
-  JSON,
-  YAML,
-  TOML,
+  Xml,
+  Json,
+  Yaml,
+  Toml,
 }
 impl FromStr for InputFormat {
   type Err = String;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     match s {
-      "xml" => Ok(InputFormat::XML),
-      "json" => Ok(InputFormat::JSON),
-      "yaml" => Ok(InputFormat::YAML),
-      "toml" => Ok(InputFormat::TOML),
+      "xml" => Ok(InputFormat::Xml),
+      "json" => Ok(InputFormat::Json),
+      "yaml" => Ok(InputFormat::Yaml),
+      "toml" => Ok(InputFormat::Toml),
       _ => Err(format!(
         "Unrecognized format. Actual: '{}'. Expected: 'xml', 'json', 'yaml' or 'toml'",
         s
@@ -35,36 +35,36 @@ impl FromStr for InputFormat {
 impl InputFormat {
   fn get<R: BufRead>(self, reader: R) -> Result<VOTableWrapper<InMemTableDataRows>, VOTableError> {
     match self {
-      InputFormat::XML => VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_reader(reader),
-      InputFormat::JSON => VOTableWrapper::<InMemTableDataRows>::from_json_reader(reader),
-      InputFormat::YAML => VOTableWrapper::<InMemTableDataRows>::from_yaml_reader(reader),
-      InputFormat::TOML => VOTableWrapper::<InMemTableDataRows>::from_toml_reader(reader),
+      InputFormat::Xml => VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_reader(reader),
+      InputFormat::Json => VOTableWrapper::<InMemTableDataRows>::from_json_reader(reader),
+      InputFormat::Yaml => VOTableWrapper::<InMemTableDataRows>::from_yaml_reader(reader),
+      InputFormat::Toml => VOTableWrapper::<InMemTableDataRows>::from_toml_reader(reader),
     }
   }
 }
 
 #[derive(Debug, Copy, Clone)]
 pub enum OutputFormat {
-  XML,
-  XML_TABLEDATA,
-  XML_BINARY,
-  XML_BINARY2,
-  JSON,
-  YAML,
-  TOML,
+  Xml,
+  XmlTabledata,
+  XmlBinary,
+  XmlBinary2,
+  Json,
+  Yaml,
+  Toml,
 }
 impl FromStr for OutputFormat {
   type Err = String;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     match s {
-      "xml" => Ok(OutputFormat::XML),
-      "xml-td" => Ok(OutputFormat::XML_TABLEDATA),
-      "xml-bin" => Ok(OutputFormat::XML_BINARY),
-      "xml-bin2" => Ok(OutputFormat::XML_BINARY2),
-      "json" => Ok(OutputFormat::JSON),
-      "yaml" => Ok(OutputFormat::YAML),
-      "toml" => Ok(OutputFormat::TOML),
+      "xml" => Ok(OutputFormat::Xml),
+      "xml-td" => Ok(OutputFormat::XmlTabledata),
+      "xml-bin" => Ok(OutputFormat::XmlBinary),
+      "xml-bin2" => Ok(OutputFormat::XmlBinary2),
+      "json" => Ok(OutputFormat::Json),
+      "yaml" => Ok(OutputFormat::Yaml),
+      "toml" => Ok(OutputFormat::Toml),
       _ => Err(format!(
         "Unrecognized format. Actual: '{}'. Expected: 'xml', 'xml-td', 'xml-bin', 'xml-bin2', 'json', 'yaml' or 'toml'",
         s
@@ -80,22 +80,22 @@ impl OutputFormat {
     pretty: bool,
   ) -> Result<(), VOTableError> {
     match self {
-      OutputFormat::XML => vot.to_ivoa_xml_writer(writer),
-      OutputFormat::XML_TABLEDATA => {
+      OutputFormat::Xml => vot.to_ivoa_xml_writer(writer),
+      OutputFormat::XmlTabledata => {
         vot.to_tabledata()?;
         vot.to_ivoa_xml_writer(writer)
       }
-      OutputFormat::XML_BINARY => {
+      OutputFormat::XmlBinary => {
         vot.to_binary()?;
         vot.to_ivoa_xml_writer(writer)
       }
-      OutputFormat::XML_BINARY2 => {
+      OutputFormat::XmlBinary2 => {
         vot.to_binary2()?;
         vot.to_ivoa_xml_writer(writer)
       }
-      OutputFormat::JSON => vot.to_json_writer(writer, pretty),
-      OutputFormat::YAML => vot.to_yaml_writer(writer),
-      OutputFormat::TOML => vot.to_toml_writer(writer, pretty),
+      OutputFormat::Json => vot.to_json_writer(writer, pretty),
+      OutputFormat::Yaml => vot.to_yaml_writer(writer),
+      OutputFormat::Toml => vot.to_toml_writer(writer, pretty),
     }
   }
 }
