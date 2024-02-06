@@ -6,8 +6,8 @@
 
 use std::{io::Write, str};
 
+use log::{debug, warn};
 use paste::paste;
-
 use quick_xml::{
   events::{BytesStart, Event},
   Reader, Writer,
@@ -135,7 +135,7 @@ fn read_globals_sub_elem_by_ref<R: std::io::BufRead>(
       Event::Text(e) if is_empty(e) => {}
       Event::End(e) if e.local_name() == Globals::TAG_BYTES => return Ok(()),
       Event::Eof => return Err(VOTableError::PrematureEOF(Globals::TAG)),
-      _ => eprintln!("Discarded event in {}: {:?}", Globals::TAG, event),
+      _ => debug!("Discarded event in {}: {:?}", Globals::TAG, event),
     }
   }
 }

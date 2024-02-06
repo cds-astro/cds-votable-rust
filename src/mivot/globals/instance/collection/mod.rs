@@ -6,8 +6,8 @@ use std::{
   str,
 };
 
+use log::debug;
 use paste::paste;
-
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
@@ -270,7 +270,7 @@ pub(crate) fn create_collection_from_dmrole_and_reading_sub_elems<R: BufRead>(
         });
       }
       Event::Eof => return Err(VOTableError::PrematureEOF(Collection::TAG)),
-      _ => eprintln!("Discarded event in {}: {:?}", Collection::TAG, event),
+      _ => debug!("Discarded event in {}: {:?}", Collection::TAG, event),
     }
   }
 }

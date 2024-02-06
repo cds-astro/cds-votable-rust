@@ -122,6 +122,7 @@ struct Args {
 
 fn main() -> Result<(), VOTableError> {
   let args = Args::parse();
+  env_logger::init();
   let vot = match args.input {
     Some(path) => {
       let file = File::open(path).map_err(VOTableError::Io)?;

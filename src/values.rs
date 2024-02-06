@@ -8,6 +8,7 @@ use quick_xml::{
   Reader, Writer,
 };
 
+use log::{debug, warn};
 use paste::paste;
 
 use super::{error::VOTableError, QuickXmlReadWrite, TableDataContent, VOTableVisitor};
@@ -48,8 +49,8 @@ impl QuickXmlReadWrite for Min {
         b"value" => value = Some(val),
         b"inclusive" => inclusive = val.parse::<bool>().map_err(VOTableError::ParseBool)?,
         _ => {
-          eprintln!(
-            "WARNING: attribute {:?} in {} is ignored",
+          warn!(
+            "Attribute {:?} in {} is ignored",
             std::str::from_utf8(attr.key),
             Self::TAG
           );
@@ -135,8 +136,8 @@ impl QuickXmlReadWrite for Max {
         b"value" => value = Some(val),
         b"inclusive" => inclusive = val.parse::<bool>().map_err(VOTableError::ParseBool)?,
         _ => {
-          eprintln!(
-            "WARNING: attribute {:?} in {} is ignored",
+          warn!(
+            "Attribute {:?} in {} is ignored",
             std::str::from_utf8(attr.key),
             Self::TAG
           );
@@ -237,8 +238,8 @@ impl QuickXmlReadWrite for Opt {
         b"name" => name = Some(val),
         b"value" => value = Some(val),
         _ => {
-          eprintln!(
-            "WARNING: attribute {:?} in {} is ignored",
+          warn!(
+            "Attribute {:?} in {} is ignored",
             std::str::from_utf8(attr.key),
             Self::TAG
           );
@@ -289,7 +290,7 @@ impl QuickXmlReadWrite for Opt {
         },
         Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(reader),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }
@@ -401,8 +402,8 @@ impl QuickXmlReadWrite for Values {
         b"null" => values.set_null(value),
         b"ref" => values.set_ref(value),
         _ => {
-          eprintln!(
-            "WARNING: attribute {:?} in {} is ignored",
+          warn!(
+            "Attribute {:?} in {} is ignored",
             std::str::from_utf8(attr.key),
             Self::TAG
           );
@@ -457,7 +458,7 @@ impl QuickXmlReadWrite for Values {
         },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }

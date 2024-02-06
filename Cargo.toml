@@ -53,6 +53,7 @@ base64 = "0.21"
 ucs2 = "0.3"
 bitvec = { version = "1", features = ["std", "alloc", "serde"] }
 bstringify = "0.1"
+log = "0.4"
 
 [features]
 default = []

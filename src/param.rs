@@ -8,6 +8,7 @@ use quick_xml::{
   Reader, Writer,
 };
 
+use log::debug;
 use serde_json::Value;
 
 use super::{
@@ -227,7 +228,7 @@ impl QuickXmlReadWrite for Param {
         },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }

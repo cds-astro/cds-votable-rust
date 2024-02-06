@@ -3,9 +3,8 @@
 use std::str;
 
 use bstringify::bstringify;
-
+use log::debug;
 use paste::paste;
-
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
@@ -130,7 +129,7 @@ fn read_template_sub_elem_by_ref<R: std::io::BufRead>(
         }
       }
       Event::Eof => return Err(VOTableError::PrematureEOF(Templates::TAG)),
-      _ => eprintln!("Discarded event in {}: {:?}", Templates::TAG, event),
+      _ => debug!("Discarded event in {}: {:?}", Templates::TAG, event),
     }
   }
 }

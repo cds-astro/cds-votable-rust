@@ -1,5 +1,6 @@
 use std::io::{BufRead, Write};
 
+use log::{debug, warn};
 use quick_xml::{
   events::{attributes::Attributes, BytesText, Event},
   Reader, Writer,
@@ -28,7 +29,7 @@ impl QuickXmlReadWrite for Description {
 
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     if attrs.count() > 0 {
-      eprintln!("Unexpected attributes in DESCRIPTION (not serialized!)");
+      warn!("Unexpected attributes in DESCRIPTION (not serialized!)");
     }
     Ok(Description(Default::default()))
   }

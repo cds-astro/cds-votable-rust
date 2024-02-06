@@ -9,13 +9,13 @@ use quick_xml::{
   Reader, Writer,
 };
 
-use crate::is_empty;
+use log::{debug, warn};
 use paste::paste;
 use serde_json::Value;
 
 use super::{
   data::Data, desc::Description, error::VOTableError, field::Field, group::TableGroup, info::Info,
-  link::Link, param::Param, QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+  is_empty, link::Link, param::Param, QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -220,7 +220,7 @@ impl<C: TableDataContent> Table<C> {
         Event::Text(e) if is_empty(e) => {}
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }
@@ -440,7 +440,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
         Event::Text(e) if is_empty(e) => {}
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }

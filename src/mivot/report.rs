@@ -1,7 +1,7 @@
 use std::str::{self, FromStr};
 
+use log::debug;
 use paste::paste;
-
 use quick_xml::{
   events::{attributes::Attributes, BytesText, Event},
   Reader, Writer,

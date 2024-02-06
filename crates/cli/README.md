@@ -133,6 +133,19 @@ sys	0m0,012s
 > diff xml.1.vot xml.2.vot
 ```
 
+## Log messages
+
+You can adapt the `level` of log messages using
+the environement variable `RUST_LOG` with one of the following value:
+`error`, `warn`, `info`, `debug`, `trace` and `off`.
+
+E.g.:
+```bash
+RUST_LOG="trace" vot xml xml --input VII.vot
+```
+
+See [env_logger](https://docs.rs/env_logger/latest/env_logger/) for more details.
+
 
 ## License
 

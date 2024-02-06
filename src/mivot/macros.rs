@@ -491,7 +491,7 @@ macro_rules! impl_quickrw_not_e_no_a {
           attrs: quick_xml::events::attributes::Attributes,
       ) -> Result<Self, crate::error::VOTableError> {
           if attrs.count() > 0 {
-              eprintln!("Unexpected attributes in {} (not serialized!)", $tag);
+              warn!("Unexpected attributes in {} (not serialized!)", $tag);
           }
           Ok(Self::default())
       }

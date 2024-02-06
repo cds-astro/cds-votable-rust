@@ -6,8 +6,8 @@ use std::{
   str,
 };
 
+use log::debug;
 use paste::paste;
-
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
@@ -210,7 +210,7 @@ impl QuickXmlReadWrite for Instance {
         Event::Text(e) if is_empty(e) => {}
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }

@@ -23,6 +23,8 @@ test = false
 [dependencies]
 votable = { package = "votable", path = "../..", features = ["mivot"] }
 clap = { version = "4.0", features = ["derive"] }
+log = "0.4"
+env_logger = "0.11"
 
 [package.metadata.deb]
 maintainer = "F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>"

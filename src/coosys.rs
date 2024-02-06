@@ -1,12 +1,12 @@
+use log::{debug, warn};
+use quick_xml::{
+  events::{attributes::Attributes, BytesStart, Event},
+  ElementWriter, Reader, Writer,
+};
 use std::{
   io::{BufRead, Write},
   num::ParseFloatError,
   str::{self, FromStr},
-};
-
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  ElementWriter, Reader, Writer,
 };
 
 use paste::paste;
@@ -106,8 +106,8 @@ impl QuickXmlReadWrite for CooSys {
         b"epoch" => epoch = Some(value),
         b"refposition" => refposition = Some(value.parse().map_err(VOTableError::Variant)?),
         _ => {
-          eprintln!(
-            "WARNING: attribute {:?} in {} is ignored",
+          warn!(
+            "Attribute {:?} in {} is ignored",
             std::str::from_utf8(attr.key),
             Self::TAG
           );
@@ -256,7 +256,7 @@ impl QuickXmlReadWrite for CooSys {
         },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }

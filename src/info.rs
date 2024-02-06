@@ -4,13 +4,12 @@ use std::{
   str,
 };
 
+use log::debug;
+use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesText, Event},
   Reader, Writer,
 };
-
-use paste::paste;
-
 use serde_json::Value;
 
 use super::{error::VOTableError, QuickXmlReadWrite};

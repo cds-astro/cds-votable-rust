@@ -263,7 +263,7 @@ macro_rules! read_content {
             return Ok($reader);
           },
           Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-          _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+          _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
           // _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End or Text or CDATA. Actual: {:?}.", $Self::TAG, event))),
         }
       }
@@ -282,7 +282,7 @@ macro_rules! read_content {
             return Ok($reader);
           },
           Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-          _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+          _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
           // _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End or Text or CDATA. Actual: {:?}.", $Self::TAG, event))),
         }
       }
@@ -304,7 +304,7 @@ macro_rules! read_content_by_ref {
             return Ok(());
           },
           Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-          _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+          _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
           // _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End or Text or CDATA. Actual: {:?}.", $Self::TAG, event))),
         }
       }
@@ -323,7 +323,7 @@ macro_rules! read_content_by_ref {
             return Ok(());
           },
           Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-          _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+          _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
           // _ => Err(VOTableError::Custom(format!("Unexpected {} event. Expected: End or Text or CDATA. Actual: {:?}.", $Self::TAG, event))),
         }
       }
@@ -587,15 +587,13 @@ macro_rules! from_event_start_by_ref {
 }
 
 macro_rules! from_event_start_desc_by_ref {
-  ($self:ident, $elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {
-    {
-      let mut desc = $elem::from_attributes($e.attributes())?;
-      desc.read_sub_elements_and_clean_by_ref(&mut $reader, &mut $reader_buff, &())?;
-      if $self.description.replace(desc).is_some() {
-        eprintln!("WARNING: multiple occurrence of DESCRIPTION in VOTable. All but the last one are discarded.");
-      }
+  ($self:ident, $elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {{
+    let mut desc = $elem::from_attributes($e.attributes())?;
+    desc.read_sub_elements_and_clean_by_ref(&mut $reader, &mut $reader_buff, &())?;
+    if $self.description.replace(desc).is_some() {
+      warn!("Multiple occurrence of DESCRIPTION in VOTable. All but the last one are discarded.");
     }
-  };
+  }};
 }
 
 #[cfg(feature = "mivot")]
@@ -604,9 +602,7 @@ macro_rules! from_event_start_vodml_by_ref {
     let mut vodml = $elem::from_attributes($e.attributes())?;
     vodml.read_sub_elements_and_clean_by_ref(&mut $reader, &mut $reader_buff, &())?;
     if $self.vodml.replace(vodml).is_some() {
-      eprintln!(
-        "WARNING: multiple occurrence of VODML in VOTable. All but the last one are discarded."
-      );
+      warn!("Multiple occurrence of VODML in VOTable. All but the last one are discarded.");
     }
   }};
 }

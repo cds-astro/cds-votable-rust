@@ -3,12 +3,12 @@ use std::{
   str,
 };
 
+use log::debug;
+use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
 };
-
-use paste::paste;
 use serde;
 
 use crate::impls::mem::VoidTableDataContent;
@@ -95,7 +95,7 @@ impl QuickXmlReadWrite for Fits {
         },
         Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(reader),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }

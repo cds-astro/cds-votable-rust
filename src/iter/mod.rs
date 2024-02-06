@@ -5,7 +5,7 @@ use std::{
 };
 
 use base64::{engine::general_purpose, read::DecoderReader};
-
+use log::debug;
 use memchr::memmem::Finder;
 use once_cell::sync::Lazy;
 use quick_xml::{events::Event, Reader};
@@ -209,7 +209,7 @@ fn next<T: BufRead>(
         {
           continue;
         }
-        _ => eprintln!("Discarded event reading rows: {:?}", event),
+        _ => debug!("Discarded event reading rows: {:?}", event),
       }
     }
   } else {

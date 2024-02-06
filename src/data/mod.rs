@@ -1,11 +1,11 @@
-use std::{
-  io::{BufRead, Write},
-  str,
-};
-
+use log::{debug, warn};
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
+};
+use std::{
+  io::{BufRead, Write},
+  str,
 };
 
 use paste::paste;
@@ -268,42 +268,10 @@ impl<C: TableDataContent> Data<C> {
         Event::Text(e) if is_empty(e) => {}
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }
-
-  /*pub(crate) fn read_till_table_bin_or_bin2_or_fits<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    mut reader_buff: &mut Vec<u8>,
-  ) -> Result<(Reader<R>, Option<TableOrBinOrBin2>), VOTableError> {
-    loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
-      match &mut event {
-        Event::Start(ref e) => {
-          match e.local_name() {
-            TableData::<VoidTableDataContent>::TAG_BYTES => return Ok((reader, Some(TableOrBinOrBin2::TableData))),
-            Binary::<VoidTableDataContent>::TAG_BYTES => return Ok((reader, Some(TableOrBinOrBin2::Binary))),
-            Binary2::<VoidTableDataContent>::TAG_BYTES => return Ok((reader, Some(TableOrBinOrBin2::Binary2))),
-            Fits::TAG_BYTES => return Ok((reader, Some(TableOrBinOrBin2::Fits))),
-            Info::TAG_BYTES => self.infos.push(from_event_start!(Info, reader, reader_buff, e)),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
-          }
-        }
-        Event::Empty(ref e) => {
-          match e.local_name() {
-            Info::TAG_BYTES => self.infos.push(Info::from_event_empty(e)?),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
-          }
-        }
-        Event::Text(e) if is_empty(e) => { },
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok((reader, None)),
-        Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
-      }
-    }
-  }*/
 
   /// Write the content of the `<DATA ...>` tag till (including) the tags:
   /// * `<TABLEDATA ...>`: for `TABLEDATA`
@@ -345,7 +313,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     let data = Self::new_empty();
     if attrs.count() > 0 {
-      eprintln!(
+      warn!(
         "No attribute expected in {}: attribute(s) ignored.",
         Self::TAG
       );
@@ -418,7 +386,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
         Event::Text(e) if is_empty(e) => {}
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }

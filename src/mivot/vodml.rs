@@ -51,18 +51,18 @@
 //! and the [Meas data model](https://ivoa.net/documents/Meas/20211019/index.html)
 //!
 
-use std::{
-  collections::HashMap,
-  io::{BufRead, Write},
-  str,
-};
-
+use log::debug;
 use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
 };
 use serde_json::Value;
+use std::{
+  collections::HashMap,
+  io::{BufRead, Write},
+  str,
+};
 
 use super::{globals::Globals, model::Model, report::Report, templates::Templates, VodmlVisitor};
 use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
@@ -255,7 +255,7 @@ fn read_vodml_sub_elem_by_ref<R: BufRead>(
         }
       }
       Event::Eof => return Err(VOTableError::PrematureEOF(Vodml::TAG)),
-      _ => eprintln!("Discarded event in {}: {:?}", Vodml::TAG, event),
+      _ => debug!("Discarded event in {}: {:?}", Vodml::TAG, event),
     }
   }
 }

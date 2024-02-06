@@ -4,8 +4,8 @@ use std::{
   mem, str,
 };
 
+use log::{debug, warn};
 use paste::paste;
-
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
@@ -580,7 +580,7 @@ impl<C: TableDataContent> Resource<C> {
         }
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }
@@ -695,7 +695,7 @@ impl<C: TableDataContent> Resource<C> {
         }
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }
@@ -924,7 +924,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
           };
         }
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }

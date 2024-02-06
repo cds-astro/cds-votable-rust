@@ -1,12 +1,12 @@
+use log::debug;
+use quick_xml::{
+  events::{attributes::Attributes, BytesStart, Event},
+  Reader, Writer,
+};
 use std::{
   fmt,
   io::{BufRead, Write},
   str::{self, FromStr},
-};
-
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  Reader, Writer,
 };
 
 use paste::paste;
@@ -177,7 +177,7 @@ impl Stream<VoidTableDataContent> {
         },
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }

@@ -3,12 +3,12 @@ use std::{
   str,
 };
 
+use log::{debug, warn};
+use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
 };
-
-use paste::paste;
 
 use super::{
   desc::Description, error::VOTableError, fieldref::FieldRef, param::Param, paramref::ParamRef,
@@ -199,7 +199,7 @@ impl QuickXmlReadWrite for Group {
         },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }
@@ -452,7 +452,7 @@ impl QuickXmlReadWrite for TableGroup {
         },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }

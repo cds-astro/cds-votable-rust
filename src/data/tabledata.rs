@@ -3,11 +3,11 @@ use std::{
   str,
 };
 
+use log::warn;
 use quick_xml::{
   events::{attributes::Attributes, BytesEnd, BytesStart, Event},
   Reader, Writer,
 };
-
 use serde;
 
 use crate::{error::VOTableError, table::TableElem, QuickXmlReadWrite, TableDataContent};
@@ -53,7 +53,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for TableData<C> {
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     let table_data = Self::default();
     if attrs.count() > 0 {
-      eprintln!(
+      warn!(
         "No attribute expected in {}: attribute(s) ignored.",
         Self::TAG
       );

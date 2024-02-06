@@ -6,6 +6,7 @@ use std::{
   str::{self, FromStr},
 };
 
+use log::{debug, warn};
 use paste::paste;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -527,7 +528,7 @@ impl<C: TableDataContent> VOTable<C> {
         }
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }
@@ -551,7 +552,7 @@ impl<C: TableDataContent> VOTable<C> {
         }
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }
@@ -729,7 +730,7 @@ impl<C: TableDataContent> VOTable<C> {
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }
@@ -860,7 +861,7 @@ fn check_declaration(decl: &BytesDecl) {
         .unwrap_or_else(|e| format!("Error: {:?}", e))
     })
     .unwrap_or_else(|| String::from("error"));
-  eprintln!(
+  debug!(
     "XML declaration. Version: {}; Encoding: {}; Standalone: {}.",
     version, encoding, standalone
   );
@@ -1009,7 +1010,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
         */
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }

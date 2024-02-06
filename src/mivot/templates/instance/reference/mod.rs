@@ -3,8 +3,8 @@ use std::{
   str,
 };
 
+use log::debug;
 use paste::paste;
-
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
@@ -192,7 +192,7 @@ impl QuickXmlReadWrite for ReferenceDyn {
           }
         }
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }

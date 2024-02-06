@@ -1,12 +1,12 @@
-use std::{
-  io::{BufRead, Write},
-  str,
-};
-
+use log::{debug, warn};
 use quick_xml::events::{BytesEnd, BytesStart};
 use quick_xml::{
   events::{attributes::Attributes, Event},
   Reader, Writer,
+};
+use std::{
+  io::{BufRead, Write},
+  str,
 };
 
 use serde;
@@ -73,7 +73,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary2<C> {
   fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
     let binary2 = Self::new();
     if attrs.count() > 0 {
-      eprintln!(
+      warn!(
         "No attribute expected in {}: attribute(s) ignored.",
         Self::TAG
       );
@@ -118,7 +118,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary2<C> {
               match &mut event {
                 Event::Text(e) if is_empty(e) => {}
                 Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(()),
-                _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+                _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
               }
             }
           }
@@ -140,7 +140,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary2<C> {
         },
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }

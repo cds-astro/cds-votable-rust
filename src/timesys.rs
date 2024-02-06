@@ -7,8 +7,8 @@ use std::{
 
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
+use log::warn;
 use paste::paste;
-
 use serde;
 
 use super::{error::VOTableError, QuickXmlReadWrite};
@@ -61,8 +61,8 @@ impl QuickXmlReadWrite for TimeSys {
         b"timescale" => timescale = Some(value.parse().map_err(VOTableError::Variant)?),
         b"refposition" => refposition = Some(value.parse().map_err(VOTableError::Variant)?),
         _ => {
-          eprintln!(
-            "WARNING: attribute {:?} in {} is ignored",
+          warn!(
+            "Attribute {:?} in {} is ignored",
             std::str::from_utf8(attr.key),
             Self::TAG
           );

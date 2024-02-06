@@ -1,16 +1,14 @@
-use std::io::BufReader;
 use std::{
-  io::{BufRead, Write},
+  io::{BufRead, BufReader, Write},
   mem,
 };
 
+use base64::{engine::general_purpose, read::DecoderReader, write::EncoderWriter};
+use log::debug;
 use quick_xml::{
   events::{BytesStart, BytesText, Event},
   Reader, Writer,
 };
-
-use base64::{engine::general_purpose, read::DecoderReader, write::EncoderWriter};
-
 use serde::{de::DeserializeSeed, ser::SerializeTuple, Deserializer, Serializer};
 
 use crate::impls::TableSchema;
@@ -145,10 +143,10 @@ impl TableDataContent for InMemTableDataStringRows {
               Event::Text(e) => {
                 row.push(e.unescape_and_decode(reader).map_err(VOTableError::Read)?)
               }
-              _ => eprintln!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
+              _ => debug!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
             }
           }
-          _ => eprintln!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
+          _ => debug!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
         },
         Event::Empty(e) if e.local_name() == b"TD" => row.push(String::from("")),
         Event::End(e) => match e.local_name() {
@@ -157,11 +155,11 @@ impl TableDataContent for InMemTableDataStringRows {
             .rows
             .push(mem::replace(&mut row, Vec::with_capacity(context.len()))),
           TableData::<Self>::TAG_BYTES => return Ok(()),
-          _ => eprintln!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
+          _ => debug!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
         },
         Event::Eof => return Err(VOTableError::PrematureEOF(TableData::<Self>::TAG)),
         Event::Text(e) if is_empty(e) => {}
-        _ => eprintln!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
       }
     }
   }
@@ -279,15 +277,12 @@ impl TableDataContent for InMemTableDataRows {
               Event::Text(e) => {
                 let s = e.unescape_and_decode(reader).map_err(VOTableError::Read)?;
                 let value = schema[row.len()].value_from_str(s.trim())?;
-                // eprintln!("Value: {}", s);
-                /* let value = serde_json::from_str(s.as_str().trim())
-                .map_err(|e| VOTableError::Custom(format!("JSON parse error: {:?}", e)))?;*/
                 row.push(value)
               }
-              _ => eprintln!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
+              _ => debug!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
             }
           }
-          _ => eprintln!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
+          _ => debug!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
         },
         Event::Empty(e) if e.local_name() == b"TD" => row.push(VOTableValue::Null),
         Event::End(e) => match e.local_name() {
@@ -296,11 +291,11 @@ impl TableDataContent for InMemTableDataRows {
             .rows
             .push(mem::replace(&mut row, Vec::with_capacity(context.len()))),
           TableData::<Self>::TAG_BYTES => return Ok(()),
-          _ => eprintln!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
+          _ => debug!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
         },
         Event::Eof => return Err(VOTableError::PrematureEOF(TableData::<Self>::TAG)),
         Event::Text(e) if is_empty(e) => {}
-        _ => eprintln!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", TableData::<Self>::TAG, event),
       }
     }
   }

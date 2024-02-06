@@ -6,13 +6,13 @@ use std::{
   str::{self, FromStr},
 };
 
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
-use serde_json::Value;
-
+use log::{debug, warn};
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
 };
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde_json::Value;
 
 use crate::is_empty;
 use paste::paste;
@@ -553,30 +553,6 @@ impl QuickXmlReadWrite for Field {
     reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
   ) -> Result<Reader<R>, VOTableError> {
-    /*loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
-      match &mut event {
-        Event::Start(ref e) => {
-          match e.local_name() {
-            Description::TAG_BYTES => from_event_start_desc!(self, Description, reader, reader_buff, e),
-            Values::TAG_BYTES => self.values = Some(from_event_start!(Values, reader, reader_buff, e)),
-            Link::TAG_BYTES => self.links.push(from_event_start!(Link, reader, reader_buff, e)),
-            _ => return Err(VOTableError::UnexpectedStartTag(e.local_name().to_vec(), Self::TAG)),
-          }
-        }
-        Event::Empty(ref e) => {
-          match e.local_name() {
-            Values::TAG_BYTES => self.values = Some(Values::from_event_empty(e)?),
-            Link::TAG_BYTES => self.links.push(Link::from_event_empty(e)?),
-            _ => return Err(VOTableError::UnexpectedEmptyTag(e.local_name().to_vec(), Self::TAG)),
-          }
-        }
-        Event::Text(e) if is_empty(e) => { },
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(reader),
-        Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
-      }
-    }*/
     self
       .read_sub_elements_by_ref(&mut reader, reader_buff, _context)
       .map(|()| reader)
@@ -623,7 +599,7 @@ impl QuickXmlReadWrite for Field {
         Event::Text(e) if is_empty(e) => {}
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
       }
     }
   }
