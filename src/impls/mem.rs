@@ -11,10 +11,10 @@ use quick_xml::{
 };
 use serde::{de::DeserializeSeed, ser::SerializeTuple, Deserializer, Serializer};
 
-use crate::impls::TableSchema;
 use crate::{
   data::tabledata::TableData,
   error::VOTableError,
+  impls::TableSchema,
   impls::{
     b64::{
       read::{B64Cleaner, BinaryDeserializer},
@@ -23,8 +23,8 @@ use crate::{
     visitors::FixedLengthArrayVisitor,
     Schema, VOTableValue,
   },
-  is_empty,
   table::TableElem,
+  utils::is_empty,
   QuickXmlReadWrite, TableDataContent,
 };
 

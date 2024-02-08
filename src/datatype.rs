@@ -1,3 +1,5 @@
+//! Enum of the possible VOTable datatypes.
+
 use std::{fmt, str::FromStr};
 
 /// See [IVOA spec](https://www.ivoa.net/documents/VOTable/20191021/REC-VOTable-1.4-20191021.html#primitives)

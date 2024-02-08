@@ -1,8 +1,5 @@
-use log::debug;
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  Reader, Writer,
-};
+//! Module dedicated to the `STREAM` tag.
+
 use std::{
   fmt,
   io::{BufRead, Write},
@@ -10,10 +7,16 @@ use std::{
 };
 
 use paste::paste;
+use quick_xml::{
+  events::{attributes::Attributes, BytesStart, Event},
+  Reader, Writer,
+};
 
 use crate::{
-  error::VOTableError, impls::mem::VoidTableDataContent, is_empty, QuickXmlReadWrite,
-  TableDataContent,
+  error::VOTableError,
+  impls::mem::VoidTableDataContent,
+  utils::{discard_comment, discard_event, is_empty},
+  QuickXmlReadWrite, TableDataContent,
 };
 use serde;
 
@@ -177,7 +180,8 @@ impl Stream<VoidTableDataContent> {
         },
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }

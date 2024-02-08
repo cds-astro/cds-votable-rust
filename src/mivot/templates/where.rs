@@ -3,9 +3,7 @@
 use std::str;
 
 use bstringify::bstringify;
-
 use paste::paste;
-
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
 
 use crate::{
@@ -38,10 +36,7 @@ impl_quickrw_e!(
 
 #[cfg(test)]
 mod tests {
-  use crate::{
-    mivot::test::{get_xml, test_error},
-    tests::test_read,
-  };
+  use crate::{mivot::test::get_xml, tests::test_read};
 
   use super::Where;
 

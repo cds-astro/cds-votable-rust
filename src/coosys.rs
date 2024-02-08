@@ -1,20 +1,25 @@
-use log::{debug, warn};
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  ElementWriter, Reader, Writer,
-};
+//! Module dedicated to the `COOSYS` tag.
+
 use std::{
   io::{BufRead, Write},
   num::ParseFloatError,
   str::{self, FromStr},
 };
 
+use log::warn;
 use paste::paste;
-
+use quick_xml::{
+  events::{attributes::Attributes, BytesStart, Event},
+  ElementWriter, Reader, Writer,
+};
 use serde;
 
 use crate::{
-  error::VOTableError, fieldref::FieldRef, paramref::ParamRef, timesys::RefPosition,
+  error::VOTableError,
+  fieldref::FieldRef,
+  paramref::ParamRef,
+  timesys::RefPosition,
+  utils::{discard_comment, discard_event},
   QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
 
@@ -256,7 +261,8 @@ impl QuickXmlReadWrite for CooSys {
         },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }

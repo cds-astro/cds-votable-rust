@@ -1,9 +1,9 @@
+//! Struct dedicated to the `DEFINITIONS` tag.
 use std::{
   io::{BufRead, Write},
   str,
 };
 
-use log::debug;
 use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
@@ -11,8 +11,11 @@ use quick_xml::{
 };
 
 use super::{
-  coosys::CooSys, error::VOTableError, param::Param, QuickXmlReadWrite, TableDataContent,
-  VOTableVisitor,
+  coosys::CooSys,
+  error::VOTableError,
+  param::Param,
+  utils::{discard_comment, discard_event},
+  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -153,7 +156,8 @@ impl QuickXmlReadWrite for Definitions {
         },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }

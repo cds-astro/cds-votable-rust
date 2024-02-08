@@ -1,9 +1,10 @@
+//! Module dedicated to the `FITS` tag.
+
 use std::{
   io::{BufRead, Write},
   str,
 };
 
-use log::debug;
 use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
@@ -14,7 +15,11 @@ use serde;
 use crate::impls::mem::VoidTableDataContent;
 
 use super::{
-  super::{error::VOTableError, QuickXmlReadWrite, TableDataContent, VOTableVisitor},
+  super::{
+    error::VOTableError,
+    utils::{discard_comment, discard_event},
+    QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+  },
   stream::Stream,
 };
 
@@ -67,15 +72,26 @@ impl QuickXmlReadWrite for Fits {
   fn read_sub_elements<R: BufRead>(
     &mut self,
     mut reader: Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    context: &Self::Context,
+  ) -> Result<Reader<R>, VOTableError> {
+    self
+      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
+      .map(|()| reader)
+  }
+
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    mut reader: &mut Reader<R>,
     mut reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.name() {
           Stream::<VoidTableDataContent>::TAG_BYTES => {
-            self.stream = from_event_start!(Stream, reader, reader_buff, e)
+            self.stream = from_event_start_by_ref!(Stream, reader, reader_buff, e)
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -93,20 +109,12 @@ impl QuickXmlReadWrite for Fits {
             ))
           }
         },
-        Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(reader),
+        Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    todo!()
   }
 
   fn write<W: Write>(

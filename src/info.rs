@@ -1,3 +1,5 @@
+//! Struct dedicated to the `INFO` tag.
+
 use std::{
   collections::HashMap,
   io::{BufRead, Write},

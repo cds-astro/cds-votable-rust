@@ -1,9 +1,10 @@
+//! Module dedicated to the `TEPLATES` tag.
+//!
 //! The `TEMPLATES` block maps data model instances on the rows of a table in the VOTable.
 
 use std::str;
 
 use bstringify::bstringify;
-use log::debug;
 use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
@@ -12,8 +13,8 @@ use quick_xml::{
 
 use crate::{
   error::VOTableError,
-  is_empty,
   mivot::{value_checker, VodmlVisitor},
+  utils::{discard_comment, discard_event, is_empty},
   QuickXmlReadWrite,
 };
 
@@ -129,7 +130,8 @@ fn read_template_sub_elem_by_ref<R: std::io::BufRead>(
         }
       }
       Event::Eof => return Err(VOTableError::PrematureEOF(Templates::TAG)),
-      _ => debug!("Discarded event in {}: {:?}", Templates::TAG, event),
+      Event::Comment(e) => discard_comment(e, reader, Templates::TAG),
+      _ => discard_event(event, Templates::TAG),
     }
   }
 }

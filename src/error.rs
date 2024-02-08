@@ -1,3 +1,6 @@
+//! Definition of the VOTable errors.
+// TODO: replace quick_error by anyhow and thiserror.
+
 use std::{
   num::{ParseFloatError, ParseIntError},
   str::ParseBoolError,

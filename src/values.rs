@@ -1,17 +1,22 @@
+//! Module dedicated to the `VALUES` tag.
+
 use std::{
   io::{BufRead, Write},
   str,
 };
 
+use log::warn;
+use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
 };
 
-use log::{debug, warn};
-use paste::paste;
-
-use super::{error::VOTableError, QuickXmlReadWrite, TableDataContent, VOTableVisitor};
+use super::{
+  error::VOTableError,
+  utils::{discard_comment, discard_event, is_empty},
+  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Min {
@@ -262,16 +267,27 @@ impl QuickXmlReadWrite for Opt {
   fn read_sub_elements<R: BufRead>(
     &mut self,
     mut reader: Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    context: &Self::Context,
+  ) -> Result<Reader<R>, VOTableError> {
+    self
+      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
+      .map(|()| reader)
+  }
+
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    mut reader: &mut Reader<R>,
     mut reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
+  ) -> Result<(), VOTableError> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.name() {
-          Self::TAG_BYTES => self
-            .opts
-            .push(from_event_start!(Opt, reader, reader_buff, e)),
+          Self::TAG_BYTES => {
+            self.push_opt_by_ref(from_event_start_by_ref!(Opt, reader, reader_buff, e))
+          }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.name().to_vec(),
@@ -280,7 +296,7 @@ impl QuickXmlReadWrite for Opt {
           }
         },
         Event::Empty(ref e) => match e.name() {
-          Self::TAG_BYTES => self.opts.push(Self::from_event_empty(e)?),
+          Self::TAG_BYTES => self.push_opt_by_ref(Self::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.name().to_vec(),
@@ -288,20 +304,13 @@ impl QuickXmlReadWrite for Opt {
             ))
           }
         },
-        Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(reader),
+        Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(()),
+        Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    todo!()
   }
 
   fn write<W: Write>(
@@ -457,8 +466,10 @@ impl QuickXmlReadWrite for Values {
           }
         },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
+        Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }

@@ -1,14 +1,18 @@
-use std::io::BufReader;
-use std::{io::BufRead, slice::Iter, str};
+//! Iterator on `TABLEDATA` rows in which a row is a `Vector` of `VOTableValue`.
 
-use base64::engine::GeneralPurpose;
-use base64::{engine::general_purpose, read::DecoderReader};
+use std::{
+  io::{BufRead, BufReader},
+  slice::Iter,
+  str,
+};
 
+use base64::{
+  engine::{general_purpose, GeneralPurpose},
+  read::DecoderReader,
+};
 use quick_xml::{events::Event, Reader};
-
 use serde::{de::DeserializeSeed, Deserializer};
 
-use crate::iter::TableIter;
 use crate::{
   error::VOTableError,
   impls::{
@@ -17,8 +21,9 @@ use crate::{
     visitors::FixedLengthArrayVisitor,
     Schema, VOTableValue,
   },
-  is_empty,
+  iter::TableIter,
   table::Table,
+  utils::is_empty,
 };
 
 pub struct DataTableRowValueIterator<'a, R: BufRead> {

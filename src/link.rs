@@ -1,3 +1,5 @@
+//! Struct dedicated to the `LINK` tag.
+
 use std::{
   collections::HashMap,
   fmt::{self, Debug},

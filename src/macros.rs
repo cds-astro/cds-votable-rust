@@ -560,6 +560,7 @@ macro_rules! write_elem_vec_empty_context {
   };
 }
 
+/*
 macro_rules! from_event_start {
   ($elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {{
     let mut elem = $elem::from_attributes($e.attributes())?;
@@ -571,7 +572,7 @@ macro_rules! from_event_start {
     $reader = elem.read_sub_elements_and_clean($reader, &mut $reader_buff, &$context)?;
     elem
   }};
-}
+}*/
 
 macro_rules! from_event_start_by_ref {
   ($elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {{

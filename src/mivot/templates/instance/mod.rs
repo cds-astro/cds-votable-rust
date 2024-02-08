@@ -15,8 +15,8 @@ use quick_xml::{
 
 use crate::{
   error::VOTableError,
-  is_empty,
   mivot::{attribute::AttributeChildOfInstance as Attribute, VodmlVisitor},
+  utils::is_empty,
   QuickXmlReadWrite,
 };
 
@@ -27,9 +27,6 @@ use instance::Instance as InstanceChildOfInstance;
 pub mod primary_key;
 use primary_key::PrimaryKeyDyn as PrimaryKey;
 pub mod reference;
-use crate::mivot::templates::instance::collection::{
-  create_collection_from_dmrole_and_reading_sub_elems, get_dmrole_opt_dmid_from_atttributes,
-};
 use reference::Reference;
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -175,8 +172,9 @@ impl QuickXmlReadWrite for Instance {
               )))
           }
           Collection::TAG_BYTES => {
-            let (dmrole, dmid_opt) = get_dmrole_opt_dmid_from_atttributes(e.attributes())?;
-            let collection = create_collection_from_dmrole_and_reading_sub_elems(
+            let (dmrole, dmid_opt) =
+              Collection::get_dmrole_opt_dmid_from_atttributes(e.attributes())?;
+            let collection = Collection::from_dmrole_and_reading_sub_elems(
               dmrole,
               dmid_opt,
               context,

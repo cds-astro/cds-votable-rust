@@ -1,9 +1,11 @@
+//! Struct dedicated to the `GROUP` tag.
+
 use std::{
   io::{BufRead, Write},
   str,
 };
 
-use log::{debug, warn};
+use log::warn;
 use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
@@ -11,7 +13,12 @@ use quick_xml::{
 };
 
 use super::{
-  desc::Description, error::VOTableError, fieldref::FieldRef, param::Param, paramref::ParamRef,
+  desc::Description,
+  error::VOTableError,
+  fieldref::FieldRef,
+  param::Param,
+  paramref::ParamRef,
+  utils::{discard_comment, discard_event},
   QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
 
@@ -156,26 +163,15 @@ impl QuickXmlReadWrite for Group {
           Description::TAG_BYTES => {
             from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e);
           }
-          ParamRef::TAG_BYTES => self
-            .elems
-            .push(GroupElem::ParamRef(from_event_start_by_ref!(
-              ParamRef,
-              reader,
-              reader_buff,
-              e
-            ))),
-          Param::TAG_BYTES => self.elems.push(GroupElem::Param(from_event_start_by_ref!(
-            Param,
-            reader,
-            reader_buff,
-            e
-          ))),
-          Group::TAG_BYTES => self.elems.push(GroupElem::Group(from_event_start_by_ref!(
-            Group,
-            reader,
-            reader_buff,
-            e
-          ))),
+          ParamRef::TAG_BYTES => {
+            self.push_paramref_by_ref(from_event_start_by_ref!(ParamRef, reader, reader_buff, e))
+          }
+          Param::TAG_BYTES => {
+            self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
+          }
+          Group::TAG_BYTES => {
+            self.push_group_by_ref(from_event_start_by_ref!(Group, reader, reader_buff, e))
+          }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -184,12 +180,8 @@ impl QuickXmlReadWrite for Group {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          ParamRef::TAG_BYTES => self
-            .elems
-            .push(GroupElem::ParamRef(ParamRef::from_event_empty(e)?)),
-          Param::TAG_BYTES => self
-            .elems
-            .push(GroupElem::Param(Param::from_event_empty(e)?)),
+          ParamRef::TAG_BYTES => self.push_paramref_by_ref(ParamRef::from_event_empty(e)?),
+          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -199,7 +191,8 @@ impl QuickXmlReadWrite for Group {
         },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }
@@ -389,43 +382,20 @@ impl QuickXmlReadWrite for TableGroup {
             from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e);
           }
           FieldRef::TAG_BYTES => {
-            self
-              .elems
-              .push(TableGroupElem::FieldRef(from_event_start_by_ref!(
-                FieldRef,
-                reader,
-                reader_buff,
-                e
-              )))
+            self.push_fieldref_by_ref(from_event_start_by_ref!(FieldRef, reader, reader_buff, e))
           }
           ParamRef::TAG_BYTES => {
-            self
-              .elems
-              .push(TableGroupElem::ParamRef(from_event_start_by_ref!(
-                ParamRef,
-                reader,
-                reader_buff,
-                e
-              )))
+            self.push_paramref_by_ref(from_event_start_by_ref!(ParamRef, reader, reader_buff, e))
           }
-          Param::TAG_BYTES => self
-            .elems
-            .push(TableGroupElem::Param(from_event_start_by_ref!(
-              Param,
-              reader,
-              reader_buff,
-              e
-            ))),
-          TableGroup::TAG_BYTES => {
-            self
-              .elems
-              .push(TableGroupElem::TableGroup(from_event_start_by_ref!(
-                TableGroup,
-                reader,
-                reader_buff,
-                e
-              )))
+          Param::TAG_BYTES => {
+            self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
           }
+          TableGroup::TAG_BYTES => self.push_tablegroup_by_ref(from_event_start_by_ref!(
+            TableGroup,
+            reader,
+            reader_buff,
+            e
+          )),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -452,7 +422,8 @@ impl QuickXmlReadWrite for TableGroup {
         },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }

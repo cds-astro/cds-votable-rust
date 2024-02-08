@@ -1,3 +1,5 @@
+//! Module dedicated to the `REPORT` tag.
+
 use std::str::{self, FromStr};
 
 use log::debug;

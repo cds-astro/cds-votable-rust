@@ -5,7 +5,6 @@ use std::{
 
 use bstringify::bstringify;
 use paste::paste;
-
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
@@ -13,11 +12,11 @@ use quick_xml::{
 
 use crate::{
   error::VOTableError,
-  is_empty,
   mivot::{
     globals::collection::reference::Reference as ReferenceStatic,
     templates::instance::reference::foreign_key::ForeignKey, value_checker, VodmlVisitor,
   },
+  utils::{discard_comment, discard_event, is_empty},
   QuickXmlReadWrite,
 };
 
@@ -180,7 +179,8 @@ impl QuickXmlReadWrite for ReferenceDyn {
           }
         }
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => eprintln!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }

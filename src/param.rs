@@ -1,3 +1,5 @@
+//! Struct dedicated to the `PARAM` tag.
+
 use std::{
   io::{BufRead, Write},
   str,
@@ -8,7 +10,6 @@ use quick_xml::{
   Reader, Writer,
 };
 
-use log::debug;
 use serde_json::Value;
 
 use super::{
@@ -17,6 +18,7 @@ use super::{
   error::VOTableError,
   field::{ArraySize, Field, Precision},
   link::Link,
+  utils::{discard_comment, discard_event},
   values::Values,
   QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
@@ -37,6 +39,7 @@ impl Param {
   }
 
   // copy/paste + modified from `cargo expand field`
+  // TODO: add _by_ref setters!!
 
   pub fn set_id<I: Into<String>>(mut self, id: I) -> Self {
     self.field.id = Some(id.into());
@@ -228,7 +231,8 @@ impl QuickXmlReadWrite for Param {
         },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }

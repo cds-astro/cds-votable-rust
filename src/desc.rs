@@ -1,3 +1,5 @@
+//! Struct dedicated to the `DESCRIPTION` tag.
+
 use std::io::{BufRead, Write};
 
 use log::{debug, warn};

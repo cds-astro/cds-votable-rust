@@ -51,21 +51,22 @@
 //! and the [Meas data model](https://ivoa.net/documents/Meas/20211019/index.html)
 //!
 
-use log::debug;
+use std::{collections::HashMap, io::Write, str};
+
 use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
 };
 use serde_json::Value;
-use std::{
-  collections::HashMap,
-  io::{BufRead, Write},
-  str,
+
+use crate::{
+  error::VOTableError,
+  utils::{discard_comment, discard_event, is_empty},
+  QuickXmlReadWrite,
 };
 
 use super::{globals::Globals, model::Model, report::Report, templates::Templates, VodmlVisitor};
-use crate::{error::VOTableError, is_empty, QuickXmlReadWrite};
 
 /// Structure storing the content of the `VODML` tag.
 #[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -146,7 +147,105 @@ impl QuickXmlReadWrite for Vodml {
     Ok(vodml)
   }
 
-  non_empty_read_sub!(read_vodml_sub_elem_by_ref);
+  fn read_sub_elements<R: std::io::BufRead>(
+    &mut self,
+    mut reader: Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    context: &Self::Context,
+  ) -> Result<Reader<R>, crate::error::VOTableError> {
+    self
+      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
+      .map(|()| reader)
+  }
+
+  fn read_sub_elements_by_ref<R: std::io::BufRead>(
+    &mut self,
+    mut reader: &mut Reader<R>,
+    mut reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), crate::error::VOTableError> {
+    loop {
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      match &mut event {
+        Event::Start(ref e) => match e.local_name() {
+          Report::TAG_BYTES => {
+            if self
+              .report
+              .replace(from_event_start_by_ref!(Report, reader, reader_buff, e))
+              .is_some()
+            {
+              return Err(VOTableError::Custom(
+                "Maximum one <REPORT> tag should be present".to_owned(),
+              ));
+            }
+          }
+          Globals::TAG_BYTES => {
+            if self
+              .globals
+              .replace(from_event_start_by_ref!(Globals, reader, reader_buff, e))
+              .is_some()
+            {
+              return Err(VOTableError::Custom(
+                "Maximum one <GLOBALS> tag should be present".to_owned(),
+              ));
+            }
+          }
+          Templates::TAG_BYTES => {
+            self
+              .templates
+              .push(from_event_start_by_ref!(Templates, reader, reader_buff, e))
+          }
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Empty(ref e) => match e.local_name() {
+          Report::TAG_BYTES => {
+            if self.report.replace(Report::from_event_empty(e)?).is_some() {
+              return Err(VOTableError::Custom(
+                "Maximum one <REPORT> tag should be present".to_owned(),
+              ));
+            }
+          }
+          Model::TAG_BYTES => self.models.push(Model::from_event_empty(e)?),
+          Globals::TAG_BYTES => {
+            if self
+              .globals
+              .replace(Globals::from_event_empty(e)?)
+              .is_some()
+            {
+              return Err(VOTableError::Custom(
+                "Maximum one <GLOBALS> tag should be present".to_owned(),
+              ));
+            }
+          }
+          Templates::TAG_BYTES => self.templates.push(Templates::from_event_empty(e)?),
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Text(e) if is_empty(e) => {}
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => {
+          if !self.models.is_empty() {
+            return Ok(());
+          } else {
+            return Err(VOTableError::Custom(
+              "Expected a <MODEL> tag, none was found".to_owned(),
+            ));
+          }
+        }
+        Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
+      }
+    }
+  }
 
   fn write<W: Write>(
     &mut self,
@@ -166,97 +265,6 @@ impl QuickXmlReadWrite for Vodml {
     writer
       .write_event(Event::End(tag.to_end()))
       .map_err(VOTableError::Write)
-  }
-}
-
-///////////////////////
-// UTILITY FUNCTIONS //
-
-fn read_vodml_sub_elem_by_ref<R: BufRead>(
-  vodml: &mut Vodml,
-  _context: &(),
-  mut reader: &mut Reader<R>,
-  mut reader_buff: &mut Vec<u8>,
-) -> Result<(), VOTableError> {
-  loop {
-    let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
-    match &mut event {
-      Event::Start(ref e) => match e.local_name() {
-        Report::TAG_BYTES => {
-          if vodml
-            .report
-            .replace(from_event_start_by_ref!(Report, reader, reader_buff, e))
-            .is_some()
-          {
-            return Err(VOTableError::Custom(
-              "Maximum one <REPORT> tag should be present".to_owned(),
-            ));
-          }
-        }
-        Globals::TAG_BYTES => {
-          if vodml
-            .globals
-            .replace(from_event_start_by_ref!(Globals, reader, reader_buff, e))
-            .is_some()
-          {
-            return Err(VOTableError::Custom(
-              "Maximum one <GLOBALS> tag should be present".to_owned(),
-            ));
-          }
-        }
-        Templates::TAG_BYTES => {
-          vodml
-            .templates
-            .push(from_event_start_by_ref!(Templates, reader, reader_buff, e))
-        }
-        _ => {
-          return Err(VOTableError::UnexpectedStartTag(
-            e.local_name().to_vec(),
-            Vodml::TAG,
-          ))
-        }
-      },
-      Event::Empty(ref e) => match e.local_name() {
-        Report::TAG_BYTES => {
-          if vodml.report.replace(Report::from_event_empty(e)?).is_some() {
-            return Err(VOTableError::Custom(
-              "Maximum one <REPORT> tag should be present".to_owned(),
-            ));
-          }
-        }
-        Model::TAG_BYTES => vodml.models.push(Model::from_event_empty(e)?),
-        Globals::TAG_BYTES => {
-          if vodml
-            .globals
-            .replace(Globals::from_event_empty(e)?)
-            .is_some()
-          {
-            return Err(VOTableError::Custom(
-              "Maximum one <GLOBALS> tag should be present".to_owned(),
-            ));
-          }
-        }
-        Templates::TAG_BYTES => vodml.templates.push(Templates::from_event_empty(e)?),
-        _ => {
-          return Err(VOTableError::UnexpectedEmptyTag(
-            e.local_name().to_vec(),
-            Vodml::TAG,
-          ))
-        }
-      },
-      Event::Text(e) if is_empty(e) => {}
-      Event::End(e) if e.local_name() == Vodml::TAG_BYTES => {
-        if !vodml.models.is_empty() {
-          return Ok(());
-        } else {
-          return Err(VOTableError::Custom(
-            "Expected a <MODEL> tag, none was found".to_owned(),
-          ));
-        }
-      }
-      Event::Eof => return Err(VOTableError::PrematureEOF(Vodml::TAG)),
-      _ => debug!("Discarded event in {}: {:?}", Vodml::TAG, event),
-    }
   }
 }
 

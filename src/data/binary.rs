@@ -1,18 +1,24 @@
-use log::{debug, warn};
-use quick_xml::events::{BytesEnd, BytesStart};
-use quick_xml::{
-  events::{attributes::Attributes, Event},
-  Reader, Writer,
-};
+//! Module dedicated to the `BINARY` tag.
+
 use std::{
   io::{BufRead, Write},
   str,
 };
 
+use log::warn;
+use quick_xml::{
+  events::{attributes::Attributes, BytesEnd, BytesStart, Event},
+  Reader, Writer,
+};
 use serde;
 
 use super::{
-  super::{error::VOTableError, is_empty, table::TableElem, QuickXmlReadWrite, TableDataContent},
+  super::{
+    error::VOTableError,
+    table::TableElem,
+    utils::{discard_comment, discard_event, is_empty},
+    QuickXmlReadWrite, TableDataContent,
+  },
   stream::Stream,
 };
 
@@ -118,7 +124,8 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary<C> {
               match &mut event {
                 Event::Text(e) if is_empty(e) => {}
                 Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(()),
-                _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+                Event::Comment(e) => discard_comment(e, tmp_reader, Self::TAG),
+                _ => discard_event(event, Self::TAG),
               }
             }
           }
@@ -140,7 +147,8 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary<C> {
         },
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }

@@ -1,5 +1,4 @@
 <!-- Test Case 9.5: dmref + no sourceref + WHERE -->
 <JOIN dmref="aaaaa">
-  <!--<WHERE foreignkey="eee" value="ssss" />-->
-  <WHERE primarykey="eee" value="ssss" />
+  <WHERE primarykey="eee" foreignkey="ssss" />
 </JOIN>

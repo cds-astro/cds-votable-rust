@@ -1,3 +1,5 @@
+//! Struct dedicated to the `FIELDref` tag.
+
 use std::{
   collections::HashMap,
   io::{BufRead, Write},

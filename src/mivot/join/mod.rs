@@ -1,3 +1,5 @@
+//! Module dedicated to the `JOIN` tag.
+//!
 //! `JOIN` is the same for either `GLOBALS` `COLLECTION`s or `TEMPLATE` `COLLECTION`s.
 
 use std::{
@@ -5,13 +7,17 @@ use std::{
   str,
 };
 
-use log::debug;
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
 };
 
-use crate::{error::VOTableError, is_empty, mivot::VodmlVisitor, QuickXmlReadWrite};
+use crate::{
+  error::VOTableError,
+  mivot::VodmlVisitor,
+  utils::{discard_comment, discard_event, is_empty},
+  QuickXmlReadWrite,
+};
 
 pub mod r#where;
 use r#where::Where;
@@ -159,7 +165,8 @@ impl QuickXmlReadWrite for Join {
           return Ok(());
         }
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }
@@ -193,10 +200,7 @@ impl QuickXmlReadWrite for Join {
 
 #[cfg(test)]
 mod tests {
-  use crate::{
-    mivot::test::{get_xml, test_error},
-    tests::test_read,
-  };
+  use crate::{mivot::test::get_xml, tests::test_read};
 
   use super::Join;
 
@@ -210,6 +214,8 @@ mod tests {
     println!("testing 9.4");
     test_read::<Join>(&xml);
     let xml = get_xml("./resources/mivot/9/test_9_ok_9.5.xml");
+    println!("testing 9.5");
+    test_read::<Join>(&xml);
 
     // TODO: Wait for the doc to be clarified (PK or FK mandatory?)
     /*

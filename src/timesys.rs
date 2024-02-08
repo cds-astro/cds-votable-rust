@@ -1,14 +1,14 @@
-use std::fmt::Debug;
+//! Module dedicated to the `TIMESYS` tag.
+
 use std::{
-  fmt,
+  fmt::{self, Debug},
   io::{BufRead, Write},
   str::{self, FromStr},
 };
 
-use quick_xml::{events::attributes::Attributes, Reader, Writer};
-
 use log::warn;
 use paste::paste;
+use quick_xml::{events::attributes::Attributes, Reader, Writer};
 use serde;
 
 use super::{error::VOTableError, QuickXmlReadWrite};

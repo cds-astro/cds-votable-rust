@@ -1,26 +1,25 @@
-use log::{debug, warn};
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  Reader, Writer,
-};
+//! Module dedicated to the `DATA` tag.
 use std::{
   io::{BufRead, Write},
   str,
 };
 
+use log::warn;
 use paste::paste;
-
+use quick_xml::{
+  events::{attributes::Attributes, BytesStart, Event},
+  Reader, Writer,
+};
 use serde;
 
 use super::{
-  error::VOTableError, info::Info, table::TableElem, QuickXmlReadWrite, TableDataContent,
-  VOTableVisitor,
-};
-
-use crate::{
   data::stream::{EncodingType, Stream},
+  error::VOTableError,
   impls::mem::VoidTableDataContent,
-  is_empty,
+  info::Info,
+  table::TableElem,
+  utils::{discard_comment, discard_event, is_empty},
+  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
 
 // Sub modules
@@ -268,7 +267,8 @@ impl<C: TableDataContent> Data<C> {
         Event::Text(e) if is_empty(e) => {}
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }
@@ -386,7 +386,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
         Event::Text(e) if is_empty(e) => {}
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }

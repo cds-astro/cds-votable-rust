@@ -1,30 +1,20 @@
+//! Iterator on `TABLEDATA` rows in which a row is a `Vector` of `String`.
 use std::{io::BufRead, str};
 
 use quick_xml::{events::Event, Reader};
 
-use crate::{
-  // table::Table,
-  error::VOTableError,
-  // impls::mem::VoidTableDataContent
-  is_empty,
-};
+use crate::{error::VOTableError, utils::is_empty};
 
 pub struct RowStringIterator<'a, R: BufRead> {
   reader: &'a mut Reader<R>,
   reader_buff: &'a mut Vec<u8>,
-  // table: &'a mut Table<VoidTableDataContent>,
 }
 
 impl<'a, R: BufRead> RowStringIterator<'a, R> {
-  pub fn new(
-    reader: &'a mut Reader<R>,
-    reader_buff: &'a mut Vec<u8>,
-    // table: &'a mut Table<VoidTableDataContent>
-  ) -> Self {
+  pub fn new(reader: &'a mut Reader<R>, reader_buff: &'a mut Vec<u8>) -> Self {
     Self {
       reader,
       reader_buff,
-      // table,
     }
   }
 }

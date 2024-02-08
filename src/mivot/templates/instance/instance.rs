@@ -6,7 +6,6 @@ use std::{
   str,
 };
 
-use log::debug;
 use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
@@ -15,8 +14,8 @@ use quick_xml::{
 
 use crate::{
   error::VOTableError,
-  is_empty,
   mivot::{attribute::AttributeChildOfInstance as Attribute, VodmlVisitor},
+  utils::{discard_comment, discard_event, is_empty},
   QuickXmlReadWrite,
 };
 
@@ -173,7 +172,8 @@ impl QuickXmlReadWrite for Instance {
         Event::Text(e) if is_empty(e) => {}
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }

@@ -53,7 +53,6 @@ mod tests {
     let xml = get_xml("./resources/mivot/10/test_10_ok_10.2.xml");
     println!("testing 10.2");
     test_read::<Where>(&xml);
-    let xml = get_xml("./resources/mivot/10/test_10_ok_10.3.xml");
 
     // KO WHERES
     let xml = get_xml("./resources/mivot/10/test_10_ko_10.1.xml");

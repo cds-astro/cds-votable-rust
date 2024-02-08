@@ -1,11 +1,11 @@
-extern crate core;
+//! Module dedicated to the `VODML` tag.
 
 use std::error::Error;
 
 use crate::error::VOTableError;
 
 #[macro_use]
-pub mod macros;
+mod macros;
 
 pub mod attribute;
 pub mod globals;

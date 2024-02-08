@@ -1,3 +1,5 @@
+//! Module dedicated to the `VOTABLE` tag.
+
 use std::{
   collections::HashMap,
   fs::File,
@@ -18,8 +20,17 @@ pub use quick_xml::{
 };
 
 use super::{
-  coosys::CooSys, definitions::Definitions, desc::Description, error::VOTableError, group::Group,
-  info::Info, is_empty, param::Param, resource::Resource, table::Table, timesys::TimeSys,
+  coosys::CooSys,
+  definitions::Definitions,
+  desc::Description,
+  error::VOTableError,
+  group::Group,
+  info::Info,
+  param::Param,
+  resource::Resource,
+  table::Table,
+  timesys::TimeSys,
+  utils::{discard_comment, discard_event, is_empty},
   QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
 
@@ -528,7 +539,7 @@ impl<C: TableDataContent> VOTable<C> {
         }
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }
@@ -552,7 +563,7 @@ impl<C: TableDataContent> VOTable<C> {
         }
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }
@@ -704,22 +715,19 @@ impl<C: TableDataContent> VOTable<C> {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Info::TAG_BYTES if self.resources.is_empty() => self
-            .elems
-            .push(VOTableElem::Info(Info::from_event_empty(e)?)),
-          CooSys::TAG_BYTES => self
-            .elems
-            .push(VOTableElem::CooSys(CooSys::from_event_empty(e)?)),
-          TimeSys::TAG_BYTES => self
-            .elems
-            .push(VOTableElem::TimeSys(TimeSys::from_event_empty(e)?)),
-          Group::TAG_BYTES => self
-            .elems
-            .push(VOTableElem::Group(Group::from_event_empty(e)?)),
-          Param::TAG_BYTES => self
-            .elems
-            .push(VOTableElem::Param(Param::from_event_empty(e)?)),
-          Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
+          Info::TAG_BYTES => {
+            let info = Info::from_event_empty(e)?;
+            if self.resources.is_empty() {
+              self.push_info_by_ref(info);
+            } else {
+              self.push_post_info_by_ref(info);
+            }
+          }
+          CooSys::TAG_BYTES => self.push_coosys_by_ref(CooSys::from_event_empty(e)?),
+          TimeSys::TAG_BYTES => self.push_timesys_by_ref(TimeSys::from_event_empty(e)?),
+          Group::TAG_BYTES => self.push_group_by_ref(Group::from_event_empty(e)?),
+          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
+          Definitions::TAG_BYTES => self.push_definitions_by_ref(Definitions::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -730,7 +738,8 @@ impl<C: TableDataContent> VOTable<C> {
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }
@@ -965,25 +974,19 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Info::TAG_BYTES if self.resources.is_empty() => self
-            .elems
-            .push(VOTableElem::Info(Info::from_event_empty(e)?)),
-          CooSys::TAG_BYTES => self
-            .elems
-            .push(VOTableElem::CooSys(CooSys::from_event_empty(e)?)),
-          TimeSys::TAG_BYTES => self
-            .elems
-            .push(VOTableElem::TimeSys(TimeSys::from_event_empty(e)?)),
-          Group::TAG_BYTES => self
-            .elems
-            .push(VOTableElem::Group(Group::from_event_empty(e)?)),
-          Param::TAG_BYTES => self
-            .elems
-            .push(VOTableElem::Param(Param::from_event_empty(e)?)),
-          Definitions::TAG_BYTES => self
-            .elems
-            .push(VOTableElem::Definitions(Definitions::from_event_empty(e)?)),
-          Info::TAG_BYTES => self.post_infos.push(Info::from_event_empty(e)?),
+          Info::TAG_BYTES => {
+            let info = Info::from_event_empty(e)?;
+            if self.resources.is_empty() {
+              self.push_info_by_ref(info);
+            } else {
+              self.push_post_info_by_ref(info);
+            }
+          }
+          CooSys::TAG_BYTES => self.push_coosys_by_ref(CooSys::from_event_empty(e)?),
+          TimeSys::TAG_BYTES => self.push_timesys_by_ref(TimeSys::from_event_empty(e)?),
+          Group::TAG_BYTES => self.push_group_by_ref(Group::from_event_empty(e)?),
+          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
+          Definitions::TAG_BYTES => self.push_definitions_by_ref(Definitions::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -1000,17 +1003,10 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
             Ok(())
           }
         }
-        /*
-        Event::Text(_) => {}
-        Event::Comment(_) => {}
-        Event::CData(_) => {}
-        Event::Decl(_) => {}
-        Event::PI(_) => {}
-        Event::DocType(_) => {}
-        */
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }

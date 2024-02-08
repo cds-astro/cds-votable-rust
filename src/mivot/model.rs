@@ -1,3 +1,5 @@
+//! Module dedicated to the `MODEL` tag.
+
 use std::str;
 
 use bstringify::bstringify;

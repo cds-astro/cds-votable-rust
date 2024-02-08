@@ -1,3 +1,5 @@
+//! Module dedicated to the `GLOBALS` tag.
+//!
 //! The `GLOBALS` block contains model element(s)  having no reference to any table.
 //! Thus, an element in a `GLOBALS` block cannot contains a `ref` attribute pointing to a table
 //! (`FIELD` or `PARAM`), **but** it may contain a `ref` attribute pointing to a `PARAM` which is
@@ -6,14 +8,19 @@
 
 use std::{io::Write, str};
 
-use log::{debug, warn};
+use log::warn;
 use paste::paste;
 use quick_xml::{
   events::{BytesStart, Event},
   Reader, Writer,
 };
 
-use crate::{error::VOTableError, is_empty, mivot::VodmlVisitor, QuickXmlReadWrite};
+use crate::{
+  error::VOTableError,
+  mivot::VodmlVisitor,
+  utils::{discard_comment, discard_event, is_empty},
+  QuickXmlReadWrite,
+};
 
 pub mod collection;
 use collection::Collection;
@@ -79,20 +86,6 @@ impl_quickrw_not_e_no_a!(
   [elems]
 );
 
-///////////////////////
-// UTILITY FUNCTIONS //
-
-/*
-    function read_globals_sub_elem
-    Description:
-    *   reads the children of Globals
-    @generic R: BufRead; a struct that implements the std::io::BufRead trait.
-    @generic T: QuickXMLReadWrite + ElemImpl<GlobalsElem>; a struct that implements the quickXMLReadWrite and ElemImpl for GlobalsElem traits.
-    @param instance &mut T: an instance of T (here Globals)
-    @param reader &mut quick_xml::Reader<R>: the reader used to read the elements
-    @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
-    #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
-*/
 fn read_globals_sub_elem_by_ref<R: std::io::BufRead>(
   globals: &mut Globals,
   _context: &(),
@@ -107,13 +100,9 @@ fn read_globals_sub_elem_by_ref<R: std::io::BufRead>(
           globals.push_instance_by_ref(from_event_start_by_ref!(Instance, reader, reader_buff, e))
         }
         Collection::TAG_BYTES => {
-          let dmid = collection::get_dmid_from_atttributes(e.attributes())?;
-          let collection = collection::create_collection_from_dmid_and_reading_sub_elems(
-            dmid,
-            &(),
-            reader,
-            reader_buff,
-          )?;
+          let dmid = Collection::get_dmid_from_atttributes(e.attributes())?;
+          let collection =
+            Collection::from_dmid_and_reading_sub_elems(dmid, &(), reader, reader_buff)?;
           globals.push_collection_by_ref(collection);
         }
         _ => {
@@ -135,11 +124,11 @@ fn read_globals_sub_elem_by_ref<R: std::io::BufRead>(
       Event::Text(e) if is_empty(e) => {}
       Event::End(e) if e.local_name() == Globals::TAG_BYTES => return Ok(()),
       Event::Eof => return Err(VOTableError::PrematureEOF(Globals::TAG)),
-      _ => debug!("Discarded event in {}: {:?}", Globals::TAG, event),
+      Event::Comment(e) => discard_comment(e, reader, Globals::TAG),
+      _ => discard_event(event, Globals::TAG),
     }
   }
 }
-
 #[cfg(test)]
 mod tests {
   use crate::{

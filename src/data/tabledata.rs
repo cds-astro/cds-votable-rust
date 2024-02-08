@@ -1,3 +1,5 @@
+//! Module dedicated to the `TABLEDATA` tag.
+
 use std::{
   io::{BufRead, Write},
   str,

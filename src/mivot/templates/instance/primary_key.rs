@@ -135,10 +135,7 @@ impl_quickrw_e!(
 
 #[cfg(test)]
 mod tests {
-  use crate::{
-    mivot::test::{get_xml, test_error},
-    tests::test_read,
-  };
+  use crate::{mivot::test::get_xml, tests::test_read};
 
   use super::PrimaryKeyDyn;
 

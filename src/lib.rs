@@ -20,12 +20,14 @@ use std::{
 };
 
 use quick_xml::{
-  events::{attributes::Attributes, BytesStart, BytesText},
+  events::{attributes::Attributes, BytesStart},
   Reader, Writer,
 };
 
 #[macro_use]
-pub mod macros;
+mod macros;
+mod utils;
+
 pub mod coosys;
 pub mod data;
 pub mod datatype;
@@ -37,9 +39,8 @@ pub mod fieldref;
 pub mod group;
 pub mod impls;
 pub mod info;
+pub mod iter;
 pub mod link;
-#[cfg(feature = "mivot")]
-pub mod mivot;
 pub mod param;
 pub mod paramref;
 pub mod resource;
@@ -48,7 +49,8 @@ pub mod timesys;
 pub mod values;
 pub mod votable;
 
-pub mod iter;
+#[cfg(feature = "mivot")]
+pub mod mivot;
 
 #[cfg(feature = "mivot")]
 pub use self::mivot::VodmlVisitor;
@@ -206,15 +208,6 @@ trait QuickXmlReadWrite: Sized {
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError>;
-}
-
-pub(crate) fn is_empty(text: &BytesText) -> bool {
-  for byte in text.escaped() {
-    if *byte != b' ' && *byte != b'\n' && *byte != b'\t' {
-      return false;
-    }
-  }
-  true
 }
 
 // We visit all sub elements, bu we retrieve attributes from objects
@@ -607,7 +600,7 @@ mod tests {
     println!("\n\n#### VOTABLE ####\n");
     let mut write = Writer::new_with_indent(std::io::stdout(), b' ', 4);
     match votable.unwrap().write(&mut write, &()) {
-      Ok(content) => println!("\nOK"),
+      Ok(_) => println!("\nOK"),
       Err(error) => println!("Error: {:?}", &error),
     }
 
@@ -621,7 +614,6 @@ mod tests {
 
   use crate::field::ArraySize;
   use crate::resource::ResourceSubElem;
-  use bitvec::macros::internal::funty::Integral;
   use std::io::Cursor;
 
   pub(crate) fn test_read<X: QuickXmlReadWrite<Context = ()>>(xml: &str) -> X {
@@ -632,9 +624,11 @@ mod tests {
       match &mut event {
         Event::Start(ref mut e) if e.local_name() == X::TAG_BYTES => {
           let mut info = X::from_attributes(e.attributes()).unwrap();
-          info
-            .read_sub_elements_and_clean(reader, &mut buff, &())
-            .unwrap();
+          let res = info.read_sub_elements_and_clean(reader, &mut buff, &());
+          if let Err(e) = res {
+            eprintln!("Error: {}", e.to_string());
+            assert!(false);
+          }
           return info;
         }
         Event::Empty(ref mut e) if e.local_name() == X::TAG_BYTES => {
@@ -647,7 +641,7 @@ mod tests {
         Event::Decl(_) => (),
         _ => {
           println!("{:?}", event);
-          unreachable!()
+          assert!(false);
         }
       }
     }

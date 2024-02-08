@@ -1,3 +1,5 @@
+//! Module defining iterators on table rows.
+
 use std::{
   fs::File,
   io::{BufRead, BufReader},
@@ -5,7 +7,6 @@ use std::{
 };
 
 use base64::{engine::general_purpose, read::DecoderReader};
-use log::debug;
 use memchr::memmem::Finder;
 use once_cell::sync::Lazy;
 use quick_xml::{events::Event, Reader};
@@ -23,8 +24,9 @@ use crate::{
     Schema, VOTableValue,
   },
   iter::elems::{Binary2RowValueIterator, BinaryRowValueIterator},
-  resource::{Resource, ResourceOrTable},
+  resource::{Resource, ResourceOrTable, ResourceSubElem},
   table::{Table, TableElem},
+  utils::{discard_comment, discard_event, is_empty},
   votable::{VOTable, VOTableWrapper},
   QuickXmlReadWrite,
 };
@@ -32,9 +34,7 @@ use crate::{
 pub mod elems;
 pub mod strings;
 
-use crate::resource::ResourceSubElem;
 use elems::DataTableRowValueIterator;
-// use strings::RowStringIterator;
 
 static TR_END_FINDER: Lazy<Finder<'static>> = Lazy::new(|| Finder::new("</TR>"));
 
@@ -91,19 +91,6 @@ impl<R: BufRead> OwnedTabledataRowIterator<R> {
       mut votable,
       has_next: _,
     } = self;
-    /*// TODO: redundant code with SimpleVOTableRowIterator...
-    votable.resources[0]
-      .get_first_table_mut()
-      .and_then(|table| table.data.as_mut())
-      .unwrap()
-      .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &Vec::default())?;
-    votable.resources[0]
-      .get_first_table_mut()
-      .unwrap()
-      .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
-    votable.resources[0].read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
-    votable.read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
-    Ok(votable)*/
     votable
       .read_from_data_end_to_end(&mut reader, &mut reader_buff)
       .map(|()| votable)
@@ -200,16 +187,13 @@ fn next<T: BufRead>(
           *has_next = false;
           return None;
         }
-        Err(e) => return Some(Err(VOTableError::Read(e))),
         Ok(Event::Eof) => return Some(Err(VOTableError::PrematureEOF("reading rows"))),
-        Ok(Event::Text(ref e))
-          if unsafe { std::str::from_utf8_unchecked(e.escaped()) }
-            .trim()
-            .is_empty() =>
-        {
-          continue;
+        Ok(Event::Text(ref e)) if is_empty(e) => {}
+        Ok(Event::Comment(ref e)) => {
+          discard_comment(e, reader, TableData::<VoidTableDataContent>::TAG)
         }
-        _ => debug!("Discarded event reading rows: {:?}", event),
+        Ok(event) => discard_event(event, TableData::<VoidTableDataContent>::TAG),
+        Err(e) => return Some(Err(VOTableError::Read(e))),
       }
     }
   } else {

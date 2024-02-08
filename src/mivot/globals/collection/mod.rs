@@ -6,7 +6,6 @@ use std::{
   str,
 };
 
-use log::debug;
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
@@ -14,8 +13,8 @@ use quick_xml::{
 
 use crate::{
   error::VOTableError,
-  is_empty,
   mivot::{join::Join, VodmlVisitor},
+  utils::{discard_comment, discard_event, is_empty},
   QuickXmlReadWrite,
 };
 
@@ -146,97 +145,92 @@ impl Collection {
     }
   }
 
+  /// Special case since we check that the Collection contains attribute...
+  pub(crate) fn from_dmid_and_reading_sub_elems<R: BufRead>(
+    dmid: String,
+    _context: &(),
+    mut reader: &mut Reader<R>,
+    mut reader_buff: &mut Vec<u8>,
+  ) -> Result<Self, VOTableError> {
+    let mut inst_or_ref_vec: Vec<InstanceOrRef> = Default::default();
+    let mut join_vec: Vec<Join> = Default::default();
+
+    loop {
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      match &mut event {
+        Event::Start(ref e) => match e.local_name() {
+          Reference::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Reference(
+            from_event_start_by_ref!(Reference, reader, reader_buff, e),
+          )),
+          Instance::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Instance(
+            from_event_start_by_ref!(Instance, reader, reader_buff, e),
+          )),
+          Join::TAG_BYTES => join_vec.push(from_event_start_by_ref!(Join, reader, reader_buff, e)),
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Empty(ref e) => match e.local_name() {
+          Reference::TAG_BYTES => {
+            inst_or_ref_vec.push(InstanceOrRef::Reference(Reference::from_event_empty(e)?))
+          }
+          Instance::TAG_BYTES => {
+            inst_or_ref_vec.push(InstanceOrRef::Instance(Instance::from_event_empty(e)?))
+          }
+          Join::TAG_BYTES => join_vec.push(Join::from_event_empty(e)?),
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Text(e) if is_empty(e) => {}
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => {
+          return match (((!inst_or_ref_vec.is_empty()) as u8) << 1) + ((!join_vec.is_empty()) as u8)
+          {
+            2 => Self::from_instance_or_reference_elems(dmid, inst_or_ref_vec),
+            1 if join_vec.len() == 1 => Self::from_join(dmid, join_vec.drain(..).next().unwrap()),
+            1 => Err(VOTableError::Custom(
+              "A collection cannot have more than one join".to_owned(),
+            )),
+            0 => Err(VOTableError::Custom(
+              "In COLLECTION child of GLOBALS: must have at least one item".to_owned(),
+            )),
+            _ => Err(VOTableError::Custom(
+              "A collection cannot have items of different types".to_owned(),
+            )),
+          };
+        }
+        Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
+      }
+    }
+  }
+
+  pub(crate) fn get_dmid_from_atttributes(attrs: Attributes) -> Result<String, VOTableError> {
+    let mut dmid = String::new();
+    for attr_res in attrs {
+      let attr = attr_res.map_err(VOTableError::Attr)?;
+      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
+      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
+      if !value.is_empty() {
+        match attr.key {
+          b"dmid" => dmid.push_str(value),
+          _ => return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG)),
+        }
+      };
+    }
+    Ok(dmid)
+  }
+
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
     visitor.visit_collection_childof_globals(self)?;
     self.elems.visit(visitor)
-  }
-}
-
-pub(crate) fn get_dmid_from_atttributes(attrs: Attributes) -> Result<String, VOTableError> {
-  let mut dmid = String::new();
-  for attr_res in attrs {
-    let attr = attr_res.map_err(VOTableError::Attr)?;
-    let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-    let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-    if !value.is_empty() {
-      match attr.key {
-        b"dmid" => dmid.push_str(value),
-        _ => {
-          return Err(VOTableError::UnexpectedAttr(
-            attr.key.to_vec(),
-            Collection::TAG,
-          ))
-        }
-      }
-    };
-  }
-  Ok(dmid)
-}
-
-/// Special case since we check that the Collection contains attribute...
-pub(crate) fn create_collection_from_dmid_and_reading_sub_elems<R: BufRead>(
-  dmid: String,
-  _context: &(),
-  mut reader: &mut Reader<R>,
-  mut reader_buff: &mut Vec<u8>,
-) -> Result<Collection, VOTableError> {
-  let mut inst_or_ref_vec: Vec<InstanceOrRef> = Default::default();
-  let mut join_vec: Vec<Join> = Default::default();
-
-  loop {
-    let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
-    match &mut event {
-      Event::Start(ref e) => match e.local_name() {
-        Reference::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Reference(
-          from_event_start_by_ref!(Reference, reader, reader_buff, e),
-        )),
-        Instance::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Instance(
-          from_event_start_by_ref!(Instance, reader, reader_buff, e),
-        )),
-        Join::TAG_BYTES => join_vec.push(from_event_start_by_ref!(Join, reader, reader_buff, e)),
-        _ => {
-          return Err(VOTableError::UnexpectedStartTag(
-            e.local_name().to_vec(),
-            Collection::TAG,
-          ))
-        }
-      },
-      Event::Empty(ref e) => match e.local_name() {
-        Reference::TAG_BYTES => {
-          inst_or_ref_vec.push(InstanceOrRef::Reference(Reference::from_event_empty(e)?))
-        }
-        Instance::TAG_BYTES => {
-          inst_or_ref_vec.push(InstanceOrRef::Instance(Instance::from_event_empty(e)?))
-        }
-        Join::TAG_BYTES => join_vec.push(Join::from_event_empty(e)?),
-        _ => {
-          return Err(VOTableError::UnexpectedEmptyTag(
-            e.local_name().to_vec(),
-            Collection::TAG,
-          ))
-        }
-      },
-      Event::Text(e) if is_empty(e) => {}
-      Event::End(e) if e.local_name() == Collection::TAG_BYTES => {
-        return match (((!inst_or_ref_vec.is_empty()) as u8) << 1) + ((!join_vec.is_empty()) as u8) {
-          2 => Collection::from_instance_or_reference_elems(dmid, inst_or_ref_vec),
-          1 if join_vec.len() == 1 => {
-            Collection::from_join(dmid, join_vec.drain(..).next().unwrap())
-          }
-          1 => Err(VOTableError::Custom(
-            "A collection cannot have more than one join".to_owned(),
-          )),
-          0 => Err(VOTableError::Custom(
-            "In COLLECTION child of GLOBALS: must have at least one item".to_owned(),
-          )),
-          _ => Err(VOTableError::Custom(
-            "A collection cannot have items of different types".to_owned(),
-          )),
-        };
-      }
-      Event::Eof => return Err(VOTableError::PrematureEOF(Collection::TAG)),
-      _ => debug!("Discarded event in {}: {:?}", Collection::TAG, event),
-    }
   }
 }
 

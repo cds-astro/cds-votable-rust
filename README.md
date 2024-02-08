@@ -570,9 +570,11 @@ votable:
 * [ ] Add much more tests!
 * [X] Add possibility to convert to/from `TABLEDATA`, `BINARY`, `BINARY2`
     + but still to implement streaming mode in CLI
-* [ ] Enrich `votable::impls::Schema.serialize_seed` (possible bugs when deserializing JSON/TOML/YAML arrays and converting to BINARY or BINARY2)
-* [ ] Write a custom deserializer for `VOTableValue` (look at cargo-expand output for a basis)
 * [ ] Implements `toCSV` (but not `fromCSV`) in CLI
+* [ ] Replace `quick_error` by `anyhow` and `thiserror`.
+* [ ] Bump `quick_xml` version and: 
+    + [ ] Implement parsing without copy from `&[u8]` (when full data in men, e.g. in wasm, or for memmapped files) 
+    + [ ] Implement async
 * ...
 
 

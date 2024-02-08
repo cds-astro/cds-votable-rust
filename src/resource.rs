@@ -1,16 +1,17 @@
+//! Module dedicated to the `RESOURCE` tag.
+
 use std::{
   collections::HashMap,
   io::{BufRead, Write},
   mem, str,
 };
 
-use log::{debug, warn};
+use log::warn;
 use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
 };
-
 use serde_json::Value;
 
 #[cfg(feature = "mivot")]
@@ -23,11 +24,11 @@ use super::{
   group::Group,
   impls::mem::VoidTableDataContent,
   info::Info,
-  is_empty,
   link::Link,
   param::Param,
   table::Table,
   timesys::TimeSys,
+  utils::{discard_comment, discard_event, is_empty},
   QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
 
@@ -489,33 +490,18 @@ impl<C: TableDataContent> Resource<C> {
             if let Some(sub_elem) = self.sub_elems.last_mut() {
               sub_elem.push_info_by_ref(info)
             } else {
-              self.infos.push(info)
+              self.push_info_by_ref(info)
             }
           }
-          CooSys::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::CooSys(from_event_start_by_ref!(
-              CooSys,
-              reader,
-              reader_buff,
-              e
-            ))),
-          Group::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::Group(from_event_start_by_ref!(
-              Group,
-              reader,
-              reader_buff,
-              e
-            ))),
-          Param::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::Param(from_event_start_by_ref!(
-              Param,
-              reader,
-              reader_buff,
-              e
-            ))),
+          CooSys::TAG_BYTES => {
+            self.push_coosys_by_ref(from_event_start_by_ref!(CooSys, reader, reader_buff, e))
+          }
+          Group::TAG_BYTES => {
+            self.push_group_by_ref(from_event_start_by_ref!(Group, reader, reader_buff, e))
+          }
+          Param::TAG_BYTES => {
+            self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
+          }
           Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
           #[cfg(feature = "mivot")]
           Vodml::TAG_BYTES => {
@@ -529,9 +515,9 @@ impl<C: TableDataContent> Resource<C> {
           }
           Resource::<C>::TAG_BYTES => {
             let resource = from_event_start_by_ref!(Resource, reader, reader_buff, e);
-            self
-              .sub_elems
-              .push(ResourceSubElem::from_resource(resource).set_links(mem::take(&mut links)));
+            self.push_sub_elem_by_ref(
+              ResourceSubElem::from_resource(resource).set_links(mem::take(&mut links)),
+            );
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -549,18 +535,10 @@ impl<C: TableDataContent> Resource<C> {
               self.infos.push(info)
             }
           }
-          TimeSys::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::TimeSys(TimeSys::from_event_empty(e)?)),
-          CooSys::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::CooSys(CooSys::from_event_empty(e)?)),
-          Group::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::Group(Group::from_event_empty(e)?)),
-          Param::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::Param(Param::from_event_empty(e)?)),
+          TimeSys::TAG_BYTES => self.push_timesys_by_ref(TimeSys::from_event_empty(e)?),
+          CooSys::TAG_BYTES => self.push_coosys_by_ref(CooSys::from_event_empty(e)?),
+          Group::TAG_BYTES => self.push_group_by_ref(Group::from_event_empty(e)?),
+          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
           Link::TAG_BYTES => links.push(Link::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
@@ -574,13 +552,14 @@ impl<C: TableDataContent> Resource<C> {
           if e.local_name() == Binary::<VoidTableDataContent>::TAG_BYTES
             || e.local_name() == Binary2::<VoidTableDataContent>::TAG_BYTES
             || e.local_name() == Data::<VoidTableDataContent>::TAG_BYTES
-            || e.local_name() == Table::<VoidTableDataContent>::TAG_BYTES =>
+            || e.local_name() == Table::<VoidTableDataContent>::TAG_BYTES
+            || e.local_name() == Self::TAG_BYTES =>
         {
           return Ok(None)
         }
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }
@@ -604,33 +583,18 @@ impl<C: TableDataContent> Resource<C> {
             if let Some(sub_elem) = self.sub_elems.last_mut() {
               sub_elem.push_info_by_ref(info)
             } else {
-              self.infos.push(info)
+              self.push_info_by_ref(info)
             }
           }
-          CooSys::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::CooSys(from_event_start_by_ref!(
-              CooSys,
-              reader,
-              reader_buff,
-              e
-            ))),
-          Group::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::Group(from_event_start_by_ref!(
-              Group,
-              reader,
-              reader_buff,
-              e
-            ))),
-          Param::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::Param(from_event_start_by_ref!(
-              Param,
-              reader,
-              reader_buff,
-              e
-            ))),
+          CooSys::TAG_BYTES => {
+            self.push_coosys_by_ref(from_event_start_by_ref!(CooSys, reader, reader_buff, e))
+          }
+          Group::TAG_BYTES => {
+            self.push_group_by_ref(from_event_start_by_ref!(Group, reader, reader_buff, e))
+          }
+          Param::TAG_BYTES => {
+            self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
+          }
           Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
           #[cfg(feature = "mivot")]
           Vodml::TAG_BYTES => {
@@ -664,18 +628,10 @@ impl<C: TableDataContent> Resource<C> {
               self.infos.push(info)
             }
           }
-          TimeSys::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::TimeSys(TimeSys::from_event_empty(e)?)),
-          CooSys::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::CooSys(CooSys::from_event_empty(e)?)),
-          Group::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::Group(Group::from_event_empty(e)?)),
-          Param::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::Param(Param::from_event_empty(e)?)),
+          TimeSys::TAG_BYTES => self.push_timesys_by_ref(TimeSys::from_event_empty(e)?),
+          CooSys::TAG_BYTES => self.push_coosys_by_ref(CooSys::from_event_empty(e)?),
+          Group::TAG_BYTES => self.push_group_by_ref(Group::from_event_empty(e)?),
+          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
           Link::TAG_BYTES => links.push(Link::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
@@ -689,13 +645,14 @@ impl<C: TableDataContent> Resource<C> {
           if e.local_name() == Binary::<VoidTableDataContent>::TAG_BYTES
             || e.local_name() == Binary2::<VoidTableDataContent>::TAG_BYTES
             || e.local_name() == Data::<VoidTableDataContent>::TAG_BYTES
-            || e.local_name() == Table::<VoidTableDataContent>::TAG_BYTES =>
+            || e.local_name() == Table::<VoidTableDataContent>::TAG_BYTES
+            || e.local_name() == Self::TAG_BYTES =>
         {
           return Ok(None)
         }
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }
@@ -845,37 +802,27 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
             if let Some(sub_elem) = self.sub_elems.last_mut() {
               sub_elem.push_info_by_ref(info)
             } else {
-              self.infos.push(info)
+              self.push_info_by_ref(info)
             }
           }
-          Group::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::Group(from_event_start_by_ref!(
-              Group,
-              reader,
-              reader_buff,
-              e
-            ))),
-          Param::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::Param(from_event_start_by_ref!(
-              Param,
-              reader,
-              reader_buff,
-              e
-            ))),
+          Group::TAG_BYTES => {
+            self.push_group_by_ref(from_event_start_by_ref!(Group, reader, reader_buff, e))
+          }
+          Param::TAG_BYTES => {
+            self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
+          }
           Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
           Table::<C>::TAG_BYTES => {
             let table = from_event_start_by_ref!(Table, reader, reader_buff, e);
-            self
-              .sub_elems
-              .push(ResourceSubElem::from_table(table).set_links(mem::take(&mut links)));
+            self.push_sub_elem_by_ref(
+              ResourceSubElem::from_table(table).set_links(mem::take(&mut links)),
+            );
           }
           Resource::<C>::TAG_BYTES => {
             let resource = from_event_start_by_ref!(Resource, reader, reader_buff, e);
-            self
-              .sub_elems
-              .push(ResourceSubElem::from_resource(resource).set_links(mem::take(&mut links)));
+            self.push_sub_elem_by_ref(
+              ResourceSubElem::from_resource(resource).set_links(mem::take(&mut links)),
+            );
           }
           #[cfg(feature = "mivot")]
           Vodml::TAG_BYTES => from_event_start_vodml_by_ref!(self, Vodml, reader, reader_buff, e),
@@ -895,18 +842,10 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
               self.infos.push(info)
             }
           }
-          TimeSys::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::TimeSys(TimeSys::from_event_empty(e)?)),
-          CooSys::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::CooSys(CooSys::from_event_empty(e)?)),
-          Group::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::Group(Group::from_event_empty(e)?)),
-          Param::TAG_BYTES => self
-            .elems
-            .push(ResourceElem::Param(Param::from_event_empty(e)?)),
+          TimeSys::TAG_BYTES => self.push_timesys_by_ref(TimeSys::from_event_empty(e)?),
+          CooSys::TAG_BYTES => self.push_coosys_by_ref(CooSys::from_event_empty(e)?),
+          Group::TAG_BYTES => self.push_group_by_ref(Group::from_event_empty(e)?),
+          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
           Link::TAG_BYTES => links.push(Link::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
@@ -924,7 +863,8 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
           };
         }
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }

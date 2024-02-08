@@ -1,21 +1,30 @@
+//! Module dedicated to the `TABLE` tag.
+
 use std::{
   collections::HashMap,
   io::{BufRead, Write},
   str,
 };
 
+use log::warn;
+use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
 };
-
-use log::{debug, warn};
-use paste::paste;
 use serde_json::Value;
 
 use super::{
-  data::Data, desc::Description, error::VOTableError, field::Field, group::TableGroup, info::Info,
-  is_empty, link::Link, param::Param, QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+  data::Data,
+  desc::Description,
+  error::VOTableError,
+  field::Field,
+  group::TableGroup,
+  info::Info,
+  link::Link,
+  param::Param,
+  utils::{discard_comment, discard_event, is_empty},
+  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -155,41 +164,27 @@ impl<C: TableDataContent> Table<C> {
           Description::TAG_BYTES => {
             from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
           }
-          Field::TAG_BYTES => self.elems.push(TableElem::Field(from_event_start_by_ref!(
-            Field,
-            reader,
-            reader_buff,
-            e
-          ))),
-          Param::TAG_BYTES => self.elems.push(TableElem::Param(from_event_start_by_ref!(
-            Param,
-            reader,
-            reader_buff,
-            e
-          ))),
-          TableGroup::TAG_BYTES => {
-            self
-              .elems
-              .push(TableElem::TableGroup(from_event_start_by_ref!(
-                TableGroup,
-                reader,
-                reader_buff,
-                e
-              )))
+          Field::TAG_BYTES => {
+            self.push_field_by_ref(from_event_start_by_ref!(Field, reader, reader_buff, e))
           }
+          Param::TAG_BYTES => {
+            self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
+          }
+          TableGroup::TAG_BYTES => self.push_tablegroup_by_ref(from_event_start_by_ref!(
+            TableGroup,
+            reader,
+            reader_buff,
+            e
+          )),
           Link::TAG_BYTES => {
-            self
-              .links
-              .push(from_event_start_by_ref!(Link, reader, reader_buff, e))
+            self.push_link_by_ref(from_event_start_by_ref!(Link, reader, reader_buff, e))
           }
           Data::<C>::TAG_BYTES => {
             let data = Data::from_attributes(e.attributes())?;
             return Ok(Some(data));
           }
           Info::TAG_BYTES => {
-            self
-              .infos
-              .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
+            self.push_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -199,17 +194,11 @@ impl<C: TableDataContent> Table<C> {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Field::TAG_BYTES => self
-            .elems
-            .push(TableElem::Field(Field::from_event_empty(e)?)),
-          Param::TAG_BYTES => self
-            .elems
-            .push(TableElem::Param(Param::from_event_empty(e)?)),
-          TableGroup::TAG_BYTES => self
-            .elems
-            .push(TableElem::TableGroup(TableGroup::from_event_empty(e)?)),
-          Link::TAG_BYTES => self.links.push(Link::from_event_empty(e)?),
-          Info::TAG_BYTES => self.infos.push(Info::from_event_empty(e)?),
+          Field::TAG_BYTES => self.push_field_by_ref(Field::from_event_empty(e)?),
+          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
+          TableGroup::TAG_BYTES => self.push_tablegroup_by_ref(TableGroup::from_event_empty(e)?),
+          Link::TAG_BYTES => self.push_link_by_ref(Link::from_event_empty(e)?),
+          Info::TAG_BYTES => self.push_info_by_ref(Info::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -220,7 +209,8 @@ impl<C: TableDataContent> Table<C> {
         Event::Text(e) if is_empty(e) => {}
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }
@@ -370,32 +360,20 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
           Description::TAG_BYTES => {
             from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
           }
-          Field::TAG_BYTES => self.elems.push(TableElem::Field(from_event_start_by_ref!(
-            Field,
-            reader,
-            reader_buff,
-            e
-          ))),
-          Param::TAG_BYTES => self.elems.push(TableElem::Param(from_event_start_by_ref!(
-            Param,
-            reader,
-            reader_buff,
-            e
-          ))),
-          TableGroup::TAG_BYTES => {
-            self
-              .elems
-              .push(TableElem::TableGroup(from_event_start_by_ref!(
-                TableGroup,
-                reader,
-                reader_buff,
-                e
-              )))
+          Field::TAG_BYTES => {
+            self.push_field_by_ref(from_event_start_by_ref!(Field, reader, reader_buff, e))
           }
+          Param::TAG_BYTES => {
+            self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
+          }
+          TableGroup::TAG_BYTES => self.push_tablegroup_by_ref(from_event_start_by_ref!(
+            TableGroup,
+            reader,
+            reader_buff,
+            e
+          )),
           Link::TAG_BYTES => {
-            self
-              .links
-              .push(from_event_start_by_ref!(Link, reader, reader_buff, e))
+            self.push_link_by_ref(from_event_start_by_ref!(Link, reader, reader_buff, e))
           }
           Data::<C>::TAG_BYTES => {
             self.data = Some(from_event_start_by_ref!(
@@ -407,9 +385,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
             ))
           }
           Info::TAG_BYTES => {
-            self
-              .infos
-              .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
+            self.push_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -419,17 +395,11 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Field::TAG_BYTES => self
-            .elems
-            .push(TableElem::Field(Field::from_event_empty(e)?)),
-          Param::TAG_BYTES => self
-            .elems
-            .push(TableElem::Param(Param::from_event_empty(e)?)),
-          TableGroup::TAG_BYTES => self
-            .elems
-            .push(TableElem::TableGroup(TableGroup::from_event_empty(e)?)),
-          Link::TAG_BYTES => self.links.push(Link::from_event_empty(e)?),
-          Info::TAG_BYTES => self.infos.push(Info::from_event_empty(e)?),
+          Field::TAG_BYTES => self.push_field_by_ref(Field::from_event_empty(e)?),
+          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
+          TableGroup::TAG_BYTES => self.push_tablegroup_by_ref(TableGroup::from_event_empty(e)?),
+          Link::TAG_BYTES => self.push_link_by_ref(Link::from_event_empty(e)?),
+          Info::TAG_BYTES => self.push_info_by_ref(Info::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -440,7 +410,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
         Event::Text(e) if is_empty(e) => {}
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
-        _ => debug!("Discarded event in {}: {:?}", Self::TAG, event),
+        _ => discard_event(event, Self::TAG),
       }
     }
   }

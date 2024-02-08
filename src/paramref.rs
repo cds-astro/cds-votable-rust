@@ -1,3 +1,5 @@
+//! Struct dedicated to the `PARAMref` tag.
+
 use std::{
   collections::HashMap,
   io::{BufRead, Write},
@@ -101,11 +103,11 @@ impl QuickXmlReadWrite for ParamRef {
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
+    reader: &mut Reader<R>,
+    reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    todo!()
+    read_content_by_ref!(Self, self, reader, reader_buff)
   }
 
   fn write<W: Write>(
