@@ -93,6 +93,7 @@ enum GetAction {
     #[arg(short, long, default_value_t = '▮')]
     separator: char,
   },
+  /// Print selected field information as an array
   FieldsArray {
     /// Coma separated list of columns we want in the array of fields attributes
     #[arg(value_enum, value_delimiter(','))]

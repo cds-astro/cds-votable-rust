@@ -2,8 +2,8 @@
 
 # `votable-cli` or `VOTCli`
 
-A command-line to read and convert [VOTables](https://www.ivoa.net/documents/VOTable/20191021/REC-VOTable-1.4-20191021.html)
-from/to XML, JSON, TOML and YAML.
+Command-line to extract information from IVOA VOTables](https://www.ivoa.net/documents/VOTable/20191021/REC-VOTable-1.4-20191021.html)
+and to convert efficiently VOTables back and forth in XML, JSON, YAML, TOML (and to CSV) while preserving all elements (except in CSV).
 
 ## Status
 
@@ -23,8 +23,9 @@ Please, provide us with VOTable examples!
 
 * [X] Support `CDATA` in `TD` tags
 * [X] Use the iterator to implement streaming transformations between DATATABLE/BINARY/BINARY2.
-* [X] Also implement streaming conversion to CSV
-* [ ] Add commands to modify a VOTable metadata
+* [X] Also implement streaming conversion to CSV.
+* [ ] Implement streaming mode for multiple tables (if it is really useful, please tell me).
+* [ ] Add commands to modify a VOTable metadata.
 * [ ] Add commands to select/compute columns and filter rows?
  
 ## Install
@@ -102,22 +103,73 @@ cargo install --path crates/cli
 
 ```bash
 > vot --help
-Command-line to convert IVOA VOTables in XML, JSON, YAML and TOML
+Command-line to extract information from IVOA VOTables and to convert them in XML, JSON, YAML, TOML and CSV.
 
-Usage: vot [OPTIONS] <INPUT_FMT> <OUTPUT_FMT>
+Usage: vot <COMMAND>
 
-Arguments:
-  <INPUT_FMT>   Format of the input document ('xml', 'json', 'yaml' or 'toml')
-  <OUTPUT_FMT>  Format of the output document ('xml', 'xml-td', 'xml-bin', 'xml-bin2', 'json', 'yaml' or 'toml')
+Commands:
+  convert   Convert a VOTable from one format to another (full table loaded in memory)
+  sconvert  Convert a (large) single table VOTable in streaming mode. All information is preserved, even after the `</TABLE>` tag. 
+            The `TABLEDATA` to `CSV` conversion preserve fields formatting.
+  update    Update metadata from another VOTable of from a CSV file
+  get       Get information from a VOTable (sstreaming for XML files)
+  help      Print this message or the help of the given subcommand(s)
 
 Options:
-  -i, --input <FILE>   Input file (else read from stdin)
-  -o, --output <FILE>  Output file (else write to stdout)
-  -p, --pretty         Pretty print (for JSON and TOML)
-  -h, --help           Print help
-  -V, --version        Print version
+  -h, --help     Print help
+  -V, --version  Print version
 ```
 
+```bash
+> vot convert --help
+Convert a VOTable from one format to another (full table loaded in memory)
+
+Usage: vot convert [OPTIONS] --out-fmt <OUTPUT_FMT>
+
+Options:
+  -i, --in <FILE>             Path of the input VOTable [default: read from stdin]
+  -t, --in-fmt <INPUT_FMT>    Format of the input VOTable ('xml', 'json', 'yaml' or 'toml') [default: guess from file extension]
+  -o, --out <FILE>            Path of the output VOTable [default: write to stdout]
+  -f, --out-fmt <OUTPUT_FMT>  Format of the output VOTable ('xml', 'xml-td', 'xml-bin', 'xml-bin2', 'json', 'yaml' or 'toml')
+  -p, --pretty                Pretty print (for JSON and TOML)
+  -h, --help                  Print help
+```
+
+```bash
+> vot sconvert --help
+Convert a (large) single table VOTable in streaming mode. All information is preserved, even after the `</TABLE>` tag. 
+The `TABLEDATA` to `CSV` conversion preserve fields formatting.
+
+Usage: vot sconvert [OPTIONS] --out-fmt <OUTPUT_FMT>
+
+Options:
+  -i, --in <FILE>                Path of the input XML VOTable [default: read from stdin]
+  -o, --out <FILE>               Path of the output file [default: write to stdout]
+  -f, --out-fmt <OUTPUT_FMT>     Format of the output file ('xml-td', 'xml-bin', 'xml-bin2' or 'csv')
+  -s, --separator <SEPARATOR>    Separator used for the 'csv' format [default: ,]
+      --parallel <N>             Exec concurrently using N threads (row order not preserved!)
+      --chunk-size <CHUNK_SIZE>  Number of rows process by a same thread in `parallel` mode [default: 10000]
+  -h, --help                     Print help
+```
+
+```bash
+> vot get --help
+Get information from a VOTable (sstreaming for XML files)
+
+Usage: vot get [OPTIONS] <COMMAND>
+
+Commands:
+  struct        Print the VOTable structure
+  colnames      Print column names, one separated values line per table.
+  fields-array  Print selected field information as an array
+  help          Print this message or the help of the given subcommand(s)
+
+Options:
+  -i, --in <FILE>           Path of the input VOTable [default: read from stdin]
+  -t, --in-fmt <INPUT_FMT>  Format of the input VOTable ('xml', 'json', 'yaml' or 'toml') [default: guess from file extension]
+  -s, --early-stop          Stop parsing before reading first data ('xml' input only)
+  -h, --help                Print help
+```
 
 ## Example
 
@@ -159,7 +211,7 @@ the environement variable `RUST_LOG` with one of the following value:
 
 E.g.:
 ```bash
-RUST_LOG="trace" vot xml xml --input VII.vot
+RUST_LOG="trace" vot get --in my_votable.xml struct
 ```
 
 See [env_logger](https://docs.rs/env_logger/latest/env_logger/) for more details.
