@@ -20,6 +20,12 @@ quick_error! {
     UnexpectedStartTag(tag: Vec<u8>, context_tag: &'static str) {
       display("Unexpected start tag {} in tag {}", String::from_utf8_lossy(tag.as_slice()), context_tag)
     }
+    UnexpectedEndTag(tag: Vec<u8>, context_tag: &'static str) {
+      display("Unexpected end tag {} in tag {}", String::from_utf8_lossy(tag.as_slice()), context_tag)
+    }
+    WrongFieldNumber(expected: usize, actual: usize) {
+      display("Wrong number of fields in row. Expected: {}. Actual: {}.", expected, actual)
+    }
     Variant(err: String) {
       display("Error parsing variant: {}", err)
     }
