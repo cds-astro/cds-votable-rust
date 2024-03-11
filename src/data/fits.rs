@@ -10,7 +10,6 @@ use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   Reader, Writer,
 };
-use serde;
 
 use crate::impls::mem::VoidTableDataContent;
 

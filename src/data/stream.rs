@@ -18,7 +18,6 @@ use crate::{
   utils::{discard_comment, discard_event, is_empty},
   QuickXmlReadWrite, TableDataContent,
 };
-use serde;
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Type {
@@ -205,6 +204,34 @@ impl<C: TableDataContent> Stream<C> {
   pub fn set_content(mut self, content: C) -> Self {
     self.content = Some(content);
     self
+  }
+
+  /// Calls a closure on each (key, value) attribute pairs.
+  pub fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(type_) = &self.type_ {
+      f("type", type_.to_string().as_str());
+    }
+    if let Some(href) = &self.href {
+      f("href", href.as_str());
+    }
+    if let Some(actuate) = &self.actuate {
+      f("actuate", actuate.to_string().as_str());
+    }
+    if let Some(encoding) = &self.encoding {
+      f("encoding", encoding.to_string().as_str());
+    }
+    if let Some(expires) = &self.expires {
+      f("expires", expires.as_str());
+    }
+    if let Some(rights) = &self.rights {
+      f("rights", rights.as_str());
+    }
+    /*for (k, v) in &self.extra {
+      f(k.as_str(), v.to_string().as_str());
+    }*/
   }
 
   pub fn write_start<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {

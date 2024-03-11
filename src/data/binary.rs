@@ -10,7 +10,6 @@ use quick_xml::{
   events::{attributes::Attributes, BytesEnd, BytesStart, Event},
   Reader, Writer,
 };
-use serde;
 
 use super::{
   super::{
@@ -44,14 +43,14 @@ impl<C: TableDataContent> Binary<C> {
       .write_event(Event::Start(BytesStart::borrowed_name(Self::TAG_BYTES)))
       .map_err(VOTableError::Write)
       .and_then(|()| {
-        if self.stream.content.is_some() {
-          self
-            .stream
-            .write_start(writer)
-            .and_then(|()| writer.write(b"\n").map_err(VOTableError::Write))
-        } else {
+        //if self.stream.content.is_some() {
+        self
+          .stream
+          .write_start(writer)
+          .and_then(|()| writer.write(b"\n").map_err(VOTableError::Write))
+        /*} else {
           self.stream.write(writer, &())
-        }
+        }*/
       })
   }
 
@@ -59,16 +58,18 @@ impl<C: TableDataContent> Binary<C> {
     &mut self,
     writer: &mut Writer<W>,
   ) -> Result<(), VOTableError> {
-    if self.stream.content.is_some() {
-      self.stream.write_end(writer)
-    } else {
-      self.stream.write(writer, &())
-    }
-    .and_then(|()| {
-      writer
-        .write_event(Event::End(BytesEnd::borrowed(Self::TAG_BYTES)))
-        .map_err(VOTableError::Write)
-    })
+    //if self.stream.content.is_some() {
+    self
+      .stream
+      .write_end(writer)
+      /*} else {
+        self.stream.write(writer, &())
+      }*/
+      .and_then(|()| {
+        writer
+          .write_event(Event::End(BytesEnd::borrowed(Self::TAG_BYTES)))
+          .map_err(VOTableError::Write)
+      })
   }
 }
 
