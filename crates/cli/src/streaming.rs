@@ -73,9 +73,9 @@ pub struct StreamConvert {
   /// Exec concurrently using N threads (row order not preserved!)
   #[arg(long, value_name = "N")]
   parallel: Option<usize>,
-  // Number of rows process by a same thread in `parallel` mode
-  //#[arg(long, default_value_t = 1_000_usize)]
-  //chunk_size: usize,
+  /// Number of rows process by a same thread in `parallel` mode
+  #[arg(long, default_value_t = 10_000_usize)]
+  chunk_size: usize,
   /// Robust TABLEDATA -> CSV conversion: to be used if rows contains comments or CDATA.
   #[arg(short, long, value_name = "N")]
   robust: bool,
@@ -135,11 +135,11 @@ impl StreamConvert {
           OutputFormat::XmlTabledata => to_same(it, write),
           OutputFormat::XmlBinary => match self.parallel {
             None => to_binary(it, write),
-            Some(n_threads) => td_to_binary_par(it, write, n_threads),
+            Some(n_threads) => td_to_binary_par(it, write, n_threads, self.chunk_size),
           },
           OutputFormat::XmlBinary2 => match self.parallel {
             None => to_binary2(it, write),
-            Some(n_threads) => td_to_binary2_par(it, write, n_threads),
+            Some(n_threads) => td_to_binary2_par(it, write, n_threads, self.chunk_size),
           },
           OutputFormat::CSV => {
             let mut raw_row_it = it.to_owned_tabledata_row_iterator();
@@ -173,6 +173,7 @@ impl StreamConvert {
                   write,
                   self.separator,
                   n_threads,
+                  self.chunk_size,
                 )
               }
             }
@@ -182,12 +183,12 @@ impl StreamConvert {
       TableOrBinOrBin2::Binary => match self.output_fmt {
         OutputFormat::XmlTabledata => match self.parallel {
           None => to_tabledata(it, write),
-          Some(n_threads) => binary_to_td_par(it, write, n_threads),
+          Some(n_threads) => binary_to_td_par(it, write, n_threads, self.chunk_size),
         },
         OutputFormat::XmlBinary => to_same(it, write),
         OutputFormat::XmlBinary2 => match self.parallel {
           None => to_binary2(it, write),
-          Some(n_threads) => binary_to_binary2_par(it, write, n_threads),
+          Some(n_threads) => binary_to_binary2_par(it, write, n_threads, self.chunk_size),
         },
         OutputFormat::CSV => match self.parallel {
           None => to_csv(it, write, self.separator),
@@ -204,6 +205,7 @@ impl StreamConvert {
               write,
               self.separator,
               n_threads,
+              self.chunk_size,
             )
           }
         },
@@ -211,11 +213,11 @@ impl StreamConvert {
       TableOrBinOrBin2::Binary2 => match self.output_fmt {
         OutputFormat::XmlTabledata => match self.parallel {
           None => to_tabledata(it, write),
-          Some(n_threads) => binary2_to_td_par(it, write, n_threads),
+          Some(n_threads) => binary2_to_td_par(it, write, n_threads, self.chunk_size),
         },
         OutputFormat::XmlBinary => match self.parallel {
           None => to_binary(it, write),
-          Some(n_threads) => binary2_to_binary_par(it, write, n_threads),
+          Some(n_threads) => binary2_to_binary_par(it, write, n_threads, self.chunk_size),
         },
         OutputFormat::XmlBinary2 => to_same(it, write),
         OutputFormat::CSV => match self.parallel {
@@ -233,6 +235,7 @@ impl StreamConvert {
               write,
               self.separator,
               n_threads,
+              self.chunk_size,
             )
           }
         },
@@ -274,7 +277,7 @@ fn write_1st_csv_field<W: Write>(
   field: &str,
   sep: char,
 ) -> Result<(), VOTableError> {
-  if field.contains(sep) {
+  if need_double_quotes(field, sep) {
     write_double_quoted_field(field, write)
   } else {
     write.write_all(field.as_bytes())
@@ -293,7 +296,9 @@ fn write_1st_csv_field_with_newline<W: Write>(
 }
 fn write_csv_field<W: Write>(write: &mut W, field: &str, sep: char) -> Result<(), VOTableError> {
   if need_double_quotes(field, sep) {
-    write_double_quoted_field(field, write)
+    write
+      .write_all(b",")
+      .and_then(|_| write_double_quoted_field(field, write))
   } else {
     write.write_fmt(format_args!(",{}", field))
   }
@@ -314,44 +319,7 @@ fn write_double_quoted_field<W: Write>(field: &str, write: &mut W) -> Result<(),
   }
 }
 
-/*
-/// TableData row (without starting `<TR>` and ending `</TR>`) to fields iterator
-/// WARNING:
-/// * we do not handle CDATA or TD wth attributes (but we do not expect such things in large tables...)
-/// * we do not unescape XML reserved chars (again, we do not expect such chars in large table) like:
-///     + `&` escaped as `&amp;`
-///     + `>` escaped as `&gt;`
-///     + `<` escaped as `&lt;` when part of the sequence `]]>`
-fn tdrow2strfields(bytes: &[u8]) -> impl Iterator<Item = &str> {
-  unsafe {
-    from_utf8_unchecked(
-      bytes
-        .trim_ascii_start()
-        .strip_prefix(b"<TD>")
-        .expect("No starting <TD> found!"),
-    )
-  }
-  .split("<TD>")
-  .map(|field| unsafe {
-    from_utf8_unchecked(
-      field
-        .as_bytes()
-        .trim_ascii_end()
-        .strip_suffix(b"</TD>")
-        .expect("No ending </TD> found!")
-        .trim_ascii(),
-    )
-  })
-}
-*/
-/*fn tdrow2votfields(bytes: &[u8], schema: &Vec<Schema>) -> impl Iterator<Item = VOTableValue> {
-
-
-
-}*/
-
 fn tdrow2csvrow(bytes: &[u8], _schema: &TableSchema, sep: char) -> Box<[u8]> {
-  // fieldit2csvrow(tdrow2strfields(bytes), sep)
   fieldit2csvrow(
     FieldIteratorUnbuffered::new(bytes).map(|res| match res {
       Ok(s) => s,
@@ -560,6 +528,7 @@ fn td_to_binary_par<R: BufRead + Send, W: Write>(
   mut it: SimpleVOTableRowIterator<R>,
   write: W,
   n_threads: usize,
+  chunk_size: usize,
 ) -> Result<(), VOTableError> {
   let mut writer = new_xml_writer(write, None, None);
   if it
@@ -598,9 +567,17 @@ fn td_to_binary_par<R: BufRead + Send, W: Write>(
       B64Formatter::new(writer.inner()),
       &general_purpose::STANDARD,
     );
-    convert_par(&mut raw_row_it, schema, convert, write, ' ', n_threads)
-      .and_then(|_| raw_row_it.read_to_end())
-      .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
+    convert_par(
+      &mut raw_row_it,
+      schema,
+      convert,
+      write,
+      ' ',
+      n_threads,
+      chunk_size,
+    )
+    .and_then(|_| raw_row_it.read_to_end())
+    .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {
     // No table in the VOTable
     Ok(())
@@ -611,6 +588,7 @@ fn td_to_binary2_par<R: BufRead + Send, W: Write>(
   mut it: SimpleVOTableRowIterator<R>,
   write: W,
   n_threads: usize,
+  chunk_size: usize,
 ) -> Result<(), VOTableError> {
   let mut writer = new_xml_writer(write, None, None);
   if it
@@ -638,9 +616,17 @@ fn td_to_binary2_par<R: BufRead + Send, W: Write>(
       B64Formatter::new(writer.inner()),
       &general_purpose::STANDARD,
     );
-    convert_par(&mut raw_row_it, schema, convert, write, ' ', n_threads)
-      .and_then(|_| raw_row_it.read_to_end())
-      .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
+    convert_par(
+      &mut raw_row_it,
+      schema,
+      convert,
+      write,
+      ' ',
+      n_threads,
+      chunk_size,
+    )
+    .and_then(|_| raw_row_it.read_to_end())
+    .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {
     // No table in the VOTable
     Ok(())
@@ -651,6 +637,7 @@ fn binary_to_td_par<R: BufRead + Send, W: Write>(
   mut it: SimpleVOTableRowIterator<R>,
   write: W,
   n_threads: usize,
+  chunk_size: usize,
 ) -> Result<(), VOTableError> {
   let mut writer = new_xml_writer(write, None, None);
   if it
@@ -679,6 +666,7 @@ fn binary_to_td_par<R: BufRead + Send, W: Write>(
       writer.inner(),
       ' ',
       n_threads,
+      chunk_size,
     )
     .and_then(|_| raw_row_it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
@@ -692,6 +680,7 @@ fn binary_to_binary2_par<R: BufRead + Send, W: Write>(
   mut it: SimpleVOTableRowIterator<R>,
   write: W,
   n_threads: usize,
+  chunk_size: usize,
 ) -> Result<(), VOTableError> {
   let mut writer = new_xml_writer(write, None, None);
   if it
@@ -720,6 +709,7 @@ fn binary_to_binary2_par<R: BufRead + Send, W: Write>(
       B64Formatter::new(writer.inner()),
       ' ',
       n_threads,
+      chunk_size,
     )
     .and_then(|_| raw_row_it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
@@ -734,6 +724,7 @@ fn binary2_to_td_par<R: BufRead + Send, W: Write>(
   mut it: SimpleVOTableRowIterator<R>,
   write: W,
   n_threads: usize,
+  chunk_size: usize,
 ) -> Result<(), VOTableError> {
   let mut writer = new_xml_writer(write, None, None);
   if it
@@ -759,9 +750,17 @@ fn binary2_to_td_par<R: BufRead + Send, W: Write>(
       B64Formatter::new(writer.inner()),
       &general_purpose::STANDARD,
     );
-    convert_par(&mut raw_row_it, schema, convert, write, ' ', n_threads)
-      .and_then(|_| raw_row_it.read_to_end())
-      .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
+    convert_par(
+      &mut raw_row_it,
+      schema,
+      convert,
+      write,
+      ' ',
+      n_threads,
+      chunk_size,
+    )
+    .and_then(|_| raw_row_it.read_to_end())
+    .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {
     // No table in the VOTable
     Ok(())
@@ -772,6 +771,7 @@ fn binary2_to_binary_par<R: BufRead + Send, W: Write>(
   mut it: SimpleVOTableRowIterator<R>,
   write: W,
   n_threads: usize,
+  chunk_size: usize,
 ) -> Result<(), VOTableError> {
   let mut writer = new_xml_writer(write, None, None);
   if it
@@ -797,9 +797,17 @@ fn binary2_to_binary_par<R: BufRead + Send, W: Write>(
       B64Formatter::new(writer.inner()),
       &general_purpose::STANDARD,
     );
-    convert_par(&mut raw_row_it, schema, convert, write, ' ', n_threads)
-      .and_then(|_| raw_row_it.read_to_end())
-      .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
+    convert_par(
+      &mut raw_row_it,
+      schema,
+      convert,
+      write,
+      ' ',
+      n_threads,
+      chunk_size,
+    )
+    .and_then(|_| raw_row_it.read_to_end())
+    .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {
     // No table in the VOTable
     Ok(())
@@ -830,6 +838,7 @@ fn convert_par<I, W>(
   mut write: W,
   separator: char,
   n_threads: usize,
+  chunk_size: usize,
 ) -> Result<(), VOTableError>
 where
   I: Iterator<Item = Result<Vec<u8>, VOTableError>> + Send,
@@ -839,24 +848,15 @@ where
   // Usage of crossbeam from https://rust-lang-nursery.github.io/rust-cookbook/concurrency/threads.html
   let (snd1, rcv1) = bounded(1);
   let (snd2, rcv2) = bounded(1);
-  let mut raw_rows_chunk_iter = raw_row_it
-    .map(|res| match res {
-      Ok(row) => row.into_boxed_slice(),
-      Err(e) => panic!("Error reading row: {:?}", e),
-    })
-    .array_chunks::<10_000>();
   scope(|s| {
     // Producer thread
     s.spawn(|| {
-      while let Some(raw_rows_chunk) = raw_rows_chunk_iter.next() {
+      let mut rows_chunk = load_n(raw_row_it, chunk_size);
+      while !rows_chunk.is_empty() {
         snd1
-          .send(raw_rows_chunk.to_vec())
+          .send(rows_chunk)
           .expect("Unexpected error sending raw rows");
-      }
-      if let Some(last_raw_rows_iter) = raw_rows_chunk_iter.into_remainder() {
-        snd1
-          .send(last_raw_rows_iter.collect::<Vec<Box<[u8]>>>())
-          .expect("Unexpected error sending raw rows");
+        rows_chunk = load_n(raw_row_it, chunk_size);
       }
       // Close the channel, otherwise sink will never exit the for-loop
       drop(snd1);
@@ -893,4 +893,15 @@ where
     }
   });
   Ok(())
+}
+
+fn load_n<R, T>(iter: &mut T, n: usize) -> Vec<R>
+where
+  R: Send + Sync,
+  T: Send + Iterator<Item = Result<R, VOTableError>>,
+{
+  match iter.take(n).collect() {
+    Ok(v) => v,
+    Err(e) => panic!("Error reading rows: {:?}", e),
+  }
 }
