@@ -2,25 +2,34 @@
 
 # `votable` or `VOTLibRust`
 
-Library to read/write [VOTables](https://www.ivoa.net/documents/VOTable/)
-in Rust and to convert them in JSON, YAML, TOML and back to XML.
+Library to build, read and write [VOTables](https://www.ivoa.net/documents/VOTable/)
+in Rust and to convert them efficiently back and forth in JSON, YAML, TOML, XML-TABLEDATA, XML-BINARY and XML-BINARY2
+while preserving all elements (except comments) and their order.
 
 [![](https://img.shields.io/crates/v/votable.svg)](https://crates.io/crates/votable)
 [![](https://img.shields.io/crates/d/votable.svg)](https://crates.io/crates/votable)
 [![API Documentation on docs.rs](https://docs.rs/votable/badge.svg)](https://docs.rs/votable/)
 [![BenchLib](https://github.com/cds-astro/cds-votable-rust/actions/workflows/libtest.yml/badge.svg)](https://github.com/cds-astro/cds-moc-rust/actions/workflows/libtest.yml)
 
-
-VOT Lib Rust is used in: 
+VOT Lib Rust is used in:
 * [VOTCli](https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli) 
   convert VOTables from the command line;
 * [VOTWasm](https://github.com/cds-astro/cds-votable-rust/tree/main/crates/wasm) 
   read/write and convert VOTables in Web Browsers.
+* [Aladin Lite V3](https://github.com/cds-astro/aladin-lite)
 
 ## Status
 
-This library is in an early stage of development.  
-We are (reasonably) open to changes in the various format, e.g.:
+The code contains all main functionalities: 
+* supports BINARY, BINARY2 formats
+* supports CDATA in rows, StAX mode for streaming
+* supports MIVOT block parsing
+
+But it is far from been as clean and documented as I would like.
+If you want to use this crate in a Rust project, you should probably have a look 
+at the VOTCli code.
+
+We are still (reasonably) open to changes, e.g.:
 * we could flag attributes with a '@' prefix
 * we could use upper case elements tag names
 * we could remove the 's' suffix in elements arrays
@@ -56,10 +65,10 @@ VOTable is an XML based format. Why other formats?
 
 ## Design choices and problems
 
-The default provided implementation converting from JSON/YAML/TOML **does not
+Although the default provided implementation converting from JSON/YAML/TOML **does not
 focus on performances** since we do not use the VOTable FIELDs information but 
 deserialize each table field in the first succeeding *VOTableValue* 
-(see `votable::impls::Schema.serialize_seed`).
+(see `votable::impls::Schema.serialize_seed`), performances seems to be good nevertheless.
 
 VOT Lib resort heavily on [serde](https://serde.rs/).
 
@@ -95,9 +104,8 @@ names (all in camel case).
 
 ### WARNINGS
 
-* TOML does not supports `null` (we so far convert `null` values by an empty string).
-* The default provided implementation loads all data in memory, so it is not
-  adapted for large files!
+* TOML does not support `null` (we so far convert `null` values by an empty string).
+* Conversions from/to TOML/JSON/YAML requires all data to be loaded in memory, it is not adapted for large files.
 
 ## Other way to convert from VOTable to JSON
 
@@ -561,16 +569,16 @@ votable:
 
 ## To-do list
 
-* [ ] Support `CDATA`
+* [X] Support `CDATA`
     + [X] Support in `Info`, `Description`, `Link`, `PARAMRef` and `FIELDRef`
-    + [ ] Support `CDATA` in `<TD></TD>` 
+    + [X] Support `CDATA` in `<TD></TD>` 
 * [ ] Fill the doc for the Rust library (but I so far do not know people interested in such a lib since Rust is not very used in the astronomy community so far, so...)
 * [X] Add a check method ensuring that user input VOTableValue (using the API to build a VOTable) 
       matches the table schema (or automatically converting in the right VOTableValue)
 * [ ] Add much more tests!
 * [X] Add possibility to convert to/from `TABLEDATA`, `BINARY`, `BINARY2`
     + but still to implement streaming mode in CLI
-* [ ] Implements `toCSV` (but not `fromCSV`) in CLI
+* [X] Implements `toCSV` (but not `fromCSV`) in CLI
 * [ ] Replace `quick_error` by `anyhow` and `thiserror`.
 * [ ] Bump `quick_xml` version and: 
     + [ ] Implement parsing without copy from `&[u8]` (when full data in men, e.g. in wasm, or for memmapped files) 

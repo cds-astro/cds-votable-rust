@@ -21,10 +21,12 @@ Please, provide us with VOTable examples!
 
 ## To-Do list
 
-* [ ] Support `CDATA` in `TD` tags
-* [ ] Use the iterator to implement streaming transformations between DATATABLE/BINARY/BINARY2.
-* [ ] Also implement streaming conversion to CSV
-
+* [X] Support `CDATA` in `TD` tags
+* [X] Use the iterator to implement streaming transformations between DATATABLE/BINARY/BINARY2.
+* [X] Also implement streaming conversion to CSV
+* [ ] Add commands to modify a VOTable metadata
+* [ ] Add commands to select/compute columns and filter rows?
+ 
 ## Install
 
 ### From pypi for python users
@@ -119,19 +121,35 @@ Options:
 
 ## Example
 
+### XML/JSON/TOML/YAML convertion 
+
 ```bash
-> time vot xml xml -i VII.vot > xml.1.vot
-real	0m0,009s
-user	0m0,001s
-sys 0m0,009s
-
-> time vot xml toml --pretty -i VII.vot | vot toml json | vot json xml > xml.2.vot
-real	0m0,022s
-user	0m0,018s
-sys	0m0,012s
-
-> diff xml.1.vot xml.2.vot
+# In memory conversion of a VOTable from XML-TABLEDATA to JSON
+vot convert --in my_votable.xml --out my_votable.json --out-fmt json
 ```
+
+### Streaming conversion XML-TD, XML-BIN, CML-BIN2 and CSV
+
+```bash
+# Streaming conversion of a VOTable from XML-TABLEDATA to XML-BINARY2
+vot sconvert --in my_votable.xml --out my_votable.xml.b64  --out-fmt xml-bin
+# Streaming conversion from XML to CSV, in parallel, of a single large table
+vot sconvert --in my_votable.xml --out my_votable.csv --out-fmt csv --parallel 6
+```
+
+### Get metadata
+
+```bash
+# Get the structure of a VOTable with virtual identifier for each element
+vot get --in my_votable.xml struct --line-width 120
+# Get the structure of alarge VOTable till DATA is reached
+vot get --in my_votable.xml --early-stop struct --line-width 120
+# Get only the colum names of a large table, with a non-ascii separator
+vot get --in my_votable.xml --early-stop colnames --separator '▮'
+# Get a field metadata array with selected info
+vot get -in my_votable.xml fields-array index,name,datatype,arraysize,width,precision,unit,ucd,description --separator ,
+```
+
 
 ## Log messages
 
