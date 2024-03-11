@@ -1,5 +1,6 @@
 use std::io::BufRead;
 
+use crate::VOTableError;
 use log::{debug, info, warn};
 use quick_xml::{
   events::{BytesText, Event},
@@ -8,7 +9,7 @@ use quick_xml::{
 
 pub(crate) fn is_empty(text: &BytesText) -> bool {
   for byte in text.escaped() {
-    if *byte != b' ' && *byte != b'\n' && *byte != b'\t' && *byte != b'\r' {
+    if !u8::is_ascii_whitespace(byte) {
       return false;
     }
   }
@@ -25,4 +26,8 @@ pub(crate) fn discard_comment<R: BufRead>(comment: &BytesText, reader: &Reader<R
 
 pub(crate) fn discard_event(event: Event, tag: &str) {
   debug!("Discarded event in tag {}: {:?}", tag, event)
+}
+
+pub(crate) fn unexpected_event(event: Event, tag: &str) -> VOTableError {
+  VOTableError::Custom(format!("Unexpected event in tag {}: {:?}", tag, event))
 }
