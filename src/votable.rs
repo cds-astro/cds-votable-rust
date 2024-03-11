@@ -2,6 +2,7 @@
 
 use std::{
   collections::HashMap,
+  fmt::{Display, Formatter},
   fs::File,
   io::{BufRead, BufReader, BufWriter, Write},
   path::Path,
@@ -83,6 +84,11 @@ impl Version {
       Self::V1_4 => "http://www.ivoa.net/xml/VOTable/v1.4",
       Self::V1_5 => "http://www.ivoa.net/xml/VOTable/v1.5",
     }
+  }
+}
+impl Display for Version {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    f.write_str(self.into())
   }
 }
 
@@ -544,7 +550,7 @@ impl<C: TableDataContent> VOTable<C> {
     }
   }
 
-  /// Read (and store) the content of the VOTable till it encounters the first `RESOURCE`.
+  /// Read (and store) the content of the VOTable till it finds the first `RESOURCE`.
   /// It then build the `RESOURCE` from its attributes, without adding it to the VOTable, and returns.
   pub(crate) fn from_reader_till_next_resource<R: BufRead>(
     reader: R,
@@ -665,7 +671,7 @@ impl<C: TableDataContent> VOTable<C> {
   }
 
   /// Read (and store) the content of the VOTable till it reaches a `RESOURCE` tag **child of** `VOTABLE`.
-  /// The newly encountered `RESOURCE` tag is built from its `attributes` but its content
+  /// The newly found `RESOURCE` tag is built from its `attributes` but its content
   /// (the sub-elements it contains) is to be read and the `RESOURCE` is not added to the VOTable
   /// (`VOTable.push_resource` must be called externally).
   pub fn read_till_next_resource_by_ref<R: BufRead>(
@@ -745,7 +751,7 @@ impl<C: TableDataContent> VOTable<C> {
   }
 
   /// Read (and store) the content of the VOTable till it reaches a `RESOURCE` tag **child of** `VOTABLE`.
-  /// The newly encountered `RESOURCE` tag is built from its `attributes` but its content.
+  /// The newly found `RESOURCE` tag is built from its `attributes` but its content.
   /// (the sub-elements it contains) are to be read.
   /// The `VOTable.push_resource` has to be done externally.
   pub(crate) fn read_till_next_resource<R: BufRead>(
@@ -781,8 +787,8 @@ impl<C: TableDataContent> VOTable<C> {
 
   /// Returns `true` if a table has been found, else the full content of the VOTable is written.
   /// Write the VOTable from the beginning till:
-  /// * either the first encountered `DATA` tag (without writing the `<DATA>` tag).
-  /// * or the end of the first encountered `TABLE`(without writing then `</TABLE` tag)
+  /// * either the first `DATA` tag si found (without writing the `<DATA>` tag).
+  /// * or the end of the first `TABLE` tag is found (without writing the `<TABLE>` tag)
   pub fn write_to_data_beginning<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
@@ -1176,7 +1182,7 @@ mod tests {
 
   #[test]
   fn test_votable_read_iter_datatable_from_file() {
-    use crate::iter::VOTableIterator;
+    use crate::iter::{TableIter, VOTableIterator};
 
     /*
     println!();
