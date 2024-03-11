@@ -1,5 +1,16 @@
 # `moc-cli` Change Log
 
+## 0.5.0
+
+Released 2023-03-11
+
+* ⚠️  BREAKING: new options and hence new command layout
+* Add the 'convert' sub-command, and conversion from XML to CSV
+* Add the 'sconvert' sub-command for streaming conversion
+    + add 'parallel' for multi-threaded streaming conversion
+* Add 'get' command to retrieve some metadata or the VOTable structure
+
+
 ## 0.4.0
 
 Released 2023-02-06

@@ -1,5 +1,12 @@
 # `vot-wasm` Change Log
 
+## 0.45.0
+
+Released 2023-03-11
+
+* Add support for `CDATA` in `TD` tags
+
+
 ## 0.4.0
 
 Released 2023-02-06
