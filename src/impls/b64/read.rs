@@ -1,15 +1,16 @@
 use std::{
-  io::{self, BufRead, BufReader, Bytes, Error, ErrorKind, Read},
+  io::{self, BufRead, BufReader, Error, ErrorKind, Read},
   mem::size_of,
 };
 
-use base64::engine::general_purpose;
-use base64::{engine::GeneralPurpose, read::DecoderReader};
+use base64::{
+  engine::{general_purpose, GeneralPurpose},
+  read::DecoderReader,
+};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use serde::{de::Visitor, Deserializer};
 
-use crate::error::VOTableError;
-use crate::impls::Schema;
+use crate::{error::VOTableError, impls::Schema};
 
 /// Take a Byte iterator from a BufRead and remove the '\n', 'r' and ' ' characters.
 /// We recall that the allowed characters in base64 are: '0-9a-zA-Z+-' and '=' (for padding).
@@ -20,21 +21,26 @@ use crate::impls::Schema;
 /// # Remark
 ///   This Bytes based implementation (iterating char by char) is probably not the most
 ///   efficient, but is quite simple to implement. To be changed if performances are really poor.
+///   Also, have a look at [memchr](https://docs.rs/memchr/latest/memchr/)
 pub struct B64Cleaner<'a, R: BufRead> {
-  bytes: Bytes<&'a mut R>,
+  reader: &'a mut R,
   is_over: bool,
 }
 
 impl<'a, R: BufRead> B64Cleaner<'a, R> {
   pub fn new(reader: &'a mut R) -> Self {
     Self {
-      bytes: reader.bytes(),
+      reader,
       is_over: false,
     }
   }
 
   pub fn is_over(&self) -> bool {
     self.is_over
+  }
+
+  pub fn into_inner(self) -> &'a mut R {
+    self.reader
   }
 }
 
@@ -44,22 +50,23 @@ impl<'a, R: BufRead> Read for B64Cleaner<'a, R> {
       return Ok(0);
     }
     for (i, byte) in buf.iter_mut().enumerate() {
+      let mut bytes = (&mut *self.reader).bytes();
       *byte = loop {
-        match self.bytes.next() {
+        match bytes.next() {
           Some(read_byte) => {
             match read_byte? {
               // Simply ignore blank and carriage return (possibly added for formatting purpose)
               b'\n' | b'\t' | b' ' => continue,
               // Return when we detect the beginning of the </STREAM> tag
               b'<' => {
-                assert_eq!(self.bytes.next().unwrap().unwrap(), b'/');
-                assert_eq!(self.bytes.next().unwrap().unwrap(), b'S');
-                assert_eq!(self.bytes.next().unwrap().unwrap(), b'T');
-                assert_eq!(self.bytes.next().unwrap().unwrap(), b'R');
-                assert_eq!(self.bytes.next().unwrap().unwrap(), b'E');
-                assert_eq!(self.bytes.next().unwrap().unwrap(), b'A');
-                assert_eq!(self.bytes.next().unwrap().unwrap(), b'M');
-                assert_eq!(self.bytes.next().unwrap().unwrap(), b'>');
+                assert_eq!(bytes.next().unwrap().unwrap(), b'/');
+                assert_eq!(bytes.next().unwrap().unwrap(), b'S');
+                assert_eq!(bytes.next().unwrap().unwrap(), b'T');
+                assert_eq!(bytes.next().unwrap().unwrap(), b'R');
+                assert_eq!(bytes.next().unwrap().unwrap(), b'E');
+                assert_eq!(bytes.next().unwrap().unwrap(), b'A');
+                assert_eq!(bytes.next().unwrap().unwrap(), b'M');
+                assert_eq!(bytes.next().unwrap().unwrap(), b'>');
                 self.is_over = true;
                 return Ok(i);
               }
@@ -416,6 +423,9 @@ impl<R: BufRead> BinaryDeserializer<R> {
   pub fn has_data_left(&mut self) -> Result<bool, io::Error> {
     self.reader.fill_buf().map(|b| !b.is_empty())
   }
+  pub fn into_inner(self) -> R {
+    self.reader
+  }
 }
 
 impl<'de, 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializer<R> {
@@ -663,16 +673,11 @@ impl<'de, 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializer<R> {
     V: Visitor<'de>,
   {
     // used to deserialize fixed length array and rows
-    /*struct Access<'b, 'a: 'b, R: BufRead> {
-      deserializer: &'b mut BinaryDeserializer<'a, R>,
-      len: usize,
-    }*/
     struct Access<'b, R: BufRead> {
       deserializer: &'b mut BinaryDeserializer<R>,
       len: usize,
     }
 
-    //impl<'de, 'b, 'a: 'b, R: BufRead> serde::de::SeqAccess<'de> for Access<'b, 'a, R> {
     impl<'de, 'b, R: BufRead> serde::de::SeqAccess<'de> for Access<'b, R> {
       type Error = VOTableError;
 

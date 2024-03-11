@@ -2,7 +2,7 @@
 
 use std::{
   fs::File,
-  io::{BufRead, BufReader},
+  io::{BufRead, BufReader, Write},
   path::Path,
 };
 
@@ -23,7 +23,9 @@ use crate::{
     mem::VoidTableDataContent,
     Schema, VOTableValue,
   },
-  iter::elems::{Binary2RowValueIterator, BinaryRowValueIterator},
+  iter::elems::{
+    Binary2RowValueIterator, BinaryRowValueIterator, DataTableRowValueIterator, RowValueIterator,
+  },
   resource::{Resource, ResourceOrTable, ResourceSubElem},
   table::{Table, TableElem},
   utils::{discard_comment, discard_event, is_empty},
@@ -34,9 +36,9 @@ use crate::{
 pub mod elems;
 pub mod strings;
 
-use elems::DataTableRowValueIterator;
-
 static TR_END_FINDER: Lazy<Finder<'static>> = Lazy::new(|| Finder::new("</TR>"));
+static STREAM_END_FINDER: Lazy<Finder<'static>> = Lazy::new(|| Finder::new("</STREAM>"));
+static TABLEDATA_END_FINDER: Lazy<Finder<'static>> = Lazy::new(|| Finder::new("</TABLEDATA>"));
 
 /// Iterate over the raw rows (i.e. everything inside the `<TR>`/`</TR>` tags).
 /// We assume the `<TABLEDATA>` tag has already been consumed and this iterator will consume
@@ -62,10 +64,13 @@ impl<'a, R: BufRead> Iterator for TabledataRowIterator<'a, R> {
   type Item = Result<Vec<u8>, VOTableError>;
 
   fn next(&mut self) -> Option<Self::Item> {
-    next(self.reader, self.reader_buff, &mut self.has_next)
+    next_tabledata_row(self.reader, self.reader_buff, &mut self.has_next)
   }
 }
 
+/// Iterate over the raw rows (i.e. everything inside the `<TR>`/`</TR>` tags).
+/// We assume the `<TABLEDATA>` tag has already been consumed and this iterator will consume
+/// the `</TABLEDATA>` tag.
 pub struct OwnedTabledataRowIterator<R: BufRead> {
   pub reader: Reader<R>,
   pub reader_buff: Vec<u8>,
@@ -101,18 +106,53 @@ impl<R: BufRead> Iterator for OwnedTabledataRowIterator<R> {
   type Item = Result<Vec<u8>, VOTableError>;
 
   fn next(&mut self) -> Option<Self::Item> {
-    next(&mut self.reader, &mut self.reader_buff, &mut self.has_next)
+    next_tabledata_row(&mut self.reader, &mut self.reader_buff, &mut self.has_next)
+  }
+}
+
+fn next_tabledata_row<T: BufRead>(
+  reader: &mut Reader<T>,
+  reader_buff: &mut Vec<u8>,
+  has_next: &mut bool,
+) -> Option<Result<Vec<u8>, VOTableError>> {
+  if *has_next {
+    reader_buff.clear();
+    loop {
+      let event = reader.read_event(reader_buff);
+      match event {
+        Ok(Event::Start(ref e)) if e.name() == b"TR" => {
+          let mut raw_row: Vec<u8> = Vec::with_capacity(256);
+          return Some(
+            read_until_found(TR_END_FINDER.as_ref(), reader, &mut raw_row).map(move |_| raw_row),
+          );
+        }
+        Ok(Event::End(ref e)) if e.name() == TableData::<VoidTableDataContent>::TAG_BYTES => {
+          *has_next = false;
+          return None;
+        }
+        Ok(Event::Eof) => return Some(Err(VOTableError::PrematureEOF("reading rows"))),
+        Ok(Event::Text(ref e)) if is_empty(e) => {}
+        Ok(Event::Comment(ref e)) => {
+          discard_comment(e, reader, TableData::<VoidTableDataContent>::TAG)
+        }
+        Ok(event) => discard_event(event, TableData::<VoidTableDataContent>::TAG),
+        Err(e) => return Some(Err(VOTableError::Read(e))),
+      }
+    }
+  } else {
+    None
   }
 }
 
 /// Same as `read_until` but taking a `memchr::memmem::Finder` for better performances when
 /// a same `needle` has to be used several times.
-/// WARNING: NOT GENERIC, WORKS ONLY WITH THE '</TR>' needle!!!
-fn read_until_with_finder<T: BufRead>(
+fn read_until_found<T: BufRead>(
+  finder: Finder<'_>,
   reader: &mut Reader<T>,
   buf: &mut Vec<u8>,
 ) -> Result<usize, VOTableError> {
-  let l = TR_END_FINDER.needle().len();
+  let needle = finder.needle();
+  let l = needle.len();
   let r = reader.get_mut();
   let mut ending_pattern: Option<(&[u8], &[u8])> = None;
   let mut read = 0;
@@ -134,27 +174,26 @@ fn read_until_with_finder<T: BufRead>(
           ending_pattern = None;
         }
       }
-      match TR_END_FINDER.find(available) {
+      match finder.find(available) {
         Some(i) => {
           buf.extend_from_slice(&available[..i]);
           (true, i + l)
         }
         None => {
           let len = available.len();
-          if available.ends_with(b"<") {
-            ending_pattern = Some((b"<", b"/TR>"));
-            buf.extend_from_slice(&available[..len - 1]);
-          } else if available.ends_with(b"</") {
-            ending_pattern = Some((b"</", b"TR>"));
-            buf.extend_from_slice(&available[..len - 2]);
-          } else if available.ends_with(b"</T") {
-            ending_pattern = Some((b"</T", b"R>"));
-            buf.extend_from_slice(&available[..len - 3]);
-          } else if available.ends_with(b"</TR") {
-            ending_pattern = Some((b"</TR", b">"));
-            buf.extend_from_slice(&available[..len - 4]);
-          } else {
-            // regular case
+          for sub in 1..l {
+            if available.ends_with(&needle[0..sub]) {
+              /*println!(
+                "{} -- {}",
+                from_utf8(&needle[0..sub]).unwrap(),
+                from_utf8(&needle[sub..l]).unwrap()
+              );*/
+              ending_pattern = Some((&needle[0..sub], &needle[sub..l]));
+              buf.extend_from_slice(&available[..len - sub]);
+              break;
+            }
+          }
+          if ending_pattern.is_none() {
             buf.extend_from_slice(available);
           }
           (false, len)
@@ -169,41 +208,74 @@ fn read_until_with_finder<T: BufRead>(
   }
 }
 
-fn next<T: BufRead>(
-  reader: &mut Reader<T>,
-  reader_buff: &mut Vec<u8>,
-  has_next: &mut bool,
-) -> Option<Result<Vec<u8>, VOTableError>> {
-  if *has_next {
-    reader_buff.clear();
-    loop {
-      let event = reader.read_event(reader_buff);
-      match event {
-        Ok(Event::Start(ref e)) if e.name() == b"TR" => {
-          let mut raw_row: Vec<u8> = Vec::with_capacity(256);
-          return Some(read_until_with_finder(reader, &mut raw_row).map(move |_| raw_row));
+fn copy_until_found<R, W>(
+  finder: Finder<'_>,
+  reader: &mut R,
+  writer: &mut W,
+) -> Result<usize, VOTableError>
+where
+  R: BufRead,
+  W: Write,
+{
+  let needle = finder.needle();
+  let l = needle.len();
+  let r = reader;
+  let mut ending_pattern: Option<(&[u8], &[u8])> = None;
+  let mut read = 0;
+  loop {
+    let (done, used) = {
+      let available = match r.fill_buf() {
+        Ok(n) => n,
+        Err(ref e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+        Err(e) => return Err(VOTableError::Io(e)),
+      };
+      if let Some((start, end)) = ending_pattern {
+        if available.starts_with(end) {
+          r.consume(end.len());
+          read += end.len();
+          return Ok(read);
+        } else {
+          // not the right pattern, starting part to be added!!
+          writer.write_all(start).map_err(VOTableError::Io)?;
+          ending_pattern = None;
         }
-        Ok(Event::End(ref e)) if e.name() == TableData::<VoidTableDataContent>::TAG_BYTES => {
-          *has_next = false;
-          return None;
-        }
-        Ok(Event::Eof) => return Some(Err(VOTableError::PrematureEOF("reading rows"))),
-        Ok(Event::Text(ref e)) if is_empty(e) => {}
-        Ok(Event::Comment(ref e)) => {
-          discard_comment(e, reader, TableData::<VoidTableDataContent>::TAG)
-        }
-        Ok(event) => discard_event(event, TableData::<VoidTableDataContent>::TAG),
-        Err(e) => return Some(Err(VOTableError::Read(e))),
       }
+      match finder.find(available) {
+        Some(i) => {
+          writer
+            .write_all(&available[..i])
+            .map_err(VOTableError::Io)?;
+          (true, i + l)
+        }
+        None => {
+          let len = available.len();
+          for sub in 1..l {
+            if available.ends_with(&needle[0..sub]) {
+              ending_pattern = Some((&needle[0..sub], &needle[sub..l]));
+              writer
+                .write_all(&available[..len - sub])
+                .map_err(VOTableError::Io)?;
+              break;
+            }
+          }
+          if ending_pattern.is_none() {
+            writer.write_all(available).map_err(VOTableError::Io)?;
+          }
+          (false, len)
+        }
+      }
+    };
+    r.consume(used);
+    read += used;
+    if done || used == 0 {
+      return Ok(read);
     }
-  } else {
-    None
   }
 }
 
-/// Iterate over the raw rows (i.e. everything inside the `<TR>`/`</TR>` tags).
-/// We assume the `<TABLEDATA>` tag has already been consumed and this iterator will consume
-/// the `</TABLEDATA>` tag.
+/// Iterate over the raw rows.
+/// We assume the `<BINARY>` or `<BINARY2>` tag has already been consumed and this iterator will consume
+/// the `</BINARY>` or `</BINARY2>` tag.
 pub struct Binary1or2RowIterator<'a, R: BufRead> {
   reader: BulkBinaryRowDeserializer<'a, R>,
 }
@@ -318,20 +390,6 @@ impl<R: BufRead> OwnedBinary1or2RowIterator<R> {
         &mut reader_buff,
       )
       .map_err(|e| VOTableError::Custom(format!("Reading to BINARY or BINARY2... {:?}", e)))?;
-    /*let first_table_mut = votable.get_first_table_mut().unwrap();
-    first_table_mut
-      .data
-      .as_mut()
-      .unwrap()
-      .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &Vec::default())?;
-    first_table_mut.read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
-    ERROR WE SHOULD GET THE STACK!!
-    votable
-      .get_first_resource_containing_a_table_mut()
-      .unwrap()
-      .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
-    votable.read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
-    Ok(votable)*/
     votable
       .read_from_data_end_to_end(&mut reader, &mut reader_buff)
       .map(|()| votable)
@@ -342,7 +400,7 @@ impl<R: BufRead> Iterator for OwnedBinary1or2RowIterator<R> {
   type Item = Result<Vec<u8>, VOTableError>;
 
   fn next(&mut self) -> Option<Self::Item> {
-    // TODO: ask the exact max binary size?!
+    // TODO: ask the exact max binary size (estimated from the number of bytes of each field)?!
     if self.reader.has_data_left().unwrap_or(false) {
       let mut row = Vec::with_capacity(512);
       Some(self.reader.read_raw_row(&mut row).map(|_| {
@@ -365,10 +423,10 @@ pub struct SimpleVOTableRowIterator<R: BufRead> {
 }
 
 impl SimpleVOTableRowIterator<BufReader<File>> {
-  /// Starts parsing the VOTable till (inclusive):
+  /// Open file and starts parsing the VOTable till (inclusive):
   /// * `TABLEDATA` for the `TABLEDATA` tag
   /// * `STREAM` for `BINARY` and `BINARY2` tags
-  pub fn open_file_and_read_to_data<P: AsRef<Path>>(path: P) -> Result<Self, VOTableError> {
+  pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, VOTableError> {
     let mut reader_buff: Vec<u8> = Vec::with_capacity(1024);
     let (votable, resource, reader) =
       VOTableWrapper::<VoidTableDataContent>::manual_from_ivoa_xml_file(path, &mut reader_buff)?;
@@ -382,7 +440,7 @@ impl SimpleVOTableRowIterator<BufReader<File>> {
 }
 
 impl<R: BufRead> SimpleVOTableRowIterator<R> {
-  pub fn read_to_data(reader: R) -> Result<Self, VOTableError> {
+  pub fn from_reader(reader: R) -> Result<Self, VOTableError> {
     let mut reader_buff: Vec<u8> = Vec::with_capacity(1024);
     let (votable, resource, reader) =
       VOTable::from_reader_till_next_resource(reader, &mut reader_buff)?;
@@ -482,8 +540,42 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
     (&mut self.reader, &mut self.reader_buff)
   }
 
+  /// This method returns an iterator over each row in which each row is a of `Vec<VOTableValue`.
+  /// It is generic and is valid for either TableData, Bianry or Binary2.
+  /// WARNING: use either this method *or* one of the `to_onwed` method
+  /// (since they will consume data rows).
+  pub fn to_row_value_iter(&mut self) -> RowValueIterator<'_, R> {
+    let table = self.votable.get_first_table_mut().unwrap();
+    let schema: Vec<Schema> = table
+      .elems
+      .iter()
+      .filter_map(|table_elem| match table_elem {
+        TableElem::Field(field) => Some(field.into()),
+        _ => None,
+      })
+      .collect();
+    match &self.data_type {
+      TableOrBinOrBin2::TableData => RowValueIterator::TableData(DataTableRowValueIterator::new(
+        &mut self.reader,
+        &mut self.reader_buff,
+        table,
+        schema,
+      )),
+      TableOrBinOrBin2::Binary => {
+        RowValueIterator::BinaryTable(BinaryRowValueIterator::new(&mut self.reader, table, schema))
+      }
+      TableOrBinOrBin2::Binary2 => RowValueIterator::Binary2Table(Binary2RowValueIterator::new(
+        &mut self.reader,
+        table,
+        schema,
+      )),
+      _ => unreachable!(),
+    }
+  }
+
   /// Before calling this method, you **must** ensure that `self.data_type()` returns `TableOrBinOrBin2::TableData`
   pub fn to_owned_tabledata_row_iterator(self) -> OwnedTabledataRowIterator<R> {
+    assert!(matches!(self.data_type, TableOrBinOrBin2::TableData));
     OwnedTabledataRowIterator {
       reader: self.reader,
       reader_buff: self.reader_buff,
@@ -494,16 +586,18 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
 
   /// Before calling this method, you **must** ensure that `self.data_type()` returns `TableOrBinOrBin2::Binary`
   pub fn to_owned_binary_row_iterator(self) -> OwnedBinary1or2RowIterator<R> {
+    assert!(matches!(self.data_type, TableOrBinOrBin2::Binary));
     OwnedBinary1or2RowIterator::new(self.reader, self.votable, false)
   }
 
   /// Before calling this method, you **must** ensure that `self.data_type()` returns `TableOrBinOrBin2::Binary2`
   pub fn to_owned_binary2_row_iterator(self) -> OwnedBinary1or2RowIterator<R> {
+    assert!(matches!(self.data_type, TableOrBinOrBin2::Binary2));
     OwnedBinary1or2RowIterator::new(self.reader, self.votable, true)
   }
 
   /// You can call this method only if you have not yet consumed:
-  /// * `</TABLEDATA>` int he case of `<TABLEDATA>`
+  /// * `</TABLEDATA>` in the case of `<TABLEDATA>`
   /// * `</STREAM>` **and** `</BINARY>` in the case of `<BINARY>`
   /// * `</STREAM>` **and** `</BINARY2>` in the case of `<BINARY2>`
   pub fn skip_remaining_data(&mut self) -> Result<(), VOTableError> {
@@ -551,6 +645,36 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
     }
   }
 
+  /// You can call this method only if you have not yet consumed:
+  /// * `</TABLEDATA>` in the case of `<TABLEDATA>`
+  /// * `</STREAM>` **and** `</BINARY>` in the case of `<BINARY>`
+  /// * `</STREAM>` **and** `</BINARY2>` in the case of `<BINARY2>`
+  pub fn copy_remaining_data<W: Write>(&mut self, mut write: W) -> Result<(), VOTableError> {
+    match self.data_type {
+      TableOrBinOrBin2::TableData => copy_until_found(
+        TABLEDATA_END_FINDER.as_ref(),
+        self.reader.get_mut(),
+        &mut write,
+      ),
+      TableOrBinOrBin2::Binary => copy_until_found(
+        STREAM_END_FINDER.as_ref(),
+        self.reader.get_mut(),
+        &mut write,
+      ),
+      TableOrBinOrBin2::Binary2 => copy_until_found(
+        STREAM_END_FINDER.as_ref(),
+        self.reader.get_mut(),
+        &mut write,
+      ),
+      _ => unreachable!(),
+    }
+    .map(|_| ())
+  }
+
+  pub fn end_of_it(self) -> VOTable<VoidTableDataContent> {
+    self.votable
+  }
+
   pub fn read_to_end(self) -> Result<VOTable<VoidTableDataContent>, VOTableError> {
     let Self {
       mut reader,
@@ -561,28 +685,23 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
     votable
       .read_from_data_end_to_end(&mut reader, &mut reader_buff)
       .map(|()| votable)
-    /*votable.resources[0]
-      .get_first_table_mut()
-      .and_then(|table| table.data.as_mut())
-      .unwrap()
-      .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &Vec::default())?;
-    votable.resources[0]
-      .get_first_table_mut()
-      .unwrap()
-      .read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
-    votable.resources[0].read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
-    votable.read_sub_elements_by_ref(&mut reader, &mut reader_buff, &())?;
-    Ok(votable)*/
   }
 }
 
+/// Iterates over a table rows.
 pub trait TableIter: Iterator<Item = Result<Vec<VOTableValue>, VOTableError>> {
+  /// Returns the table metadata.
   fn table(&mut self) -> &mut Table<VoidTableDataContent>;
+  /// Read to the end of the table, skipping all remaining data rows.
+  fn read_to_end(self) -> Result<(), VOTableError>;
 }
 
 /// Returns an Iterator on the tables a VOTable contains.
 /// For each table, an iterator on the table rows is provided.
 /// The iteration on a table rows must be complete before iterating to the the new table.
+/// TODO:
+/// * to use this iterator like `SimpleVOTableRowIterator`, we **must** implement
+/// methods starting reading again after the last table.
 pub struct VOTableIterator<R: BufRead> {
   reader: Reader<R>,
   reader_buff: Vec<u8>,
@@ -615,9 +734,33 @@ impl VOTableIterator<BufReader<File>> {
 }
 
 impl<R: BufRead> VOTableIterator<R> {
-  pub fn next_table_row_value_iter<'a>(
-    &'a mut self,
-  ) -> Result<Option<Box<dyn 'a + TableIter>>, VOTableError> {
+  pub fn from_reader(reader: R) -> Result<Self, VOTableError> {
+    let mut reader_buff: Vec<u8> = Vec::with_capacity(1024);
+    let (votable, resource, reader) =
+      VOTable::from_reader_till_next_resource(reader, &mut reader_buff)?;
+    let mut resource_stack = Vec::with_capacity(4);
+    resource_stack.push(resource);
+    Ok(VOTableIterator::<R> {
+      reader,
+      reader_buff,
+      votable,
+      resource_stack,
+      resource_sub_elems_stack: Vec::with_capacity(10),
+    })
+  }
+
+  pub fn read_all_skipping_data(mut self) -> Result<VOTable<VoidTableDataContent>, VOTableError> {
+    while let Some(table_it) = self.next_table_row_value_iter()? {
+      table_it.read_to_end()?;
+    }
+    assert!(self.resource_sub_elems_stack.is_empty());
+    assert!(self.resource_stack.is_empty());
+    Ok(self.votable)
+  }
+
+  pub fn next_table_row_value_iter(
+    &mut self,
+  ) -> Result<Option<RowValueIterator<'_, R>>, VOTableError> {
     loop {
       if let Some(mut sub_resource) = self.resource_sub_elems_stack.pop() {
         match &mut sub_resource.resource_or_table {
@@ -683,7 +826,7 @@ impl<R: BufRead> VOTableIterator<R> {
                       .unwrap(),
                     schema,
                   );
-                  return Ok(Some(Box::new(row_it)));
+                  return Ok(Some(RowValueIterator::TableData(row_it)));
                 }
                 Some(TableOrBinOrBin2::Binary) => {
                   let stream = Stream::open_stream(&mut self.reader, &mut self.reader_buff)?;
@@ -720,7 +863,7 @@ impl<R: BufRead> VOTableIterator<R> {
                       .unwrap(),
                     schema,
                   );
-                  return Ok(Some(Box::new(row_it)));
+                  return Ok(Some(RowValueIterator::BinaryTable(row_it)));
                 }
                 Some(TableOrBinOrBin2::Binary2) => {
                   let stream = Stream::open_stream(&mut self.reader, &mut self.reader_buff)?;
@@ -757,7 +900,7 @@ impl<R: BufRead> VOTableIterator<R> {
                       .unwrap(),
                     schema,
                   );
-                  return Ok(Some(Box::new(row_it)));
+                  return Ok(Some(RowValueIterator::Binary2Table(row_it)));
                 }
                 Some(TableOrBinOrBin2::Fits(fits)) => {
                   data.set_fits_by_ref(fits);
@@ -842,8 +985,7 @@ mod tests {
     println!("-- next_table_row_value_iter dss12.vot --");
     println!();
 
-    let mut svor =
-      SimpleVOTableRowIterator::open_file_and_read_to_data("resources/sdss12.vot").unwrap();
+    let mut svor = SimpleVOTableRowIterator::from_file("resources/sdss12.vot").unwrap();
     assert!(matches!(svor.data_type(), &TableOrBinOrBin2::TableData));
 
     // svor.skip_remaining_data().unwrap();
@@ -863,11 +1005,10 @@ mod tests {
   #[test]
   fn test_simple_votable_read_iter_tabledata_owned() {
     println!();
-    println!("-- next_table_row_value_iter dss12.vot --");
+    println!("-- next_table_row_value_iter sdss12.vot --");
     println!();
 
-    let svor =
-      SimpleVOTableRowIterator::open_file_and_read_to_data("resources/sdss12.vot").unwrap();
+    let svor = SimpleVOTableRowIterator::from_file("resources/sdss12.vot").unwrap();
     assert!(matches!(svor.data_type(), &TableOrBinOrBin2::TableData));
     let mut raw_row_it = svor.to_owned_tabledata_row_iterator();
     let mut n_row = 0_u32;
@@ -890,8 +1031,7 @@ mod tests {
     println!("-- next_table_row_value_iter binary.b64 --");
     println!();
 
-    let mut svor =
-      SimpleVOTableRowIterator::open_file_and_read_to_data("resources/binary.b64").unwrap();
+    let mut svor = SimpleVOTableRowIterator::from_file("resources/binary.b64").unwrap();
     assert!(matches!(svor.data_type(), &TableOrBinOrBin2::Binary));
 
     let context = svor.votable.get_first_table().unwrap().elems.as_slice();
@@ -933,8 +1073,7 @@ mod tests {
     println!("-- next_table_row_value_iter gaia_dr3.b264 --");
     println!();
 
-    let mut svor =
-      SimpleVOTableRowIterator::open_file_and_read_to_data("resources/gaia_dr3.b264").unwrap();
+    let mut svor = SimpleVOTableRowIterator::from_file("resources/gaia_dr3.b264").unwrap();
     assert!(matches!(svor.data_type(), &TableOrBinOrBin2::Binary2));
 
     let context = svor.votable.resources[0]

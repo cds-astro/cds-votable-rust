@@ -1,10 +1,6 @@
 //! Iterator on `TABLEDATA` rows in which a row is a `Vector` of `VOTableValue`.
 
-use std::{
-  io::{BufRead, BufReader},
-  slice::Iter,
-  str,
-};
+use std::io::{BufRead, BufReader};
 
 use base64::{
   engine::{general_purpose, GeneralPurpose},
@@ -14,6 +10,7 @@ use quick_xml::{events::Event, Reader};
 use serde::{de::DeserializeSeed, Deserializer};
 
 use crate::{
+  data::tabledata::FieldIterator,
   error::VOTableError,
   impls::{
     b64::read::{B64Cleaner, BinaryDeserializer},
@@ -23,8 +20,45 @@ use crate::{
   },
   iter::TableIter,
   table::Table,
-  utils::is_empty,
+  utils::{discard_comment, is_empty, unexpected_event},
+  Binary, Binary2, QuickXmlReadWrite, Stream, TableData,
 };
+
+/// Possible iterators and a table row value.
+pub enum RowValueIterator<'a, R: BufRead> {
+  TableData(DataTableRowValueIterator<'a, R>),
+  BinaryTable(BinaryRowValueIterator<'a, R>),
+  Binary2Table(Binary2RowValueIterator<'a, R>),
+}
+
+impl<'a, R: BufRead> TableIter for RowValueIterator<'a, R> {
+  fn table(&mut self) -> &mut Table<VoidTableDataContent> {
+    match self {
+      Self::TableData(o) => o.table(),
+      Self::BinaryTable(o) => o.table(),
+      Self::Binary2Table(o) => o.table(),
+    }
+  }
+
+  fn read_to_end(self) -> Result<(), VOTableError> {
+    match self {
+      Self::TableData(o) => o.read_to_end(),
+      Self::BinaryTable(o) => o.read_to_end(),
+      Self::Binary2Table(o) => o.read_to_end(),
+    }
+  }
+}
+impl<'a, R: BufRead> Iterator for RowValueIterator<'a, R> {
+  type Item = Result<Vec<VOTableValue>, VOTableError>;
+
+  fn next(&mut self) -> Option<Self::Item> {
+    match self {
+      Self::TableData(o) => o.next(),
+      Self::BinaryTable(o) => o.next(),
+      Self::Binary2Table(o) => o.next(),
+    }
+  }
+}
 
 pub struct DataTableRowValueIterator<'a, R: BufRead> {
   reader: &'a mut Reader<R>,
@@ -53,6 +87,16 @@ impl<'a, R: BufRead> TableIter for DataTableRowValueIterator<'a, R> {
   fn table(&mut self) -> &mut Table<VoidTableDataContent> {
     self.table
   }
+
+  fn read_to_end(self) -> Result<(), VOTableError> {
+    self
+      .reader
+      .read_to_end(
+        TableData::<VoidTableDataContent>::TAG_BYTES,
+        self.reader_buff,
+      )
+      .map_err(VOTableError::Read)
+  }
 }
 
 impl<'a, R: BufRead> Iterator for DataTableRowValueIterator<'a, R> {
@@ -60,129 +104,32 @@ impl<'a, R: BufRead> Iterator for DataTableRowValueIterator<'a, R> {
 
   fn next(&mut self) -> Option<Self::Item> {
     loop {
-      let event = self
-        .reader
-        .read_event(self.reader_buff)
-        .map_err(VOTableError::Read);
-      match event {
-        Err(e) => return Some(Err(e)),
-        Ok(mut event) => match &mut event {
-          Event::Start(ref e) => match e.local_name() {
-            b"TR" => {
-              let fit = DataTableFieldValueIterator {
-                reader: self.reader,
-                reader_buff: self.reader_buff,
-                it_schema: self.schema.iter(),
-              };
-              let res = fit.collect::<Result<Vec<VOTableValue>, VOTableError>>();
-              self.reader_buff.clear();
-              return Some(res);
-            }
-            _ => {
-              return Some(Err(VOTableError::Custom(format!(
-                "Discarded event in Row Iterator: {:?}",
-                event
-              ))))
-            }
-          },
-          Event::End(e) => match e.local_name() {
-            b"TABLEDATA" => return None,
-            _ => {
-              return Some(Err(VOTableError::Custom(format!(
-                "Unexpected end of tag in Row Iterator '{:?}'",
-                str::from_utf8(e.local_name())
-              ))))
-            }
-          },
-          Event::Eof => {
-            return Some(Err(VOTableError::Custom(String::from(
-              "Premature end of file in Row Iterator",
-            ))))
-          }
-          Event::Text(e) if is_empty(e) => {}
-          _ => {
-            return Some(Err(VOTableError::Custom(format!(
-              "Discarded event in Field Iterator: {:?}",
-              event
-            ))))
-          }
-        },
-      }
-    }
-  }
-}
-
-pub struct DataTableFieldValueIterator<'a, R: BufRead> {
-  reader: &'a mut Reader<R>,
-  reader_buff: &'a mut Vec<u8>,
-  it_schema: Iter<'a, Schema>,
-}
-
-impl<'a, R: BufRead> Iterator for DataTableFieldValueIterator<'a, R> {
-  type Item = Result<VOTableValue, VOTableError>;
-
-  fn next(&mut self) -> Option<Self::Item> {
-    loop {
       let event = self.reader.read_event(self.reader_buff);
       match event {
         Err(e) => return Some(Err(VOTableError::Read(e))),
         Ok(mut event) => match &mut event {
-          Event::Start(ref e) => match e.local_name() {
-            b"TD" => {
-              let event = self.reader.read_event(self.reader_buff);
-              match event {
-                Err(e) => return Some(Err(VOTableError::Read(e))),
-                Ok(Event::Text(e)) => match e.unescape_and_decode(self.reader) {
-                  Err(e) => return Some(Err(VOTableError::Read(e))),
-                  Ok(s) => match self.it_schema.next() {
-                    Some(schema) => return Some(schema.value_from_str(s.trim())),
-                    None => {
-                      return Some(Err(VOTableError::Custom(String::from(
-                        "More TDs than Field schemas...",
-                      ))))
-                    }
-                  },
-                },
-                _ => {
-                  return Some(Err(VOTableError::Custom(format!(
-                    "Discarded event in Field Iterator: {:?}",
-                    event
-                  ))))
-                }
-              }
-            }
-            _ => {
-              return Some(Err(VOTableError::Custom(format!(
-                "Discarded event in Field Iterator: {:?}",
-                event
-              ))))
-            }
-          },
-          Event::Empty(e) if e.local_name() == b"TD" => {
-            return Some(Ok(VOTableValue::String(String::from(""))))
+          Event::Start(ref e) if e.local_name() == b"TR" => {
+            let nf = self.schema.len();
+            return Some(
+              FieldIterator::new(self.reader, self.reader_buff)
+                .zip(self.schema.iter())
+                .map(|(f_res, s)| f_res.and_then(|f| s.value_from_str(f.trim())))
+                .collect::<Result<Vec<VOTableValue>, VOTableError>>()
+                .and_then(|fields| {
+                  if fields.len() == nf {
+                    self.reader_buff.clear();
+                    Ok(fields)
+                  } else {
+                    Err(VOTableError::WrongFieldNumber(nf, fields.len()))
+                  }
+                }),
+            );
           }
-          Event::End(e) => match e.local_name() {
-            b"TD" => {}
-            b"TR" => return None,
-            _ => {
-              return Some(Err(VOTableError::Custom(format!(
-                "Unexpected end of tag in Field Iterator '{:?}'",
-                str::from_utf8(e.local_name())
-              ))))
-            }
-          },
-          Event::Eof => {
-            return Some(Err(VOTableError::Custom(String::from(
-              "Premature end of file in Field Iterator",
-            ))))
-          }
+          Event::End(e) if e.local_name() == b"TABLEDATA" => return None,
+          Event::Eof => return Some(Err(VOTableError::PrematureEOF("TABLEDATA"))),
           Event::Text(e) if is_empty(e) => {}
-          _ => {
-            return Some(Err(VOTableError::Custom(format!(
-              "Discarded event in Field Iterator: {:?}",
-              event
-            ))))
-          }
+          Event::Comment(e) => discard_comment(e, self.reader, "TABLEDATA"),
+          _ => return Some(Err(unexpected_event(event, "TABLEDATA"))),
         },
       }
     }
@@ -216,6 +163,44 @@ impl<'a, R: BufRead> BinaryRowValueIterator<'a, R> {
 impl<'a, R: BufRead> TableIter for BinaryRowValueIterator<'a, R> {
   fn table(&mut self) -> &mut Table<VoidTableDataContent> {
     self.table
+  }
+
+  fn read_to_end(self) -> Result<(), VOTableError> {
+    let reader = self
+      .binary_deser
+      .into_inner()
+      .into_inner()
+      .into_inner()
+      .into_inner();
+    // Stream::<VoidTableDataContent>::TAG_BYTES,
+    let mut stream_buf = [0_u8; 8];
+    let mut bin_buf = [0_u8; 8]; // we could have reuse stream_buf, but not for BINARY2...
+    skip_until(reader, b'<')
+      .and_then(|_| reader.read_exact(&mut stream_buf))
+      .map_err(VOTableError::Io)
+      .and_then(|_| {
+        if &stream_buf == b"/STREAM>" {
+          Ok(())
+        } else {
+          Err(VOTableError::UnexpectedEndTag(
+            (&stream_buf)[1..8].to_vec(),
+            Stream::<VoidTableDataContent>::TAG,
+          ))
+        }
+      })?;
+    skip_until(reader, b'<')
+      .and_then(|_| reader.read_exact(&mut bin_buf))
+      .map_err(VOTableError::Io)
+      .and_then(|_| {
+        if &bin_buf == b"/BINARY>" {
+          Ok(())
+        } else {
+          Err(VOTableError::UnexpectedEndTag(
+            (&bin_buf)[1..8].to_vec(),
+            Binary::<VoidTableDataContent>::TAG,
+          ))
+        }
+      })
   }
 }
 
@@ -272,6 +257,45 @@ impl<'a, R: BufRead> TableIter for Binary2RowValueIterator<'a, R> {
   fn table(&mut self) -> &mut Table<VoidTableDataContent> {
     self.table
   }
+
+  fn read_to_end(self) -> Result<(), VOTableError> {
+    let reader = self
+      .binary_deser
+      .into_inner()
+      .into_inner()
+      .into_inner()
+      .into_inner();
+    // Stream::<VoidTableDataContent>::TAG_BYTES,
+    let mut stream_buf = [0_u8; 8];
+    let mut bin2_buf = [0_u8; 9]; // we could have reuse stream_buf, but not for BINARY2...
+
+    skip_until(reader, b'<')
+      .and_then(|_| reader.read_exact(&mut stream_buf))
+      .map_err(VOTableError::Io)
+      .and_then(|_| {
+        if &stream_buf == b"/STREAM>" {
+          Ok(())
+        } else {
+          Err(VOTableError::UnexpectedEndTag(
+            (&stream_buf)[1..8].to_vec(),
+            Stream::<VoidTableDataContent>::TAG,
+          ))
+        }
+      })?;
+    skip_until(reader, b'<')
+      .and_then(|_| reader.read_exact(&mut bin2_buf))
+      .map_err(VOTableError::Io)
+      .and_then(|_| {
+        if &bin2_buf == b"/BINARY2>" {
+          Ok(())
+        } else {
+          Err(VOTableError::UnexpectedEndTag(
+            (&bin2_buf)[1..9].to_vec(),
+            Binary2::<VoidTableDataContent>::TAG,
+          ))
+        }
+      })
+  }
 }
 
 impl<'a, R: BufRead> Iterator for Binary2RowValueIterator<'a, R> {
@@ -305,6 +329,29 @@ impl<'a, R: BufRead> Iterator for Binary2RowValueIterator<'a, R> {
       )))
     } else {
       None
+    }
+  }
+}
+
+// Method copied from https://doc.rust-lang.org/src/std/io/mod.rs since it is nightly (so far) :o/
+fn skip_until<R: BufRead + ?Sized>(r: &mut R, delim: u8) -> std::io::Result<usize> {
+  let mut read = 0;
+  loop {
+    let (done, used) = {
+      let available = match r.fill_buf() {
+        Ok(n) => n,
+        Err(ref e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+        Err(e) => return Err(e),
+      };
+      match memchr::memchr(delim, available) {
+        Some(i) => (true, i + 1),
+        None => (false, available.len()),
+      }
+    };
+    r.consume(used);
+    read += used;
+    if done || used == 0 {
+      return Ok(read);
     }
   }
 }

@@ -1,4 +1,9 @@
-use base64::{engine::GeneralPurpose, write::EncoderWriter};
+use std::io::Write;
+// Re-export base64 to be sure to use the same version in an external code
+pub use base64::{
+  engine::{general_purpose, GeneralPurpose},
+  write::EncoderWriter,
+};
 use byteorder::{BigEndian, WriteBytesExt};
 use serde::ser::{
   SerializeMap, SerializeStruct, SerializeStructVariant, SerializeTupleStruct,
@@ -8,11 +13,10 @@ use serde::{
   ser::{SerializeSeq, SerializeTuple},
   Serialize, Serializer,
 };
-use std::io::Write;
 
 use crate::error::VOTableError;
 
-const N_CHAR_PER_LINE: usize = 72;
+const N_CHAR_PER_LINE: usize = 64;
 
 pub struct B64Formatter<W: Write> {
   n_curr: usize,
@@ -51,12 +55,27 @@ impl<W: Write> Write for B64Formatter<W> {
   }
 }
 
+/*
 pub struct BinarySerializer<W: Write> {
   writer: EncoderWriter<'static, GeneralPurpose, B64Formatter<W>>,
 }
 
 impl<W: Write> BinarySerializer<W> {
   pub fn new(writer: EncoderWriter<'static, GeneralPurpose, B64Formatter<W>>) -> Self {
+    Self { writer }
+  }
+}*/
+
+/// # WARNING:
+/// This struct is very generic so we can write binary data without converting it to base64.
+/// The proper to call it in general is to pass to the constructor an
+/// `EncoderWriter<'static, GeneralPurpose, B64Formatter<W>>`
+pub struct BinarySerializer<W: Write> {
+  writer: W,
+}
+
+impl<W: Write> BinarySerializer<W> {
+  pub fn new(writer: W) -> Self {
     Self { writer }
   }
 }

@@ -26,7 +26,7 @@ pub mod mem;
 pub mod visitors;
 use visitors::CharVisitor;
 
-#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct BitVec(BV<u8, Msb0>);
 /*impl Serialize for BitVec {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
@@ -34,6 +34,7 @@ pub struct BitVec(BV<u8, Msb0>);
   }
 }*/
 
+#[derive(Debug, Clone)]
 pub struct TableSchema(Vec<Schema>);
 impl TableSchema {
   pub fn unwrap(self) -> Vec<Schema> {
@@ -60,7 +61,7 @@ impl<'a> From<&'a [TableElem]> for TableSchema {
 }
 
 // WARNING: THE ORDER IS IMPORTANT WHEN DESERIALIZING JSON, NOT TO LOOSE SIGNIFICANT DIGITS!!
-#[derive(Debug, PartialEq, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 #[serde(untagged)]
 pub enum VOTableValue {
   Null,
@@ -86,7 +87,11 @@ pub enum VOTableValue {
   ComplexDoubleArray(Vec<(f64, f64)>),
   ComplexFloatArray(Vec<(f32, f32)>),
 }
-
+impl AsRef<VOTableValue> for VOTableValue {
+  fn as_ref(&self) -> &Self {
+    self
+  }
+}
 impl Serialize for VOTableValue {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
   where
@@ -163,7 +168,7 @@ impl Display for VOTableValue {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Schema {
   Bool,
   Bit,
