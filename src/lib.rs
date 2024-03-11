@@ -151,6 +151,14 @@ trait QuickXmlReadWrite: Sized {
   const TAG_BYTES: &'static [u8] = Self::TAG.as_bytes();
   type Context;
 
+  fn tag(&self) -> &str {
+    Self::TAG
+  }
+
+  fn tag_bytes(&self) -> &[u8] {
+    Self::TAG_BYTES
+  }
+
   fn from_event_empty(e: &BytesStart) -> Result<Self, VOTableError> {
     Self::from_attributes(e.attributes())
   }
@@ -171,7 +179,7 @@ trait QuickXmlReadWrite: Sized {
   }
 
   /// We assume that the previous event was `Start`, and that the method returns
-  /// when encountering the `End` event matching the last `Start` event before entering the method.
+  /// when finding the `End` event matching the last `Start` event before entering the method.
   fn read_sub_elements<R: BufRead>(
     &mut self,
     reader: Reader<R>,
@@ -192,7 +200,7 @@ trait QuickXmlReadWrite: Sized {
   }
 
   /// We assume that the previous event was `Start`, and that the method returns
-  /// when encountering the `End` event matching the last `Start` event before entering the method.
+  /// when finding the `End` event matching the last `Start` event before entering the method.
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
     reader: &mut Reader<R>,
@@ -262,8 +270,8 @@ pub trait VOTableVisitor<C: TableDataContent> {
   fn visit_table_start(&mut self, table: &mut Table<C>) -> Result<(), Self::E>;
   fn visit_table_ended(&mut self, table: &mut Table<C>) -> Result<(), Self::E>;
 
-  fn visit_data_start(&mut self, table: &mut Data<C>) -> Result<(), Self::E>;
-  fn visit_data_ended(&mut self, table: &mut Data<C>) -> Result<(), Self::E>;
+  fn visit_data_start(&mut self, data: &mut Data<C>) -> Result<(), Self::E>;
+  fn visit_data_ended(&mut self, data: &mut Data<C>) -> Result<(), Self::E>;
 
   fn visit_tabledata(&mut self, table: &mut TableData<C>) -> Result<(), Self::E>;
   fn visit_binary_stream(&mut self, stream: &mut Stream<C>) -> Result<(), Self::E>;

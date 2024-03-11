@@ -6,7 +6,6 @@ use std::{
   str,
 };
 
-use log::debug;
 use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesText, Event},
@@ -14,7 +13,11 @@ use quick_xml::{
 };
 use serde_json::Value;
 
-use super::{error::VOTableError, QuickXmlReadWrite, TableDataContent, VOTableVisitor};
+use super::{
+  error::VOTableError,
+  utils::{discard_comment, discard_event},
+  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+};
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct FieldRef {
@@ -49,6 +52,23 @@ impl FieldRef {
   impl_builder_insert_extra!();
 
   impl_builder_opt_string_attr!(content);
+
+  /// Calls a closure on each (key, value) attribute pairs.
+  pub fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    f("ref", self.ref_.as_str());
+    if let Some(ucd) = &self.ucd {
+      f("ucd", ucd.as_str());
+    }
+    if let Some(utype) = &self.utype {
+      f("utype", utype.as_str());
+    }
+    for (k, v) in &self.extra {
+      f(k.as_str(), v.to_string().as_str());
+    }
+  }
 
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where

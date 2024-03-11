@@ -2,14 +2,18 @@
 
 use std::str::{self, FromStr};
 
-use log::debug;
 use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesText, Event},
   Reader, Writer,
 };
 
-use crate::{error::VOTableError, mivot::VodmlVisitor, QuickXmlReadWrite};
+use crate::{
+  error::VOTableError,
+  mivot::VodmlVisitor,
+  utils::{discard_comment, discard_event},
+  QuickXmlReadWrite,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Status {
