@@ -2,11 +2,11 @@
 name = "votable-cli"
 version = "0.4.0"
 authors = ["F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>"]
-description = "Command-line to convert IVOA VOTables in XML, JSON, YAML and TOML"
+description = "Command-line to extract information from IVOA VOTables and to convert them in XML, JSON, YAML, TOML and CSV."
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 categories = ["command-line-utilities", "science", "data-structures"]
-keywords = ["ivoa", "votable", "xml", "json", "toml", "yaml"]
+keywords = ["ivoa", "votable", "xml"]
 documentation = "https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli"
 homepage = "https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli"
 repository = "https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli"
@@ -22,9 +22,18 @@ test = false
 
 [dependencies]
 votable = { package = "votable", path = "../..", features = ["mivot"] }
-clap = { version = "4.0", features = ["derive"] }
+clap = { version = "4.5", features = ["derive"] }
 log = "0.4"
 env_logger = "0.11"
+crossbeam = "0.8"
+serde = "1.0"
+
+
+[features]
+default = []
+
+# Provides VizieR specific functionalities 
+vizier = []
 
 [package.metadata.deb]
 maintainer = "F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>"
