@@ -284,6 +284,28 @@ impl<C: TableDataContent> Resource<C> {
   #[cfg(feature = "mivot")]
   impl_builder_opt_attr!(vodml, Vodml);
 
+  /// Calls a closure on each (key, value) attribute pairs.
+  pub fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(id) = &self.id {
+      f("ID", id.as_str());
+    }
+    if let Some(name) = &self.name {
+      f("name", name.as_str());
+    }
+    if let Some(type_) = &self.type_ {
+      f("type", type_.as_str());
+    }
+    if let Some(utype) = &self.utype {
+      f("utype", utype.as_str());
+    }
+    for (k, v) in &self.extra {
+      f(k.as_str(), v.to_string().as_str());
+    }
+  }
+
   pub fn visit<V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where
     V: VOTableVisitor<C>,
@@ -439,7 +461,7 @@ impl<C: TableDataContent> Resource<C> {
   /// `TABLEDATA` or `BINARY` or `BINARY2` tag.
   /// Then continue reading (and storing) the remaining of the VOTable (assuming
   /// it will not contains another table).
-  /// If no table is encountered, return `false`.
+  /// If no table is found, return `false`.
   pub(crate) fn read_from_data_end_to_end<R: BufRead>(
     &mut self,
     reader: &mut Reader<R>,
@@ -717,7 +739,7 @@ impl<C: TableDataContent> Resource<C> {
     let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     let mut iter = self.sub_elems.iter_mut();
     let mut table_found = false;
-    while let Some(se) = iter.next() {
+    for se in iter.by_ref() {
       if match &mut se.resource_or_table {
         ResourceOrTable::Resource(resource) => {
           resource.write_from_data_end(writer, &(), start_after_data)

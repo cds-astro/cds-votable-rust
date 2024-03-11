@@ -36,6 +36,14 @@ impl Min {
     self.inclusive = inclusive;
     self
   }
+
+  pub fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    f("value", self.value.as_str());
+    f("inclusive", self.inclusive.to_string().as_str());
+  }
 }
 
 impl QuickXmlReadWrite for Min {
@@ -123,6 +131,14 @@ impl Max {
   pub fn set_inclusive(mut self, inclusive: bool) -> Self {
     self.inclusive = inclusive;
     self
+  }
+
+  pub fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    f("value", self.value.as_str());
+    f("inclusive", self.inclusive.to_string().as_str());
   }
 }
 
@@ -214,6 +230,16 @@ impl Opt {
 
   impl_builder_opt_string_attr!(name);
   impl_builder_push!(Opt);
+
+  pub fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(name) = &self.name {
+      f("name", name.as_str());
+    }
+    f("value", self.value.as_str());
+  }
 
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where
@@ -376,6 +402,25 @@ impl Values {
   impl_builder_opt_attr!(max, Max);
 
   impl_builder_push!(Opt);
+
+  /// Calls a closure on each (key, value) attribute pairs.
+  pub fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(id) = &self.id {
+      f("ID", id.as_str());
+    }
+    if let Some(type_) = &self.type_ {
+      f("type", type_.as_str());
+    }
+    if let Some(null) = &self.null {
+      f("null", null.as_str());
+    }
+    if let Some(ref_) = &self.ref_ {
+      f("ref", ref_.as_str());
+    }
+  }
 
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where

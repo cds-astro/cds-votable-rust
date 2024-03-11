@@ -334,6 +334,45 @@ impl Field {
   impl_builder_opt_attr!(values, Values);
   impl_builder_push!(Link);
 
+  /// Calls a closure on each (key, value) attribute pairs.
+  pub fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(id) = &self.id {
+      f("ID", id.as_str());
+    }
+    f("name", self.name.as_str());
+    f("datatype", self.datatype.to_string().as_str());
+    if let Some(arraysize) = &self.arraysize {
+      f("arraysize", arraysize.to_string().as_str());
+    }
+    if let Some(width) = &self.width {
+      f("width", width.to_string().as_str());
+    }
+    if let Some(precision) = &self.precision {
+      f("precision", precision.to_string().as_str());
+    }
+    if let Some(unit) = &self.unit {
+      f("unit", unit.as_str());
+    }
+    if let Some(ucd) = &self.ucd {
+      f("ucd", ucd.as_str());
+    }
+    if let Some(utype) = &self.utype {
+      f("utype", utype.as_str());
+    }
+    if let Some(xtype) = &self.xtype {
+      f("xtype", xtype.as_str());
+    }
+    if let Some(ref_) = &self.ref_ {
+      f("ref", ref_.as_str());
+    }
+    for (k, v) in &self.extra {
+      f(k.as_str(), v.to_string().as_str());
+    }
+  }
+
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where
     C: TableDataContent,

@@ -100,6 +100,28 @@ impl Group {
   impl_builder_push_elem!(Param, GroupElem);
   impl_builder_push_elem!(Group, GroupElem);
 
+  /// Calls a closure on each (key, value) attribute pairs.
+  pub fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(id) = &self.id {
+      f("ID", id.as_str());
+    }
+    if let Some(name) = &self.name {
+      f("name", name.as_str());
+    }
+    if let Some(r) = &self.ref_ {
+      f("ref", r.as_str());
+    }
+    if let Some(ucd) = &self.ucd {
+      f("ucd", ucd.as_str());
+    }
+    if let Some(utype) = &self.utype {
+      f("utype", utype.as_str());
+    }
+  }
+
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where
     C: TableDataContent,
@@ -317,6 +339,28 @@ impl TableGroup {
   impl_builder_push_elem!(ParamRef, TableGroupElem);
   impl_builder_push_elem!(Param, TableGroupElem);
   impl_builder_push_elem!(TableGroup, TableGroupElem);
+
+  /// Calls a closure on each (key, value) attribute pairs.
+  pub fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(id) = &self.id {
+      f("ID", id.as_str());
+    }
+    if let Some(name) = &self.name {
+      f("name", name.as_str());
+    }
+    if let Some(r) = &self.ref_ {
+      f("ref", r.as_str());
+    }
+    if let Some(ucd) = &self.ucd {
+      f("ucd", ucd.as_str());
+    }
+    if let Some(utype) = &self.utype {
+      f("utype", utype.as_str());
+    }
+  }
 
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where

@@ -7,16 +7,18 @@ use std::{
   str::{self, FromStr},
 };
 
-use log::debug;
 use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesText, Event},
   Reader, Writer,
 };
-
 use serde_json::Value;
 
-use super::{error::VOTableError, QuickXmlReadWrite};
+use super::{
+  error::VOTableError,
+  utils::{discard_comment, discard_event},
+  QuickXmlReadWrite,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ContentRole {
@@ -94,6 +96,34 @@ impl Link {
   impl_builder_insert_extra!();
 
   impl_builder_opt_string_attr!(content);
+
+  /// Calls a closure on each (key, value) attribute pairs.
+  pub fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(id) = &self.id {
+      f("ID", id.as_str());
+    }
+    if let Some(content_role) = &self.content_role {
+      f("content-role", content_role.to_string().as_str());
+    }
+    if let Some(content_type) = &self.content_type {
+      f("content-type", content_type.as_str());
+    }
+    if let Some(title) = &self.title {
+      f("title", title.as_str());
+    }
+    if let Some(value) = &self.value {
+      f("value", value.as_str());
+    }
+    if let Some(href) = &self.href {
+      f("href", href.as_str());
+    }
+    for (k, v) in &self.extra {
+      f(k.as_str(), v.to_string().as_str());
+    }
+  }
 }
 
 impl QuickXmlReadWrite for Link {

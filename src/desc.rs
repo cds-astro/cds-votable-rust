@@ -1,14 +1,21 @@
 //! Struct dedicated to the `DESCRIPTION` tag.
 
-use std::io::{BufRead, Write};
+use std::{
+  fmt::{self, Display, Formatter},
+  io::{BufRead, Write},
+};
 
-use log::{debug, warn};
+use log::warn;
 use quick_xml::{
   events::{attributes::Attributes, BytesText, Event},
   Reader, Writer,
 };
 
-use super::{error::VOTableError, QuickXmlReadWrite};
+use super::{
+  error::VOTableError,
+  utils::{discard_comment, discard_event},
+  QuickXmlReadWrite,
+};
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Description(pub String);
@@ -22,6 +29,12 @@ impl From<&str> for Description {
 impl From<String> for Description {
   fn from(s: String) -> Self {
     Description(s)
+  }
+}
+
+impl Display for Description {
+  fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    f.write_str(self.0.as_str())
   }
 }
 

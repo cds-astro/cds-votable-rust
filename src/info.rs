@@ -6,7 +6,6 @@ use std::{
   str,
 };
 
-use log::debug;
 use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, BytesText, Event},
@@ -14,7 +13,11 @@ use quick_xml::{
 };
 use serde_json::Value;
 
-use super::{error::VOTableError, QuickXmlReadWrite};
+use super::{
+  error::VOTableError,
+  utils::{discard_comment, discard_event},
+  QuickXmlReadWrite,
+};
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Info {
@@ -68,6 +71,36 @@ impl Info {
   impl_builder_insert_extra!();
 
   impl_builder_opt_string_attr!(content);
+
+  /// Calls a closure on each (key, value) attribute pairs.
+  pub fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(id) = &self.id {
+      f("ID", id.as_str());
+    }
+    f("name", self.name.as_str());
+    f("value", self.value.as_str());
+    if let Some(xtype) = &self.xtype {
+      f("xtype", xtype.to_string().as_str());
+    }
+    if let Some(r) = &self.ref_ {
+      f("ref", r.as_str());
+    }
+    if let Some(unit) = &self.unit {
+      f("unit", unit.as_str());
+    }
+    if let Some(ucd) = &self.ucd {
+      f("ucd", ucd.as_str());
+    }
+    if let Some(utype) = &self.utype {
+      f("utype", utype.as_str());
+    }
+    for (k, v) in &self.extra {
+      f(k.as_str(), v.to_string().as_str());
+    }
+  }
 }
 
 impl QuickXmlReadWrite for Info {

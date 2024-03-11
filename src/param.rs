@@ -94,6 +94,45 @@ impl Param {
     self
   }
 
+  pub fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(id) = &self.field.id {
+      f("ID", id.as_str());
+    }
+    f("name", self.field.name.as_str());
+    f("datatype", self.field.datatype.to_string().as_str());
+    f("value", self.value.as_str());
+    if let Some(arraysize) = &self.field.arraysize {
+      f("arraysize", arraysize.to_string().as_str());
+    }
+    if let Some(width) = &self.field.width {
+      f("width", width.to_string().as_str());
+    }
+    if let Some(precision) = &self.field.precision {
+      f("precision", precision.to_string().as_str());
+    }
+    if let Some(unit) = &self.field.unit {
+      f("unit", unit.as_str());
+    }
+    if let Some(ucd) = &self.field.ucd {
+      f("ucd", ucd.as_str());
+    }
+    if let Some(utype) = &self.field.utype {
+      f("utype", utype.as_str());
+    }
+    if let Some(xtype) = &self.field.xtype {
+      f("xtype", xtype.as_str());
+    }
+    if let Some(ref_) = &self.field.ref_ {
+      f("ref", ref_.as_str());
+    }
+    for (k, v) in &self.field.extra {
+      f(k.as_str(), v.to_string().as_str());
+    }
+  }
+
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where
     C: TableDataContent,

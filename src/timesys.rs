@@ -9,7 +9,6 @@ use std::{
 use log::warn;
 use paste::paste;
 use quick_xml::{events::attributes::Attributes, Reader, Writer};
-use serde;
 
 use super::{error::VOTableError, QuickXmlReadWrite};
 
@@ -36,6 +35,19 @@ impl TimeSys {
       timescale,
       refposition,
     }
+  }
+
+  /// Calls a closure on each (key, value) attribute pairs.
+  pub fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    f("ID", self.id.as_str());
+    if let Some(timeorigin) = self.timeorigin {
+      f("timeorigin", timeorigin.to_string().as_str());
+    }
+    f("timescale", self.timescale.to_string().as_str());
+    f("refposition", self.refposition.to_string().as_str());
   }
 
   impl_builder_opt_attr!(timeorigin, f64);

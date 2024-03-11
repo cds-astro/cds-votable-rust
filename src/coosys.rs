@@ -1,6 +1,7 @@
 //! Module dedicated to the `COOSYS` tag.
 
 use std::{
+  fmt::{self, Display, Formatter},
   io::{BufRead, Write},
   num::ParseFloatError,
   str::{self, FromStr},
@@ -12,7 +13,7 @@ use quick_xml::{
   events::{attributes::Attributes, BytesStart, Event},
   ElementWriter, Reader, Writer,
 };
-use serde;
+// use serde;
 
 use crate::{
   error::VOTableError,
@@ -71,6 +72,18 @@ impl CooSys {
       coosys,
       refposition: None,
       elems: Default::default(),
+    }
+  }
+
+  /// Calls a closure on each (key, value) attribute pairs.
+  pub fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    f("ID", self.id.as_str());
+    self.coosys.for_each_attribute(&mut f);
+    if let Some(refposition) = &self.refposition {
+      f("refposition", refposition.to_string().as_str());
     }
   }
 
@@ -298,16 +311,6 @@ impl QuickXmlReadWrite for CooSys {
   }
 }
 
-/*
-/// Either Julian years or Besselian years.
-/// E.g: J2000, B1950, J2015.5, ...
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-#[serde(tag = "astro_year")]
-enum JulianOrBesselianYear{
-  Julian(f64),
-  Besselian(f64)
-}*/
-
 /// Besselian (= tropical) year, e.g. B1950
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct BesselianYear(pub f64);
@@ -321,6 +324,11 @@ impl FromStr for BesselianYear {
       s
     };
     decimal_year_str.parse::<f64>().map(BesselianYear)
+  }
+}
+impl Display for BesselianYear {
+  fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    f.write_fmt(format_args!("B{}", self.0))
   }
 }
 
@@ -339,32 +347,11 @@ impl FromStr for JulianYear {
     decimal_year_str.parse::<f64>().map(JulianYear)
   }
 }
-
-/*#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-#[serde(tag = "epoch_type")]
-pub enum Epoch {
-  #[serde(rename = "unknown")]
-  Unknown,
-  #[serde(rename = "unknown")]
-  Val{
-    #[serde(rename = "epoch_val")]
-    value: f64
-  }, // in years
-  Var {
-    #[serde(rename = "epoch_ref")]
-    ref_: String
-  },
-}*/
-
-/*
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub struct BesselianEpoch(pub f64);
-// pub struct BesselianEpoch(pub Epoch);
-
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub struct JulianEpoch(pub f64);
-// pub struct JulianEpoch(pub Epoch);
-*/
+impl Display for JulianYear {
+  fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    f.write_fmt(format_args!("J{}", self.0))
+  }
+}
 
 /// Missing coosys are:
 /// * xy
@@ -538,111 +525,78 @@ impl System {
     Ok(self)
   }
 
+  pub fn for_each_attribute<F>(&self, f: &mut F)
+  where
+    F: FnMut(&str, &str),
+  {
+    match self {
+      System::EquatorialFK4 { equinox, epoch } => {
+        f("system", "eq_FK4");
+        f("equinox", equinox.to_string().as_str());
+        if let Some(epoch) = epoch {
+          f("epoch", epoch.to_string().as_str());
+        }
+      }
+      System::EcliptiqueFK4 { equinox, epoch } => {
+        f("system", "ecl_FK4");
+        f("equinox", equinox.to_string().as_str());
+        if let Some(epoch) = epoch {
+          f("epoch", epoch.to_string().as_str());
+        }
+      }
+      System::EquatorialFK5 { equinox, epoch } => {
+        f("system", "eq_FK5");
+        f("equinox", equinox.to_string().as_str());
+        if let Some(epoch) = epoch {
+          f("epoch", epoch.to_string().as_str());
+        }
+      }
+      System::EcliptiqueFK5 { equinox, epoch } => {
+        f("system", "ecl_FK5");
+        f("equinox", equinox.to_string().as_str());
+        if let Some(epoch) = epoch {
+          f("epoch", epoch.to_string().as_str());
+        }
+      }
+      System::ICRS { epoch } => {
+        f("system", "ICRS");
+        if let Some(epoch) = epoch {
+          f("epoch", epoch.to_string().as_str());
+        }
+      }
+      System::Galactic { epoch } => {
+        f("system", "galactic");
+        if let Some(epoch) = epoch {
+          f("epoch", epoch.to_string().as_str());
+        }
+      }
+      System::SuperGalactic { epoch } => {
+        f("system", "supergalactic");
+        if let Some(epoch) = epoch {
+          f("epoch", epoch.to_string().as_str());
+        }
+      }
+    }
+  }
+
   pub fn with_attributes<'a, W: Write>(
     &self,
     mut writer: ElementWriter<'a, W>,
   ) -> ElementWriter<'a, W> {
-    // let mut writer = writer;
-    match self {
-      System::EquatorialFK4 { equinox, epoch } => {
-        writer = writer.with_attribute(("system", "eq_FK4"));
-        writer = writer.with_attribute(("equinox", format!("B{:}", equinox.0).as_str()));
-        if let Some(epoch) = epoch {
-          writer = writer.with_attribute(("epoch", format!("B{:}", epoch.0).as_str()));
-        }
-      }
-      System::EcliptiqueFK4 { equinox, epoch } => {
-        writer = writer.with_attribute(("system", "ecl_FK4"));
-        writer = writer.with_attribute(("equinox", format!("B{:}", equinox.0).as_str()));
-        if let Some(epoch) = epoch {
-          writer = writer.with_attribute(("epoch", format!("B{:}", epoch.0).as_str()));
-        }
-      }
-      System::EquatorialFK5 { equinox, epoch } => {
-        writer = writer.with_attribute(("system", "eq_FK5"));
-        writer = writer.with_attribute(("equinox", format!("J{:}", equinox.0).as_str()));
-        if let Some(epoch) = epoch {
-          writer = writer.with_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
-        }
-      }
-      System::EcliptiqueFK5 { equinox, epoch } => {
-        writer = writer.with_attribute(("system", "ecl_FK5"));
-        writer = writer.with_attribute(("equinox", format!("J{:}", equinox.0).as_str()));
-        if let Some(epoch) = epoch {
-          writer = writer.with_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
-        }
-      }
-      System::ICRS { epoch } => {
-        writer = writer.with_attribute(("system", "ICRS"));
-        if let Some(epoch) = epoch {
-          writer = writer.with_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
-        }
-      }
-      System::Galactic { epoch } => {
-        writer = writer.with_attribute(("system", "galactic"));
-        if let Some(epoch) = epoch {
-          writer = writer.with_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
-        }
-      }
-      System::SuperGalactic { epoch } => {
-        writer = writer.with_attribute(("system", "supergalactic"));
-        if let Some(epoch) = epoch {
-          writer = writer.with_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
-        }
-      }
-    };
+    // I have not (yet) found a way to avoid copies :o/
+    // * I tried 'attrs: Vec<(&str, &str)>' plus  'writer.with_attributes'
+    let mut attrs: Vec<(String, String)> = Vec::with_capacity(3);
+    let mut f = |key: &str, val: &str| attrs.push((key.to_owned(), val.to_owned()));
+    self.for_each_attribute(&mut f);
+    for (k, v) in attrs {
+      writer = writer.with_attribute((k.as_str(), v.as_str()))
+    }
     writer
   }
 
   pub fn push_attributes(&self, tag: &mut BytesStart) {
-    match self {
-      System::EquatorialFK4 { equinox, epoch } => {
-        tag.push_attribute(("system", "eq_FK4"));
-        tag.push_attribute(("equinox", format!("B{:}", equinox.0).as_str()));
-        if let Some(epoch) = epoch {
-          tag.push_attribute(("epoch", format!("B{:}", epoch.0).as_str()));
-        }
-      }
-      System::EcliptiqueFK4 { equinox, epoch } => {
-        tag.push_attribute(("system", "ecl_FK4"));
-        tag.push_attribute(("equinox", format!("B{:}", equinox.0).as_str()));
-        if let Some(epoch) = epoch {
-          tag.push_attribute(("epoch", format!("B{:}", epoch.0).as_str()));
-        }
-      }
-      System::EquatorialFK5 { equinox, epoch } => {
-        tag.push_attribute(("system", "eq_FK5"));
-        tag.push_attribute(("equinox", format!("J{:}", equinox.0).as_str()));
-        if let Some(epoch) = epoch {
-          tag.push_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
-        }
-      }
-      System::EcliptiqueFK5 { equinox, epoch } => {
-        tag.push_attribute(("system", "ecl_FK5"));
-        tag.push_attribute(("equinox", format!("J{:}", equinox.0).as_str()));
-        if let Some(epoch) = epoch {
-          tag.push_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
-        }
-      }
-      System::ICRS { epoch } => {
-        tag.push_attribute(("system", "ICRS"));
-        if let Some(epoch) = epoch {
-          tag.push_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
-        }
-      }
-      System::Galactic { epoch } => {
-        tag.push_attribute(("system", "galactic"));
-        if let Some(epoch) = epoch {
-          tag.push_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
-        }
-      }
-      System::SuperGalactic { epoch } => {
-        tag.push_attribute(("system", "supergalactic"));
-        if let Some(epoch) = epoch {
-          tag.push_attribute(("epoch", format!("J{:}", epoch.0).as_str()));
-        }
-      }
-    }
+    let mut f = |key: &str, val: &str| tag.push_attribute((key, val));
+    self.for_each_attribute(&mut f);
   }
 }
 
