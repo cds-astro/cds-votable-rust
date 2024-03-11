@@ -77,9 +77,9 @@ impl Input {
 
   pub fn get_fmt(&self) -> Result<InputFormat, VOTableError> {
     match &self.input_fmt {
-      Some(input_fmt) => Ok(input_fmt.clone()),
+      Some(input_fmt) => Ok(*input_fmt),
       None => match &self.input {
-        Some(path) => InputFormat::from_extension(&path).map_err(VOTableError::Custom),
+        Some(path) => InputFormat::from_extension(path).map_err(VOTableError::Custom),
         None => Err(VOTableError::Custom(String::from(
           "Input format **must** be provided when reading from stdin.",
         ))),
@@ -102,7 +102,7 @@ impl Input {
     let reader = BufReader::new(file);
     match self.input_fmt {
       Some(input_fmt) => input_fmt.get(reader),
-      None => InputFormat::from_extension(&path)
+      None => InputFormat::from_extension(path)
         .map_err(VOTableError::Custom)
         .and_then(|input_fmt| input_fmt.get(reader)),
     }

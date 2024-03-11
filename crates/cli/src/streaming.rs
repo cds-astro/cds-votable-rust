@@ -606,7 +606,7 @@ fn td_to_binary2_par<R: BufRead + Send, W: Write>(
         .zip(schema.iter())
         .map(|(res, schema)| res.and_then(|field_str| schema.value_from_str(&field_str)))
         .collect::<Result<Vec<VOTableValue>, VOTableError>>()
-        .map(|fields| InMemTableDataRows::write_binary2_row(&mut bin_ser, fields, &schema))
+        .map(|fields| InMemTableDataRows::write_binary2_row(&mut bin_ser, fields, schema))
       {
         panic!("Error convertings rows: {:?}", e);
       }
@@ -652,8 +652,8 @@ fn binary_to_td_par<R: BufRead + Send, W: Write>(
       td_row.append(b"\n<TR>".to_vec().as_mut());
       InMemTableDataRows::write_tabledata_row(
         &mut new_xml_writer(&mut td_row, None, None),
-        binrow2fieldit(raw_bin_row, &schema),
-        &schema,
+        binrow2fieldit(raw_bin_row, schema),
+        schema,
       )
       .unwrap();
       td_row.append(b"</TR>".to_vec().as_mut());
@@ -695,8 +695,8 @@ fn binary_to_binary2_par<R: BufRead + Send, W: Write>(
       let mut bin_ser = BinarySerializer::new(&mut bin_row);
       if let Err(e) = InMemTableDataRows::write_binary2_row(
         &mut bin_ser,
-        binrow2fieldit(raw_bin_row, &schema).collect::<Vec<VOTableValue>>(),
-        &schema,
+        binrow2fieldit(raw_bin_row, schema).collect::<Vec<VOTableValue>>(),
+        schema,
       ) {
         panic!("Error convertings rows: {:?}", e);
       }
@@ -739,8 +739,8 @@ fn binary2_to_td_par<R: BufRead + Send, W: Write>(
       td_row.append(b"\n<TR>".to_vec().as_mut());
       InMemTableDataRows::write_tabledata_row(
         &mut new_xml_writer(&mut td_row, None, None),
-        bin2row2fieldit(raw_bin_row, &schema),
-        &schema,
+        bin2row2fieldit(raw_bin_row, schema),
+        schema,
       )
       .unwrap();
       td_row.append(b"</TR>".to_vec().as_mut());
@@ -786,8 +786,8 @@ fn binary2_to_binary_par<R: BufRead + Send, W: Write>(
       let mut bin_ser = BinarySerializer::new(&mut bin_row);
       if let Err(e) = InMemTableDataRows::write_binary_row(
         &mut bin_ser,
-        bin2row2fieldit(raw_bin_row, &schema),
-        &schema,
+        bin2row2fieldit(raw_bin_row, schema),
+        schema,
       ) {
         panic!("Error convertings rows: {:?}", e);
       }
@@ -820,7 +820,7 @@ fn write_csv_header<W: Write>(
   separator: char,
 ) -> Result<(), VOTableError> {
   // Write header
-  let mut colname_it = get_colnames(&votable).into_iter();
+  let mut colname_it = get_colnames(votable).into_iter();
   if let Some(colname) = colname_it.next() {
     write_1st_csv_field(&mut write, colname.as_str(), separator)?;
     for colname in colname_it {

@@ -97,7 +97,7 @@ impl FieldAttributesArray {
     self.all_fields[FieldElem::Index.index()].push(self.n_rows);
     self.all_fields[FieldElem::Id.index()].push_opt(&field.id);
     self.all_fields[FieldElem::Name.index()].push(&field.name);
-    self.all_fields[FieldElem::Datatype.index()].push(&field.datatype);
+    self.all_fields[FieldElem::Datatype.index()].push(field.datatype);
     self.all_fields[FieldElem::Arraysize.index()].push_opt(&field.arraysize);
     self.all_fields[FieldElem::Width.index()].push_opt(&field.width);
     self.all_fields[FieldElem::Precision.index()].push_opt(&field.precision);

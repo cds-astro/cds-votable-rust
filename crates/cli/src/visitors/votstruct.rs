@@ -84,26 +84,20 @@ impl<'a> TagPrinter<'a> {
     // Add attributes (if any)
     self.attrs.reverse(); // to use pop (while preserving input order), hence limit the number of copy
     while let Some(mut kv) = self.attrs.pop() {
-      let mut max_len = self
-        .line_width
-        .checked_sub(s.len() + SEP.len())
-        .unwrap_or(0);
+      let mut max_len = self.line_width.saturating_sub(s.len() + SEP.len());
       if kv.len() <= max_len {
         s.push_str(SEP);
         s.push_str(kv.as_str());
       } else {
         // first try to complete with other attributes (size min = 3 because: 'k=v')
         while max_len >= 3 && Self::try_append_kv(max_len, &mut s, &mut self.attrs) {
-          max_len = self
-            .line_width
-            .checked_sub(s.len() + SEP.len())
-            .unwrap_or(0);
+          max_len = self.line_width.saturating_sub(s.len() + SEP.len());
         }
         println!("{}", s);
         s.clear();
         s.push_str(self.indent);
         s.push_str(INDENT); // add an extra indent level
-        max_len = self.line_width.checked_sub(s.len()).unwrap_or(0);
+        max_len = self.line_width.saturating_sub(s.len());
         if kv.len() <= max_len {
           s.push_str(kv.as_str());
         } else {
@@ -118,7 +112,7 @@ impl<'a> TagPrinter<'a> {
     if let Some(content) = self.content {
       let mut content_clean = String::with_capacity(content.len() + 8);
       content_clean.push_str("content=");
-      let content = content.trim().replace(&['\n'], "\\n");
+      let content = content.trim().replace(['\n'], "\\n");
       let mut word_it = content.split_whitespace();
       if let Some(word) = word_it.next() {
         content_clean.push_str(word);
@@ -128,10 +122,7 @@ impl<'a> TagPrinter<'a> {
         }
       }
       let mut content = content_clean;
-      let mut max_len = self
-        .line_width
-        .checked_sub(s.len() + SEP.len())
-        .unwrap_or(0);
+      let mut max_len = self.line_width.saturating_sub(s.len() + SEP.len());
       if content.len() <= max_len {
         // Print on the same line, no need to truncate
         s.push_str(SEP);
@@ -148,7 +139,7 @@ impl<'a> TagPrinter<'a> {
         s.clear();
         s.push_str(self.indent);
         s.push_str(INDENT); // add an extra indent level
-        max_len = self.line_width.checked_sub(s.len()).unwrap_or(0);
+        max_len = self.line_width.saturating_sub(s.len());
         if content.len() <= max_len {
           // Not truncation needed
           s.push_str(content.as_str());
