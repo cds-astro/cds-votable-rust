@@ -2,20 +2,16 @@
 //!
 //! The `TEMPLATES` block maps data model instances on the rows of a table in the VOTable.
 
-use std::str;
+use std::{io::Write, str};
 
-use bstringify::bstringify;
 use paste::paste;
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  Reader, Writer,
-};
+use quick_xml::{events::Event, Reader, Writer};
 
 use crate::{
   error::VOTableError,
-  mivot::{value_checker, VodmlVisitor},
-  utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite,
+  mivot::VodmlVisitor,
+  utils::{discard_comment, discard_event, is_empty, unexpected_attr_err},
+  QuickXmlReadWrite, VOTableElement,
 };
 
 pub mod instance;
@@ -34,105 +30,150 @@ pub struct Templates {
   pub instances: Vec<Instance>,
 }
 impl Templates {
-  fn new_empty() -> Self {
+  fn new() -> Self {
     Self {
       tableref: None,
       wheres: vec![],
       instances: vec![],
     }
   }
+
   impl_builder_opt_string_attr!(tableref);
 
   pub fn push_where(mut self, where_: Where) -> Self {
-    self.wheres.push(where_);
+    self.push_where_by_ref(where_);
     self
   }
+  pub fn push_where_by_ref(&mut self, where_: Where) {
+    self.wheres.push(where_);
+  }
   pub fn push_instance(mut self, instance: Instance) -> Self {
-    self.instances.push(instance);
+    self.push_instance_by_ref(instance);
     self
+  }
+  pub fn push_instance_by_ref(&mut self, instance: Instance) {
+    self.instances.push(instance);
   }
 
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
-    visitor.visit_templates(self)?;
+    visitor.visit_templates_start(self)?;
     for w in self.wheres.iter_mut() {
       w.visit(visitor)?;
     }
     for elem in self.instances.iter_mut() {
       elem.visit(visitor)?;
     }
-    Ok(())
+    visitor.visit_templates_ended(self)
   }
 }
-impl_quickrw_not_e!(
-  [],                            // MANDATORY ATTRIBUTES
-  [tableref],                    // OPTIONAL ATTRIBUTES
-  "TEMPLATES",                   // TAG, here : <INSTANCE>
-  Templates,                     // Struct on which to impl
-  (),                            // Context type
-  [wheres, instances],           // Ordered elements
-  read_template_sub_elem_by_ref, // Sub elements reader
-  []                             // Empty context writables
-);
 
-///////////////////////
-// UTILITY FUNCTIONS //
+impl VOTableElement for Templates {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new().set_attrs(attrs)
+  }
 
-/*
-    function read_template_sub_elem
-    Description:
-    *   reads the children of Templates
-    @generic R: BufRead; a struct that implements the std::io::BufRead trait.
-    @param instance &mut Templates: an instance of Templates
-    @param reader &mut quick_xml::Reader<R>: the reader used to read the elements
-    @param reader &mut &mut Vec<u8>: a buffer used to read events [see read_event function from quick_xml::Reader]
-    #returns Result<quick_xml::Reader<R>, VOTableError>: returns the Reader once finished or an error if reading doesn't work
-*/
-fn read_template_sub_elem_by_ref<R: std::io::BufRead>(
-  template: &mut Templates,
-  _context: &(),
-  mut reader: &mut quick_xml::Reader<R>,
-  mut reader_buff: &mut Vec<u8>,
-) -> Result<(), VOTableError> {
-  loop {
-    let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
-    match &mut event {
-      Event::Start(ref e) => match e.local_name() {
-        Instance::TAG_BYTES => {
-          template
-            .instances
-            .push(from_event_start_by_ref!(Instance, reader, reader_buff, e))
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "tableref" => {
+          if val.as_ref().is_empty() {
+            return Err(VOTableError::Custom(String::from(
+              "Attribute 'tableref' must not be empty.",
+            )));
+          } else {
+            self.set_tableref_by_ref(val)
+          }
         }
-        _ => {
-          return Err(VOTableError::UnexpectedStartTag(
-            e.local_name().to_vec(),
-            Templates::TAG,
-          ))
-        }
-      },
-      Event::Empty(ref e) => match e.local_name() {
-        Where::TAG_BYTES => template.wheres.push(Where::from_event_empty(e)?),
-        Instance::TAG_BYTES => template.instances.push(Instance::from_event_empty(e)?),
-        _ => {
-          return Err(VOTableError::UnexpectedEmptyTag(
-            e.local_name().to_vec(),
-            Templates::TAG,
-          ))
-        }
-      },
-      Event::Text(e) if is_empty(e) => {}
-      Event::End(e) if e.local_name() == Templates::TAG_BYTES => {
-        if template.instances.is_empty() {
-          return Err(VOTableError::Custom(
-            "At least one instance should be present in a templates tag.".to_owned(),
-          ));
-        } else {
-          return Ok(());
-        }
+        _ => return Err(unexpected_attr_err(key, Self::TAG)),
       }
-      Event::Eof => return Err(VOTableError::PrematureEOF(Templates::TAG)),
-      Event::Comment(e) => discard_comment(e, reader, Templates::TAG),
-      _ => discard_event(event, Templates::TAG),
     }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(tableref) = &self.tableref {
+      f("tableref", tableref.as_ref());
+    }
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    true
+  }
+}
+
+impl QuickXmlReadWrite for Templates {
+  const TAG: &'static str = "TEMPLATES";
+  type Context = ();
+
+  fn read_sub_elements_by_ref<R: std::io::BufRead>(
+    &mut self,
+    mut reader: &mut Reader<R>,
+    mut reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), crate::error::VOTableError> {
+    loop {
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      match &mut event {
+        Event::Start(ref e) => match e.local_name() {
+          Instance::TAG_BYTES => {
+            self.push_instance_by_ref(from_event_start_by_ref!(Instance, reader, reader_buff, e))
+          }
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.local_name().to_vec(),
+              Templates::TAG,
+            ))
+          }
+        },
+        Event::Empty(ref e) => match e.local_name() {
+          Where::TAG_BYTES => self.push_where_by_ref(Where::from_event_empty(e)?),
+          Instance::TAG_BYTES => self.push_instance_by_ref(Instance::from_event_empty(e)?),
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.local_name().to_vec(),
+              Templates::TAG,
+            ))
+          }
+        },
+        Event::Text(e) if is_empty(e) => {}
+        Event::End(e) if e.local_name() == Templates::TAG_BYTES => {
+          if self.instances.is_empty() {
+            return Err(VOTableError::Custom(
+              "At least one instance should be present in a templates tag.".to_owned(),
+            ));
+          } else {
+            return Ok(());
+          }
+        }
+        Event::Eof => return Err(VOTableError::PrematureEOF(Templates::TAG)),
+        Event::Comment(e) => discard_comment(e, reader, Templates::TAG),
+        _ => discard_event(event, Templates::TAG),
+      }
+    }
+  }
+
+  fn write_sub_elements_by_ref<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+    context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    write_elem_vec!(self, wheres, writer, context);
+    write_elem_vec!(self, instances, writer, context);
+    Ok(())
   }
 }
 

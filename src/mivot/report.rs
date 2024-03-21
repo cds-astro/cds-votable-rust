@@ -1,18 +1,18 @@
 //! Module dedicated to the `REPORT` tag.
 
-use std::str::{self, FromStr};
+use std::{
+  io::{BufRead, Write},
+  str::{self, FromStr},
+};
 
 use paste::paste;
-use quick_xml::{
-  events::{attributes::Attributes, BytesText, Event},
-  Reader, Writer,
-};
+use quick_xml::{events::Event, Reader, Writer};
 
 use crate::{
   error::VOTableError,
   mivot::VodmlVisitor,
-  utils::{discard_comment, discard_event},
-  QuickXmlReadWrite,
+  utils::{discard_comment, discard_event, unexpected_attr_err},
+  QuickXmlReadWrite, VOTableElement,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -63,6 +63,7 @@ impl Report {
     }
   }
 
+  impl_builder_mandatory_attr!(status, Status);
   impl_builder_opt_string_attr!(content);
 
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
@@ -70,54 +71,68 @@ impl Report {
   }
 }
 
+impl VOTableElement for Report {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    let mut status: Option<Status> = None;
+    // Look for attributes (especially mandatory attributes)
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "status" => status = Some(val.as_ref().parse().map_err(VOTableError::Custom)?),
+        _ => return Err(unexpected_attr_err(key, Self::TAG)),
+      }
+    }
+    // Set from found attributes
+    if let Some(status) = status {
+      Ok(Self::new(status))
+    } else {
+      Err(VOTableError::Custom(format!(
+        "Attributes 'status' is mandatory in tag '{}'",
+        Self::TAG
+      )))
+    }
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "status" => self.set_status_by_ref(val.as_ref().parse().map_err(VOTableError::Custom)?),
+        _ => return Err(unexpected_attr_err(key, Self::TAG)),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    f("status", self.status.to_string().as_str());
+  }
+
+  fn get_content(&self) -> Option<&str> {
+    self.content.as_ref().map(|x| x.as_str())
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    true
+  }
+}
+
 impl QuickXmlReadWrite for Report {
   const TAG: &'static str = "REPORT";
   type Context = ();
 
-  fn from_attributes(mut attrs: Attributes) -> Result<Self, VOTableError> {
-    if let Some(attr_res) = attrs.next() {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = std::str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
-      return match attr.key {
-        b"status" => Status::from_str(value)
-          .map(Report::new)
-          .map_err(VOTableError::Custom),
-        _ => Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG)),
-      };
-    }
-    Err(VOTableError::Custom(format!(
-      "Attribute 'status' is mandatory in tag '{}'",
-      Self::TAG
-    )))
-  }
-
-  fn read_sub_elements<R: std::io::BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    // I dot not like the fact that we first create an empty String that we replace here... :o/
-    read_content!(Self, self, reader, reader_buff)
-  }
-
-  fn read_sub_elements_by_ref<R: std::io::BufRead>(
-    &mut self,
-    reader: &mut Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    read_content_by_ref!(Self, self, reader, reader_buff)
-  }
-
-  fn write<W: std::io::Write>(
-    &mut self,
-    writer: &mut Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-    elem_writer = elem_writer.with_attribute(("status", self.status.to_string().as_str()));
-    write_content!(self, elem_writer);
-    Ok(())
-  }
+  impl_read_write_content_only!();
 }

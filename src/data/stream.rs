@@ -8,15 +8,15 @@ use std::{
 
 use paste::paste;
 use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
+  events::{BytesStart, Event},
   Reader, Writer,
 };
 
 use crate::{
   error::VOTableError,
   impls::mem::VoidTableDataContent,
-  utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite, TableDataContent,
+  utils::{discard_comment, discard_event, is_empty, unexpected_attr_warn},
+  QuickXmlReadWrite, TableDataContent, VOTableElement,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -135,11 +135,7 @@ pub struct Stream<C: TableDataContent> {
   // date!
   #[serde(skip_serializing_if = "Option::is_none")]
   pub rights: Option<String>,
-  // extra attributes
-  // #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
-  // pub extra: HashMap<String, Value>,
   // content, if not parsed by binary of binary2
-  //#[serde(skip_serializing_if = "Option::is_none")]
   #[serde(flatten)]
   pub content: Option<C>,
 }
@@ -198,16 +194,82 @@ impl<C: TableDataContent> Stream<C> {
   impl_builder_opt_attr!(encoding, EncodingType);
   impl_builder_opt_string_attr!(expires);
   impl_builder_opt_string_attr!(rights);
-  // extra attributes
-  // impl_builder_insert_extra!();
 
   pub fn set_content(mut self, content: C) -> Self {
-    self.content = Some(content);
+    self.set_content_by_ref(content);
     self
+  }
+  pub fn set_content_by_ref(&mut self, content: C) {
+    self.content = Some(content);
+  }
+
+  pub fn write_start<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    // Write tag + attributes
+    self.for_each_attribute(|k, v| tag.push_attribute((k, v)));
+    // push2write_extra!(self, tag);
+    writer
+      .write_event(Event::Start(tag.to_borrowed()))
+      .map_err(VOTableError::Write)
+  }
+
+  pub fn write_end<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
+    // Close tag
+    let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    writer
+      .write_event(Event::End(tag.to_end()))
+      .map_err(VOTableError::Write)
+  }
+}
+
+impl<C: TableDataContent> VOTableElement for Stream<C> {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new().set_attrs(attrs)
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "type" => self.set_type_by_ref(
+          val
+            .as_ref()
+            .parse::<Type>()
+            .map_err(VOTableError::Variant)?,
+        ),
+        "href" => self.set_href_by_ref(val),
+        "actuate" => self.set_actuate_by_ref(
+          val
+            .as_ref()
+            .parse::<Actuate>()
+            .map_err(VOTableError::Variant)?,
+        ),
+        "encoding" => self.set_encoding_by_ref(
+          val
+            .as_ref()
+            .parse::<EncodingType>()
+            .map_err(VOTableError::Variant)?,
+        ),
+        "expires" => self.set_expires_by_ref(val),
+        "rights" => self.set_rights_by_ref(val),
+        _ => unexpected_attr_warn(key, Self::TAG),
+      }
+    }
+    Ok(())
   }
 
   /// Calls a closure on each (key, value) attribute pairs.
-  pub fn for_each_attribute<F>(&self, mut f: F)
+  fn for_each_attribute<F>(&self, mut f: F)
   where
     F: FnMut(&str, &str),
   {
@@ -229,32 +291,10 @@ impl<C: TableDataContent> Stream<C> {
     if let Some(rights) = &self.rights {
       f("rights", rights.as_str());
     }
-    /*for (k, v) in &self.extra {
-      f(k.as_str(), v.to_string().as_str());
-    }*/
   }
 
-  pub fn write_start<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-    // Write tag + attributes
-    push2write_opt_tostring_attr!(self, tag, type_, type);
-    push2write_opt_string_attr!(self, tag, href);
-    push2write_opt_tostring_attr!(self, tag, actuate);
-    push2write_opt_tostring_attr!(self, tag, encoding);
-    push2write_opt_string_attr!(self, tag, expires);
-    push2write_opt_string_attr!(self, tag, rights);
-    // push2write_extra!(self, tag);
-    writer
-      .write_event(Event::Start(tag.to_borrowed()))
-      .map_err(VOTableError::Write)
-  }
-
-  pub fn write_end<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
-    // Close tag
-    let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-    writer
-      .write_event(Event::End(tag.to_end()))
-      .map_err(VOTableError::Write)
+  fn has_no_sub_elements(&self) -> bool {
+    true
   }
 }
 
@@ -262,51 +302,16 @@ impl<C: TableDataContent> QuickXmlReadWrite for Stream<C> {
   const TAG: &'static str = "STREAM";
   type Context = ();
 
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut stream = Self::default();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
-      stream = match attr.key {
-        b"type" => stream.set_type(value.parse::<Type>().map_err(VOTableError::Variant)?),
-        b"href" => stream.set_href(value),
-        b"actuate" => stream.set_actuate(value.parse::<Actuate>().map_err(VOTableError::Variant)?),
-        b"encoding" => stream.set_encoding(
-          value
-            .parse::<EncodingType>()
-            .map_err(VOTableError::Variant)?,
-        ),
-        b"expires" => stream.set_expires(value),
-        b"rights" => stream.set_rights(value),
-        _ => stream, /*stream.insert_extra(
-                       str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
-                       Value::String(value.into()),
-                     )*/
-      }
-    }
-    Ok(stream)
-  }
-
-  fn read_sub_elements<R: BufRead>(
+  fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
-    mut _reader: Reader<R>,
-    mut _reader_buff: &mut Vec<u8>,
+    _reader: &mut Reader<R>,
+    _reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    // read_content!(Self, self, reader, reader_buff)
+  ) -> Result<(), VOTableError> {
     Err(VOTableError::Custom(String::from(
       "Reading STREAM with a content must be taken in charge by the parent \
     element (since the encoding depends on the parent: BINARY of BINARY2",
     )))
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    mut _reader: &mut Reader<R>,
-    mut _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    todo!()
   }
 
   fn write<W: Write>(
@@ -329,5 +334,13 @@ impl<C: TableDataContent> QuickXmlReadWrite for Stream<C> {
     // write_extra!(self, elem_writer);
     elem_writer.write_empty().map_err(VOTableError::Write)?;
     Ok(())
+  }
+
+  fn write_sub_elements_by_ref<W: Write>(
+    &mut self,
+    _writer: &mut Writer<W>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    unreachable!()
   }
 }

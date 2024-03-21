@@ -7,18 +7,16 @@ use std::{
 };
 
 use paste::paste;
-use quick_xml::{
-  events::{attributes::Attributes, BytesText, Event},
-  Reader, Writer,
-};
+use quick_xml::{events::Event, Reader, Writer};
 use serde_json::Value;
 
 use super::{
   error::VOTableError,
   utils::{discard_comment, discard_event},
-  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
+/// Struct corresponding to the `PARAMRef` XML tag.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ParamRef {
   #[serde(rename = "ref")]
@@ -46,29 +44,14 @@ impl ParamRef {
     }
   }
 
+  // attributes
+  impl_builder_mandatory_string_attr!(ref_, ref);
   impl_builder_opt_string_attr!(ucd);
   impl_builder_opt_string_attr!(utype);
-
+  // extra attributes
   impl_builder_insert_extra!();
-
+  // content
   impl_builder_opt_string_attr!(content);
-
-  /// Calls a closure on each (key, value) attribute pairs.
-  pub fn for_each_attribute<F>(&self, mut f: F)
-  where
-    F: FnMut(&str, &str),
-  {
-    f("ref", self.ref_.as_str());
-    if let Some(ucd) = &self.ucd {
-      f("ucd", ucd.as_str());
-    }
-    if let Some(utype) = &self.utype {
-      f("utype", utype.as_str());
-    }
-    for (k, v) in &self.extra {
-      f(k.as_str(), v.to_string().as_str());
-    }
-  }
 
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where
@@ -79,70 +62,72 @@ impl ParamRef {
   }
 }
 
+impl VOTableElement for ParamRef {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    const DEFAULT_VALUE: &str = "@TBD";
+    Self::new(DEFAULT_VALUE).set_attrs(attrs).and_then(|pref| {
+      if pref.ref_.as_str() == DEFAULT_VALUE {
+        Err(VOTableError::Custom(format!(
+          "Mandatory attribute 'ref' not found in tag '{}'",
+          Self::TAG
+        )))
+      } else {
+        Ok(pref)
+      }
+    })
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "ref" => self.set_ref_by_ref(val),
+        "ucd" => self.set_ucd_by_ref(val),
+        "utype" => self.set_utype_by_ref(val),
+        _ => self.insert_extra_str_by_ref(key, val),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    f("ref", self.ref_.as_str());
+    if let Some(ucd) = &self.ucd {
+      f("ucd", ucd.as_str());
+    }
+    if let Some(utype) = &self.utype {
+      f("utype", utype.as_str());
+    }
+    for_each_extra_attribute!(self, f);
+  }
+
+  fn get_content(&self) -> Option<&str> {
+    self.content.as_deref()
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    true
+  }
+}
+
 impl QuickXmlReadWrite for ParamRef {
   const TAG: &'static str = "PARAMref";
   type Context = ();
 
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    const NULL: &str = "@TBD";
-    let mut paramref = Self::new(NULL);
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
-      paramref = match attr.key {
-        b"ref" => {
-          paramref.ref_ = value.to_string();
-          paramref
-        }
-        b"ucd" => paramref.set_ucd(value),
-        b"utype" => paramref.set_utype(value),
-        _ => paramref.insert_extra(
-          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
-          Value::String(value.into()),
-        ),
-      }
-    }
-    if paramref.ref_.as_str() == NULL {
-      Err(VOTableError::Custom(format!(
-        "Attributes 'ref' is mandatory in tag '{}'",
-        Self::TAG
-      )))
-    } else {
-      Ok(paramref)
-    }
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    read_content!(Self, self, reader, reader_buff)
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    reader: &mut Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    read_content_by_ref!(Self, self, reader, reader_buff)
-  }
-
-  fn write<W: Write>(
-    &mut self,
-    writer: &mut Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-    elem_writer = elem_writer.with_attribute(("ref", self.ref_.as_str()));
-    write_opt_string_attr!(self, elem_writer, ucd);
-    write_opt_string_attr!(self, elem_writer, utype);
-    write_extra!(self, elem_writer);
-    write_content!(self, elem_writer);
-    Ok(())
-  }
+  impl_read_write_content_only!();
 }
 
 #[cfg(test)]

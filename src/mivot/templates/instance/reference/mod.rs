@@ -5,15 +5,15 @@ use std::{
 
 use paste::paste;
 use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
+  events::{attributes::Attributes, Event},
   Reader, Writer,
 };
 
 use crate::{
   error::VOTableError,
   mivot::{globals::instance::reference::Reference as ReferenceStatic, VodmlVisitor},
-  utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite,
+  utils::{discard_comment, discard_event, is_empty, unexpected_attr_err},
+  QuickXmlReadWrite, VOTableElement,
 };
 
 pub mod foreign_key;
@@ -35,24 +35,25 @@ impl Reference {
   }
 }
 
-impl QuickXmlReadWrite for Reference {
-  const TAG: &'static str = "REFERENCE";
-  type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
+impl VOTableElement for Reference {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
     let mut dmrole = String::new();
     let mut dmref = String::new();
     let mut sourceref = String::new();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      if !value.is_empty() {
-        match attr.key {
-          b"dmrole" => dmrole.push_str(value),
-          b"dmref" => dmref.push_str(value),
-          b"sourceref" => sourceref.push_str(value),
-          _ => return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG)),
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      let val = val.as_ref();
+      if !val.is_empty() {
+        match key {
+          "dmrole" => dmrole.push_str(val),
+          "dmref" => dmref.push_str(val),
+          "sourceref" => sourceref.push_str(val),
+          _ => return Err(unexpected_attr_err(key, Self::TAG)),
         }
       }
     }
@@ -75,16 +76,39 @@ impl QuickXmlReadWrite for Reference {
     }
   }
 
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, _context)
-      .map(|()| reader)
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    match self {
+      Reference::Static(e) => e.set_attrs_by_ref(attrs),
+      Reference::Dynamic(e) => e.set_attrs_by_ref(attrs),
+    }
   }
+
+  fn for_each_attribute<F>(&self, f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    match self {
+      Reference::Static(e) => e.for_each_attribute(f),
+      Reference::Dynamic(e) => e.for_each_attribute(f),
+    }
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    match self {
+      Reference::Static(e) => e.has_no_sub_elements(),
+      Reference::Dynamic(e) => e.has_no_sub_elements(),
+    }
+  }
+}
+
+impl QuickXmlReadWrite for Reference {
+  const TAG: &'static str = "REFERENCE";
+  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -93,12 +117,8 @@ impl QuickXmlReadWrite for Reference {
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
     match self {
-      Reference::Static(static_ref_mut) => {
-        static_ref_mut.read_sub_elements_by_ref(reader, reader_buff, context)
-      }
-      Reference::Dynamic(dyn_ref_mut) => {
-        dyn_ref_mut.read_sub_elements_by_ref(reader, reader_buff, context)
-      }
+      Reference::Static(e) => e.read_sub_elements_by_ref(reader, reader_buff, context),
+      Reference::Dynamic(e) => e.read_sub_elements_by_ref(reader, reader_buff, context),
     }
   }
 
@@ -108,9 +128,17 @@ impl QuickXmlReadWrite for Reference {
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
     match self {
-      Reference::Static(static_ref) => static_ref.write(writer, context),
-      Reference::Dynamic(dyn_ref) => dyn_ref.write(writer, context),
+      Reference::Static(e) => e.write(writer, context),
+      Reference::Dynamic(e) => e.write(writer, context),
     }
+  }
+
+  fn write_sub_elements_by_ref<W: Write>(
+    &mut self,
+    _writer: &mut Writer<W>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    unreachable!()
   }
 }
 
@@ -125,35 +153,80 @@ pub struct ReferenceDyn {
   pub foreignkeys: Vec<ForeignKey>, // TODO: ensure contains a least one FK!
 }
 impl ReferenceDyn {
-  impl_new!([dmrole, sourceref], [], [foreignkeys]);
+  pub fn new<S: Into<String>>(dmrole: S, sourceref: S) -> Self {
+    Self {
+      dmrole: dmrole.into(),
+      sourceref: sourceref.into(),
+      foreignkeys: Default::default(),
+    }
+  }
+
+  impl_builder_mandatory_string_attr!(dmrole);
+  impl_builder_mandatory_string_attr!(sourceref);
   impl_builder_push!(ForeignKey);
 
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
-    visitor.visit_reference_dynamic_childof_instance_in_templates(self)?;
+    visitor.visit_reference_dynamic_childof_instance_in_templates_start(self)?;
     for fk in self.foreignkeys.iter_mut() {
       fk.visit(visitor)?;
     }
-    Ok(())
+    visitor.visit_reference_dynamic_childof_instance_in_templates_ended(self)
   }
 }
+impl VOTableElement for ReferenceDyn {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new("", "").set_attrs(attrs).and_then(|reference| {
+      if reference.dmrole.is_empty() || reference.sourceref.is_empty() {
+        Err(VOTableError::Custom(format!(
+          "Attribute 'dmrole' and 'sourceref' are mandatory and must be non-empty in tag '{}'",
+          Self::TAG
+        )))
+      } else {
+        Ok(reference)
+      }
+    })
+  }
 
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "dmrole" => self.set_dmrole_by_ref(val),
+        "sourceref" => self.set_sourceref_by_ref(val),
+        _ => return Err(unexpected_attr_err(key, Self::TAG)),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    f("dmrole", self.dmrole.as_str());
+    f("sourceref", self.sourceref.as_str());
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    self.foreignkeys.is_empty()
+  }
+}
 impl QuickXmlReadWrite for ReferenceDyn {
   const TAG: &'static str = "REFERENCE";
   type Context = ();
 
   fn from_attributes(_attrs: Attributes) -> Result<Self, VOTableError> {
     unreachable!("Should not be called directly!")
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, _context)
-      .map(|()| reader)
   }
 
   fn read_sub_elements_by_ref<R: BufRead>(
@@ -197,34 +270,15 @@ impl QuickXmlReadWrite for ReferenceDyn {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    if self.foreignkeys.is_empty() {
-      /*let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-      elem_writer = elem_writer.with_attribute(("dmrole", self.dmrole.as_str()));
-      elem_writer = elem_writer.with_attribute(("sourceref", self.sourceref.as_str()));
-      elem_writer.write_empty().map_err(VOTableError::Write)?;
-      Ok(())*/
-      Err(VOTableError::Custom(
-        "A Dynamic Reference must have at least one ForeignKey".to_owned(),
-      ))
-    } else {
-      let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-      // Write tag + attributes
-      tag.push_attribute(("dmrole", self.dmrole.as_str()));
-      tag.push_attribute(("sourceref", self.sourceref.as_str()));
-      writer
-        .write_event(Event::Start(tag.to_borrowed()))
-        .map_err(VOTableError::Write)?;
-      // Write sub-elems
-      write_elem_vec!(self, foreignkeys, writer, context);
-      // Close tag
-      writer
-        .write_event(Event::End(tag.to_end()))
-        .map_err(VOTableError::Write)
-    }
+    /*if self.foreignkeys.is_empty(): Err(VOTableError::Custom(
+      "A Dynamic Reference must have at least one ForeignKey".to_owned(),
+    ))*/
+    write_elem_vec!(self, foreignkeys, writer, context);
+    Ok(())
   }
 }

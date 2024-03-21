@@ -1,13 +1,14 @@
-use std::str;
+use std::{
+  io::{BufRead, Write},
+  str,
+};
 
-use bstringify::bstringify;
 use paste::paste;
-use quick_xml::{events::attributes::Attributes, Reader, Writer};
+use quick_xml::{Reader, Writer};
 
 use crate::{
-  error::VOTableError,
-  mivot::{value_checker, VodmlVisitor},
-  QuickXmlReadWrite,
+  error::VOTableError, mivot::VodmlVisitor, utils::unexpected_attr_err, QuickXmlReadWrite,
+  VOTableElement,
 };
 
 /// Only used in `REFERENCE` in `TEMPLATE`.
@@ -19,21 +20,70 @@ pub struct ForeignKey {
   pub ref_: String,
 }
 impl ForeignKey {
-  impl_new!([ref_], []);
-  impl_empty_new!([ref_], []);
+  pub fn new<S: Into<String>>(ref_: S) -> Self {
+    Self { ref_: ref_.into() }
+  }
+
+  impl_builder_mandatory_string_attr!(ref_, ref);
 
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
     visitor.visit_foreign_key(self)
   }
 }
 
-impl_quickrw_e!(
-  [ref_, "ref"], // MANDATORY ATTRIBUTES
-  [],            // OPTIONAL ATTRIBUTES
-  "FOREIGN_KEY", // TAG, here : <FOREIGN\_KEY>
-  ForeignKey,    // Struct on which to impl
-  ()             // Context type
-);
+impl VOTableElement for ForeignKey {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new("").set_attrs(attrs).and_then(|fk| {
+      if fk.ref_.is_empty() {
+        Err(VOTableError::Custom(format!(
+          "Mandatory attribute 'ref' not found in tag '{}'",
+          Self::TAG
+        )))
+      } else {
+        Ok(fk)
+      }
+    })
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "ref" => self.set_ref_by_ref(val),
+        _ => return Err(unexpected_attr_err(key, Self::TAG)),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    f("ref", self.ref_.as_str());
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    true
+  }
+}
+
+impl QuickXmlReadWrite for ForeignKey {
+  const TAG: &'static str = "FOREIGN_KEY";
+  type Context = ();
+
+  impl_read_write_no_content_no_sub_elems!();
+}
 
 #[cfg(test)]
 mod tests {

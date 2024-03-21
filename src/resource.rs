@@ -9,13 +9,13 @@ use std::{
 use log::warn;
 use paste::paste;
 use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
+  events::{BytesStart, Event},
   Reader, Writer,
 };
 use serde_json::Value;
 
 #[cfg(feature = "mivot")]
-use super::mivot::{vodml::Vodml, VodmlVisitor};
+use super::mivot::vodml::Vodml;
 use super::{
   coosys::CooSys,
   data::{binary::Binary, binary2::Binary2, Data},
@@ -29,7 +29,7 @@ use super::{
   table::Table,
   timesys::TimeSys,
   utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -199,6 +199,7 @@ impl<C: TableDataContent> ResourceSubElem<C> {
   }
 }
 
+/// Struct corresponding to the `RESOURCE` XML tag.
 #[derive(Default, Clone, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Resource<C: TableDataContent> {
   // Attributes
@@ -258,7 +259,7 @@ impl<C: TableDataContent> Resource<C> {
   // - extra attributes
   impl_builder_insert_extra!();
   // Sequence elements
-  impl_builder_opt_attr!(description, Description);
+  impl_builder_opt_subelem!(description, Description);
   impl_builder_push!(Info);
   // - choice elements
   impl_builder_push_elem!(CooSys, ResourceElem);
@@ -282,29 +283,7 @@ impl<C: TableDataContent> Resource<C> {
   }
   // - extra optional element
   #[cfg(feature = "mivot")]
-  impl_builder_opt_attr!(vodml, Vodml);
-
-  /// Calls a closure on each (key, value) attribute pairs.
-  pub fn for_each_attribute<F>(&self, mut f: F)
-  where
-    F: FnMut(&str, &str),
-  {
-    if let Some(id) = &self.id {
-      f("ID", id.as_str());
-    }
-    if let Some(name) = &self.name {
-      f("name", name.as_str());
-    }
-    if let Some(type_) = &self.type_ {
-      f("type", type_.as_str());
-    }
-    if let Some(utype) = &self.utype {
-      f("utype", utype.as_str());
-    }
-    for (k, v) in &self.extra {
-      f(k.as_str(), v.to_string().as_str());
-    }
-  }
+  impl_builder_opt_subelem!(vodml, Vodml);
 
   pub fn visit<V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where
@@ -325,7 +304,8 @@ impl<C: TableDataContent> Resource<C> {
     }
     #[cfg(feature = "mivot")]
     if let Some(vodml) = &mut self.vodml {
-      visitor.get_mivot_visitor().visit_vodml(vodml)?;
+      let mut vodml_visitor = visitor.get_mivot_visitor();
+      vodml.visit(&mut vodml_visitor)?;
     }
     visitor.visit_resource_ended(self)
   }
@@ -504,9 +484,7 @@ impl<C: TableDataContent> Resource<C> {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => {
-            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
-          }
+          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
           Info::TAG_BYTES => {
             let info = from_event_start_by_ref!(Info, reader, reader_buff, e);
             if let Some(sub_elem) = self.sub_elems.last_mut() {
@@ -527,7 +505,7 @@ impl<C: TableDataContent> Resource<C> {
           Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
           #[cfg(feature = "mivot")]
           Vodml::TAG_BYTES => {
-            from_event_start_vodml_by_ref!(self, Vodml, reader, reader_buff, e)
+            self.set_vodml_by_ref(from_event_start_by_ref!(Vodml, reader, reader_buff, e))
           }
           Table::<C>::TAG_BYTES => {
             let table = Table::<C>::from_attributes(e.attributes())?;
@@ -597,9 +575,7 @@ impl<C: TableDataContent> Resource<C> {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => {
-            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
-          }
+          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
           Info::TAG_BYTES => {
             let info = from_event_start_by_ref!(Info, reader, reader_buff, e);
             if let Some(sub_elem) = self.sub_elems.last_mut() {
@@ -620,7 +596,7 @@ impl<C: TableDataContent> Resource<C> {
           Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
           #[cfg(feature = "mivot")]
           Vodml::TAG_BYTES => {
-            from_event_start_vodml_by_ref!(self, Vodml, reader, reader_buff, e)
+            self.set_vodml_by_ref(from_event_start_by_ref!(Vodml, reader, reader_buff, e))
           }
           Table::<C>::TAG_BYTES => {
             let table = Table::<C>::from_attributes(e.attributes())?;
@@ -691,11 +667,7 @@ impl<C: TableDataContent> Resource<C> {
   ) -> Result<bool, VOTableError> {
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     // Write tag + attributes
-    push2write_opt_string_attr!(self, tag, ID);
-    push2write_opt_string_attr!(self, tag, name);
-    push2write_opt_string_attr!(self, tag, type_, type);
-    push2write_opt_string_attr!(self, tag, utype);
-    push2write_extra!(self, tag);
+    self.for_each_attribute(|k, v| tag.push_attribute((k, v)));
     writer
       .write_event(Event::Start(tag.to_borrowed()))
       .map_err(VOTableError::Write)?;
@@ -771,39 +743,76 @@ impl<C: TableDataContent> Resource<C> {
   }
 }
 
+impl<C: TableDataContent> VOTableElement for Resource<C> {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::default().set_attrs(attrs)
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key_str = key.as_ref();
+      match key_str {
+        "ID" => self.set_id_by_ref(val),
+        "name" => self.set_name_by_ref(val),
+        "type" => self.set_type_by_ref(val),
+        "utype" => self.set_utype_by_ref(val),
+        _ => self.insert_extra_str_by_ref(key, val),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(id) = &self.id {
+      f("ID", id.as_str());
+    }
+    if let Some(name) = &self.name {
+      f("name", name.as_str());
+    }
+    if let Some(type_) = &self.type_ {
+      f("type", type_.as_str());
+    }
+    if let Some(utype) = &self.utype {
+      f("utype", utype.as_str());
+    }
+    for_each_extra_attribute!(self, f);
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    #[cfg(not(feature = "mivot"))]
+    {
+      self.description.is_none()
+        && self.infos.is_empty()
+        && self.elems.is_empty()
+        && self.sub_elems.is_empty()
+    }
+    #[cfg(feature = "mivot")]
+    {
+      self.description.is_none()
+        && self.infos.is_empty()
+        && self.elems.is_empty()
+        && self.sub_elems.is_empty()
+        && self.vodml.is_none()
+    }
+  }
+}
+
 impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
   const TAG: &'static str = "RESOURCE";
   type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut resource = Self::new();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
-      resource = match attr.key {
-        b"ID" => resource.set_id(value),
-        b"name" => resource.set_name(value),
-        b"type" => resource.set_type(value),
-        b"utype" => resource.set_utype(value),
-        _ => resource.insert_extra(
-          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
-          Value::String(value.into()),
-        ),
-      }
-    }
-    Ok(resource)
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
-      .map(|()| reader)
-  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -816,9 +825,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => {
-            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
-          }
+          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
           Info::TAG_BYTES => {
             let info = from_event_start_by_ref!(Info, reader, reader_buff, e);
             if let Some(sub_elem) = self.sub_elems.last_mut() {
@@ -847,7 +854,9 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
             );
           }
           #[cfg(feature = "mivot")]
-          Vodml::TAG_BYTES => from_event_start_vodml_by_ref!(self, Vodml, reader, reader_buff, e),
+          Vodml::TAG_BYTES => {
+            self.set_vodml_by_ref(from_event_start_by_ref!(Vodml, reader, reader_buff, e))
+          }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -891,32 +900,18 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-    // Write tag + attributes
-    push2write_opt_string_attr!(self, tag, ID);
-    push2write_opt_string_attr!(self, tag, name);
-    push2write_opt_string_attr!(self, tag, type_, type);
-    push2write_opt_string_attr!(self, tag, utype);
-    push2write_extra!(self, tag);
-    writer
-      .write_event(Event::Start(tag.to_borrowed()))
-      .map_err(VOTableError::Write)?;
-    // Write sub-elements
     write_elem!(self, description, writer, context);
     write_elem_vec!(self, infos, writer, context);
     write_elem_vec_no_context!(self, elems, writer);
     write_elem_vec_no_context!(self, sub_elems, writer);
     #[cfg(feature = "mivot")]
     write_elem_vec!(self, vodml, writer, context);
-    // Close tag
-    writer
-      .write_event(Event::End(tag.to_end()))
-      .map_err(VOTableError::Write)
+    Ok(())
   }
 }
 
@@ -926,17 +921,18 @@ mod tests {
     impls::mem::InMemTableDataRows,
     resource::Resource,
     tests::{test_read, test_writer},
+    VOTableElement,
   };
 
   #[test]
   fn test_resource_read_write() {
-    let xml = r#"<RESOURCE ID="yCat_5147" name="V/147"><DESCRIPTION>The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)</DESCRIPTION><INFO name="matches" value="50">matching records</INFO><INFO name="warning" value="No center provided++++"/><TABLE ID="V_147_sdss12" name="V/147/sdss12"><FIELD name="RA_ICRS" datatype="char" ucd="pos.eq.ra;meta.main"></FIELD><DATA><TABLEDATA><TR><TD>a</TD></TR></TABLEDATA></DATA></TABLE><TABLE ID="V_148_sdss12" name="V/148/sdss12"><FIELD name="DE_ICRS" datatype="char" ucd="pos.eq.dec;meta.main"></FIELD><DATA><TABLEDATA><TR><TD>b</TD></TR></TABLEDATA></DATA></TABLE></RESOURCE>"#; // Test read
+    let xml = r#"<RESOURCE ID="yCat_5147" name="V/147"><DESCRIPTION>The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)</DESCRIPTION><INFO name="matches" value="50">matching records</INFO><INFO name="warning" value="No center provided++++"/><TABLE ID="V_147_sdss12" name="V/147/sdss12"><FIELD name="RA_ICRS" datatype="char" ucd="pos.eq.ra;meta.main"/><DATA><TABLEDATA><TR><TD>a</TD></TR></TABLEDATA></DATA></TABLE><TABLE ID="V_148_sdss12" name="V/148/sdss12"><FIELD name="DE_ICRS" datatype="char" ucd="pos.eq.dec;meta.main"/><DATA><TABLEDATA><TR><TD>b</TD></TR></TABLEDATA></DATA></TABLE></RESOURCE>"#; // Test read
     let resource = test_read::<Resource<InMemTableDataRows>>(xml);
     assert_eq!(resource.id.as_ref().unwrap().as_str(), "yCat_5147");
     assert_eq!(resource.name.as_ref().unwrap().as_str(), "V/147");
     assert_eq!(
-      resource.description.as_ref().unwrap().0,
-      "The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)"
+      resource.description.as_ref().unwrap().get_content(),
+      Some("The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)")
     );
     assert_eq!(resource.sub_elems.len(), 2);
     assert_eq!(resource.infos.get(0).unwrap().name, "matches");
@@ -947,7 +943,7 @@ mod tests {
 
   #[test]
   fn test_resource_read_write_w_end_info() {
-    let xml = r#"<RESOURCE ID="yCat_5147" name="V/147"><DESCRIPTION>The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)</DESCRIPTION><TABLE ID="V_148_sdss12" name="V/148/sdss12"><FIELD name="DE_ICRS" datatype="char" ucd="pos.eq.dec;meta.main"></FIELD><DATA><TABLEDATA><TR><TD>b</TD></TR></TABLEDATA></DATA></TABLE><INFO name="matches" value="50">matching records</INFO><INFO name="warning" value="No center provided++++"/></RESOURCE>"#; // Test read
+    let xml = r#"<RESOURCE ID="yCat_5147" name="V/147"><DESCRIPTION>The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)</DESCRIPTION><TABLE ID="V_148_sdss12" name="V/148/sdss12"><FIELD name="DE_ICRS" datatype="char" ucd="pos.eq.dec;meta.main"/><DATA><TABLEDATA><TR><TD>b</TD></TR></TABLEDATA></DATA></TABLE><INFO name="matches" value="50">matching records</INFO><INFO name="warning" value="No center provided++++"/></RESOURCE>"#; // Test read
     let resource = test_read::<Resource<InMemTableDataRows>>(xml);
     assert_eq!(resource.sub_elems[0].infos[0].name, "matches");
     assert_eq!(resource.sub_elems[0].infos[1].name, "warning");

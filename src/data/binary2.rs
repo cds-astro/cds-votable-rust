@@ -5,9 +5,8 @@ use std::{
   str,
 };
 
-use log::warn;
 use quick_xml::{
-  events::{attributes::Attributes, BytesEnd, BytesStart, Event},
+  events::{BytesEnd, BytesStart, Event},
   Reader, Writer,
 };
 
@@ -15,8 +14,8 @@ use super::{
   super::{
     error::VOTableError,
     table::TableElem,
-    utils::{discard_comment, discard_event, is_empty},
-    QuickXmlReadWrite, TableDataContent,
+    utils::{discard_comment, discard_event, is_empty, unexpected_attr_warn},
+    QuickXmlReadWrite, TableDataContent, VOTableElement,
   },
   stream::Stream,
 };
@@ -43,14 +42,10 @@ impl<C: TableDataContent> Binary2<C> {
       .write_event(Event::Start(BytesStart::borrowed_name(Self::TAG_BYTES)))
       .map_err(VOTableError::Write)
       .and_then(|()| {
-        //if self.stream.content.is_some() {
         self
           .stream
           .write_start(writer)
           .and_then(|()| writer.write(b"\n").map_err(VOTableError::Write))
-        /*} else {
-          self.stream.write(writer, &())
-        }*/
       })
   }
 
@@ -59,45 +54,50 @@ impl<C: TableDataContent> Binary2<C> {
     writer: &mut Writer<W>,
   ) -> Result<(), VOTableError> {
     //if self.stream.content.is_some() {
-    self
-      .stream
-      .write_end(writer)
-      /*} else {
-        self.stream.write(writer, &())
-      }*/
-      .and_then(|()| {
-        writer
-          .write_event(Event::End(BytesEnd::borrowed(Self::TAG_BYTES)))
-          .map_err(VOTableError::Write)
-      })
+    self.stream.write_end(writer).and_then(|()| {
+      writer
+        .write_event(Event::End(BytesEnd::borrowed(Self::TAG_BYTES)))
+        .map_err(VOTableError::Write)
+    })
+  }
+}
+
+impl<C: TableDataContent> VOTableElement for Binary2<C> {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new().set_attrs(attrs)
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (k, _) in attrs {
+      unexpected_attr_warn(k.as_ref(), Self::TAG);
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, _f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    false
   }
 }
 
 impl<C: TableDataContent> QuickXmlReadWrite for Binary2<C> {
   const TAG: &'static str = "BINARY2";
   type Context = Vec<TableElem>;
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let binary2 = Self::new();
-    if attrs.count() > 0 {
-      warn!(
-        "No attribute expected in {}: attribute(s) ignored.",
-        Self::TAG
-      );
-    }
-    Ok(binary2)
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
-      .map(|()| reader)
-  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -159,23 +159,6 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary2<C> {
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    /*writer
-        .write_event(Event::Start(BytesStart::borrowed_name(Self::TAG_BYTES)))
-        .map_err(VOTableError::Write)?;
-      if self.stream.content.is_some() {
-        self.stream.write_start(writer)?;
-        writer.write(b"\n").map_err(VOTableError::Write)?;
-        let content = self.stream.content.as_mut().unwrap();
-        content.write_in_binary2(writer, context)?;
-        // self.content.write_in_datatable(&mut writer)?;
-        self.stream.write_end(writer)?;
-      } else {
-        self.stream.write(writer, &())?;
-      }
-      writer
-        .write_event(Event::End(BytesEnd::borrowed(Self::TAG_BYTES)))
-        .map_err(VOTableError::Write)
-    */
     self
       .write_to_data_beginning(writer)
       .and_then(|()| {
@@ -187,5 +170,13 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary2<C> {
           .write_in_binary2(writer, context)
       })
       .and_then(|()| self.write_from_data_end(writer))
+  }
+
+  fn write_sub_elements_by_ref<W: Write>(
+    &mut self,
+    _writer: &mut Writer<W>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    unreachable!()
   }
 }

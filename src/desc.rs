@@ -5,59 +5,82 @@ use std::{
   io::{BufRead, Write},
 };
 
-use log::warn;
-use quick_xml::{
-  events::{attributes::Attributes, BytesText, Event},
-  Reader, Writer,
-};
+use quick_xml::{events::Event, Reader, Writer};
 
 use super::{
   error::VOTableError,
-  utils::{discard_comment, discard_event},
-  QuickXmlReadWrite,
+  utils::{discard_comment, discard_event, unexpected_attr_warn},
+  QuickXmlReadWrite, VOTableElement,
 };
 
+/// Struct corresponding to the `DESCRIPTION` XML tag.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct Description(pub String);
+pub struct Description(String);
+
+impl Description {
+  pub fn new<I: Into<String>>(content: I) -> Self {
+    Self::from(content.into())
+  }
+}
 
 impl From<&str> for Description {
-  fn from(s: &str) -> Self {
-    s.to_string().into()
+  fn from(content: &str) -> Self {
+    content.to_string().into()
   }
 }
 
 impl From<String> for Description {
-  fn from(s: String) -> Self {
-    Description(s)
+  fn from(content: String) -> Self {
+    Self(content)
   }
 }
 
 impl Display for Description {
   fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-    f.write_str(self.0.as_str())
+    f.write_str(self.get_content().unwrap_or(""))
+  }
+}
+
+impl VOTableElement for Description {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new("").set_attrs(attrs)
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (k, _) in attrs {
+      unexpected_attr_warn(k.as_ref(), Self::TAG);
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, _f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+  }
+
+  fn get_content(&self) -> Option<&str> {
+    Some(self.0.as_str())
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    true
   }
 }
 
 impl QuickXmlReadWrite for Description {
   const TAG: &'static str = "DESCRIPTION";
   type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    if attrs.count() > 0 {
-      warn!("Unexpected attributes in DESCRIPTION (not serialized!)");
-    }
-    Ok(Description(Default::default()))
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    // I dot not like the fact that we first create an empty String that we replace here... :o/
-    read_content!(Self, self, reader, reader_buff, 0)
-  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -68,16 +91,12 @@ impl QuickXmlReadWrite for Description {
     read_content_by_ref!(Self, self, reader, reader_buff, 0)
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
-    writer: &mut Writer<W>,
+    _writer: &mut Writer<W>,
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    let elem_writer = writer.create_element(Self::TAG_BYTES);
-    elem_writer
-      .write_text_content(BytesText::from_plain_str(self.0.as_str()))
-      .map_err(VOTableError::Write)?;
-    Ok(())
+    unreachable!()
   }
 }
 
@@ -85,7 +104,7 @@ impl QuickXmlReadWrite for Description {
 mod tests {
   use std::io::Cursor;
 
-  use crate::{desc::Description, QuickXmlReadWrite};
+  use crate::{desc::Description, QuickXmlReadWrite, VOTableElement};
   use quick_xml::{events::Event, Reader, Writer};
 
   #[test]
@@ -109,14 +128,16 @@ mod tests {
             .read_sub_elements_and_clean(reader, &mut buff, &())
             .unwrap();
           assert_eq!(
-            desc.0,
-            r#"
+            desc.get_content(),
+            Some(
+              r#"
    VizieR Astronomical Server vizier.u-strasbg.fr
     Date: 2022-04-19T13:38:24 [V1.99+ (14-Oct-2013)]
    Explanations and Statistics of UCDs:			See LINK below
    In case of problem, please report to:	cds-question@unistra.fr
    In this version, NULL integer columns are written as an empty string
    <TD></TD>, explicitely possible from VOTable-1.3"#
+            )
           );
           break desc;
         }

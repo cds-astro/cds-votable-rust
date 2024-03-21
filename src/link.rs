@@ -8,18 +8,16 @@ use std::{
 };
 
 use paste::paste;
-use quick_xml::{
-  events::{attributes::Attributes, BytesText, Event},
-  Reader, Writer,
-};
+use quick_xml::{events::Event, Reader, Writer};
 use serde_json::Value;
 
 use super::{
   error::VOTableError,
   utils::{discard_comment, discard_event},
-  QuickXmlReadWrite,
+  QuickXmlReadWrite, VOTableElement,
 };
 
+/// Enum for the possible values of the `content-role` attriute.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ContentRole {
   Query,
@@ -59,6 +57,7 @@ impl fmt::Display for ContentRole {
   }
 }
 
+/// Struct corresponding to the `LINK` XML tag.
 #[derive(Default, Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Link {
   #[serde(rename = "ID", skip_serializing_if = "Option::is_none")]
@@ -86,19 +85,53 @@ impl Link {
     Self::default()
   }
 
+  // attributes
   impl_builder_opt_string_attr!(id);
   impl_builder_opt_attr!(content_role, ContentRole);
   impl_builder_opt_string_attr!(content_type);
   impl_builder_opt_string_attr!(title);
   impl_builder_opt_string_attr!(value);
   impl_builder_opt_string_attr!(href);
-
+  // extra attributes
   impl_builder_insert_extra!();
-
+  // content
   impl_builder_opt_string_attr!(content);
+}
 
-  /// Calls a closure on each (key, value) attribute pairs.
-  pub fn for_each_attribute<F>(&self, mut f: F)
+impl VOTableElement for Link {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new().set_attrs(attrs)
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "ID" => self.set_id_by_ref(val),
+        "content-role" => {
+          self.set_content_role_by_ref(val.as_ref().parse().map_err(VOTableError::Custom)?)
+        }
+        "content-type" => self.set_content_type_by_ref(val),
+        "title" => self.set_title_by_ref(val),
+        "value" => self.set_value_by_ref(val),
+        "href" => self.set_href_by_ref(val),
+        _ => self.insert_extra_str_by_ref(key, val),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
   where
     F: FnMut(&str, &str),
   {
@@ -106,7 +139,7 @@ impl Link {
       f("ID", id.as_str());
     }
     if let Some(content_role) = &self.content_role {
-      f("content-role", content_role.to_string().as_str());
+      f("content-role", content_role.into());
     }
     if let Some(content_type) = &self.content_type {
       f("content-type", content_type.as_str());
@@ -120,9 +153,15 @@ impl Link {
     if let Some(href) = &self.href {
       f("href", href.as_str());
     }
-    for (k, v) in &self.extra {
-      f(k.as_str(), v.to_string().as_str());
-    }
+    for_each_extra_attribute!(self, f);
+  }
+
+  fn get_content(&self) -> Option<&str> {
+    self.content.as_deref()
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    true
   }
 }
 
@@ -130,64 +169,7 @@ impl QuickXmlReadWrite for Link {
   const TAG: &'static str = "LINK";
   type Context = ();
 
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut link = Self::new();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      link = match attr.key {
-        b"ID" => link.set_id(value),
-        b"content-role" => {
-          link.set_content_role(ContentRole::from_str(value).map_err(VOTableError::Custom)?)
-        }
-        b"content-type" => link.set_content_type(value),
-        b"title" => link.set_title(value),
-        b"value" => link.set_value(value),
-        b"href" => link.set_href(value),
-        _ => link.insert_extra(
-          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
-          Value::String(value.into()),
-        ),
-      }
-    }
-    Ok(link)
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    read_content!(Self, self, reader, reader_buff)
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    reader: &mut Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    read_content_by_ref!(Self, self, reader, reader_buff)
-  }
-
-  fn write<W: Write>(
-    &mut self,
-    writer: &mut Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-    write_opt_string_attr!(self, elem_writer, ID);
-    write_opt_into_attr!(self, elem_writer, content_role, "content-role");
-    write_opt_string_attr!(self, elem_writer, content_type, "content-type");
-    write_opt_string_attr!(self, elem_writer, title);
-    write_opt_string_attr!(self, elem_writer, value);
-    write_opt_string_attr!(self, elem_writer, href);
-    write_extra!(self, elem_writer);
-    write_content!(self, elem_writer);
-    Ok(())
-  }
+  impl_read_write_content_only!();
 }
 
 #[cfg(test)]

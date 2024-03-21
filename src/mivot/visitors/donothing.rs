@@ -15,11 +15,13 @@ impl<E: Error> Default for DoNothing<E> {
   }
 }
 
-
 impl<E: Error> VodmlVisitor for DoNothing<E> {
   type E = E;
 
-  fn visit_vodml(&mut self, _: &mut Vodml) -> Result<(), Self::E> {
+  fn visit_vodml_start(&mut self, _: &mut Vodml) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_vodml_ended(&mut self, _: &mut Vodml) -> Result<(), Self::E> {
     Ok(())
   }
 
@@ -31,83 +33,158 @@ impl<E: Error> VodmlVisitor for DoNothing<E> {
     Ok(())
   }
 
-  fn visit_globals(&mut self, _: &mut Globals) -> Result<(), Self::E> {
+  fn visit_globals_start(&mut self, _: &mut Globals) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_globals_ended(&mut self, _: &mut Globals) -> Result<(), Self::E> {
     Ok(())
   }
 
-  fn visit_templates(&mut self, _: &mut Templates) -> Result<(), Self::E> {
+  fn visit_templates_start(&mut self, _: &mut Templates) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_templates_ended(&mut self, _: &mut Templates) -> Result<(), Self::E> {
     Ok(())
   }
 
-  fn visit_instance_childof_globals(&mut self, _: &mut InstanceGI) -> Result<(), Self::E> {
+  fn visit_instance_childof_globals_start(&mut self, _: &mut InstanceGI) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_instance_childof_globals_ended(&mut self, _: &mut InstanceGI) -> Result<(), Self::E> {
     Ok(())
   }
 
-  fn visit_instance_childof_instance_in_globals(
+  fn visit_instance_childof_instance_in_globals_start(
+    &mut self,
+    _: &mut InstanceGII,
+  ) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_instance_childof_instance_in_globals_ended(
     &mut self,
     _: &mut InstanceGII,
   ) -> Result<(), Self::E> {
     Ok(())
   }
 
-  fn visit_instance_childof_collection_in_globals(
+  fn visit_instance_childof_collection_in_globals_start(
+    &mut self,
+    _: &mut InstanceGCI,
+  ) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_instance_childof_collection_in_globals_ended(
     &mut self,
     _: &mut InstanceGCI,
   ) -> Result<(), Self::E> {
     Ok(())
   }
 
-  fn visit_collection_childof_instance_in_globals(
+  fn visit_collection_childof_instance_in_globals_start(
+    &mut self,
+    _: &mut CollectionGIC,
+  ) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_collection_childof_instance_in_globals_ended(
     &mut self,
     _: &mut CollectionGIC,
   ) -> Result<(), Self::E> {
     Ok(())
   }
 
-  fn visit_collection_childof_globals(&mut self, _: &mut CollectionGC) -> Result<(), Self::E> {
+  fn visit_collection_childof_globals_start(
+    &mut self,
+    _: &mut CollectionGC,
+  ) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_collection_childof_globals_ended(
+    &mut self,
+    _: &mut CollectionGC,
+  ) -> Result<(), Self::E> {
     Ok(())
   }
 
-  fn visit_collection_childof_collection_in_globals(
+  fn visit_collection_childof_collection_in_globals_start(
+    &mut self,
+    _: &mut CollectionGICC,
+  ) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_collection_childof_collection_in_globals_ended(
     &mut self,
     _: &mut CollectionGICC,
   ) -> Result<(), Self::E> {
     Ok(())
   }
 
-  fn visit_instance_childof_templates(&mut self, _: &mut InstanceTI) -> Result<(), Self::E> {
+  fn visit_instance_childof_templates_start(&mut self, _: &mut InstanceTI) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_instance_childof_templates_ended(&mut self, _: &mut InstanceTI) -> Result<(), Self::E> {
     Ok(())
   }
 
-  fn visit_instance_childof_instance_in_templates(
+  fn visit_instance_childof_instance_in_templates_start(
+    &mut self,
+    _: &mut InstanceTII,
+  ) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_instance_childof_instance_in_templates_ended(
     &mut self,
     _: &mut InstanceTII,
   ) -> Result<(), Self::E> {
     Ok(())
   }
 
-  fn visit_collection_childof_instance_in_templates(
+  fn visit_collection_childof_instance_in_templates_start(
+    &mut self,
+    _: &mut CollectionTIC,
+  ) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_collection_childof_instance_in_templates_ended(
     &mut self,
     _: &mut CollectionTIC,
   ) -> Result<(), Self::E> {
     Ok(())
   }
 
-  fn visit_collection_childof_collection_in_templates(
+  fn visit_collection_childof_collection_in_templates_start(
+    &mut self,
+    _: &mut CollectionTICC,
+  ) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_collection_childof_collection_in_templates_ended(
     &mut self,
     _: &mut CollectionTICC,
   ) -> Result<(), Self::E> {
     Ok(())
   }
 
-  fn visit_reference_dynamic_childof_instance_in_templates(
+  fn visit_reference_dynamic_childof_instance_in_templates_start(
+    &mut self,
+    _: &mut RefDynTIR,
+  ) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_reference_dynamic_childof_instance_in_templates_ended(
     &mut self,
     _: &mut RefDynTIR,
   ) -> Result<(), Self::E> {
     Ok(())
   }
 
-  fn visit_reference_dynamic_childof_collection_in_templates(
+  fn visit_reference_dynamic_childof_collection_in_templates_start(
+    &mut self,
+    _: &mut RefDynTICR,
+  ) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_reference_dynamic_childof_collection_in_templates_ended(
     &mut self,
     _: &mut RefDynTICR,
   ) -> Result<(), Self::E> {
@@ -142,7 +219,10 @@ impl<E: Error> VodmlVisitor for DoNothing<E> {
     Ok(())
   }
 
-  fn visit_join(&mut self, _: &mut Join) -> Result<(), Self::E> {
+  fn visit_join_start(&mut self, _: &mut Join) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_join_ended(&mut self, _: &mut Join) -> Result<(), Self::E> {
     Ok(())
   }
 

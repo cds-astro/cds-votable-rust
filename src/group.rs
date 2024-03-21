@@ -7,10 +7,7 @@ use std::{
 
 use log::warn;
 use paste::paste;
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  Reader, Writer,
-};
+use quick_xml::{events::Event, Reader, Writer};
 
 use super::{
   desc::Description,
@@ -18,8 +15,8 @@ use super::{
   fieldref::FieldRef,
   param::Param,
   paramref::ParamRef,
-  utils::{discard_comment, discard_event},
-  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+  utils::{discard_comment, discard_event, unexpected_attr_warn},
+  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -51,6 +48,7 @@ impl GroupElem {
   }
 }
 
+/// Struct corresponding to the `GROUP` XML tag when it is in a `VOTABLE` or a `RESOURCE`.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Group {
   // attributes
@@ -90,18 +88,65 @@ impl Group {
     }
   }
 
+  // attributes
   impl_builder_opt_string_attr!(id);
   impl_builder_opt_string_attr!(name);
   impl_builder_opt_string_attr!(ref_, ref);
   impl_builder_opt_string_attr!(ucd);
   impl_builder_opt_string_attr!(utype);
-  impl_builder_opt_attr!(description, Description);
+  // sub-elements
+  impl_builder_opt_subelem!(description, Description);
   impl_builder_push_elem!(ParamRef, GroupElem);
   impl_builder_push_elem!(Param, GroupElem);
   impl_builder_push_elem!(Group, GroupElem);
 
-  /// Calls a closure on each (key, value) attribute pairs.
-  pub fn for_each_attribute<F>(&self, mut f: F)
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_group_start(self)?;
+    if let Some(descrition) = &mut self.description {
+      visitor.visit_description(descrition)?;
+    }
+    for elem in &mut self.elems {
+      elem.visit(visitor)?;
+    }
+    visitor.visit_group_ended(self)
+  }
+}
+
+impl VOTableElement for Group {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new().set_attrs(attrs)
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "ID" => self.set_id_by_ref(val),
+        "name" => self.set_name_by_ref(val),
+        "ref" => self.set_ref_by_ref(val),
+        "ucd" => self.set_ucd_by_ref(val),
+        "utype" => self.set_utype_by_ref(val),
+        _ => unexpected_attr_warn(key, Self::TAG),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
   where
     F: FnMut(&str, &str),
   {
@@ -122,55 +167,14 @@ impl Group {
     }
   }
 
-  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
-  where
-    C: TableDataContent,
-    V: VOTableVisitor<C>,
-  {
-    visitor.visit_group_start(self)?;
-    if let Some(descrition) = &mut self.description {
-      visitor.visit_description(descrition)?;
-    }
-    for elem in &mut self.elems {
-      elem.visit(visitor)?;
-    }
-    visitor.visit_group_ended(self)
+  fn has_no_sub_elements(&self) -> bool {
+    self.description.is_none() && self.elems.is_empty()
   }
 }
 
 impl QuickXmlReadWrite for Group {
   const TAG: &'static str = "GROUP";
   type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut group = Self::new();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
-      group = match attr.key {
-        b"ID" => group.set_id(value),
-        b"name" => group.set_name(value),
-        b"ref" => group.set_ref(value),
-        b"ucd" => group.set_ucd(value),
-        b"utype" => group.set_utype(value),
-        _ => {
-          return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
-        }
-      }
-    }
-    Ok(group)
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
-      .map(|()| reader)
-  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -182,9 +186,7 @@ impl QuickXmlReadWrite for Group {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => {
-            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e);
-          }
+          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
           ParamRef::TAG_BYTES => {
             self.push_paramref_by_ref(from_event_start_by_ref!(ParamRef, reader, reader_buff, e))
           }
@@ -219,39 +221,14 @@ impl QuickXmlReadWrite for Group {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    if self.description.is_none() && self.elems.is_empty() {
-      let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-      write_opt_string_attr!(self, elem_writer, ID);
-      write_opt_string_attr!(self, elem_writer, name);
-      write_opt_string_attr!(self, elem_writer, ref_, "ref");
-      write_opt_string_attr!(self, elem_writer, ucd);
-      write_opt_string_attr!(self, elem_writer, utype);
-      elem_writer.write_empty().map_err(VOTableError::Write)?;
-      Ok(())
-    } else {
-      let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-      // Write tag + attributes
-      push2write_opt_string_attr!(self, tag, ID);
-      push2write_opt_string_attr!(self, tag, name);
-      push2write_opt_string_attr!(self, tag, ref_, ref);
-      push2write_opt_string_attr!(self, tag, ucd);
-      push2write_opt_string_attr!(self, tag, utype);
-      writer
-        .write_event(Event::Start(tag.to_borrowed()))
-        .map_err(VOTableError::Write)?;
-      // Write sub-elems
-      write_elem!(self, description, writer, context);
-      write_elem_vec_no_context!(self, elems, writer);
-      // Close tag
-      writer
-        .write_event(Event::End(tag.to_end()))
-        .map_err(VOTableError::Write)
-    }
+    write_elem!(self, description, writer, context);
+    write_elem_vec_no_context!(self, elems, writer);
+    Ok(())
   }
 }
 
@@ -289,6 +266,7 @@ impl TableGroupElem {
   }
 }
 
+/// Struct corresponding to the `GROUP` XML tag when it is in a `TABLE`.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename = "Group")]
 pub struct TableGroup {
@@ -329,19 +307,66 @@ impl TableGroup {
     }
   }
 
+  // attributes
   impl_builder_opt_string_attr!(id);
   impl_builder_opt_string_attr!(name);
   impl_builder_opt_string_attr!(ref_, ref);
   impl_builder_opt_string_attr!(ucd);
   impl_builder_opt_string_attr!(utype);
-  impl_builder_opt_attr!(description, Description);
+  // sub-elements
+  impl_builder_opt_subelem!(description, Description);
   impl_builder_push_elem!(FieldRef, TableGroupElem);
   impl_builder_push_elem!(ParamRef, TableGroupElem);
   impl_builder_push_elem!(Param, TableGroupElem);
   impl_builder_push_elem!(TableGroup, TableGroupElem);
 
-  /// Calls a closure on each (key, value) attribute pairs.
-  pub fn for_each_attribute<F>(&self, mut f: F)
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_table_group_start(self)?;
+    if let Some(desc) = &mut self.description {
+      visitor.visit_description(desc)?;
+    }
+    for e in &mut self.elems {
+      e.visit(visitor)?;
+    }
+    visitor.visit_table_group_ended(self)
+  }
+}
+
+impl VOTableElement for TableGroup {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new().set_attrs(attrs)
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "ID" => self.set_id_by_ref(val),
+        "name" => self.set_name_by_ref(val),
+        "ref" => self.set_ref_by_ref(val),
+        "ucd" => self.set_ucd_by_ref(val),
+        "utype" => self.set_utype_by_ref(val),
+        _ => unexpected_attr_warn(key, Self::TAG),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
   where
     F: FnMut(&str, &str),
   {
@@ -362,55 +387,14 @@ impl TableGroup {
     }
   }
 
-  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
-  where
-    C: TableDataContent,
-    V: VOTableVisitor<C>,
-  {
-    visitor.visit_table_group_start(self)?;
-    if let Some(desc) = &mut self.description {
-      visitor.visit_description(desc)?;
-    }
-    for e in &mut self.elems {
-      e.visit(visitor)?;
-    }
-    visitor.visit_table_group_ended(self)
+  fn has_no_sub_elements(&self) -> bool {
+    self.description.is_none() && self.elems.is_empty()
   }
 }
 
 impl QuickXmlReadWrite for TableGroup {
   const TAG: &'static str = "GROUP";
   type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut group = Self::new();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
-      group = match attr.key {
-        b"ID" => group.set_id(value),
-        b"name" => group.set_name(value),
-        b"ref" => group.set_ref(value),
-        b"ucd" => group.set_ucd(value),
-        b"utype" => group.set_utype(value),
-        _ => {
-          return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
-        }
-      }
-    }
-    Ok(group)
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
-      .map(|()| reader)
-  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -422,9 +406,7 @@ impl QuickXmlReadWrite for TableGroup {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => {
-            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e);
-          }
+          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
           FieldRef::TAG_BYTES => {
             self.push_fieldref_by_ref(from_event_start_by_ref!(FieldRef, reader, reader_buff, e))
           }
@@ -448,15 +430,9 @@ impl QuickXmlReadWrite for TableGroup {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          FieldRef::TAG_BYTES => self
-            .elems
-            .push(TableGroupElem::FieldRef(FieldRef::from_event_empty(e)?)),
-          ParamRef::TAG_BYTES => self
-            .elems
-            .push(TableGroupElem::ParamRef(ParamRef::from_event_empty(e)?)),
-          Param::TAG_BYTES => self
-            .elems
-            .push(TableGroupElem::Param(Param::from_event_empty(e)?)),
+          FieldRef::TAG_BYTES => self.push_fieldref_by_ref(FieldRef::from_event_empty(e)?),
+          ParamRef::TAG_BYTES => self.push_paramref_by_ref(ParamRef::from_event_empty(e)?),
+          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -472,57 +448,32 @@ impl QuickXmlReadWrite for TableGroup {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    if self.description.is_none() && self.elems.is_empty() {
-      let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-      write_opt_string_attr!(self, elem_writer, ID);
-      write_opt_string_attr!(self, elem_writer, name);
-      write_opt_string_attr!(self, elem_writer, ref_, "ref");
-      write_opt_string_attr!(self, elem_writer, ucd);
-      write_opt_string_attr!(self, elem_writer, utype);
-      elem_writer.write_empty().map_err(VOTableError::Write)?;
-      Ok(())
-    } else {
-      let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-      // Write tag + attributes
-      push2write_opt_string_attr!(self, tag, ID);
-      push2write_opt_string_attr!(self, tag, name);
-      push2write_opt_string_attr!(self, tag, ref_, ref);
-      push2write_opt_string_attr!(self, tag, ucd);
-      push2write_opt_string_attr!(self, tag, utype);
-      writer
-        .write_event(Event::Start(tag.to_borrowed()))
-        .map_err(VOTableError::Write)?;
-      // Write sub-elems
-      write_elem!(self, description, writer, context);
-      write_elem_vec_no_context!(self, elems, writer);
-      // Close tag
-      writer
-        .write_event(Event::End(tag.to_end()))
-        .map_err(VOTableError::Write)
-    }
+    write_elem!(self, description, writer, context);
+    write_elem_vec_no_context!(self, elems, writer);
+    Ok(())
   }
 }
 
 #[cfg(test)]
 mod tests {
-  use crate::group::Group;
   use crate::tests::{test_read, test_writer};
+  use crate::{group::Group, VOTableElement};
 
   #[test]
   fn test_group_read_write() {
-    let xml = r#"<GROUP ID="flux" name="Flux" ucd="phot.flux;em.radio.200-400MHz"><DESCRIPTION>Flux measured at 352MHz</DESCRIPTION><PARAM name="Freq" datatype="float" value="352" ucd="em.freq" utype="MHz"></PARAM><PARAMref ref="col4"/><PARAMref ref="col5"/></GROUP>"#;
+    let xml = r#"<GROUP ID="flux" name="Flux" ucd="phot.flux;em.radio.200-400MHz"><DESCRIPTION>Flux measured at 352MHz</DESCRIPTION><PARAM name="Freq" datatype="float" value="352" ucd="em.freq" utype="MHz"/><PARAMref ref="col4"/><PARAMref ref="col5"/></GROUP>"#;
     let group = test_read::<Group>(xml);
     assert_eq!(group.id, Some("flux".to_string()));
     assert_eq!(group.name, Some("Flux".to_string()));
     assert_eq!(group.ucd, Some("phot.flux;em.radio.200-400MHz".to_string()));
     assert_eq!(
-      group.description.as_ref().unwrap().0,
-      "Flux measured at 352MHz"
+      group.description.as_ref().unwrap().get_content(),
+      Some("Flux measured at 352MHz")
     );
     assert_eq!(group.elems.len(), 3);
     test_writer(group, xml);

@@ -4,10 +4,9 @@ use std::{
   str,
 };
 
-use log::warn;
 use paste::paste;
 use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
+  events::{BytesStart, Event},
   Reader, Writer,
 };
 
@@ -17,8 +16,8 @@ use super::{
   impls::mem::VoidTableDataContent,
   info::Info,
   table::TableElem,
-  utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+  utils::{discard_comment, discard_event, is_empty, unexpected_attr_warn},
+  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 // Sub modules
@@ -217,9 +216,7 @@ impl<C: TableDataContent> Data<C> {
     };
     Ok(self)
   }
-}
 
-impl<C: TableDataContent> Data<C> {
   pub(crate) fn read_till_table_bin_or_bin2_or_fits_by_ref<R: BufRead>(
     &mut self,
     mut reader: &mut Reader<R>,
@@ -305,31 +302,42 @@ impl<C: TableDataContent> Data<C> {
   }
 }
 
+impl<C: TableDataContent> VOTableElement for Data<C> {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new_empty().set_attrs(attrs)
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (k, _) in attrs {
+      unexpected_attr_warn(k.as_ref(), Self::TAG);
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, _f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    false
+  }
+}
+
 impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
   const TAG: &'static str = "DATA";
   type Context = Vec<TableElem>;
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let data = Self::new_empty();
-    if attrs.count() > 0 {
-      warn!(
-        "No attribute expected in {}: attribute(s) ignored.",
-        Self::TAG
-      );
-    }
-    Ok(data)
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
-      .map(|_| reader)
-  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -390,21 +398,13 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-    writer
-      .write_event(Event::Start(tag.to_borrowed()))
-      .map_err(VOTableError::Write)?;
-    // Write sub-element
     self.data.write(writer, context)?;
     write_elem_vec_empty_context!(self, infos, writer);
-    // Close tag
-    writer
-      .write_event(Event::End(tag.to_end()))
-      .map_err(VOTableError::Write)
+    Ok(())
   }
 }

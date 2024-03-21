@@ -1,13 +1,18 @@
 //! Contains common code for `ATTRIBUTE` child of `COLLECTION` and `INSTANCE`
 //! in both `GLOBALS` and `TEMPLATES`.
 
-use std::{io::Write, str};
+use std::{
+  io::{BufRead, Write},
+  str,
+};
 
 use paste::paste;
+use quick_xml::{Reader, Writer};
 
-use quick_xml::{events::attributes::Attributes, ElementWriter, Reader, Writer};
-
-use crate::{error::VOTableError, mivot::VodmlVisitor, QuickXmlReadWrite};
+use crate::{
+  error::VOTableError, mivot::VodmlVisitor, utils::unexpected_attr_err, QuickXmlReadWrite,
+  VOTableElement,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
@@ -59,14 +64,18 @@ impl RefOrValueOrBoth {
     }
   }
 
-  pub fn push_in_tag<'a, W: Write>(&'a self, tag: ElementWriter<'a, W>) -> ElementWriter<W> {
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
     match self {
-      Self::Ref { ref_ } => tag.with_attribute(("ref", ref_.as_str())),
-      Self::Value { value } => tag.with_attribute(("value", value.as_str())),
-      Self::RefAndValue { ref_, value } => tag
-        .with_attribute(("ref", ref_.as_str()))
-        .with_attribute(("value", value.as_str())),
-    }
+      Self::Ref { ref_ } => f("ref", ref_.as_str()),
+      Self::Value { value } => f("value", value.as_str()),
+      Self::RefAndValue { ref_, value } => {
+        f("ref", ref_.as_str());
+        f("value", value.as_str())
+      }
+    };
   }
 }
 
@@ -133,6 +142,9 @@ impl AttributeChildOfInstance {
     }
   }
 
+  impl_builder_mandatory_string_attr!(dmrole);
+  impl_builder_mandatory_string_attr!(dmtype);
+  impl_builder_mandatory_attr!(ref_or_val_or_both, RefOrValueOrBoth);
   impl_builder_opt_attr!(arrayindex, u32);
   impl_builder_opt_string_attr!(unit);
 
@@ -140,84 +152,94 @@ impl AttributeChildOfInstance {
     visitor.visit_attribute_childof_instance(self)
   }
 }
+
+impl VOTableElement for AttributeChildOfInstance {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    const DEFAULT_VALUE: &str = "@TBD";
+    Self::from_ref(DEFAULT_VALUE, DEFAULT_VALUE, DEFAULT_VALUE).set_attrs(attrs).and_then(|attr| {
+      if attr.dmrole.as_str() == DEFAULT_VALUE {
+        Err(VOTableError::Custom(format!(
+          "Mandatory attribute 'dmrole' not found in tag '{}' child of INSTANCE child of GLOBALS",
+          Self::TAG
+        )))
+      } else if attr.dmtype.as_str() == DEFAULT_VALUE {
+        Err(VOTableError::Custom(format!(
+          "Mandatory attribute 'dmtype' not found in tag '{}' child of INSTANCE child of GLOBALS",
+          &Self::TAG
+        )))
+      } else if let RefOrValueOrBoth::Ref { ref_: e } = &attr.ref_or_val_or_both {
+        if e.as_str() == DEFAULT_VALUE {
+          Err(VOTableError::Custom(format!(
+            "Mandatory attributes 'ref' or 'value' not found in tag '{}' child of INSTANCE child of GLOBALS",
+            &Self::TAG
+          )))
+        } else {
+          Ok(attr)
+        }
+      } else {
+        Ok(attr)
+      }
+    })
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    let mut ref_ = String::from("");
+    let mut value = String::from("");
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "dmrole" => self.set_dmrole_by_ref(val),
+        "dmtype" => self.set_dmtype_by_ref(val),
+        "ref" => ref_ = val.into(),
+        "value" => value = val.into(),
+        "arrayindex" => {
+          self.set_arrayindex_by_ref(val.as_ref().parse().map_err(VOTableError::ParseInt)?)
+        }
+        "unit" => self.set_unit_by_ref(val),
+        _ => return Err(unexpected_attr_err(key, Self::TAG)),
+      }
+    }
+    self.set_ref_or_val_or_both_by_ref(RefOrValueOrBoth::from_possibly_empty_ref_or_val(
+      ref_, value,
+    )?);
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    f("dmrole", self.dmrole.as_str());
+    f("dmtype", self.dmtype.as_str());
+    self.ref_or_val_or_both.for_each_attribute(&mut f);
+    if let Some(arrayindex) = &self.arrayindex {
+      f("arrayindex", arrayindex.to_string().as_str());
+    }
+    if let Some(unit) = &self.unit {
+      f("unit", unit.as_str());
+    }
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    true
+  }
+}
+
 impl QuickXmlReadWrite for AttributeChildOfInstance {
   const TAG: &'static str = "ATTRIBUTE";
   type Context = ();
 
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut dmrole = String::from("");
-    let mut dmtype = String::from("");
-    let mut ref_ = String::from("");
-    let mut value = String::from("");
-    let mut arrayindex: Option<u32> = None;
-    let mut unit = String::from("");
-
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let val = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      if !val.is_empty() {
-        match attr.key {
-          b"dmrole" => dmrole = val.to_string(),
-          b"dmtype" => dmtype = val.to_string(),
-          b"ref" => ref_ = val.to_string(),
-          b"value" => value = val.to_string(),
-          b"arrayindex" => {
-            arrayindex = Some(val.parse::<u32>().map_err(|e| {
-              VOTableError::Custom(format!(
-                "Unable to parse 'arrayindex' attribute '{}': {}",
-                val, e
-              ))
-            })?)
-          }
-          b"unit" => unit = val.to_string(),
-          _ => {
-            return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
-          }
-        }
-      };
-    }
-
-    if dmrole.is_empty() {
-      Err(VOTableError::Custom(format!(
-        "Attribute 'dmrole' mandatory in tag {} child of INSTANCE child of GLOBALS",
-        &Self::TAG
-      )))
-    } else if dmtype.is_empty() {
-      Err(VOTableError::Custom(format!(
-        "Attribute 'dmtype'  mandatory in tag {} child of INSTANCE child of GLOBALS",
-        &Self::TAG
-      )))
-    } else {
-      let ref_or_val = RefOrValueOrBoth::from_possibly_empty_ref_or_val(ref_, value)?;
-      let mut tag = Self::new(dmrole, dmtype, ref_or_val);
-      if let Some(arrayindex) = arrayindex {
-        tag = tag.set_arrayindex(arrayindex);
-      }
-      if !unit.is_empty() {
-        tag = tag.set_unit(unit);
-      }
-      Ok(tag)
-    }
-  }
-
-  empty_read_sub!();
-
-  fn write<W: Write>(
-    &mut self,
-    writer: &mut Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    let mut tag = writer
-      .create_element(Self::TAG_BYTES)
-      .with_attribute(("dmrole", self.dmrole.as_str()))
-      .with_attribute(("dmtype", self.dmtype.as_str()));
-    tag = self.ref_or_val_or_both.push_in_tag(tag);
-    write_opt_tostring_attr!(self, tag, arrayindex, "arrayindex");
-    write_opt_string_attr!(self, tag, unit);
-    tag.write_empty().map_err(VOTableError::Write)?;
-    Ok(())
-  }
+  impl_read_write_no_content_no_sub_elems!();
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -272,6 +294,8 @@ impl AttributeChildOfCollection {
     }
   }
 
+  impl_builder_mandatory_string_attr!(dmtype);
+  impl_builder_mandatory_attr!(ref_or_val_or_both, RefOrValueOrBoth);
   impl_builder_opt_attr!(arrayindex, u32);
   impl_builder_opt_string_attr!(unit);
 
@@ -279,76 +303,87 @@ impl AttributeChildOfCollection {
     visitor.visit_attribute_childof_collection(self)
   }
 }
+
+impl VOTableElement for AttributeChildOfCollection {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    const DEFAULT_VALUE: &str = "@TBD";
+    Self::from_ref(DEFAULT_VALUE, DEFAULT_VALUE).set_attrs(attrs).and_then(|attr| {
+      if attr.dmtype.as_str() == DEFAULT_VALUE {
+        Err(VOTableError::Custom(format!(
+          "Mandatory attribute 'dmtype' not found in tag '{}' child of COLLECTION child of GLOBALS",
+          &Self::TAG
+        )))
+      } else if let RefOrValueOrBoth::Ref { ref_: e } = &attr.ref_or_val_or_both {
+        if e.as_str() == DEFAULT_VALUE {
+          Err(VOTableError::Custom(format!(
+            "Mandatory attributes 'ref' or 'value' not found in tag '{}' child of COLLECTION child of GLOBALS",
+            &Self::TAG
+          )))
+        } else {
+          Ok(attr)
+        }
+      } else {
+        Ok(attr)
+      }
+    })
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    let mut ref_ = String::from("");
+    let mut value = String::from("");
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "dmtype" => self.set_dmtype_by_ref(val),
+        "ref" => ref_ = val.into(),
+        "value" => value = val.into(),
+        "arrayindex" => {
+          self.set_arrayindex_by_ref(val.as_ref().parse().map_err(VOTableError::ParseInt)?)
+        }
+        "unit" => self.set_unit_by_ref(val),
+        _ => return Err(unexpected_attr_err(key, Self::TAG)),
+      }
+    }
+    self.set_ref_or_val_or_both_by_ref(RefOrValueOrBoth::from_possibly_empty_ref_or_val(
+      ref_, value,
+    )?);
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    f("dmtype", self.dmtype.as_str());
+    self.ref_or_val_or_both.for_each_attribute(&mut f);
+    if let Some(arrayindex) = &self.arrayindex {
+      f("arrayindex", arrayindex.to_string().as_str());
+    }
+    if let Some(unit) = &self.unit {
+      f("unit", unit.as_str());
+    }
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    true
+  }
+}
+
 impl QuickXmlReadWrite for AttributeChildOfCollection {
   const TAG: &'static str = "ATTRIBUTE";
   type Context = ();
 
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut dmtype = String::from("");
-    let mut ref_ = String::from("");
-    let mut value = String::from("");
-    let mut arrayindex: Option<u32> = None;
-    let mut unit = String::from("");
-
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let val = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      if !val.is_empty() {
-        match attr.key {
-          b"dmtype" => dmtype = val.to_string(),
-          b"ref" => ref_ = val.to_string(),
-          b"value" => value = val.to_string(),
-          b"arrayindex" => {
-            arrayindex = Some(val.parse::<u32>().map_err(|e| {
-              VOTableError::Custom(format!(
-                "Unable to parse 'arrayindex' attribute '{}': {}",
-                val, e
-              ))
-            })?)
-          }
-          b"unit" => unit = val.to_string(),
-          _ => {
-            return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
-          }
-        }
-      };
-    }
-
-    if dmtype.is_empty() {
-      Err(VOTableError::Custom(format!(
-        "Attribute 'dmtype'  mandatory in tag {} child of COLLECTION child of GLOBALS",
-        &Self::TAG
-      )))
-    } else {
-      let ref_or_val = RefOrValueOrBoth::from_possibly_empty_ref_or_val(ref_, value)?;
-      let mut tag = Self::new(dmtype, ref_or_val);
-      if let Some(arrayindex) = arrayindex {
-        tag = tag.set_arrayindex(arrayindex);
-      }
-      if !unit.is_empty() {
-        tag = tag.set_unit(unit);
-      }
-      Ok(tag)
-    }
-  }
-
-  empty_read_sub!();
-
-  fn write<W: Write>(
-    &mut self,
-    writer: &mut Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    let mut tag = writer
-      .create_element(Self::TAG_BYTES)
-      .with_attribute(("dmtype", self.dmtype.as_str()));
-    tag = self.ref_or_val_or_both.push_in_tag(tag);
-    write_opt_tostring_attr!(self, tag, arrayindex);
-    write_opt_tostring_attr!(self, tag, unit);
-    tag.write_empty().map_err(VOTableError::Write)?;
-    Ok(())
-  }
+  impl_read_write_no_content_no_sub_elems!();
 }
 
 #[cfg(test)]

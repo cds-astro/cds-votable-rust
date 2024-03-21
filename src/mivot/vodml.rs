@@ -53,17 +53,15 @@
 
 use std::{collections::HashMap, io::Write, str};
 
+use log::warn;
 use paste::paste;
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  Reader, Writer,
-};
+use quick_xml::{events::Event, Reader, Writer};
 use serde_json::Value;
 
 use crate::{
   error::VOTableError,
   utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite,
+  QuickXmlReadWrite, VOTableElement,
 };
 
 use super::{globals::Globals, model::Model, report::Report, templates::Templates, VodmlVisitor};
@@ -104,13 +102,13 @@ impl Vodml {
   // Extra attributes
   impl_builder_insert_extra!();
   // Sub-elements
-  impl_builder_opt_attr!(report, Report);
+  impl_builder_opt_subelem!(report, Report);
   impl_builder_push!(Model);
-  impl_builder_opt_attr!(globals, Globals);
+  impl_builder_opt_subelem!(globals, Globals);
   impl_builder_push_no_s!(Templates);
 
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
-    visitor.visit_vodml(self)?;
+    visitor.visit_vodml_start(self)?;
     if let Some(report) = self.report.as_mut() {
       report.visit(visitor)?;
     }
@@ -123,40 +121,54 @@ impl Vodml {
     for template in self.templates.iter_mut() {
       template.visit(visitor)?;
     }
-    Ok(())
+    visitor.visit_vodml_ended(self)
   }
 }
+
+impl VOTableElement for Vodml {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new().set_attrs(attrs)
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "xmlns" => self.set_xmlns_by_ref(val),
+        _ => self.insert_extra_str_by_ref(key, val),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(xmlns) = &self.xmlns {
+      f("xmlns", xmlns.to_string().as_str());
+    }
+    for_each_extra_attribute!(self, f);
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    true
+  }
+}
+
 impl QuickXmlReadWrite for Vodml {
   const TAG: &'static str = "VODML";
   type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, crate::error::VOTableError> {
-    let mut vodml = Self::default();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      vodml = match attr.key {
-        b"xmlns" => vodml.set_xmlns(value),
-        _ => vodml.insert_extra(
-          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
-          Value::String(value.into()),
-        ),
-      }
-    }
-    Ok(vodml)
-  }
-
-  fn read_sub_elements<R: std::io::BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    context: &Self::Context,
-  ) -> Result<Reader<R>, crate::error::VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
-      .map(|()| reader)
-  }
 
   fn read_sub_elements_by_ref<R: std::io::BufRead>(
     &mut self,
@@ -247,24 +259,16 @@ impl QuickXmlReadWrite for Vodml {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &Self::Context,
-  ) -> Result<(), crate::error::VOTableError> {
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-    push2write_opt_string_attr!(self, tag, xmlns);
-    push2write_extra!(self, tag);
-    writer
-      .write_event(Event::Start(tag.to_borrowed()))
-      .map_err(VOTableError::Write)?;
+  ) -> Result<(), VOTableError> {
     write_elem!(self, report, writer, context);
     write_elem_vec!(self, models, writer, context);
     write_elem!(self, globals, writer, context);
     write_elem_vec!(self, templates, writer, context);
-    writer
-      .write_event(Event::End(tag.to_end()))
-      .map_err(VOTableError::Write)
+    Ok(())
   }
 }
 

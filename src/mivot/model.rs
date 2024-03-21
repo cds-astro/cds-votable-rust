@@ -1,15 +1,16 @@
 //! Module dedicated to the `MODEL` tag.
 
-use std::str;
+use std::{
+  io::{BufRead, Write},
+  str,
+};
 
-use bstringify::bstringify;
 use paste::paste;
-use quick_xml::{events::attributes::Attributes, Reader, Writer};
+use quick_xml::{Reader, Writer};
 
 use crate::{
-  error::VOTableError,
-  mivot::{value_checker, VodmlVisitor},
-  QuickXmlReadWrite,
+  error::VOTableError, mivot::VodmlVisitor, utils::unexpected_attr_err, QuickXmlReadWrite,
+  VOTableElement,
 };
 
 /// Structure storing the content of the `MODEL` tag.
@@ -22,21 +23,85 @@ pub struct Model {
   pub url: Option<String>,
 }
 impl Model {
-  impl_new!([name], [url]);
-  impl_empty_new!([name], [url]);
+  pub fn new<S: Into<String>>(name: S) -> Self {
+    Self {
+      name: name.into(),
+      url: None,
+    }
+  }
+
+  impl_builder_mandatory_string_attr!(name);
   impl_builder_opt_string_attr!(url);
 
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
     visitor.visit_model(self)
   }
 }
-impl_quickrw_e!(
-  [name],  // MANDATORY ATTRIBUTES
-  [url],   // OPTIONAL ATTRIBUTES
-  "MODEL", // TAG, here : <ATTRIBUTE>
-  Model,   // Struct on which to impl
-  ()       // Context type
-);
+impl VOTableElement for Model {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new("").set_attrs(attrs).and_then(|model| {
+      if model.name.is_empty() {
+        Err(VOTableError::Custom(format!(
+          "Mandatory attribute 'name' not found or empty in tag '{}'",
+          Self::TAG
+        )))
+      } else {
+        Ok(model)
+      }
+    })
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "name" => self.set_name_by_ref(val),
+        "url" => {
+          if val.as_ref().is_empty() {
+            return Err(VOTableError::Custom(String::from(
+              "'url' attribute must not be empty",
+            )));
+          } else {
+            self.set_url_by_ref(val)
+          }
+        }
+        _ => return Err(unexpected_attr_err(key, Self::TAG)),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    f("name", self.name.as_str());
+    if let Some(url) = &self.url {
+      f("url", url.as_str());
+    }
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    true
+  }
+}
+
+impl QuickXmlReadWrite for Model {
+  const TAG: &'static str = "MODEL";
+  type Context = ();
+
+  impl_read_write_no_content_no_sub_elems!();
+}
 
 #[cfg(test)]
 mod tests {

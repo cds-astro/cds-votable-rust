@@ -5,11 +5,9 @@ use std::{
   str,
 };
 
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  Reader, Writer,
-};
-
+use log::warn;
+use paste::paste;
+use quick_xml::{events::Event, Reader, Writer};
 use serde_json::Value;
 
 use super::{
@@ -20,9 +18,10 @@ use super::{
   link::Link,
   utils::{discard_comment, discard_event},
   values::Values,
-  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
+/// Struct corresponding to the `PARAM` XML tag.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Param {
   #[serde(flatten)]
@@ -38,63 +37,120 @@ impl Param {
     }
   }
 
-  // copy/paste + modified from `cargo expand field`
-  // TODO: add _by_ref setters!!
+  // attributes
+  impl_builder_opt_string_attr_delegated!(id, field);
+  impl_builder_mandatory_string_attr_delegated!(name, field);
+  impl_builder_mandatory_attr_delegated!(datatype, Datatype, field);
+  impl_builder_opt_string_attr_delegated!(unit, field);
+  impl_builder_opt_attr_delegated!(precision, Precision, field);
+  impl_builder_opt_attr_delegated!(width, u16, field);
+  impl_builder_opt_string_attr_delegated!(xtype, field);
+  impl_builder_opt_string_attr_delegated!(ref_, ref, field);
+  impl_builder_opt_string_attr_delegated!(ucd, field);
+  impl_builder_opt_string_attr_delegated!(utype, field);
+  impl_builder_opt_attr_delegated!(arraysize, ArraySize, field);
+  impl_builder_mandatory_string_attr!(value);
+  // extra attributes
+  impl_builder_insert_extra_delegated!(field);
+  // sub-elements
+  impl_builder_opt_subelem_delegated!(description, Description, field);
+  impl_builder_opt_subelem_delegated!(values, Values, field);
+  impl_builder_push_delegated!(Link, field);
 
-  pub fn set_id<I: Into<String>>(mut self, id: I) -> Self {
-    self.field.id = Some(id.into());
-    self
+  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
+  where
+    C: TableDataContent,
+    V: VOTableVisitor<C>,
+  {
+    visitor.visit_param_start(self)?;
+    if let Some(description) = &mut self.field.description {
+      visitor.visit_description(description)?;
+    }
+    if let Some(values) = &mut self.field.values {
+      values.visit(visitor)?;
+    }
+    for l in &mut self.field.links {
+      visitor.visit_link(l)?;
+    }
+    visitor.visit_param_ended(self)
   }
-  pub fn set_unit<I: Into<String>>(mut self, unit: I) -> Self {
-    self.field.unit = Some(unit.into());
-    self
-  }
-  pub fn set_precision(mut self, precision: Precision) -> Self {
-    self.field.precision = Some(precision);
-    self
-  }
-  pub fn set_width(mut self, width: u16) -> Self {
-    self.field.width = Some(width);
-    self
-  }
-  pub fn set_xtype<I: Into<String>>(mut self, xtype: I) -> Self {
-    self.field.xtype = Some(xtype.into());
-    self
-  }
-  pub fn set_ref<I: Into<String>>(mut self, ref_: I) -> Self {
-    self.field.ref_ = Some(ref_.into());
-    self
-  }
-  pub fn set_ucd<I: Into<String>>(mut self, ucd: I) -> Self {
-    self.field.ucd = Some(ucd.into());
-    self
-  }
-  pub fn set_utype<I: Into<String>>(mut self, utype: I) -> Self {
-    self.field.utype = Some(utype.into());
-    self
-  }
-  pub fn set_arraysize(mut self, arraysize: ArraySize) -> Self {
-    self.field.arraysize = Some(arraysize);
-    self
-  }
-  pub fn insert_extra<S: Into<String>>(mut self, key: S, value: Value) -> Self {
-    self.field.extra.insert(key.into(), value);
-    self
-  }
-  pub fn set_description(mut self, description: Description) -> Self {
-    self.field.description = Some(description);
-    self
-  }
-  pub fn set_values(mut self, values: Values) -> Self {
-    self.field.values = Some(values);
-    self
-  }
-  pub fn push_link(mut self, link: Link) -> Self {
-    self.field.links.push(link);
-    self
+}
+
+impl VOTableElement for Param {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    const DEFAULT_VALUE: &str = "@TBD";
+    const DEFAULT_DT: Datatype = Datatype::Logical;
+    let mut name_found = false;
+    let mut dt_found = false;
+    let mut val_found = false;
+    Self::new(DEFAULT_VALUE, DEFAULT_DT, DEFAULT_VALUE)
+      .set_attrs(attrs.map(|(k, v)| {
+        match k.as_ref() {
+          "name" => name_found = true,
+          "datatype" => dt_found = true,
+          "value" => val_found = true,
+          _ => {}
+        };
+        (k, v)
+      }))
+      .and_then(|param| {
+        if name_found && dt_found && val_found {
+          Ok(param)
+        } else {
+          Err(VOTableError::Custom(format!(
+            "Attributes 'name', 'datatype' and 'value' are mandatory in tag '{}'",
+            Self::TAG
+          )))
+        }
+      })
   }
 
-  pub fn for_each_attribute<F>(&self, mut f: F)
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "ID" => self.set_id_by_ref(val),
+        "name" => self.set_name_by_ref(val),
+        "datatype" => {
+          self.set_datatype_by_ref(val.as_ref().parse().map_err(VOTableError::ParseDatatype)?)
+        }
+        "unit" => self.set_unit_by_ref(val),
+        "precision" => {
+          if val.as_ref().is_empty() {
+            warn!(
+              "Emtpy 'precision' attribute in tag {}: attribute ignored",
+              Self::TAG
+            )
+          } else {
+            self.set_precision_by_ref(val.as_ref().parse().map_err(VOTableError::ParseInt)?)
+          }
+        }
+        "width" => self.set_width_by_ref(val.as_ref().parse().map_err(VOTableError::ParseInt)?),
+        "xtype" => self.set_xtype_by_ref(val),
+        "ref" => self.set_ref_by_ref(val),
+        "ucd" => self.set_ucd_by_ref(val),
+        "utype" => self.set_utype_by_ref(val),
+        "arraysize" => {
+          self.set_arraysize_by_ref(val.as_ref().parse().map_err(VOTableError::ParseInt)?)
+        }
+        "value" => self.set_value_by_ref(val),
+        _ => self.insert_extra_str_by_ref(key, val),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
   where
     F: FnMut(&str, &str),
   {
@@ -128,101 +184,20 @@ impl Param {
     if let Some(ref_) = &self.field.ref_ {
       f("ref", ref_.as_str());
     }
-    for (k, v) in &self.field.extra {
+    for_each_extra_attribute_delegated!(self, field, f);
+    /*for (k, v) in &self.field.extra {
       f(k.as_str(), v.to_string().as_str());
-    }
+    }*/
   }
 
-  pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
-  where
-    C: TableDataContent,
-    V: VOTableVisitor<C>,
-  {
-    visitor.visit_param_start(self)?;
-    if let Some(description) = &mut self.field.description {
-      visitor.visit_description(description)?;
-    }
-    if let Some(values) = &mut self.field.values {
-      values.visit(visitor)?;
-    }
-    for l in &mut self.field.links {
-      visitor.visit_link(l)?;
-    }
-    visitor.visit_param_ended(self)
+  fn has_no_sub_elements(&self) -> bool {
+    self.field.has_no_sub_elements()
   }
 }
 
 impl QuickXmlReadWrite for Param {
   const TAG: &'static str = "PARAM";
   type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    const NULL: &str = "@TBD";
-    const NULL_DT: Datatype = Datatype::Logical;
-    let mut param = Self::new(NULL, NULL_DT, NULL);
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      param = match attr.key {
-        b"ID" => param.set_id(value),
-        b"name" => {
-          param.field.name = value.to_string();
-          param
-        }
-        b"datatype" => {
-          param.field.datatype = value
-            .parse::<Datatype>()
-            .map_err(VOTableError::ParseDatatype)?;
-          param
-        }
-        b"unit" => param.set_utype(value),
-        b"precision" if !value.is_empty() => {
-          param.set_precision(value.parse::<Precision>().map_err(VOTableError::ParseInt)?)
-        }
-        b"width" if !value.is_empty() => {
-          param.set_width(value.parse().map_err(VOTableError::ParseInt)?)
-        }
-        b"xtype" => param.set_xtype(value),
-        b"ref" => param.set_ref(value),
-        b"ucd" => param.set_ucd(value),
-        b"utype" => param.set_utype(value),
-        b"arraysize" if !value.is_empty() => {
-          param.set_arraysize(value.parse::<ArraySize>().map_err(VOTableError::ParseInt)?)
-        }
-        b"value" => {
-          param.value = value.to_string();
-          param
-        }
-        _ => param.insert_extra(
-          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
-          Value::String(value.into()),
-        ),
-      }
-    }
-    if param.field.name.as_str() == NULL
-      || param.field.datatype == NULL_DT
-      || param.value.as_str() == NULL
-    {
-      Err(VOTableError::Custom(format!(
-        "Attributes 'name', 'datatype' and 'value' are mandatory in tag '{}'",
-        Self::TAG
-      )))
-    } else {
-      Ok(param)
-    }
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
-      .map(|()| reader)
-  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -276,62 +251,12 @@ impl QuickXmlReadWrite for Param {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
-    _context: &Self::Context,
+    context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    // copy/paste + modified from `cargo expand field`
-
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-    if let Some(id) = &self.field.id {
-      tag.push_attribute(("ID", id.as_str()));
-    };
-    tag.push_attribute(("name", self.field.name.as_str()));
-    tag.push_attribute(("datatype", self.field.datatype.to_string().as_str()));
-    tag.push_attribute(("value", self.value.as_str()));
-    if let Some(unit) = &self.field.unit {
-      tag.push_attribute(("unit", unit.as_str()));
-    };
-    if let Some(precision) = &self.field.precision {
-      tag.push_attribute(("precision", precision.to_string().as_str()));
-    };
-    if let Some(width) = &self.field.width {
-      tag.push_attribute(("width", width.to_string().as_str()));
-    };
-    if let Some(xtype) = &self.field.xtype {
-      tag.push_attribute(("xtype", xtype.as_str()));
-    };
-    if let Some(ref_) = &self.field.ref_ {
-      tag.push_attribute(("ref", ref_.as_str()));
-    };
-    if let Some(ucd) = &self.field.ucd {
-      tag.push_attribute(("ucd", ucd.as_str()));
-    };
-    if let Some(utype) = &self.field.utype {
-      tag.push_attribute(("utype", utype.as_str()));
-    };
-    if let Some(arraysize) = &self.field.arraysize {
-      tag.push_attribute(("arraysize", arraysize.to_string().as_str()));
-    };
-    for (key, val) in &self.field.extra {
-      tag.push_attribute((key.as_str(), val.to_string().as_str()));
-    }
-    writer
-      .write_event(Event::Start(tag.to_borrowed()))
-      .map_err(VOTableError::Write)?;
-    if let Some(elem) = &mut self.field.description {
-      elem.write(writer, &())?;
-    };
-    if let Some(elem) = &mut self.field.values {
-      elem.write(writer, &())?;
-    };
-    for elem in &mut self.field.links {
-      elem.write(writer, &())?;
-    }
-    writer
-      .write_event(Event::End(tag.to_end()))
-      .map_err(VOTableError::Write)
+    self.field.write_sub_elements_by_ref(writer, context)
   }
 }
 
@@ -344,8 +269,7 @@ mod tests {
 
   #[test]
   fn test_params_read_write() {
-    let xml =
-      r#"<PARAM name="Freq" datatype="float" value="352" ucd="em.freq" utype="MHz"></PARAM>"#; // Test read
+    let xml = r#"<PARAM name="Freq" datatype="float" value="352" ucd="em.freq" utype="MHz"/>"#; // Test read
     let param = test_read::<Param>(xml);
     //Other parameters like name datatype etc... depend on Field reading, see Field read_write_test
     assert_eq!(param.value.as_str(), "352");

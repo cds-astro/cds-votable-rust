@@ -32,7 +32,7 @@ use super::{
   table::Table,
   timesys::TimeSys,
   utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 pub fn new_xml_writer<W: Write>(
@@ -430,6 +430,7 @@ where
   }
 }
 
+/// Struct corresponding to the `VOTABLE` XML tag.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct VOTable<C: TableDataContent> {
   // attributes
@@ -575,7 +576,6 @@ impl<C: TableDataContent> VOTable<C> {
   }
 
   impl_builder_opt_string_attr!(id);
-
   impl_builder_mandatory_attr!(version, Version);
   impl_builder_mandatory_string_attr!(xmlns);
   impl_builder_opt_string_attr!(xmlns_xsi);
@@ -583,7 +583,7 @@ impl<C: TableDataContent> VOTable<C> {
 
   impl_builder_insert_extra!();
 
-  impl_builder_opt_attr!(description, Description);
+  impl_builder_opt_subelem!(description, Description);
 
   impl_builder_push_elem!(CooSys, VOTableElem);
   impl_builder_push_elem!(TimeSys, VOTableElem);
@@ -686,32 +686,22 @@ impl<C: TableDataContent> VOTable<C> {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => {
-            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
+          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
+          Info::TAG_BYTES if self.resources.is_empty() => {
+            self.push_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
           }
-          Info::TAG_BYTES if self.resources.is_empty() => self.elems.push(VOTableElem::Info(
-            from_event_start_by_ref!(Info, reader, reader_buff, e),
-          )),
-          Group::TAG_BYTES => self.elems.push(VOTableElem::Group(from_event_start_by_ref!(
-            Group,
-            reader,
-            reader_buff,
-            e
-          ))),
-          Param::TAG_BYTES => self.elems.push(VOTableElem::Param(from_event_start_by_ref!(
-            Param,
-            reader,
-            reader_buff,
-            e
-          ))),
+          Group::TAG_BYTES => {
+            self.push_group_by_ref(from_event_start_by_ref!(Group, reader, reader_buff, e))
+          }
+          Param::TAG_BYTES => {
+            self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
+          }
           Resource::<C>::TAG_BYTES => {
             let resource = Resource::<C>::from_attributes(e.attributes())?;
             return Ok(Some(resource));
           }
           Info::TAG_BYTES => {
-            self
-              .post_infos
-              .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
+            self.push_post_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -804,12 +794,7 @@ impl<C: TableDataContent> VOTable<C> {
       .map_err(VOTableError::Write)?;
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     // Write tag + attributes
-    push2write_opt_string_attr!(self, tag, ID);
-    push2write_mandatory_into_attr!(self, tag, version);
-    push2write_mandatory_string_attr!(self, tag, xmlns);
-    push2write_opt_string_attr!(self, tag, xmlns_xsi);
-    push2write_opt_string_attr!(self, tag, xsi_schema_location);
-    push2write_extra!(self, tag);
+    self.for_each_attribute(|k, v| tag.push_attribute((k, v)));
     writer
       .write_event(Event::Start(tag.to_borrowed()))
       .map_err(VOTableError::Write)?;
@@ -882,44 +867,63 @@ fn check_declaration(decl: &BytesDecl) {
   );
 }
 
+impl<C: TableDataContent> VOTableElement for VOTable<C> {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new_empty(Version::V1_4).set_attrs(attrs)
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key_str = key.as_ref();
+      match key_str {
+        "ID" => self.set_id_by_ref(val),
+        "version" => self.set_version_by_ref(val.as_ref().parse().map_err(VOTableError::Custom)?),
+        "xmlns" => self.set_xmlns_by_ref(val),
+        "xmlns:xsi" => self.set_xmlns_xsi_by_ref(val),
+        "xsi:schemaLocation" => self.set_xsi_schema_location_by_ref(val),
+        _ => self.insert_extra_str_by_ref(key, val),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(id) = &self.id {
+      f("ID", id.as_str());
+    }
+    f("version", (&self.version).into());
+    f("xmlns", self.xmlns.as_str());
+    if let Some(xmlns_xsi) = &self.xmlns_xsi {
+      f("xmlns:xsi", xmlns_xsi.as_str());
+    }
+    if let Some(xsi_schema_location) = &self.xsi_schema_location {
+      f("xsi:schemaLocation", xsi_schema_location.as_str());
+    }
+    for_each_extra_attribute!(self, f);
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    // Must contain at least one resource
+    false
+  }
+}
+
 impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
   const TAG: &'static str = "VOTABLE";
   type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut votable = Self::new_empty(Version::V1_4);
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      match attr.key {
-        b"ID" => votable.set_id_by_ref(value),
-        b"version" => {
-          votable.set_version_by_ref(Version::from_str(value).map_err(VOTableError::Custom)?)
-        }
-        b"xmlns" => votable.set_xmlns_by_ref(value.to_string()),
-        b"xmlns:xsi" => votable.set_xmlns_xsi_by_ref(value.to_string()),
-        b"xsi:schemaLocation" => votable.set_xsi_schema_location_by_ref(value.to_string()),
-        _ => votable.insert_extra_by_ref(
-          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
-          Value::String(value.into()),
-        ),
-      }
-    }
-
-    Ok(votable)
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
-      .map(|()| reader)
-  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -934,43 +938,27 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => {
-            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
-          }
+          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
           Info::TAG_BYTES if self.resources.is_empty() => self.elems.push(VOTableElem::Info(
             from_event_start_by_ref!(Info, reader, reader_buff, e),
           )),
-          Group::TAG_BYTES => self.elems.push(VOTableElem::Group(from_event_start_by_ref!(
-            Group,
-            reader,
-            reader_buff,
-            e
-          ))),
-          Param::TAG_BYTES => self.elems.push(VOTableElem::Param(from_event_start_by_ref!(
-            Param,
-            reader,
-            reader_buff,
-            e
-          ))),
-          Definitions::TAG_BYTES => {
-            self
-              .elems
-              .push(VOTableElem::Definitions(from_event_start_by_ref!(
-                Definitions,
-                reader,
-                reader_buff,
-                e
-              )))
+          Group::TAG_BYTES => {
+            self.push_group_by_ref(from_event_start_by_ref!(Group, reader, reader_buff, e))
           }
+          Param::TAG_BYTES => {
+            self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
+          }
+          Definitions::TAG_BYTES => self.push_definitions_by_ref(from_event_start_by_ref!(
+            Definitions,
+            reader,
+            reader_buff,
+            e
+          )),
           Resource::<C>::TAG_BYTES => {
-            self
-              .resources
-              .push(from_event_start_by_ref!(Resource, reader, reader_buff, e))
+            self.push_resource_by_ref(from_event_start_by_ref!(Resource, reader, reader_buff, e))
           }
           Info::TAG_BYTES => {
-            self
-              .post_infos
-              .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
+            self.push_post_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -1022,6 +1010,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
+    // We do not use the 'default' write impleemntation because of this first line.
     writer
       .write(
         r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -1031,24 +1020,28 @@ impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
       .map_err(VOTableError::Write)?;
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     // Write tag + attributes
-    push2write_opt_string_attr!(self, tag, ID);
-    push2write_mandatory_into_attr!(self, tag, version);
-    push2write_mandatory_string_attr!(self, tag, xmlns);
-    push2write_opt_string_attr!(self, tag, xmlns_xsi);
-    push2write_opt_string_attr!(self, tag, xsi_schema_location);
-    push2write_extra!(self, tag);
+    self.for_each_attribute(|k, v| tag.push_attribute((k, v)));
     writer
       .write_event(Event::Start(tag.to_borrowed()))
       .map_err(VOTableError::Write)?;
     // Write sub-elems
-    write_elem!(self, description, writer, context);
-    write_elem_vec_no_context!(self, elems, writer);
-    write_elem_vec!(self, resources, writer, context);
-    write_elem_vec!(self, post_infos, writer, context);
+    self.write_sub_elements_by_ref(writer, context)?;
     // Close tag
     writer
       .write_event(Event::End(tag.to_end()))
       .map_err(VOTableError::Write)
+  }
+
+  fn write_sub_elements_by_ref<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+    context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    write_elem!(self, description, writer, context);
+    write_elem_vec_no_context!(self, elems, writer);
+    write_elem_vec!(self, resources, writer, context);
+    write_elem_vec!(self, post_infos, writer, context);
+    Ok(())
   }
 }
 

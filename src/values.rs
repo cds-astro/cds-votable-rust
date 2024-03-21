@@ -7,17 +7,15 @@ use std::{
 
 use log::warn;
 use paste::paste;
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  Reader, Writer,
-};
+use quick_xml::{events::Event, Reader, Writer};
 
 use super::{
   error::VOTableError,
-  utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+  utils::{discard_comment, discard_event, is_empty, unexpected_attr_warn},
+  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
+/// Struct corresponding to the `MIN` XML tag.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Min {
   pub value: String,
@@ -32,17 +30,61 @@ impl Min {
     }
   }
 
-  pub fn set_inclusive(mut self, inclusive: bool) -> Self {
-    self.inclusive = inclusive;
-    self
+  impl_builder_mandatory_string_attr!(value);
+  impl_builder_mandatory_attr!(inclusive, bool);
+}
+
+impl VOTableElement for Min {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    const DEFAULT_VALUE: &str = "@TBD";
+    Self::new(DEFAULT_VALUE).set_attrs(attrs).and_then(|min| {
+      if min.value.as_str() == DEFAULT_VALUE {
+        Err(VOTableError::Custom(format!(
+          "Mandatory attribute 'value' not found in tag '{}'",
+          Self::TAG
+        )))
+      } else {
+        Ok(min)
+      }
+    })
   }
 
-  pub fn for_each_attribute<F>(&self, mut f: F)
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "value" => self.set_value_by_ref(val),
+        "inclusive" => {
+          self.set_inclusive_by_ref(val.as_ref().parse().map_err(VOTableError::ParseBool)?)
+        }
+        _ => unexpected_attr_warn(key, Self::TAG),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
   where
     F: FnMut(&str, &str),
   {
     f("value", self.value.as_str());
-    f("inclusive", self.inclusive.to_string().as_str());
+    if !self.inclusive {
+      f("inclusive", self.inclusive.to_string().as_str());
+    }
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    true
   }
 }
 
@@ -50,70 +92,10 @@ impl QuickXmlReadWrite for Min {
   const TAG: &'static str = "MIN";
   type Context = ();
 
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut value: Option<String> = None;
-    let mut inclusive = true;
-    // Look for attributes
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let val = String::from_utf8(unescaped.as_ref().to_vec()).map_err(VOTableError::FromUtf8)?;
-      match attr.key {
-        b"value" => value = Some(val),
-        b"inclusive" => inclusive = val.parse::<bool>().map_err(VOTableError::ParseBool)?,
-        _ => {
-          warn!(
-            "Attribute {:?} in {} is ignored",
-            std::str::from_utf8(attr.key),
-            Self::TAG
-          );
-        }
-      }
-    }
-    // Set from found attributes
-    if let Some(value) = value {
-      Ok(Self::new(value).set_inclusive(inclusive))
-    } else {
-      Err(VOTableError::Custom(format!(
-        "Attributes 'value' is mandatory in tag '{}'",
-        Self::TAG
-      )))
-    }
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    _reader: Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    unreachable!()
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    unreachable!()
-  }
-
-  fn write<W: Write>(
-    &mut self,
-    writer: &mut Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-    elem_writer = elem_writer.with_attribute(("value", self.value.as_str()));
-    if !self.inclusive {
-      elem_writer = elem_writer.with_attribute(("inclusive", "false"));
-    }
-    elem_writer.write_empty().map_err(VOTableError::Write)?;
-    Ok(())
-  }
+  impl_read_write_no_content_no_sub_elems!();
 }
 
+/// Struct corresponding to the `MAX` XML tag.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Max {
   pub value: String,
@@ -128,17 +110,59 @@ impl Max {
     }
   }
 
-  pub fn set_inclusive(mut self, inclusive: bool) -> Self {
-    self.inclusive = inclusive;
-    self
+  impl_builder_mandatory_string_attr!(value);
+  impl_builder_mandatory_attr!(inclusive, bool);
+}
+
+impl VOTableElement for Max {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    const DEFAULT_VALUE: &str = "@TBD";
+    Self::new(DEFAULT_VALUE).set_attrs(attrs).and_then(|max| {
+      if max.value.as_str() == DEFAULT_VALUE {
+        Err(VOTableError::Custom(format!(
+          "Mandatory attribute 'value' not found in tag '{}'",
+          Self::TAG
+        )))
+      } else {
+        Ok(max)
+      }
+    })
   }
 
-  pub fn for_each_attribute<F>(&self, mut f: F)
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "value" => self.set_value_by_ref(val),
+        "inclusive" => self.inclusive = val.as_ref().parse().map_err(VOTableError::ParseBool)?,
+        _ => unexpected_attr_warn(key, Self::TAG),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
   where
     F: FnMut(&str, &str),
   {
     f("value", self.value.as_str());
-    f("inclusive", self.inclusive.to_string().as_str());
+    if !self.inclusive {
+      f("inclusive", self.inclusive.to_string().as_str());
+    }
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    true
   }
 }
 
@@ -146,69 +170,10 @@ impl QuickXmlReadWrite for Max {
   const TAG: &'static str = "MAX";
   type Context = ();
 
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut value: Option<String> = None;
-    let mut inclusive = true;
-    // Look for attributes
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let val = String::from_utf8(attr.value.as_ref().to_vec()).map_err(VOTableError::FromUtf8)?;
-      match attr.key {
-        b"value" => value = Some(val),
-        b"inclusive" => inclusive = val.parse::<bool>().map_err(VOTableError::ParseBool)?,
-        _ => {
-          warn!(
-            "Attribute {:?} in {} is ignored",
-            std::str::from_utf8(attr.key),
-            Self::TAG
-          );
-        }
-      }
-    }
-    // Set from found attributes
-    if let Some(value) = value {
-      Ok(Self::new(value).set_inclusive(inclusive))
-    } else {
-      Err(VOTableError::Custom(format!(
-        "Attributes 'value' is mandatory in tag '{}'",
-        Self::TAG
-      )))
-    }
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    _reader: Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    unreachable!()
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    unreachable!()
-  }
-
-  fn write<W: Write>(
-    &mut self,
-    writer: &mut Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-    elem_writer = elem_writer.with_attribute(("value", self.value.as_str()));
-    if !self.inclusive {
-      elem_writer = elem_writer.with_attribute(("inclusive", "false"));
-    }
-    elem_writer.write_empty().map_err(VOTableError::Write)?;
-    Ok(())
-  }
+  impl_read_write_no_content_no_sub_elems!();
 }
 
+/// Struct corresponding to the `OPTION` XML tag.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename = "OPTION")]
 pub struct Opt {
@@ -229,17 +194,8 @@ impl Opt {
   }
 
   impl_builder_opt_string_attr!(name);
+  impl_builder_mandatory_string_attr!(value);
   impl_builder_push!(Opt);
-
-  pub fn for_each_attribute<F>(&self, mut f: F)
-  where
-    F: FnMut(&str, &str),
-  {
-    if let Some(name) = &self.name {
-      f("name", name.as_str());
-    }
-    f("value", self.value.as_str());
-  }
 
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where
@@ -254,52 +210,61 @@ impl Opt {
   }
 }
 
+impl VOTableElement for Opt {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    const DEFAULT_VALUE: &str = "@TBD";
+    Self::new(DEFAULT_VALUE).set_attrs(attrs).and_then(|opt| {
+      if opt.value.as_str() == DEFAULT_VALUE {
+        Err(VOTableError::Custom(format!(
+          "Mandatory attribute 'value' not found in tag '{}'",
+          Self::TAG
+        )))
+      } else {
+        Ok(opt)
+      }
+    })
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "name" => self.set_name_by_ref(val),
+        "value" => self.set_value_by_ref(val),
+        _ => unexpected_attr_warn(key, Self::TAG),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(name) = &self.name {
+      f("name", name.as_str());
+    }
+    f("value", self.value.as_str());
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    self.opts.is_empty()
+  }
+}
+
 impl QuickXmlReadWrite for Opt {
   const TAG: &'static str = "OPTION";
   type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut name: Option<String> = None;
-    let mut value: Option<String> = None;
-    // Look for attributes
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let val = String::from_utf8(attr.value.as_ref().to_vec()).map_err(VOTableError::FromUtf8)?;
-      match attr.key {
-        b"name" => name = Some(val),
-        b"value" => value = Some(val),
-        _ => {
-          warn!(
-            "Attribute {:?} in {} is ignored",
-            std::str::from_utf8(attr.key),
-            Self::TAG
-          );
-        }
-      }
-    }
-    // Set from found attributes
-    if let Some(value) = value {
-      let mut opt = Self::new(value);
-      opt.name = name;
-      Ok(opt)
-    } else {
-      Err(VOTableError::Custom(format!(
-        "Attributes 'value' is mandatory in tag '{}'",
-        Self::TAG
-      )))
-    }
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
-      .map(|()| reader)
-  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -339,35 +304,17 @@ impl QuickXmlReadWrite for Opt {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    if self.opts.is_empty() {
-      let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-      write_opt_string_attr!(self, elem_writer, name);
-      elem_writer = elem_writer.with_attribute(("value", self.value.as_str()));
-      elem_writer.write_empty().map_err(VOTableError::Write)?;
-    } else {
-      let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-      // Write tag + attributes
-      push2write_opt_string_attr!(self, tag, name);
-      tag.push_attribute(("value", self.value.as_str()));
-      writer
-        .write_event(Event::Start(tag.to_borrowed()))
-        .map_err(VOTableError::Write)?;
-      // Write sub-elements
-      write_elem_vec!(self, opts, writer, context);
-      // Close tag
-      writer
-        .write_event(Event::End(tag.to_end()))
-        .map_err(VOTableError::Write)?;
-    }
+    write_elem_vec!(self, opts, writer, context);
     Ok(())
   }
 }
 
+/// Struct corresponding to the `VALUES` XML tag.
 #[derive(Default, Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Values {
   // attributes
@@ -398,29 +345,10 @@ impl Values {
   impl_builder_opt_string_attr!(null);
   impl_builder_opt_string_attr!(ref_, ref);
 
-  impl_builder_opt_attr!(min, Min);
-  impl_builder_opt_attr!(max, Max);
+  impl_builder_opt_subelem!(min, Min);
+  impl_builder_opt_subelem!(max, Max);
 
   impl_builder_push!(Opt);
-
-  /// Calls a closure on each (key, value) attribute pairs.
-  pub fn for_each_attribute<F>(&self, mut f: F)
-  where
-    F: FnMut(&str, &str),
-  {
-    if let Some(id) = &self.id {
-      f("ID", id.as_str());
-    }
-    if let Some(type_) = &self.type_ {
-      f("type", type_.as_str());
-    }
-    if let Some(null) = &self.null {
-      f("null", null.as_str());
-    }
-    if let Some(ref_) = &self.ref_ {
-      f("ref", ref_.as_str());
-    }
-  }
 
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where
@@ -441,43 +369,61 @@ impl Values {
   }
 }
 
+impl VOTableElement for Values {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new().set_attrs(attrs)
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "ID" => self.set_id_by_ref(val),
+        "type" => self.set_type_by_ref(val),
+        "null" => self.set_null_by_ref(val),
+        "ref" => self.set_ref_by_ref(val),
+        _ => unexpected_attr_warn(key, Self::TAG),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(id) = &self.id {
+      f("ID", id.as_str());
+    }
+    if let Some(type_) = &self.type_ {
+      f("type", type_.as_str());
+    }
+    if let Some(null) = &self.null {
+      f("null", null.as_str());
+    }
+    if let Some(ref_) = &self.ref_ {
+      f("ref", ref_.as_str());
+    }
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    self.min.is_none() && self.max.is_none() && self.opts.is_empty()
+  }
+}
+
 impl QuickXmlReadWrite for Values {
   const TAG: &'static str = "VALUES";
   type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut values = Self::new();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
-      values = match attr.key {
-        b"ID" => values.set_id(value),
-        b"type" => values.set_type(value),
-        b"null" => values.set_null(value),
-        b"ref" => values.set_ref(value),
-        _ => {
-          warn!(
-            "Attribute {:?} in {} is ignored",
-            std::str::from_utf8(attr.key),
-            Self::TAG
-          );
-          values
-        }
-      }
-    }
-    Ok(values)
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, _context)
-      .map(|()| reader)
-  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -519,38 +465,15 @@ impl QuickXmlReadWrite for Values {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    if self.min.is_none() && self.max.is_none() && self.opts.is_empty() {
-      let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-      write_opt_string_attr!(self, elem_writer, ID);
-      write_opt_string_attr!(self, elem_writer, type_, "type");
-      write_opt_string_attr!(self, elem_writer, null);
-      write_opt_string_attr!(self, elem_writer, ref_, "ref");
-      elem_writer.write_empty().map_err(VOTableError::Write)?;
-      Ok(())
-    } else {
-      let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-      // Write tag + attributes
-      push2write_opt_string_attr!(self, tag, ID);
-      push2write_opt_string_attr!(self, tag, type_, type);
-      push2write_opt_string_attr!(self, tag, null);
-      push2write_opt_string_attr!(self, tag, ref_, ref);
-      writer
-        .write_event(Event::Start(tag.to_borrowed()))
-        .map_err(VOTableError::Write)?;
-      // Write sub-elements
-      write_elem!(self, min, writer, context);
-      write_elem!(self, max, writer, context);
-      write_elem_vec!(self, opts, writer, context);
-      // Close tag
-      writer
-        .write_event(Event::End(tag.to_end()))
-        .map_err(VOTableError::Write)
-    }
+    write_elem!(self, min, writer, context);
+    write_elem!(self, max, writer, context);
+    write_elem_vec!(self, opts, writer, context);
+    Ok(())
   }
 }
 

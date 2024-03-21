@@ -17,10 +17,11 @@ extern crate core;
 use std::{
   error::Error,
   io::{BufRead, Write},
+  str::from_utf8,
 };
 
 use quick_xml::{
-  events::{attributes::Attributes, BytesStart},
+  events::{attributes::Attributes, BytesStart, BytesText, Event},
   Reader, Writer,
 };
 
@@ -77,6 +78,61 @@ pub use self::{
   values::{Max, Min, Opt, Values},
   votable::VOTable,
 };
+
+pub trait VOTableElement: Sized {
+  /// Create a new object from a set of attributes.
+  ///
+  /// Usually, `from_attributes` simply call the object default constructor
+  /// and delegate the setting of attributes to `set_attributes`.
+  /// It may be more complicated when the object contains mandatory attributes.
+  /// # Warning
+  /// The returned object should not be considered in its final state.
+  /// Indeed, it may not be valid yet (e.g. if it **must** contains mandatory sub-elements,
+  /// those sub-elements have to be set afterwards).
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>;
+
+  /// Set (or re-set) the objet attributes.
+  fn set_attrs<K, V, I>(mut self, attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    self.set_attrs_by_ref(attrs).map(|_| self)
+  }
+
+  /// Set (or re-set) the objet attributes.
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>;
+
+  /// Calls the given function `f` on each `key=value` attribute pairs.
+  fn for_each_attribute<F>(&self, f: F)
+  where
+    F: FnMut(&str, &str);
+
+  fn get_attrs(&self) -> Vec<(String, String)> {
+    let mut attrs = Vec::new();
+    self.for_each_attribute(|k, v| attrs.push((k.to_string(), v.to_string())));
+    attrs
+  }
+
+  /// Returns the string content of the tag.
+  /// The default implementation is to return `None`.
+  /// The only tags possibly having a content are: `LINK`, `INFO`, `FIELDRef` and `PARAMRef`.
+  fn get_content(&self) -> Option<&str> {
+    None
+  }
+
+  /// Returns `false` if this object contains sub-elements.
+  fn has_no_sub_elements(&self) -> bool;
+}
 
 pub trait TableDataContent: Default + PartialEq + serde::Serialize {
   fn new() -> Self {
@@ -146,7 +202,7 @@ pub trait TableDataContent: Default + PartialEq + serde::Serialize {
   ) -> Result<(), VOTableError>;
 }
 
-trait QuickXmlReadWrite: Sized {
+trait QuickXmlReadWrite: VOTableElement {
   const TAG: &'static str;
   const TAG_BYTES: &'static [u8] = Self::TAG.as_bytes();
   type Context;
@@ -163,8 +219,58 @@ trait QuickXmlReadWrite: Sized {
     Self::from_attributes(e.attributes())
   }
 
+  /*
+  // Does not work because BytesStart
+  fn from_event_start<R: BufRead>(
+    e: &BytesStart,
+    mut reader: &mut Reader<R>,
+    reader_buff: &mut Vec<u8>,
+    context: &Self::Context,
+  ) -> Result<Self, VOTableError> {
+    Self::from_attributes(e.attributes()).and_then(|mut elem| {
+      elem
+        .read_sub_elements_and_clean_by_ref(&mut reader, reader_buff, context)
+        .map(|()| elem)
+    })
+  }*/
+
+  fn quick_xml_attrs_to_vec(attrs: Attributes) -> Result<Vec<(String, String)>, VOTableError> {
+    attrs
+      //.filter_map(|r| {
+      .map(|r| {
+        r.map_err(VOTableError::Attr).and_then(|attr| {
+          from_utf8(attr.key)
+            .map_err(VOTableError::Utf8)
+            .and_then(|key| {
+              attr
+                .unescaped_value()
+                .map_err(VOTableError::Read)
+                .and_then(|val| {
+                  from_utf8(val.as_ref())
+                    .map(|val| val.to_string())
+                    .map_err(VOTableError::Utf8)
+                })
+                .map(
+                  |val| (key.to_string(), val),
+                  /*{
+                    if val.is_empty() {
+                      None
+                    } else {
+                      Some((key.to_string(), val))
+                    }
+                  }*/
+                )
+            })
+        })
+        //.transpose()
+      })
+      .collect::<Result<Vec<(String, String)>, _>>()
+  }
+
   /// We assume that the previous event was either `Start` or `Empty`.
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError>;
+  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
+    Self::quick_xml_attrs_to_vec(attrs).and_then(|attrs| Self::from_attrs(attrs.into_iter()))
+  }
 
   /// Same as `read_sub_elements`, cleaning the `reader_buf` before returning.
   fn read_sub_elements_and_clean<R: BufRead>(
@@ -173,19 +279,21 @@ trait QuickXmlReadWrite: Sized {
     reader_buff: &mut Vec<u8>,
     context: &Self::Context,
   ) -> Result<Reader<R>, VOTableError> {
-    let res = self.read_sub_elements(reader, reader_buff, context);
-    reader_buff.clear();
-    res
+    self.read_sub_elements(reader, reader_buff, context)
   }
 
   /// We assume that the previous event was `Start`, and that the method returns
   /// when finding the `End` event matching the last `Start` event before entering the method.
   fn read_sub_elements<R: BufRead>(
     &mut self,
-    reader: Reader<R>,
+    mut reader: Reader<R>,
     reader_buff: &mut Vec<u8>,
     context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError>;
+  ) -> Result<Reader<R>, VOTableError> {
+    self
+      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
+      .map(|()| reader)
+  }
 
   /// Same as `read_sub_elements`, cleaning the `reader_buf` before returning.
   fn read_sub_elements_and_clean_by_ref<R: BufRead>(
@@ -212,6 +320,43 @@ trait QuickXmlReadWrite: Sized {
   /// and discard them as we iterate).
   /// We could add a context, e.g. to modify the parent (adding infos for example).
   fn write<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+    context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    if self.has_no_sub_elements() {
+      let mut elem_writer = writer.create_element(Self::TAG_BYTES);
+      elem_writer = elem_writer.with_attributes(
+        self
+          .get_attrs()
+          .iter()
+          .map(|(k, v)| (k.as_str(), v.as_str())),
+      );
+      if let Some(content) = self.get_content() {
+        elem_writer.write_text_content(BytesText::from_plain_str(content))
+      } else {
+        elem_writer.write_empty()
+      }
+      .map_err(VOTableError::Write)
+      .map(|_| ())
+    } else {
+      let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+      // Write tag + attributes
+      self.for_each_attribute(|k, v| tag.push_attribute((k, v)));
+      writer
+        .write_event(Event::Start(tag.to_borrowed()))
+        .map_err(VOTableError::Write)?;
+      // Write_sub-elems
+      self.write_sub_elements_by_ref(writer, context)?;
+      // Close tag
+      writer
+        .write_event(Event::End(tag.to_end()))
+        .map_err(VOTableError::Write)
+    }
+  }
+
+  /// Write sub_elements
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &Self::Context,
@@ -478,8 +623,8 @@ mod tests {
         let mut write2 = Writer::new_with_indent(&mut content2, b' ', 4);
         votable2.write(&mut write2, &()).unwrap();
 
-        //eprintln!("CONTENT1:\n{}", from_utf8(content.as_slice()).unwrap());
-        //eprintln!("CONTENT2:\n{}", from_utf8(content2.as_slice()).unwrap());
+        eprintln!("CONTENT1:\n{}", from_utf8(content.as_slice()).unwrap());
+        eprintln!("CONTENT2:\n{}", from_utf8(content2.as_slice()).unwrap());
 
         assert_eq!(content, content2);
       }

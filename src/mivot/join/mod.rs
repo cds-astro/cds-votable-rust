@@ -7,16 +7,13 @@ use std::{
   str,
 };
 
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  Reader, Writer,
-};
+use quick_xml::{events::Event, Reader, Writer};
 
 use crate::{
   error::VOTableError,
   mivot::VodmlVisitor,
-  utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite,
+  utils::{discard_comment, discard_event, is_empty, unexpected_attr_err},
+  QuickXmlReadWrite, VOTableElement,
 };
 
 pub mod r#where;
@@ -28,6 +25,58 @@ pub enum JoinAttributes {
   DmRef { dmref: String },
   SrcRef { sourceref: String },
   BothRef { dmref: String, sourceref: String },
+}
+impl JoinAttributes {
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    let mut new_dmref = String::new();
+    let mut new_sourceref = String::new();
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "dmref" => new_dmref = val.into(),
+        "sourceref" => new_sourceref = val.into(),
+        _ => return Err(unexpected_attr_err(key, Join::TAG)),
+      }
+    }
+    match self {
+      JoinAttributes::DmRef { dmref } => {
+        *dmref = new_dmref;
+        if new_sourceref.is_empty() {
+          return Err(VOTableError::Custom("Unable to set 'sourceref'".into()));
+        }
+      }
+      JoinAttributes::SrcRef { sourceref } => {
+        *sourceref = new_sourceref;
+        if new_dmref.is_empty() {
+          return Err(VOTableError::Custom("Unable to set 'dmref'".into()));
+        }
+      }
+      JoinAttributes::BothRef { dmref, sourceref } => {
+        *dmref = new_dmref;
+        *sourceref = new_sourceref;
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    match &self {
+      JoinAttributes::DmRef { dmref } => f("dmtype", dmref.as_str()),
+      JoinAttributes::SrcRef { sourceref } => f("sourceref", sourceref.as_str()),
+      JoinAttributes::BothRef { dmref, sourceref } => {
+        f("dmtype", dmref.as_str());
+        f("sourceref", sourceref.as_str());
+      }
+    }
+  }
 }
 
 /// In`TEMPLATES`, `JOIN` populates a `COLLECTION` with `INSTANCE` elements resulting from the
@@ -80,30 +129,31 @@ impl Join {
   }
 
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
-    visitor.visit_join(self)?;
+    visitor.visit_join_start(self)?;
     for w in self.wheres.iter_mut() {
       w.visit(visitor)?;
     }
-    Ok(())
+    visitor.visit_join_ended(self)
   }
 }
 
-impl QuickXmlReadWrite for Join {
-  const TAG: &'static str = "JOIN";
-  type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
+impl VOTableElement for Join {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
     let mut dmref = String::new();
     let mut sourceref = String::new();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      if !value.is_empty() {
-        match attr.key {
-          b"dmref" => dmref.push_str(value),
-          b"sourceref" => sourceref.push_str(value),
-          _ => return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG)),
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      let val = val.as_ref();
+      if !val.is_empty() {
+        match key {
+          "dmref" => dmref.push_str(val),
+          "sourceref" => sourceref.push_str(val),
+          _ => return Err(unexpected_attr_err(key, Self::TAG)),
         }
       }
     }
@@ -118,16 +168,30 @@ impl QuickXmlReadWrite for Join {
     }
   }
 
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, _context)
-      .map(|()| reader)
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    self.attr.set_attrs_by_ref(attrs)
   }
+
+  fn for_each_attribute<F>(&self, f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    self.attr.for_each_attribute(f)
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    self.wheres.is_empty()
+  }
+}
+
+impl QuickXmlReadWrite for Join {
+  const TAG: &'static str = "JOIN";
+  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -140,9 +204,7 @@ impl QuickXmlReadWrite for Join {
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
           Where::TAG_BYTES => {
-            self
-              .wheres
-              .push(from_event_start_by_ref!(Where, reader, reader_buff, e))
+            self.push_where_by_ref(from_event_start_by_ref!(Where, reader, reader_buff, e))
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -152,7 +214,7 @@ impl QuickXmlReadWrite for Join {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Where::TAG_BYTES => self.wheres.push(Where::from_event_empty(e)?),
+          Where::TAG_BYTES => self.push_where_by_ref(Where::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -171,30 +233,13 @@ impl QuickXmlReadWrite for Join {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-    // Write tag + attributes
-    match &self.attr {
-      JoinAttributes::DmRef { dmref } => tag.push_attribute(("dmtype", dmref.as_str())),
-      JoinAttributes::SrcRef { sourceref } => tag.push_attribute(("sourceref", sourceref.as_str())),
-      JoinAttributes::BothRef { dmref, sourceref } => {
-        tag.push_attribute(("dmtype", dmref.as_str()));
-        tag.push_attribute(("sourceref", sourceref.as_str()));
-      }
-    }
-    writer
-      .write_event(Event::Start(tag.to_borrowed()))
-      .map_err(VOTableError::Write)?;
-    // Write sub-elements
     write_elem_vec!(self, wheres, writer, context);
-    // Close tag
-    writer
-      .write_event(Event::End(tag.to_end()))
-      .map_err(VOTableError::Write)
+    Ok(())
   }
 }
 

@@ -6,16 +6,17 @@ use std::{
   str,
 };
 
+use paste::paste;
 use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
+  events::{attributes::Attributes, Event},
   Reader, Writer,
 };
 
 use crate::{
   error::VOTableError,
   mivot::{join::Join, VodmlVisitor},
-  utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite,
+  utils::{discard_comment, discard_event, is_empty, unexpected_attr_err},
+  QuickXmlReadWrite, VOTableElement,
 };
 
 pub mod reference;
@@ -212,6 +213,8 @@ impl Collection {
     }
   }
 
+  impl_builder_mandatory_string_attr!(dmid);
+
   pub(crate) fn get_dmid_from_atttributes(attrs: Attributes) -> Result<String, VOTableError> {
     let mut dmid = String::new();
     for attr_res in attrs {
@@ -229,8 +232,51 @@ impl Collection {
   }
 
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
-    visitor.visit_collection_childof_globals(self)?;
-    self.elems.visit(visitor)
+    visitor
+      .visit_collection_childof_globals_start(self)
+      .and_then(|()| self.elems.visit(visitor))
+      .and_then(|()| visitor.visit_collection_childof_globals_ended(self))
+  }
+}
+
+impl VOTableElement for Collection {
+  fn from_attrs<K, V, I>(_attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Err(VOTableError::Custom(format!(
+      "Tag {} cannot be built directly from attributes",
+      Self::TAG
+    )))
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "dmid" => self.set_dmid_by_ref(val),
+        _ => return Err(unexpected_attr_err(key, Self::TAG)),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    f("dmid", self.dmid.as_str());
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    false
   }
 }
 
@@ -238,28 +284,10 @@ impl QuickXmlReadWrite for Collection {
   const TAG: &'static str = "COLLECTION";
   type Context = ();
 
-  fn from_attributes(_attrs: Attributes) -> Result<Self, VOTableError> {
-    Err(VOTableError::Custom(format!(
-      "Tag {} cannot be built directly from attributes",
-      Self::TAG
-    )))
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, _context)
-      .map(|()| reader)
-  }
-
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
-    mut _reader: &mut Reader<R>,
-    mut _reader_buff: &mut Vec<u8>,
+    _reader: &mut Reader<R>,
+    _reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
     Err(VOTableError::Custom(format!(
@@ -268,22 +296,11 @@ impl QuickXmlReadWrite for Collection {
     )))
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-    // Write tag + attributes
-    tag.push_attribute(("name", self.dmid.as_str()));
-    writer
-      .write_event(Event::Start(tag.to_borrowed()))
-      .map_err(VOTableError::Write)?;
-    // Write sub-elements
-    self.elems.write(writer)?;
-    // Close tag
-    writer
-      .write_event(Event::End(tag.to_end()))
-      .map_err(VOTableError::Write)
+    self.elems.write(writer)
   }
 }

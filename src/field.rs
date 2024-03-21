@@ -10,10 +10,7 @@ use std::{
 
 use log::warn;
 use paste::paste;
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  Reader, Writer,
-};
+use quick_xml::{events::Event, Reader, Writer};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 
@@ -24,7 +21,7 @@ use super::{
   link::Link,
   utils::{discard_comment, discard_event, is_empty},
   values::Values,
-  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -250,6 +247,8 @@ impl<'de> Deserialize<'de> for Precision {
   }
 }
 
+/// Struct corresponding to the `FIELD` XML tag.
+///
 /// From the VOTable [official document](https://www.ivoa.net/documents/VOTable/20191021/REC-VOTable-1.4-20191021.html#sec:values),
 /// the 'null' attribute in VALUES is reserved to integer types:
 /// "This mechanism is only intended for use with integer types; it should not be used for floating point types, which can use NaN instead."
@@ -312,13 +311,10 @@ impl Field {
     }
   }
 
-  /// Look for a NULL value and returns it
-  pub fn null_value(&self) -> Option<&String> {
-    self.values.as_ref().and_then(|values| values.null.as_ref())
-  }
-
   // attributes
   impl_builder_opt_string_attr!(id);
+  impl_builder_mandatory_string_attr!(name);
+  impl_builder_mandatory_attr!(datatype, Datatype);
   impl_builder_opt_string_attr!(unit);
   impl_builder_opt_attr!(precision, Precision);
   impl_builder_opt_attr!(width, u16);
@@ -330,47 +326,13 @@ impl Field {
   // extra attributes
   impl_builder_insert_extra!();
   // sub-elements
-  impl_builder_opt_attr!(description, Description);
-  impl_builder_opt_attr!(values, Values);
+  impl_builder_opt_subelem!(description, Description);
+  impl_builder_opt_subelem!(values, Values);
   impl_builder_push!(Link);
 
-  /// Calls a closure on each (key, value) attribute pairs.
-  pub fn for_each_attribute<F>(&self, mut f: F)
-  where
-    F: FnMut(&str, &str),
-  {
-    if let Some(id) = &self.id {
-      f("ID", id.as_str());
-    }
-    f("name", self.name.as_str());
-    f("datatype", self.datatype.to_string().as_str());
-    if let Some(arraysize) = &self.arraysize {
-      f("arraysize", arraysize.to_string().as_str());
-    }
-    if let Some(width) = &self.width {
-      f("width", width.to_string().as_str());
-    }
-    if let Some(precision) = &self.precision {
-      f("precision", precision.to_string().as_str());
-    }
-    if let Some(unit) = &self.unit {
-      f("unit", unit.as_str());
-    }
-    if let Some(ucd) = &self.ucd {
-      f("ucd", ucd.as_str());
-    }
-    if let Some(utype) = &self.utype {
-      f("utype", utype.as_str());
-    }
-    if let Some(xtype) = &self.xtype {
-      f("xtype", xtype.as_str());
-    }
-    if let Some(ref_) = &self.ref_ {
-      f("ref", ref_.as_str());
-    }
-    for (k, v) in &self.extra {
-      f(k.as_str(), v.to_string().as_str());
-    }
+  /// Look for a NULL value and returns it
+  pub fn null_value(&self) -> Option<&String> {
+    self.values.as_ref().and_then(|values| values.null.as_ref())
   }
 
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
@@ -535,72 +497,122 @@ impl Field {
   }
 }
 
+impl VOTableElement for Field {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    const DEFAULT_VALUE: &str = "@TBD";
+    const DEFAULT_DT: Datatype = Datatype::Logical;
+    let mut name_found = false;
+    let mut dt_found = false;
+    Self::new(DEFAULT_VALUE, DEFAULT_DT)
+      .set_attrs(attrs.map(|(k, v)| {
+        match k.as_ref() {
+          "name" => name_found = true,
+          "datatype" => dt_found = true,
+          _ => {}
+        };
+        (k, v)
+      }))
+      .and_then(|field| {
+        if name_found && dt_found {
+          Ok(field)
+        } else {
+          Err(VOTableError::Custom(format!(
+            "Attributes 'name' and 'datatype' are mandatory in tag '{}'",
+            Self::TAG
+          )))
+        }
+      })
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "ID" => self.set_id_by_ref(val),
+        "name" => self.set_name_by_ref(val),
+        "datatype" => {
+          self.set_datatype_by_ref(val.as_ref().parse().map_err(VOTableError::ParseDatatype)?)
+        }
+        "unit" => self.set_unit_by_ref(val),
+        "precision" => {
+          if val.as_ref().is_empty() {
+            warn!(
+              "Emtpy 'precision' attribute in tag {}: attribute ignored",
+              Self::TAG
+            )
+          } else {
+            self.set_precision_by_ref(val.as_ref().parse().map_err(VOTableError::ParseInt)?)
+          }
+        }
+        "width" => self.set_width_by_ref(val.as_ref().parse().map_err(VOTableError::ParseInt)?),
+        "xtype" => self.set_xtype_by_ref(val),
+        "ref" => self.set_ref_by_ref(val),
+        "ucd" => self.set_ucd_by_ref(val),
+        "utype" => self.set_utype_by_ref(val),
+        "arraysize" => {
+          self.set_arraysize_by_ref(val.as_ref().parse().map_err(VOTableError::ParseInt)?)
+        }
+        _ => self.insert_extra_str_by_ref(key, val),
+      }
+    }
+    Ok(())
+  }
+
+  /// Calls a closure on each (key, value) attribute pairs.
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(id) = &self.id {
+      f("ID", id.as_str());
+    }
+    f("name", self.name.as_str());
+    f("datatype", self.datatype.to_string().as_str());
+    if let Some(arraysize) = &self.arraysize {
+      f("arraysize", arraysize.to_string().as_str());
+    }
+    if let Some(width) = &self.width {
+      f("width", width.to_string().as_str());
+    }
+    if let Some(precision) = &self.precision {
+      f("precision", precision.to_string().as_str());
+    }
+    if let Some(unit) = &self.unit {
+      f("unit", unit.as_str());
+    }
+    if let Some(ucd) = &self.ucd {
+      f("ucd", ucd.as_str());
+    }
+    if let Some(utype) = &self.utype {
+      f("utype", utype.as_str());
+    }
+    if let Some(xtype) = &self.xtype {
+      f("xtype", xtype.as_str());
+    }
+    if let Some(ref_) = &self.ref_ {
+      f("ref", ref_.as_str());
+    }
+    for_each_extra_attribute!(self, f);
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    self.description.is_none() && self.values.is_none() && self.links.is_empty()
+  }
+}
+
 impl QuickXmlReadWrite for Field {
   const TAG: &'static str = "FIELD";
   type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    const NULL: &str = "@TBD";
-    const NULL_DT: Datatype = Datatype::Logical;
-    let mut field = Self::new(NULL, NULL_DT);
-    let mut has_datatype = false;
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      field = match attr.key {
-        b"ID" => field.set_id(value),
-        b"name" => {
-          field.name = value.to_string();
-          field
-        }
-        b"datatype" => {
-          field.datatype = value
-            .parse::<Datatype>()
-            .map_err(VOTableError::ParseDatatype)?;
-          has_datatype = true;
-          field
-        }
-        b"unit" => field.set_unit(value),
-        b"precision" if !value.is_empty() => {
-          field.set_precision(value.parse::<Precision>().map_err(VOTableError::ParseInt)?)
-        }
-        b"width" if !value.is_empty() => {
-          field.set_width(value.parse().map_err(VOTableError::ParseInt)?)
-        }
-        b"xtype" => field.set_xtype(value),
-        b"ref" => field.set_ref(value),
-        b"ucd" => field.set_ucd(value),
-        b"utype" => field.set_utype(value),
-        b"arraysize" if !value.is_empty() => {
-          field.set_arraysize(value.parse::<ArraySize>().map_err(VOTableError::ParseInt)?)
-        }
-        _ => field.insert_extra(
-          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
-          Value::String(value.into()),
-        ),
-      }
-    }
-    if field.name.as_str() == NULL || !has_datatype {
-      Err(VOTableError::Custom(format!(
-        "Attributes 'name' and 'datatype' are mandatory in tag '{}'",
-        Self::TAG
-      )))
-    } else {
-      Ok(field)
-    }
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, _context)
-      .map(|()| reader)
-  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -612,16 +624,12 @@ impl QuickXmlReadWrite for Field {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => {
-            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
-          }
+          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
           Values::TAG_BYTES => {
-            self.values = Some(from_event_start_by_ref!(Values, reader, reader_buff, e))
+            self.set_values_by_ref(from_event_start_by_ref!(Values, reader, reader_buff, e))
           }
           Link::TAG_BYTES => {
-            self
-              .links
-              .push(from_event_start_by_ref!(Link, reader, reader_buff, e))
+            self.push_link_by_ref(from_event_start_by_ref!(Link, reader, reader_buff, e))
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -631,8 +639,8 @@ impl QuickXmlReadWrite for Field {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Values::TAG_BYTES => self.values = Some(Values::from_event_empty(e)?),
-          Link::TAG_BYTES => self.links.push(Link::from_event_empty(e)?),
+          Values::TAG_BYTES => self.set_values_by_ref(Values::from_event_empty(e)?),
+          Link::TAG_BYTES => self.push_link_by_ref(Link::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -649,36 +657,15 @@ impl QuickXmlReadWrite for Field {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-    // Write tag + attributes
-    push2write_opt_string_attr!(self, tag, ID);
-    tag.push_attribute(("name", self.name.as_str()));
-    tag.push_attribute(("datatype", self.datatype.to_string().as_str()));
-    push2write_opt_string_attr!(self, tag, unit);
-    push2write_opt_tostring_attr!(self, tag, precision);
-    push2write_opt_tostring_attr!(self, tag, width);
-    push2write_opt_string_attr!(self, tag, xtype);
-    push2write_opt_string_attr!(self, tag, ref_, ref);
-    push2write_opt_string_attr!(self, tag, ucd);
-    push2write_opt_string_attr!(self, tag, utype);
-    push2write_opt_tostring_attr!(self, tag, arraysize);
-    push2write_extra!(self, tag);
-    writer
-      .write_event(Event::Start(tag.to_borrowed()))
-      .map_err(VOTableError::Write)?;
-    // Write sub-elements
     write_elem!(self, description, writer, context);
     write_elem!(self, values, writer, context);
     write_elem_vec!(self, links, writer, context);
-    // Close tag
-    writer
-      .write_event(Event::End(tag.to_end()))
-      .map_err(VOTableError::Write)
+    Ok(())
   }
 }
 
@@ -689,6 +676,7 @@ mod tests {
     field::ArraySize,
     field::Field,
     tests::{test_read, test_writer},
+    VOTableElement,
   };
   use std::str::FromStr;
 
@@ -746,7 +734,7 @@ mod tests {
 
   #[test]
   fn test_field_read_write() {
-    let xml = r#"<FIELD ID="id" name="nomo" datatype="float" unit="unit" precision="1" width="5" xtype="xt" ucd="UCD" utype="ut" arraysize="5"></FIELD>"#; // Test read
+    let xml = r#"<FIELD ID="id" name="nomo" datatype="float" arraysize="5" width="5" precision="1" unit="unit" ucd="UCD" utype="ut" xtype="xt"/>"#; // Test read
     let field = test_read::<Field>(xml);
     // Test read
     assert_eq!(field.id, Some("id".to_string()));
@@ -765,11 +753,11 @@ mod tests {
 
   #[test]
   fn test_field_read_write_w_desc() {
-    let xml = r#"<FIELD name="band" datatype="char" ucd="instr.bandpass" utype="ssa:DataID.Bandpass" arraysize="*"><DESCRIPTION>Description</DESCRIPTION></FIELD>"#;
+    let xml = r#"<FIELD name="band" datatype="char" arraysize="*" ucd="instr.bandpass" utype="ssa:DataID.Bandpass"><DESCRIPTION>Description</DESCRIPTION></FIELD>"#;
     let field = test_read::<Field>(xml);
     assert_eq!(
-      field.description.as_ref().unwrap().0,
-      "Description".to_string()
+      field.description.as_ref().unwrap().get_content(),
+      Some("Description")
     );
     // Test write
     test_writer(field, xml)
@@ -777,7 +765,7 @@ mod tests {
 
   #[test]
   fn test_field_read_write_w_link() {
-    let xml = r#"<FIELD name="band" datatype="char" ucd="instr.bandpass" utype="ssa:DataID.Bandpass" arraysize="*"><LINK href="http://127.0.0.1/"/></FIELD>"#;
+    let xml = r#"<FIELD name="band" datatype="char" arraysize="*" ucd="instr.bandpass" utype="ssa:DataID.Bandpass"><LINK href="http://127.0.0.1/"/></FIELD>"#;
     let field = test_read::<Field>(xml);
     assert_eq!(
       field.links.get(0).as_ref().unwrap().href,
@@ -789,7 +777,7 @@ mod tests {
 
   #[test]
   fn test_field_read_write_w_val() {
-    let xml = r#"<FIELD name="gmag" datatype="float" unit="mag" precision="3" width="6" ucd="phot.mag;em.opt.B"><VALUES null="NaN"/></FIELD>"#;
+    let xml = r#"<FIELD name="gmag" datatype="float" width="6" precision="3" unit="mag" ucd="phot.mag;em.opt.B"><VALUES null="NaN"/></FIELD>"#;
     let field = test_read::<Field>(xml);
     assert_eq!(field.values.as_ref().unwrap().null, Some("NaN".to_string()));
     // Test write

@@ -7,21 +7,16 @@ use std::{
   str::{self, FromStr},
 };
 
-use log::warn;
 use paste::paste;
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  ElementWriter, Reader, Writer,
-};
-// use serde;
+use quick_xml::{events::Event, Reader, Writer};
 
 use crate::{
   error::VOTableError,
   fieldref::FieldRef,
   paramref::ParamRef,
   timesys::RefPosition,
-  utils::{discard_comment, discard_event},
-  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+  utils::{discard_comment, discard_event, unexpected_attr_warn},
+  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -50,6 +45,7 @@ impl CooSysElem {
   }
 }
 
+/// Struct corresponding to the `COOSYS` XML tag.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct CooSys {
   #[serde(rename = "ID")]
@@ -75,17 +71,23 @@ impl CooSys {
     }
   }
 
-  /// Calls a closure on each (key, value) attribute pairs.
-  pub fn for_each_attribute<F>(&self, mut f: F)
-  where
-    F: FnMut(&str, &str),
-  {
-    f("ID", self.id.as_str());
-    self.coosys.for_each_attribute(&mut f);
-    if let Some(refposition) = &self.refposition {
-      f("refposition", refposition.to_string().as_str());
-    }
+  // attributes
+  impl_builder_mandatory_string_attr!(id);
+  impl_builder_mandatory_attr!(coosys, System);
+  impl_builder_opt_attr!(refposition, RefPosition);
+  /// Use for modification.
+  /// No `set_equinox` for construction since we have `set_coosys`.
+  pub fn set_equinox_by_ref<S: AsRef<str>>(&mut self, epoch: S) -> Result<(), VOTableError> {
+    self.coosys.set_equinox_from_str_by_ref(epoch.as_ref())
   }
+  /// Use for modification.
+  /// No `set_epoch` for construction since we have `set_coosys`.
+  pub fn set_epoch_by_ref<S: AsRef<str>>(&mut self, epoch: S) -> Result<(), VOTableError> {
+    self.coosys.set_epoch_from_str_by_ref(epoch.as_ref())
+  }
+  // sub-elements
+  impl_builder_push_elem!(FieldRef, CooSysElem);
+  impl_builder_push_elem!(ParamRef, CooSysElem);
 
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where
@@ -98,112 +100,45 @@ impl CooSys {
     }
     visitor.visit_coosys_ended(self)
   }
-
-  impl_builder_opt_attr!(refposition, RefPosition);
 }
 
-impl QuickXmlReadWrite for CooSys {
-  const TAG: &'static str = "COOSYS";
-  type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
+impl VOTableElement for CooSys {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
     let mut id: Option<String> = None;
     let mut system: Option<String> = None;
     let mut equinox: Option<String> = None;
     let mut epoch: Option<String> = None;
     let mut refposition: Option<RefPosition> = None;
     // Look for attributes
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value =
-        String::from_utf8(attr.value.as_ref().to_vec()).map_err(VOTableError::FromUtf8)?;
-      match attr.key {
-        b"ID" => id = Some(value),
-        b"system" => system = Some(value),
-        b"equinox" => equinox = Some(value),
-        b"epoch" => epoch = Some(value),
-        b"refposition" => refposition = Some(value.parse().map_err(VOTableError::Variant)?),
-        _ => {
-          warn!(
-            "Attribute {:?} in {} is ignored",
-            std::str::from_utf8(attr.key),
-            Self::TAG
-          );
-        }
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "ID" => id = Some(val.into()),
+        "system" => system = Some(val.into()),
+        "equinox" => equinox = Some(val.into()),
+        "epoch" => epoch = Some(val.into()),
+        "refposition" => refposition = Some(val.as_ref().parse().map_err(VOTableError::Variant)?),
+        _ => unexpected_attr_warn(key, Self::TAG),
       }
     }
     // Set from found attributes
     if let (Some(id), Some(system)) = (id, system) {
-      let mut system = match system.as_str() {
-        "eq_FK4" => {
-          if let Some(equinox) = equinox {
-            System::new_eq_fk4(
-              equinox
-                .parse::<BesselianYear>()
-                .map_err(VOTableError::ParseYear)?
-                .0,
-            )
-          } else {
-            System::new_default_eq_fk4()
-          }
-        }
-        "eq_FK5" => {
-          if let Some(equinox) = equinox {
-            System::new_eq_fk5(
-              equinox
-                .parse::<JulianYear>()
-                .map_err(VOTableError::ParseYear)?
-                .0,
-            )
-          } else {
-            System::new_default_eq_fk5()
-          }
-        }
-        "ICRS" => System::new_icrs(),
-        "ecl_FK4" => {
-          if let Some(equinox) = equinox {
-            System::new_ecl_fk4(
-              equinox
-                .parse::<BesselianYear>()
-                .map_err(VOTableError::ParseYear)?
-                .0,
-            )
-          } else {
-            System::new_default_ecl_fk4()
-          }
-        }
-        "ecl_FK5" => {
-          if let Some(equinox) = equinox {
-            System::new_ecl_fk5(
-              equinox
-                .parse::<JulianYear>()
-                .map_err(VOTableError::ParseYear)?
-                .0,
-            )
-          } else {
-            System::new_default_ecl_fk5()
-          }
-        }
-        "galactic" => System::new_galactic(),
-        "supergalactic" => System::new_supergalactic(),
-        _ => {
-          return Err(VOTableError::Custom(format!(
-            "System '{}' not recognized in tag '{}'",
-            system,
-            Self::TAG
-          )));
-        }
-      };
+      // Create and set system
+      let mut system = equinox
+        .map(|equinox| System::from_system_and_equinox(&system, equinox))
+        .unwrap_or(System::from_system(system))?;
       if let Some(epoch) = epoch {
-        system = system
-          .set_epoch_from_str(epoch.as_str())
-          .map_err(VOTableError::ParseYear)?;
+        system.set_epoch_from_str_by_ref(epoch)?;
       }
-      // Create CooSys
+      // Create and set CooSys
       let mut coosys = CooSys::new(id, system);
-      // Add refposition if any
       if let Some(refposition) = refposition {
-        coosys = coosys.set_refposition(refposition);
+        coosys.set_refposition_by_ref(refposition);
       }
       Ok(coosys)
     } else {
@@ -214,16 +149,61 @@ impl QuickXmlReadWrite for CooSys {
     }
   }
 
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
-      .map(|()| reader)
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    let mut system: Option<String> = None;
+    let mut equinox: Option<String> = None;
+    let mut epoch: Option<String> = None;
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "ID" => self.set_id_by_ref(val),
+        "refposition" => {
+          self.set_refposition_by_ref(val.as_ref().parse().map_err(VOTableError::Variant)?)
+        }
+        "system" => system = Some(val.into()),
+        "equinox" => equinox = Some(val.into()),
+        "epoch" => epoch = Some(val.into()),
+        _ => unexpected_attr_warn(key, Self::TAG),
+      }
+    }
+    match (system, equinox) {
+      (Some(system), Some(equinox)) => {
+        self.coosys = System::from_system_and_equinox(system, equinox)?
+      }
+      (Some(system), None) => self.coosys = System::from_system(system)?,
+      (None, Some(equinox)) => self.coosys.set_equinox_from_str_by_ref(equinox)?,
+      (None, None) => {}
+    }
+    if let Some(epoch) = epoch {
+      self.coosys.set_epoch_from_str_by_ref(epoch.as_str())?;
+    }
+    Ok(())
   }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    f("ID", self.id.as_str());
+    self.coosys.for_each_attribute(&mut f);
+    if let Some(refposition) = &self.refposition {
+      f("refposition", refposition.to_string().as_str());
+    }
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    self.elems.is_empty()
+  }
+}
+
+impl QuickXmlReadWrite for CooSys {
+  const TAG: &'static str = "COOSYS";
+  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -280,34 +260,13 @@ impl QuickXmlReadWrite for CooSys {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    if self.elems.is_empty() {
-      let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-      elem_writer = elem_writer.with_attribute(("ID", self.id.as_str()));
-      elem_writer = self.coosys.with_attributes(elem_writer);
-      write_opt_tostring_attr!(self, elem_writer, refposition);
-      elem_writer.write_empty().map_err(VOTableError::Write)?;
-      Ok(())
-    } else {
-      let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-      // Write tag + attributes
-      tag.push_attribute(("ID", self.id.as_str()));
-      self.coosys.push_attributes(&mut tag);
-      push2write_opt_tostring_attr!(self, tag, refposition);
-      writer
-        .write_event(Event::Start(tag.to_borrowed()))
-        .map_err(VOTableError::Write)?;
-      // Write sub-elems
-      write_elem_vec_no_context!(self, elems, writer);
-      // Close tag
-      writer
-        .write_event(Event::End(tag.to_end()))
-        .map_err(VOTableError::Write)
-    }
+    write_elem_vec_no_context!(self, elems, writer);
+    Ok(())
   }
 }
 
@@ -469,60 +428,147 @@ impl System {
     System::SuperGalactic { epoch: None }
   }
 
+  pub fn from_system<S>(system: S) -> Result<Self, VOTableError>
+  where
+    S: AsRef<str>,
+  {
+    let system = system.as_ref();
+    match system {
+      "eq_FK4" => Ok(System::new_default_eq_fk4()),
+      "eq_FK5" => Ok(System::new_default_eq_fk5()),
+      "ICRS" => Ok(System::new_icrs()),
+      "ecl_FK4" => Ok(System::new_default_ecl_fk4()),
+      "ecl_FK5" => Ok(System::new_default_ecl_fk5()),
+      "galactic" => Ok(System::new_galactic()),
+      "supergalactic" => Ok(System::new_supergalactic()),
+      _ => {
+        Err(VOTableError::Custom(format!(
+          "System not recognized in tag '{}'. Expected: one of [eq_FK4, eq_FK5, ICRS, ecl_FK4, ecl_FK5, galactic, supergalactic]. Actual: '{}'.",
+          CooSys::TAG, system,
+        )))
+      }
+    }
+  }
+
+  pub fn from_system_and_equinox<S, E>(system: S, equinox: E) -> Result<Self, VOTableError>
+  where
+    S: AsRef<str>,
+    E: AsRef<str>,
+  {
+    let system = system.as_ref();
+    let equinox = equinox.as_ref();
+    match system {
+      "eq_FK4" => equinox
+        .parse::<BesselianYear>()
+        .map_err(VOTableError::ParseYear)
+        .map(|equinox| System::new_eq_fk4(equinox.0)),
+      "eq_FK5" => equinox
+        .parse::<JulianYear>()
+        .map_err(VOTableError::ParseYear)
+        .map(|equinox| System::new_eq_fk5(equinox.0)),
+      "ICRS" => Ok(System::new_icrs()),
+      "ecl_FK4" => equinox
+        .parse::<BesselianYear>()
+        .map_err(VOTableError::ParseYear)
+        .map(|equinox| System::new_ecl_fk4(equinox.0)),
+      "ecl_FK5" => equinox
+        .parse::<JulianYear>()
+        .map_err(VOTableError::ParseYear)
+        .map(|equinox| System::new_ecl_fk5(equinox.0)),
+      "galactic" => Ok(System::new_galactic()),
+      "supergalactic" => Ok(System::new_supergalactic()),
+      _ => Err(VOTableError::Custom(format!(
+        "System not recognized in tag '{}'. Expected: one of [eq_FK4, eq_FK5, ICRS, ecl_FK4, ecl_FK5, galactic, supergalactic]. Actual: '{}'.",
+        CooSys::TAG, system,
+      ))),
+    }
+  }
+
   /// For FK4 systems, the epoch must be provided in Besselian years
   /// For FK5 systems, the epoch must be provided in Julian years
-  pub fn set_epoch(mut self, epoch_in_years: f64) -> Self {
-    match &mut self {
-      System::EquatorialFK4 { equinox: _, epoch } => {
-        let _prev = epoch.insert(BesselianYear(epoch_in_years));
-      }
-      System::EcliptiqueFK4 { equinox: _, epoch } => {
-        let _prev = epoch.insert(BesselianYear(epoch_in_years));
-      }
-      System::EquatorialFK5 { equinox: _, epoch } => {
-        let _prev = epoch.insert(JulianYear(epoch_in_years));
-      }
-      System::EcliptiqueFK5 { equinox: _, epoch } => {
-        let _prev = epoch.insert(JulianYear(epoch_in_years));
-      }
-      System::ICRS { epoch } => {
-        let _prev = epoch.insert(JulianYear(epoch_in_years));
-      }
-      System::Galactic { epoch } => {
-        let _prev = epoch.insert(JulianYear(epoch_in_years));
-      }
-      System::SuperGalactic { epoch } => {
-        let _prev = epoch.insert(JulianYear(epoch_in_years));
-      }
-    };
+  pub fn set_equinox(mut self, equinox_in_years: f64) -> Self {
+    self.set_equinox_by_ref(equinox_in_years);
     self
   }
 
-  pub fn set_epoch_from_str(mut self, epoch_in_years: &str) -> Result<Self, ParseFloatError> {
-    match &mut self {
-      System::EquatorialFK4 { equinox: _, epoch } => {
-        let _prev = epoch.insert(epoch_in_years.parse()?);
-      }
-      System::EcliptiqueFK4 { equinox: _, epoch } => {
-        let _prev = epoch.insert(epoch_in_years.parse()?);
-      }
-      System::EquatorialFK5 { equinox: _, epoch } => {
-        let _prev = epoch.insert(epoch_in_years.parse()?);
-      }
-      System::EcliptiqueFK5 { equinox: _, epoch } => {
-        let _prev = epoch.insert(epoch_in_years.parse()?);
-      }
-      System::ICRS { epoch } => {
-        let _prev = epoch.insert(epoch_in_years.parse()?);
-      }
-      System::Galactic { epoch } => {
-        let _prev = epoch.insert(epoch_in_years.parse()?);
-      }
-      System::SuperGalactic { epoch } => {
-        let _prev = epoch.insert(epoch_in_years.parse()?);
-      }
+  /// For FK4 systems, the epoch must be provided in Besselian years
+  /// For FK5 systems, the epoch must be provided in Julian years
+  pub fn set_equinox_by_ref(&mut self, equinox_in_years: f64) {
+    match self {
+      System::EquatorialFK4 { equinox, .. } => equinox.0 = equinox_in_years,
+      System::EcliptiqueFK4 { equinox, .. } => equinox.0 = equinox_in_years,
+      System::EquatorialFK5 { equinox, .. } => equinox.0 = equinox_in_years,
+      System::EcliptiqueFK5 { equinox, .. } => equinox.0 = equinox_in_years,
+      _ => {}
     }
-    Ok(self)
+  }
+
+  pub fn set_equinox_from_str<S: AsRef<str>>(mut self, equinox: S) -> Result<Self, VOTableError> {
+    self.set_equinox_from_str_by_ref(equinox).map(|()| self)
+  }
+
+  pub fn set_equinox_from_str_by_ref<S: AsRef<str>>(
+    &mut self,
+    equinox: S,
+  ) -> Result<(), VOTableError> {
+    let equinox_str = equinox.as_ref();
+    match self {
+      System::EquatorialFK4 { equinox, .. } => equinox_str
+        .parse()
+        .map_err(VOTableError::ParseYear)
+        .map(|new_equinox| *equinox = new_equinox),
+      System::EcliptiqueFK4 { equinox, .. } => equinox_str
+        .parse()
+        .map_err(VOTableError::ParseYear)
+        .map(|new_equinox| *equinox = new_equinox),
+      System::EquatorialFK5 { equinox, .. } => equinox_str
+        .parse()
+        .map_err(VOTableError::ParseYear)
+        .map(|new_equinox| *equinox = new_equinox),
+      System::EcliptiqueFK5 { equinox, .. } => equinox_str
+        .parse()
+        .map_err(VOTableError::ParseYear)
+        .map(|new_equinox| *equinox = new_equinox),
+      _ => Ok(()),
+    }
+  }
+
+  /// For FK4 systems, the epoch must be provided in Besselian years
+  /// For FK5 systems, the epoch must be provided in Julian years
+  pub fn set_epoch(mut self, epoch_in_years: f64) -> Self {
+    self.set_epoch_by_ref(epoch_in_years);
+    self
+  }
+
+  pub fn set_epoch_by_ref(&mut self, epoch_in_years: f64) {
+    let _ = match self {
+      System::EquatorialFK4 { equinox: _, epoch } => epoch.insert(BesselianYear(epoch_in_years)).0,
+      System::EcliptiqueFK4 { equinox: _, epoch } => epoch.insert(BesselianYear(epoch_in_years)).0,
+      System::EquatorialFK5 { equinox: _, epoch } => epoch.insert(JulianYear(epoch_in_years)).0,
+      System::EcliptiqueFK5 { equinox: _, epoch } => epoch.insert(JulianYear(epoch_in_years)).0,
+      System::ICRS { epoch } => epoch.insert(JulianYear(epoch_in_years)).0,
+      System::Galactic { epoch } => epoch.insert(JulianYear(epoch_in_years)).0,
+      System::SuperGalactic { epoch } => epoch.insert(JulianYear(epoch_in_years)).0,
+    };
+  }
+
+  pub fn set_epoch_from_str<S: AsRef<str>>(mut self, epoch: S) -> Result<Self, VOTableError> {
+    self.set_epoch_from_str_by_ref(epoch).map(|()| self)
+  }
+
+  pub fn set_epoch_from_str_by_ref<S: AsRef<str>>(&mut self, epoch: S) -> Result<(), VOTableError> {
+    let epoch_str = epoch.as_ref();
+    match self {
+      System::EquatorialFK4 { equinox: _, epoch } => epoch_str.parse().map(|y| epoch.insert(y).0),
+      System::EcliptiqueFK4 { equinox: _, epoch } => epoch_str.parse().map(|y| epoch.insert(y).0),
+      System::EquatorialFK5 { equinox: _, epoch } => epoch_str.parse().map(|y| epoch.insert(y).0),
+      System::EcliptiqueFK5 { equinox: _, epoch } => epoch_str.parse().map(|y| epoch.insert(y).0),
+      System::ICRS { epoch } => epoch_str.parse().map(|y| epoch.insert(y).0),
+      System::Galactic { epoch } => epoch_str.parse().map(|y| epoch.insert(y).0),
+      System::SuperGalactic { epoch } => epoch_str.parse().map(|y| epoch.insert(y).0),
+    }
+    .map_err(VOTableError::ParseYear)
+    .map(|_| ())
   }
 
   pub fn for_each_attribute<F>(&self, f: &mut F)
@@ -577,26 +623,6 @@ impl System {
         }
       }
     }
-  }
-
-  pub fn with_attributes<'a, W: Write>(
-    &self,
-    mut writer: ElementWriter<'a, W>,
-  ) -> ElementWriter<'a, W> {
-    // I have not (yet) found a way to avoid copies :o/
-    // * I tried 'attrs: Vec<(&str, &str)>' plus  'writer.with_attributes'
-    let mut attrs: Vec<(String, String)> = Vec::with_capacity(3);
-    let mut f = |key: &str, val: &str| attrs.push((key.to_owned(), val.to_owned()));
-    self.for_each_attribute(&mut f);
-    for (k, v) in attrs {
-      writer = writer.with_attribute((k.as_str(), v.as_str()))
-    }
-    writer
-  }
-
-  pub fn push_attributes(&self, tag: &mut BytesStart) {
-    let mut f = |key: &str, val: &str| tag.push_attribute((key, val));
-    self.for_each_attribute(&mut f);
   }
 }
 

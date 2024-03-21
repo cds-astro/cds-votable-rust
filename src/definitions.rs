@@ -5,17 +5,14 @@ use std::{
 };
 
 use paste::paste;
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  Reader, Writer,
-};
+use quick_xml::{events::Event, Reader, Writer};
 
 use super::{
   coosys::CooSys,
   error::VOTableError,
   param::Param,
-  utils::{discard_comment, discard_event},
-  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+  utils::{discard_comment, discard_event, unexpected_attr_warn},
+  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -44,6 +41,7 @@ impl DefinitionsElem {
   }
 }
 
+/// Struct corresponding to the `DEFINITION` XML tag.
 /// Deprecated since VOTable 1.1, see
 /// [IVOA doc](https://www.ivoa.net/documents/VOTable/20040811/REC-VOTable-1.1-20040811.html#ToC19)
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -83,29 +81,42 @@ impl Definitions {
   }
 }
 
+impl VOTableElement for Definitions {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new().set_attrs(attrs)
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (k, _) in attrs {
+      unexpected_attr_warn(k.as_ref(), Self::TAG);
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, _f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    self.elems.is_empty()
+  }
+}
+
 impl QuickXmlReadWrite for Definitions {
   const TAG: &'static str = "DEFINITIONS";
   type Context = ();
-
-  fn from_attributes(mut attrs: Attributes) -> Result<Self, VOTableError> {
-    let definitions = Self::new();
-    if let Some(attr_res) = attrs.next() {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
-    }
-    Ok(definitions)
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
-      .map(|()| reader)
-  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -162,27 +173,12 @@ impl QuickXmlReadWrite for Definitions {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    if self.elems.is_empty() {
-      let elem_writer = writer.create_element(Self::TAG_BYTES);
-      elem_writer.write_empty().map_err(VOTableError::Write)?;
-      Ok(())
-    } else {
-      let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-      // Write tag
-      writer
-        .write_event(Event::Start(tag.to_borrowed()))
-        .map_err(VOTableError::Write)?;
-      // Write sub-elems
-      write_elem_vec_no_context!(self, elems, writer);
-      // Close tag
-      writer
-        .write_event(Event::End(tag.to_end()))
-        .map_err(VOTableError::Write)
-    }
+    write_elem_vec_no_context!(self, elems, writer);
+    Ok(())
   }
 }

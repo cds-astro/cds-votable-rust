@@ -7,18 +7,16 @@ use std::{
 };
 
 use paste::paste;
-use quick_xml::{
-  events::{attributes::Attributes, BytesText, Event},
-  Reader, Writer,
-};
+use quick_xml::{events::Event, Reader, Writer};
 use serde_json::Value;
 
 use super::{
   error::VOTableError,
   utils::{discard_comment, discard_event},
-  QuickXmlReadWrite,
+  QuickXmlReadWrite, VOTableElement,
 };
 
+/// Struct corresponding to the `INFO` XML tag.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Info {
   // attributes
@@ -26,7 +24,6 @@ pub struct Info {
   pub id: Option<String>,
   pub name: String,
   pub value: String,
-  // ??
   #[serde(skip_serializing_if = "Option::is_none")]
   pub xtype: Option<String>,
   #[serde(rename = "ref", skip_serializing_if = "Option::is_none")]
@@ -61,19 +58,67 @@ impl Info {
     }
   }
 
+  // attributes
   impl_builder_opt_string_attr!(id);
+  impl_builder_mandatory_string_attr!(name);
+  impl_builder_mandatory_string_attr!(value);
   impl_builder_opt_string_attr!(xtype);
   impl_builder_opt_string_attr!(ref_, ref);
   impl_builder_opt_string_attr!(unit);
   impl_builder_opt_string_attr!(ucd);
   impl_builder_opt_string_attr!(utype);
-
+  // extra attributes
   impl_builder_insert_extra!();
-
+  // content
   impl_builder_opt_string_attr!(content);
+}
 
-  /// Calls a closure on each (key, value) attribute pairs.
-  pub fn for_each_attribute<F>(&self, mut f: F)
+impl VOTableElement for Info {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    const DEFAULT_VALUE: &str = "@TBD";
+    Self::new(DEFAULT_VALUE, DEFAULT_VALUE)
+      .set_attrs(attrs)
+      .and_then(|info| {
+        if info.name.as_str() == DEFAULT_VALUE || info.value.as_str() == DEFAULT_VALUE {
+          Err(VOTableError::Custom(format!(
+            "Attributes 'name' and 'value' are mandatory in tag '{}'",
+            Self::TAG
+          )))
+        } else {
+          Ok(info)
+        }
+      })
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "ID" => self.set_id_by_ref(val),
+        "name" => self.set_name_by_ref(val),
+        "value" => self.set_value_by_ref(val),
+        "xtype" => self.set_xtype_by_ref(val),
+        "ref" => self.set_ref_by_ref(val),
+        "unit" => self.set_unit_by_ref(val),
+        "ucd" => self.set_ucd_by_ref(val),
+        "utype" => self.set_utype_by_ref(val),
+        _ => self.insert_extra_str_by_ref(key, val),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
   where
     F: FnMut(&str, &str),
   {
@@ -97,9 +142,15 @@ impl Info {
     if let Some(utype) = &self.utype {
       f("utype", utype.as_str());
     }
-    for (k, v) in &self.extra {
-      f(k.as_str(), v.to_string().as_str());
-    }
+    for_each_extra_attribute!(self, f);
+  }
+
+  fn get_content(&self) -> Option<&str> {
+    self.content.as_deref()
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    true
   }
 }
 
@@ -107,79 +158,7 @@ impl QuickXmlReadWrite for Info {
   const TAG: &'static str = "INFO";
   type Context = ();
 
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    const NULL: &str = "@TBD";
-    let mut info = Self::new(NULL, NULL);
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
-      info = match attr.key {
-        b"ID" => info.set_id(value),
-        b"name" => {
-          info.name = value.to_string();
-          info
-        }
-        b"value" => {
-          info.value = value.to_string();
-          info
-        }
-        b"xtype" => info.set_xtype(value),
-        b"ref" => info.set_ref(value),
-        b"unit" => info.set_unit(value),
-        b"ucd" => info.set_ucd(value),
-        b"utype" => info.set_utype(value),
-        _ => info.insert_extra(
-          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
-          Value::String(value.into()),
-        ),
-      }
-    }
-    if info.name.as_str() == NULL || info.value.as_str() == NULL {
-      Err(VOTableError::Custom(format!(
-        "Attributes 'name' and 'value' are mandatory in tag '{}'",
-        Self::TAG
-      )))
-    } else {
-      Ok(info)
-    }
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    read_content!(Self, self, reader, reader_buff)
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    reader: &mut Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    read_content_by_ref!(Self, self, reader, reader_buff)
-  }
-
-  fn write<W: Write>(
-    &mut self,
-    writer: &mut Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-    write_opt_string_attr!(self, elem_writer, ID);
-    elem_writer = elem_writer.with_attribute(("name", self.name.as_str()));
-    elem_writer = elem_writer.with_attribute(("value", self.value.as_str()));
-    write_opt_string_attr!(self, elem_writer, xtype);
-    write_opt_string_attr!(self, elem_writer, ref_, "ref");
-    write_opt_string_attr!(self, elem_writer, unit);
-    write_opt_string_attr!(self, elem_writer, ucd);
-    write_opt_string_attr!(self, elem_writer, utype);
-    write_extra!(self, elem_writer);
-    write_content!(self, elem_writer);
-    Ok(())
-  }
+  impl_read_write_content_only!();
 }
 
 #[cfg(test)]

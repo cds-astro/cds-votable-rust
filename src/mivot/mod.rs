@@ -2,11 +2,6 @@
 
 use std::error::Error;
 
-use crate::error::VOTableError;
-
-#[macro_use]
-mod macros;
-
 pub mod attribute;
 pub mod globals;
 pub mod join;
@@ -56,61 +51,125 @@ pub trait VodmlVisitor {
 
   /// Give access to VODML attributes, the VODML sub-elements
   /// are then automatically visited.
-  fn visit_vodml(&mut self, vodml: &mut Vodml) -> Result<(), Self::E>; // start/ended
+  fn visit_vodml_start(&mut self, vodml: &mut Vodml) -> Result<(), Self::E>; // start/ended
+  fn visit_vodml_ended(&mut self, vodml: &mut Vodml) -> Result<(), Self::E>; // start/ended
 
   fn visit_report(&mut self, report: &mut Report) -> Result<(), Self::E>;
 
   fn visit_model(&mut self, model: &mut Model) -> Result<(), Self::E>;
 
-  fn visit_globals(&mut self, globals: &mut Globals) -> Result<(), Self::E>;
+  fn visit_globals_start(&mut self, globals: &mut Globals) -> Result<(), Self::E>;
+  fn visit_globals_ended(&mut self, globals: &mut Globals) -> Result<(), Self::E>;
 
-  fn visit_templates(&mut self, templates: &mut Templates) -> Result<(), Self::E>;
+  fn visit_templates_start(&mut self, templates: &mut Templates) -> Result<(), Self::E>;
+  fn visit_templates_ended(&mut self, templates: &mut Templates) -> Result<(), Self::E>;
 
   // Globals
-  fn visit_instance_childof_globals(&mut self, instance: &mut InstanceGI) -> Result<(), Self::E>;
-  fn visit_instance_childof_instance_in_globals(
+  fn visit_instance_childof_globals_start(
+    &mut self,
+    instance: &mut InstanceGI,
+  ) -> Result<(), Self::E>;
+  fn visit_instance_childof_globals_ended(
+    &mut self,
+    instance: &mut InstanceGI,
+  ) -> Result<(), Self::E>;
+
+  fn visit_instance_childof_instance_in_globals_start(
     &mut self,
     instance: &mut InstanceGII,
   ) -> Result<(), Self::E>;
-  fn visit_instance_childof_collection_in_globals(
+  fn visit_instance_childof_instance_in_globals_ended(
+    &mut self,
+    instance: &mut InstanceGII,
+  ) -> Result<(), Self::E>;
+
+  fn visit_instance_childof_collection_in_globals_start(
+    &mut self,
+    instance: &mut InstanceGCI,
+  ) -> Result<(), Self::E>;
+  fn visit_instance_childof_collection_in_globals_ended(
     &mut self,
     instance: &mut InstanceGCI,
   ) -> Result<(), Self::E>;
 
-  fn visit_collection_childof_instance_in_globals(
+  fn visit_collection_childof_instance_in_globals_start(
     &mut self,
     instance: &mut CollectionGIC,
   ) -> Result<(), Self::E>;
-  fn visit_collection_childof_globals(
+  fn visit_collection_childof_instance_in_globals_ended(
+    &mut self,
+    instance: &mut CollectionGIC,
+  ) -> Result<(), Self::E>;
+
+  fn visit_collection_childof_globals_start(
     &mut self,
     collection: &mut CollectionGC,
   ) -> Result<(), Self::E>;
-  fn visit_collection_childof_collection_in_globals(
+  fn visit_collection_childof_globals_ended(
+    &mut self,
+    collection: &mut CollectionGC,
+  ) -> Result<(), Self::E>;
+
+  fn visit_collection_childof_collection_in_globals_start(
+    &mut self,
+    collection: &mut CollectionGICC,
+  ) -> Result<(), Self::E>;
+  fn visit_collection_childof_collection_in_globals_ended(
     &mut self,
     collection: &mut CollectionGICC,
   ) -> Result<(), Self::E>;
 
   // Templates
-  fn visit_instance_childof_templates(&mut self, instance: &mut InstanceTI) -> Result<(), Self::E>;
-  fn visit_instance_childof_instance_in_templates(
+  fn visit_instance_childof_templates_start(
+    &mut self,
+    instance: &mut InstanceTI,
+  ) -> Result<(), Self::E>;
+  fn visit_instance_childof_templates_ended(
+    &mut self,
+    instance: &mut InstanceTI,
+  ) -> Result<(), Self::E>;
+
+  fn visit_instance_childof_instance_in_templates_start(
+    &mut self,
+    instance: &mut InstanceTII,
+  ) -> Result<(), Self::E>;
+  fn visit_instance_childof_instance_in_templates_ended(
     &mut self,
     instance: &mut InstanceTII,
   ) -> Result<(), Self::E>;
 
-  fn visit_collection_childof_instance_in_templates(
+  fn visit_collection_childof_instance_in_templates_start(
     &mut self,
     collection: &mut CollectionTIC,
   ) -> Result<(), Self::E>;
-  fn visit_collection_childof_collection_in_templates(
+  fn visit_collection_childof_instance_in_templates_ended(
+    &mut self,
+    collection: &mut CollectionTIC,
+  ) -> Result<(), Self::E>;
+
+  fn visit_collection_childof_collection_in_templates_start(
+    &mut self,
+    collection: &mut CollectionTICC,
+  ) -> Result<(), Self::E>;
+  fn visit_collection_childof_collection_in_templates_ended(
     &mut self,
     collection: &mut CollectionTICC,
   ) -> Result<(), Self::E>;
 
-  fn visit_reference_dynamic_childof_instance_in_templates(
+  fn visit_reference_dynamic_childof_instance_in_templates_start(
     &mut self,
     instance: &mut RefDynTIR,
   ) -> Result<(), Self::E>;
-  fn visit_reference_dynamic_childof_collection_in_templates(
+  fn visit_reference_dynamic_childof_instance_in_templates_ended(
+    &mut self,
+    instance: &mut RefDynTIR,
+  ) -> Result<(), Self::E>;
+
+  fn visit_reference_dynamic_childof_collection_in_templates_start(
+    &mut self,
+    instance: &mut RefDynTICR,
+  ) -> Result<(), Self::E>;
+  fn visit_reference_dynamic_childof_collection_in_templates_ended(
     &mut self,
     instance: &mut RefDynTICR,
   ) -> Result<(), Self::E>;
@@ -136,20 +195,11 @@ pub trait VodmlVisitor {
 
   fn visit_foreign_key(&mut self, pk: &mut ForeignKey) -> Result<(), Self::E>;
 
-  fn visit_join(&mut self, join: &mut join::Join) -> Result<(), Self::E>;
+  fn visit_join_start(&mut self, join: &mut join::Join) -> Result<(), Self::E>;
+  fn visit_join_ended(&mut self, join: &mut join::Join) -> Result<(), Self::E>;
+
   fn visit_where_childof_join(&mut self, r#where: &mut WhereJ) -> Result<(), Self::E>;
   fn visit_where_childof_templates(&mut self, r#where: &mut WhereT) -> Result<(), Self::E>;
-}
-
-pub(crate) fn value_checker(value: &str, attribute: &str) -> Result<(), VOTableError> {
-  if value.is_empty() {
-    Err(VOTableError::Custom(format!(
-      "If attribute {} is present it cannot be empty",
-      attribute
-    )))
-  } else {
-    Ok(())
-  }
 }
 
 #[cfg(test)]

@@ -31,3 +31,15 @@ pub(crate) fn discard_event(event: Event, tag: &str) {
 pub(crate) fn unexpected_event(event: Event, tag: &str) -> VOTableError {
   VOTableError::Custom(format!("Unexpected event in tag {}: {:?}", tag, event))
 }
+
+pub(crate) fn unexpected_attr_warn(attr_key: &str, tag: &str) {
+  warn!(
+    "Unexpected attribute in tag {}: '{:?}' is discarded",
+    tag, attr_key
+  )
+}
+
+#[cfg(feature = "mivot")]
+pub(crate) fn unexpected_attr_err(attr_key: &str, tag: &'static str) -> VOTableError {
+  VOTableError::UnexpectedAttr(attr_key.as_bytes().to_vec(), tag)
+}

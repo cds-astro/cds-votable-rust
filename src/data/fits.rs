@@ -6,18 +6,14 @@ use std::{
 };
 
 use paste::paste;
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  Reader, Writer,
-};
-
-use crate::impls::mem::VoidTableDataContent;
+use quick_xml::{events::Event, Reader, Writer};
 
 use super::{
   super::{
     error::VOTableError,
-    utils::{discard_comment, discard_event},
-    QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+    impls::mem::VoidTableDataContent,
+    utils::{discard_comment, discard_event, unexpected_attr_warn},
+    QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
   },
   stream::Stream,
 };
@@ -49,35 +45,49 @@ impl Fits {
   }
 }
 
+impl VOTableElement for Fits {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new().set_attrs(attrs)
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "extnum" => self.set_extnum_by_ref(val.as_ref().parse().map_err(VOTableError::ParseInt)?),
+        _ => unexpected_attr_warn(key, Self::TAG),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(extnum) = &self.extnum {
+      f("extnum", extnum.to_string().as_str());
+    }
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    false
+  }
+}
+
 impl QuickXmlReadWrite for Fits {
   const TAG: &'static str = "FITS";
   type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut fits = Self::default();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value = str::from_utf8(attr.value.as_ref()).map_err(VOTableError::Utf8)?;
-      fits = match attr.key {
-        b"extnum" => fits.set_extnum(value.parse().map_err(VOTableError::ParseInt)?),
-        _ => {
-          return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
-        }
-      }
-    }
-    Ok(fits)
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
-      .map(|()| reader)
-  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -116,22 +126,12 @@ impl QuickXmlReadWrite for Fits {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
-    _context: &Self::Context,
+    context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-    // Write tag + attributes
-    push2write_opt_tostring_attr!(self, tag, extnum);
-    writer
-      .write_event(Event::Start(tag.to_borrowed()))
-      .map_err(VOTableError::Write)?;
-    // Write sub-elements
-    self.stream.write(writer, &())?;
-    // Close tag
-    writer
-      .write_event(Event::End(tag.to_end()))
-      .map_err(VOTableError::Write)
+    self.stream.write(writer, context)?;
+    Ok(())
   }
 }

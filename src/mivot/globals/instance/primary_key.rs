@@ -1,9 +1,15 @@
-use std::str;
+use std::{
+  io::{BufRead, Write},
+  str,
+};
 
 use paste::paste;
-use quick_xml::{events::attributes::Attributes, Reader, Writer};
+use quick_xml::{Reader, Writer};
 
-use crate::{error::VOTableError, mivot::VodmlVisitor, QuickXmlReadWrite};
+use crate::{
+  error::VOTableError, mivot::VodmlVisitor, utils::unexpected_attr_err, QuickXmlReadWrite,
+  VOTableElement,
+};
 
 /// `Static` primary key can be both in `GLOBALS` or in `TEMPLATES`, but `GLOBALS` contains only
 /// static `PRIMARY_KEY`s
@@ -12,12 +18,69 @@ pub struct PrimaryKeyStatic {
   pub dmtype: String,
   pub value: String,
 }
+
 impl PrimaryKeyStatic {
-  impl_new!([dmtype, value], []);
-  impl_empty_new!([dmtype, value], []);
+  pub fn new<S: Into<String>>(dmtype: S, value: S) -> Self {
+    Self {
+      dmtype: dmtype.into(),
+      value: value.into(),
+    }
+  }
+
+  impl_builder_mandatory_string_attr!(dmtype);
+  impl_builder_mandatory_string_attr!(value);
 
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
     visitor.visit_primarykey_static(self)
+  }
+}
+
+impl VOTableElement for PrimaryKeyStatic {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new("", "").set_attrs(attrs).and_then(|pk| {
+      if pk.dmtype.is_empty() || pk.value.is_empty() {
+        Err(VOTableError::Custom(format!(
+          "Mandatory attributes 'dmtype' or 'value' not found in tag '{}'",
+          Self::TAG
+        )))
+      } else {
+        Ok(pk)
+      }
+    })
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "dmtype" => self.set_dmtype_by_ref(val),
+        "value" => self.set_value_by_ref(val),
+        _ => return Err(unexpected_attr_err(key, Self::TAG)),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    f("dmtype", self.dmtype.as_str());
+    f("value", self.value.as_str());
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    true
   }
 }
 
@@ -25,40 +88,7 @@ impl QuickXmlReadWrite for PrimaryKeyStatic {
   const TAG: &'static str = "PRIMARY_KEY";
   type Context = ();
 
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    const NULL: &str = "@TBD";
-    let mut tag = Self::new_empty();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      if !value.is_empty() {
-        tag = match attr.key {
-          b"dmtype" => {
-            tag.dmtype = value.to_string();
-            tag
-          }
-          b"value" => {
-            tag.value = value.to_string();
-            tag
-          }
-          _ => {
-            return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG));
-          }
-        }
-      };
-    }
-    if tag.dmtype.as_str() == NULL || tag.value.as_str() == NULL {
-      Err(VOTableError::Custom(format!(
-        "Attributes dmtype value are mandatory in tag {}",
-        Self::TAG
-      )))
-    } else {
-      Ok(tag)
-    }
-  }
-  empty_read_sub!();
-  impl_write_e!([dmtype, value], []);
+  impl_read_write_no_content_no_sub_elems!();
 }
 
 #[cfg(test)]

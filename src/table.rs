@@ -9,7 +9,7 @@ use std::{
 use log::warn;
 use paste::paste;
 use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
+  events::{BytesStart, Event},
   Reader, Writer,
 };
 use serde_json::Value;
@@ -24,7 +24,7 @@ use super::{
   link::Link,
   param::Param,
   utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite, TableDataContent, VOTableVisitor,
+  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -55,6 +55,7 @@ impl TableElem {
   }
 }
 
+/// Struct corresponding to the `TABLE` XML tag.
 #[derive(Default, Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Table<C: TableDataContent> {
   // attributes
@@ -102,7 +103,7 @@ impl<C: TableDataContent> Table<C> {
 
   impl_builder_insert_extra!();
 
-  impl_builder_opt_attr!(description, Description);
+  impl_builder_opt_subelem!(description, Description);
 
   impl_builder_push_elem!(Field, TableElem);
   impl_builder_push_elem!(Param, TableElem);
@@ -120,34 +121,6 @@ impl<C: TableDataContent> Table<C> {
   }
 
   impl_builder_push!(Info);
-
-  /// Calls a closure on each (key, value) attribute pairs.
-  pub fn for_each_attribute<F>(&self, mut f: F)
-  where
-    F: FnMut(&str, &str),
-  {
-    if let Some(id) = &self.id {
-      f("ID", id.as_str());
-    }
-    if let Some(name) = &self.name {
-      f("name", name.as_str());
-    }
-    if let Some(ucd) = &self.ucd {
-      f("ucd", ucd.as_str());
-    }
-    if let Some(utype) = &self.utype {
-      f("utype", utype.as_str());
-    }
-    if let Some(ref_) = &self.ref_ {
-      f("ref", ref_.as_str());
-    }
-    if let Some(nrows) = &self.nrows {
-      f("nrows", nrows.to_string().as_str());
-    }
-    for (k, v) in &self.extra {
-      f(k.as_str(), v.to_string().as_str());
-    }
-  }
 
   pub fn visit<V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where
@@ -189,9 +162,7 @@ impl<C: TableDataContent> Table<C> {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => {
-            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
-          }
+          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
           Field::TAG_BYTES => {
             self.push_field_by_ref(from_event_start_by_ref!(Field, reader, reader_buff, e))
           }
@@ -254,13 +225,7 @@ impl<C: TableDataContent> Table<C> {
   ) -> Result<(), VOTableError> {
     let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
     // Write tag + attributes
-    push2write_opt_string_attr!(self, tag, ID);
-    push2write_opt_string_attr!(self, tag, name);
-    push2write_opt_string_attr!(self, tag, ucd);
-    push2write_opt_string_attr!(self, tag, utype);
-    push2write_opt_string_attr!(self, tag, ref_, ref);
-    push2write_opt_tostring_attr!(self, tag, nrows);
-    push2write_extra!(self, tag);
+    self.for_each_attribute(|k, v| tag.push_attribute((k, v)));
     writer
       .write_event(Event::Start(tag.to_borrowed()))
       .map_err(VOTableError::Write)?;
@@ -335,42 +300,74 @@ impl<C: TableDataContent> Table<C> {
   }
 }
 
+impl<C: TableDataContent> VOTableElement for Table<C> {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::default().set_attrs(attrs)
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key_str = key.as_ref();
+      match key_str {
+        "ID" => self.set_id_by_ref(val),
+        "name" => self.set_name_by_ref(val),
+        "ucd" => self.set_ucd_by_ref(val),
+        "utype" => self.set_ucd_by_ref(val),
+        "ref" => self.set_ref_by_ref(val),
+        "nrows" => self.set_nrows_by_ref(val.as_ref().parse().map_err(VOTableError::ParseInt)?),
+        _ => self.insert_extra_str_by_ref(key, val),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(id) = &self.id {
+      f("ID", id.as_str());
+    }
+    if let Some(name) = &self.name {
+      f("name", name.as_str());
+    }
+    if let Some(ucd) = &self.ucd {
+      f("ucd", ucd.as_str());
+    }
+    if let Some(utype) = &self.utype {
+      f("utype", utype.as_str());
+    }
+    if let Some(ref_) = &self.ref_ {
+      f("ref", ref_.as_str());
+    }
+    if let Some(nrows) = &self.nrows {
+      f("nrows", nrows.to_string().as_str());
+    }
+    for_each_extra_attribute!(self, f);
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    self.description.is_none()
+      && self.elems.is_empty()
+      && self.links.is_empty()
+      && self.data.is_none()
+      && self.infos.is_empty()
+  }
+}
+
 impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
   const TAG: &'static str = "TABLE";
   type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut table = Self::new();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      table = match attr.key {
-        b"ID" => table.set_id(value),
-        b"name" => table.set_name(value),
-        b"ucd" => table.set_ucd(value),
-        b"utype" => table.set_ucd(value),
-        b"ref" => table.set_ref(value),
-        b"nrows" => table.set_nrows(value.parse().map_err(VOTableError::ParseInt)?),
-        _ => table.insert_extra(
-          str::from_utf8(attr.key).map_err(VOTableError::Utf8)?,
-          Value::String(value.into()),
-        ),
-      }
-    }
-    Ok(table)
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, context)
-      .map(|()| reader)
-  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -385,9 +382,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => {
-            from_event_start_desc_by_ref!(self, Description, reader, reader_buff, e)
-          }
+          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
           Field::TAG_BYTES => {
             self.push_field_by_ref(from_event_start_by_ref!(Field, reader, reader_buff, e))
           }
@@ -443,36 +438,19 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-    // Write tag + attributes
-    push2write_opt_string_attr!(self, tag, ID);
-    push2write_opt_string_attr!(self, tag, name);
-    push2write_opt_string_attr!(self, tag, ucd);
-    push2write_opt_string_attr!(self, tag, utype);
-    push2write_opt_string_attr!(self, tag, ref_, ref);
-    push2write_opt_tostring_attr!(self, tag, nrows);
-    push2write_extra!(self, tag);
-    writer
-      .write_event(Event::Start(tag.to_borrowed()))
-      .map_err(VOTableError::Write)?;
-    // Write sub-elems
     write_elem!(self, description, writer, context);
     write_elem_vec_no_context!(self, elems, writer);
     write_elem_vec!(self, links, writer, context);
     if let Some(elem) = &mut self.data {
       elem.write(writer, &self.elems)?;
     }
-    // write_elem!(self, data, writer, self.elems);
     write_elem_vec!(self, infos, writer, context);
-    // Close tag
-    writer
-      .write_event(Event::End(tag.to_end()))
-      .map_err(VOTableError::Write)
+    Ok(())
   }
 }
 
@@ -486,7 +464,7 @@ mod tests {
 
   #[test]
   fn test_table_read_write() {
-    let xml = r#"<TABLE ID="V_147_sdss12" name="V/147/sdss12" nrows="2"><FIELD name="RA_ICRS" datatype="char" ucd="pos.eq.ra;meta.main"></FIELD><FIELD name="RA_ICRS" datatype="char" ucd="pos.eq.ra;meta.main"></FIELD><DATA><TABLEDATA><TR><TD>a</TD><TD>b</TD></TR><TR><TD>a</TD><TD>b</TD></TR></TABLEDATA></DATA></TABLE>"#; // Test read
+    let xml = r#"<TABLE ID="V_147_sdss12" name="V/147/sdss12" nrows="2"><FIELD name="RA_ICRS" datatype="char" ucd="pos.eq.ra;meta.main"/><FIELD name="RA_ICRS" datatype="char" ucd="pos.eq.ra;meta.main"/><DATA><TABLEDATA><TR><TD>a</TD><TD>b</TD></TR><TR><TD>a</TD><TD>b</TD></TR></TABLEDATA></DATA></TABLE>"#; // Test read
     let table = test_read::<Table<InMemTableDataRows>>(xml);
     assert_eq!(table.id.as_ref().unwrap().as_str(), "V_147_sdss12");
     assert_eq!(table.name.as_ref().unwrap().as_str(), "V/147/sdss12");

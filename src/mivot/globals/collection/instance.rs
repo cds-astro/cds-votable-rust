@@ -9,16 +9,13 @@ use std::{
 };
 
 use paste::paste;
-use quick_xml::{
-  events::{attributes::Attributes, BytesStart, Event},
-  Reader, Writer,
-};
+use quick_xml::{events::Event, Reader, Writer};
 
 use crate::{
   error::VOTableError,
   mivot::{attribute::AttributeChildOfInstance as Attribute, VodmlVisitor},
-  utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite,
+  utils::{discard_comment, discard_event, is_empty, unexpected_attr_err},
+  QuickXmlReadWrite, VOTableElement,
 };
 
 use super::super::instance::{
@@ -58,6 +55,7 @@ impl Instance {
   }
 
   impl_builder_opt_string_attr!(dmid);
+  impl_builder_mandatory_string_attr!(dmtype);
 
   impl_builder_push!(PrimaryKey);
 
@@ -67,66 +65,79 @@ impl Instance {
   impl_builder_push_elem!(Collection, InstanceElem);
 
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
-    visitor.visit_instance_childof_collection_in_globals(self)?;
+    visitor.visit_instance_childof_collection_in_globals_start(self)?;
     for pk in self.primarykeys.iter_mut() {
       pk.visit(visitor)?;
     }
     for elem in self.elems.iter_mut() {
       elem.visit(visitor)?;
     }
+    visitor.visit_instance_childof_collection_in_globals_ended(self)
+  }
+}
+
+impl VOTableElement for Instance {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new_tmp("").set_attrs(attrs).and_then(|instance| {
+      if instance.dmtype.is_empty() {
+        Err(VOTableError::Custom(format!(
+          "Attribute 'dmtype' is mandatory and must be non-empty in tag '{}' child of GLOBALS",
+          Self::TAG
+        )))
+      } else {
+        Ok(instance)
+      }
+    })
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "dmid" => self.set_dmid_by_ref(val),
+        "dmtype" => self.set_dmtype_by_ref(val),
+        _ => {
+          if !val.as_ref().is_empty() {
+            return Err(unexpected_attr_err(
+              key,
+              "INSTANCE child of COLLECTION child of GLOBALS",
+            ));
+          }
+        }
+      }
+    }
     Ok(())
+  }
+
+  /// Calls a closure on each (key, value) attribute pairs.
+  fn for_each_attribute<F>(&self, mut f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+    if let Some(dmid) = &self.dmid {
+      f("dmid", dmid.as_str());
+    }
+    f("dmtype", self.dmtype.as_str());
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    false
   }
 }
 
 impl QuickXmlReadWrite for Instance {
   const TAG: &'static str = "INSTANCE";
   type Context = ();
-
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut dmid = String::new();
-    let mut dmtype = String::new();
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
-      if !value.is_empty() {
-        match attr.key {
-          b"dmid" => dmid.push_str(value),
-          b"dmtype" => dmtype.push_str(value),
-          _ => {
-            return Err(VOTableError::UnexpectedAttr(
-              attr.key.to_vec(),
-              "INSTANCE child of COLLECTION child of GLOBALS",
-            ))
-          }
-        }
-      }
-    }
-    if dmtype.is_empty() {
-      Err(VOTableError::Custom(format!(
-        "Attribute 'dmtype' is mandatory and must be non-empty in tag '{}' child of GLOBALS",
-        Self::TAG
-      )))
-    } else {
-      // TODO: replace this by a code similar to COLLECTION not to use a constructor with empty PRIMARY_KEY
-      let mut elem = Self::new_tmp(dmtype);
-      if !dmid.is_empty() {
-        elem = elem.set_dmid(dmid);
-      }
-      Ok(elem)
-    }
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    mut reader: Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    self
-      .read_sub_elements_by_ref(&mut reader, reader_buff, _context)
-      .map(|()| reader)
-  }
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -138,36 +149,18 @@ impl QuickXmlReadWrite for Instance {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          InstanceChildOfInstance::TAG_BYTES => {
-            self
-              .elems
-              .push(InstanceElem::Instance(from_event_start_by_ref!(
-                InstanceChildOfInstance,
-                reader,
-                reader_buff,
-                e
-              )))
-          }
+          InstanceChildOfInstance::TAG_BYTES => self.push_instance_by_ref(
+            from_event_start_by_ref!(InstanceChildOfInstance, reader, reader_buff, e),
+          ),
           Reference::TAG_BYTES => {
-            self
-              .elems
-              .push(InstanceElem::Reference(from_event_start_by_ref!(
-                Reference,
-                reader,
-                reader_buff,
-                e
-              )))
+            self.push_reference_by_ref(from_event_start_by_ref!(Reference, reader, reader_buff, e))
           }
-          Collection::TAG_BYTES => {
-            self
-              .elems
-              .push(InstanceElem::Collection(from_event_start_by_ref!(
-                Collection,
-                reader,
-                reader_buff,
-                e
-              )))
-          }
+          Collection::TAG_BYTES => self.push_collection_by_ref(from_event_start_by_ref!(
+            Collection,
+            reader,
+            reader_buff,
+            e
+          )),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -176,13 +169,9 @@ impl QuickXmlReadWrite for Instance {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          PrimaryKey::TAG_BYTES => self.primarykeys.push(PrimaryKey::from_event_empty(e)?),
-          Attribute::TAG_BYTES => self
-            .elems
-            .push(InstanceElem::Attribute(Attribute::from_event_empty(e)?)),
-          Reference::TAG_BYTES => self
-            .elems
-            .push(InstanceElem::Reference(Reference::from_event_empty(e)?)),
+          PrimaryKey::TAG_BYTES => self.push_primarykey_by_ref(PrimaryKey::from_event_empty(e)?),
+          Attribute::TAG_BYTES => self.push_attribute_by_ref(Attribute::from_event_empty(e)?),
+          Reference::TAG_BYTES => self.push_reference_by_ref(Reference::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -194,7 +183,7 @@ impl QuickXmlReadWrite for Instance {
         Event::End(e) if e.local_name() == Self::TAG_BYTES => {
           return if self.primarykeys.is_empty() {
             Err(VOTableError::Custom(String::from(
-              "`INSTANCE` child of `COLLECTION` must contains at leas ont `PRIMARY_KEY`",
+              "`INSTANCE` child of `COLLECTION` must contains at least ont `PRIMARY_KEY`",
             )))
           } else {
             Ok(())
@@ -207,24 +196,13 @@ impl QuickXmlReadWrite for Instance {
     }
   }
 
-  fn write<W: Write>(
+  fn write_sub_elements_by_ref<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
-    // Write tag + attributes
-    push2write_opt_string_attr!(self, tag, dmid);
-    tag.push_attribute(("dmtype", self.dmtype.as_str()));
-    writer
-      .write_event(Event::Start(tag.to_borrowed()))
-      .map_err(VOTableError::Write)?;
-    // Write sub-elements
     write_elem_vec!(self, primarykeys, writer, context);
     write_elem_vec_no_context!(self, elems, writer);
-    // Close tag
-    writer
-      .write_event(Event::End(tag.to_end()))
-      .map_err(VOTableError::Write)
+    Ok(())
   }
 }

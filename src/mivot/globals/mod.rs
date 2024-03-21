@@ -6,20 +6,19 @@
 //! not in a VOTable table.
 //! For `PRIMARY_KEY`,
 
-use std::{io::Write, str};
-
-use log::warn;
-use paste::paste;
-use quick_xml::{
-  events::{BytesStart, Event},
-  Reader, Writer,
+use std::{
+  io::{BufRead, Write},
+  str,
 };
+
+use paste::paste;
+use quick_xml::{events::Event, Reader, Writer};
 
 use crate::{
   error::VOTableError,
   mivot::VodmlVisitor,
-  utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite,
+  utils::{discard_comment, discard_event, is_empty, unexpected_attr_err},
+  QuickXmlReadWrite, VOTableElement,
 };
 
 pub mod collection;
@@ -69,66 +68,105 @@ impl Globals {
   impl_builder_push_elem!(Collection, GlobalsElem);
 
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
-    visitor.visit_globals(self)?;
+    visitor.visit_globals_start(self)?;
     for elem in self.elems.iter_mut() {
       elem.visit(visitor)?;
     }
+    visitor.visit_globals_ended(self)
+  }
+}
+
+impl VOTableElement for Globals {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    Self::new().set_attrs(attrs)
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (k, _) in attrs {
+      return Err(unexpected_attr_err(k.as_ref(), Self::TAG));
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, _f: F)
+  where
+    F: FnMut(&str, &str),
+  {
+  }
+
+  fn has_no_sub_elements(&self) -> bool {
+    self.elems.is_empty()
+  }
+}
+
+impl QuickXmlReadWrite for Globals {
+  const TAG: &'static str = "GLOBALS";
+  type Context = ();
+
+  fn read_sub_elements_by_ref<R: BufRead>(
+    &mut self,
+    mut reader: &mut Reader<R>,
+    mut reader_buff: &mut Vec<u8>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    loop {
+      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      match &mut event {
+        Event::Start(ref e) => match e.local_name() {
+          Instance::TAG_BYTES => {
+            self.push_instance_by_ref(from_event_start_by_ref!(Instance, reader, reader_buff, e))
+          }
+          Collection::TAG_BYTES => {
+            let dmid = Collection::get_dmid_from_atttributes(e.attributes())?;
+            let collection =
+              Collection::from_dmid_and_reading_sub_elems(dmid, &(), reader, reader_buff)?;
+            self.push_collection_by_ref(collection);
+          }
+          _ => {
+            return Err(VOTableError::UnexpectedStartTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ))
+          }
+        },
+        Event::Empty(ref e) => match e.local_name() {
+          Instance::TAG_BYTES => self.push_instance_by_ref(Instance::from_event_empty(e)?),
+          _ => {
+            return Err(VOTableError::UnexpectedEmptyTag(
+              e.local_name().to_vec(),
+              Self::TAG,
+            ));
+          }
+        },
+        Event::Text(e) if is_empty(e) => {}
+        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
+        Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
+        Event::Comment(e) => discard_comment(e, reader, Self::TAG),
+        _ => discard_event(event, Self::TAG),
+      }
+    }
+  }
+
+  fn write_sub_elements_by_ref<W: Write>(
+    &mut self,
+    writer: &mut Writer<W>,
+    _context: &Self::Context,
+  ) -> Result<(), VOTableError> {
+    write_elem_vec_no_context!(self, elems, writer);
     Ok(())
   }
 }
 
-impl_quickrw_not_e_no_a!(
-  "GLOBALS",
-  Globals,
-  (),
-  [],
-  read_globals_sub_elem_by_ref,
-  [elems]
-);
-
-fn read_globals_sub_elem_by_ref<R: std::io::BufRead>(
-  globals: &mut Globals,
-  _context: &(),
-  mut reader: &mut quick_xml::Reader<R>,
-  mut reader_buff: &mut Vec<u8>,
-) -> Result<(), crate::error::VOTableError> {
-  loop {
-    let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
-    match &mut event {
-      Event::Start(ref e) => match e.local_name() {
-        Instance::TAG_BYTES => {
-          globals.push_instance_by_ref(from_event_start_by_ref!(Instance, reader, reader_buff, e))
-        }
-        Collection::TAG_BYTES => {
-          let dmid = Collection::get_dmid_from_atttributes(e.attributes())?;
-          let collection =
-            Collection::from_dmid_and_reading_sub_elems(dmid, &(), reader, reader_buff)?;
-          globals.push_collection_by_ref(collection);
-        }
-        _ => {
-          return Err(VOTableError::UnexpectedStartTag(
-            e.local_name().to_vec(),
-            Globals::TAG,
-          ))
-        }
-      },
-      Event::Empty(ref e) => match e.local_name() {
-        Instance::TAG_BYTES => globals.push_instance_by_ref(Instance::from_event_empty(e)?),
-        _ => {
-          return Err(VOTableError::UnexpectedEmptyTag(
-            e.local_name().to_vec(),
-            Globals::TAG,
-          ));
-        }
-      },
-      Event::Text(e) if is_empty(e) => {}
-      Event::End(e) if e.local_name() == Globals::TAG_BYTES => return Ok(()),
-      Event::Eof => return Err(VOTableError::PrematureEOF(Globals::TAG)),
-      Event::Comment(e) => discard_comment(e, reader, Globals::TAG),
-      _ => discard_event(event, Globals::TAG),
-    }
-  }
-}
 #[cfg(test)]
 mod tests {
   use crate::{

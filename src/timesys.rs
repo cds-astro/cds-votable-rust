@@ -6,12 +6,12 @@ use std::{
   str::{self, FromStr},
 };
 
-use log::warn;
 use paste::paste;
-use quick_xml::{events::attributes::Attributes, Reader, Writer};
+use quick_xml::{Reader, Writer};
 
-use super::{error::VOTableError, QuickXmlReadWrite};
+use super::{error::VOTableError, utils::unexpected_attr_warn, QuickXmlReadWrite, VOTableElement};
 
+/// Struct corresponding to the `TIMESYS` XML tag.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct TimeSys {
   #[serde(rename = "ID")]
@@ -37,8 +37,75 @@ impl TimeSys {
     }
   }
 
-  /// Calls a closure on each (key, value) attribute pairs.
-  pub fn for_each_attribute<F>(&self, mut f: F)
+  impl_builder_mandatory_string_attr!(id);
+  impl_builder_opt_attr!(timeorigin, f64);
+  impl_builder_mandatory_attr!(timescale, TimeScale);
+  impl_builder_mandatory_attr!(refposition, RefPosition);
+}
+
+impl VOTableElement for TimeSys {
+  fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    let mut id: Option<String> = None;
+    let mut timeorigin: Option<f64> = None;
+    let mut timescale: Option<TimeScale> = None;
+    let mut refposition: Option<RefPosition> = None;
+    // Look for attributes (especially mandatory attributes)
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "ID" => id = Some(val.into()),
+        "timeorigin" => timeorigin = Some(val.as_ref().parse().map_err(VOTableError::ParseFloat)?),
+        "timescale" => timescale = Some(val.as_ref().parse().map_err(VOTableError::Variant)?),
+        "refposition" => refposition = Some(val.as_ref().parse().map_err(VOTableError::Variant)?),
+        _ => unexpected_attr_warn(key, Self::TAG),
+      }
+    }
+    // Set from found attributes
+    if let (Some(id), Some(timescale), Some(refposition)) = (id, timescale, refposition) {
+      let mut timesys = Self::new(id, timescale, refposition);
+      if let Some(timeorigin) = timeorigin {
+        timesys.set_timeorigin_by_ref(timeorigin);
+      }
+      Ok(timesys)
+    } else {
+      Err(VOTableError::Custom(format!(
+        "Attributes 'ID', 'timescale' and 'refposition' are mandatory in tag '{}'",
+        Self::TAG
+      )))
+    }
+  }
+
+  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  where
+    K: AsRef<str> + Into<String>,
+    V: AsRef<str> + Into<String>,
+    I: Iterator<Item = (K, V)>,
+  {
+    for (key, val) in attrs {
+      let key = key.as_ref();
+      match key {
+        "ID" => self.set_id_by_ref(val),
+        "timeorigin" => {
+          self.set_timeorigin_by_ref(val.as_ref().parse().map_err(VOTableError::ParseFloat)?)
+        }
+        "timescale" => {
+          self.set_timescale_by_ref(val.as_ref().parse().map_err(VOTableError::Variant)?)
+        }
+        "refposition" => {
+          self.set_refposition_by_ref(val.as_ref().parse().map_err(VOTableError::Variant)?)
+        }
+        _ => unexpected_attr_warn(key, Self::TAG),
+      }
+    }
+    Ok(())
+  }
+
+  fn for_each_attribute<F>(&self, mut f: F)
   where
     F: FnMut(&str, &str),
   {
@@ -50,86 +117,16 @@ impl TimeSys {
     f("refposition", self.refposition.to_string().as_str());
   }
 
-  impl_builder_opt_attr!(timeorigin, f64);
+  fn has_no_sub_elements(&self) -> bool {
+    true
+  }
 }
 
 impl QuickXmlReadWrite for TimeSys {
   const TAG: &'static str = "TIMESYS";
   type Context = ();
 
-  fn from_attributes(attrs: Attributes) -> Result<Self, VOTableError> {
-    let mut id: Option<String> = None;
-    let mut timeorigin: Option<f64> = None;
-    let mut timescale: Option<TimeScale> = None;
-    let mut refposition: Option<RefPosition> = None;
-    // Look for attributes
-    for attr_res in attrs {
-      let attr = attr_res.map_err(VOTableError::Attr)?;
-      let value =
-        String::from_utf8(attr.value.as_ref().to_vec()).map_err(VOTableError::FromUtf8)?;
-      match attr.key {
-        b"ID" => id = Some(value),
-        b"timeorigin" => timeorigin = Some(value.parse().map_err(VOTableError::ParseFloat)?),
-        b"timescale" => timescale = Some(value.parse().map_err(VOTableError::Variant)?),
-        b"refposition" => refposition = Some(value.parse().map_err(VOTableError::Variant)?),
-        _ => {
-          warn!(
-            "Attribute {:?} in {} is ignored",
-            std::str::from_utf8(attr.key),
-            Self::TAG
-          );
-        }
-      }
-    }
-    // Set from found attributes
-    if let (Some(id), Some(timescale), Some(refposition)) = (id, timescale, refposition) {
-      let mut timesys = TimeSys::new(id, timescale, refposition);
-      if let Some(timeorigin) = timeorigin {
-        timesys = timesys.set_timeorigin(timeorigin);
-      }
-      Ok(timesys)
-    } else {
-      Err(VOTableError::Custom(format!(
-        "Attributes 'ID', 'timescale' and 'refposition' are mandatory in tag '{}'",
-        Self::TAG
-      )))
-    }
-  }
-
-  fn read_sub_elements<R: BufRead>(
-    &mut self,
-    _reader: Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<Reader<R>, VOTableError> {
-    unreachable!()
-  }
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    _reader: &mut Reader<R>,
-    _reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    todo!()
-  }
-
-  fn write<W: Write>(
-    &mut self,
-    writer: &mut Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    let mut elem_writer = writer.create_element(Self::TAG_BYTES);
-    elem_writer = elem_writer.with_attribute(("ID", self.id.as_str()));
-    if let Some(timeorigin) = self.timeorigin {
-      elem_writer = elem_writer.with_attribute(("timeorigin", timeorigin.to_string().as_str()));
-    }
-    elem_writer = elem_writer.with_attribute(("timescale", self.timescale.to_string().as_str()));
-    elem_writer =
-      elem_writer.with_attribute(("refposition", self.refposition.to_string().as_str()));
-    elem_writer.write_empty().map_err(VOTableError::Write)?;
-    Ok(())
-  }
+  impl_read_write_no_content_no_sub_elems!();
 }
 
 pub struct Info {
@@ -179,7 +176,6 @@ const UNKNOWN_TIMESCALE_INFO: Info = Info::new("Unknown or unavailable timescale
 );
 
 /// See the [IVOA timescale vocabulary](https://www.ivoa.net/rdf/timescale/2019-03-15/timescale.html)
-// #[serde(tag = "timescale")]
 #[derive(Clone, PartialEq, Eq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum TimeScale {
   TAI,
@@ -230,19 +226,6 @@ impl FromStr for TimeScale {
 
 impl fmt::Display for TimeScale {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    /*write!(f, "{}",
-           match self {
-             TimeScale::TAI => "tai",
-             TimeScale::TT => "tt",
-             TimeScale::UT => "ut",
-             TimeScale::UTC => "utc",
-             TimeScale::GPS => "gps",
-             TimeScale::TCG => "tcg",
-             TimeScale::TCB => "tcb",
-             TimeScale::TDB => "tdb",
-             TimeScale::UNKNOWN => "unknown"
-           }
-    )*/
     Debug::fmt(self, f)
   }
 }
@@ -309,16 +292,6 @@ impl FromStr for RefPosition {
 
 impl fmt::Display for RefPosition {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    /*write!(f, "{}",
-           match self {
-             RefPosition::TOPOCENTER => "topocenter",
-             RefPosition::GEOCENTER => "geocenter",
-             RefPosition::BARYCENTER => "barycenter",
-             RefPosition::HELIOCENTER => "heliocenter",
-             RefPosition::EMBARYCENTER => "embarycenter",
-             RefPosition::UNKNOWN => "unknown"
-           }
-    )*/
     Debug::fmt(self, f)
   }
 }
