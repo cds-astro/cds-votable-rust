@@ -39,6 +39,12 @@ impl FromStr for OutputFormat {
   }
 }
 impl OutputFormat {
+  pub fn is_streamable(&self) -> bool {
+    match self {
+      Self::Xml | Self::XmlTabledata | Self::XmlBinary | Self::XmlBinary2 => true,
+      _ => false,
+    }
+  }
   fn put<W: Write>(
     self,
     mut vot: VOTableWrapper<InMemTableDataRows>,
@@ -80,6 +86,10 @@ pub struct Output {
 }
 
 impl Output {
+  pub fn is_streamable(&self) -> bool {
+    self.output_fmt.is_streamable()
+  }
+
   pub fn save(&self, vot: VOTableWrapper<InMemTableDataRows>) -> Result<(), VOTableError> {
     match &self.output {
       Some(path) => {

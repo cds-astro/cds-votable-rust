@@ -15,7 +15,7 @@ use super::{
   },
 };
 
-/// Get information from a VOTable (sstreaming for XML files).
+/// Get information from a VOTable (streaming for XML files).
 #[derive(Debug, Args)]
 pub struct Get {
   #[command(flatten)]
@@ -28,11 +28,13 @@ pub struct Get {
 }
 impl Get {
   pub fn exec(self) -> Result<(), VOTableError> {
-    if self.input.get_fmt()?.is_xml() {
-      self.exec_streaming()
-    } else {
-      self.exec_in_mem()
-    }
+    self.input.is_streamable().and_then(|is_streamable| {
+      if is_streamable {
+        self.exec_streaming()
+      } else {
+        self.exec_in_mem()
+      }
+    })
   }
 
   /// Exec loading the full VOTable in memory in case of JSON/YAML/TOML

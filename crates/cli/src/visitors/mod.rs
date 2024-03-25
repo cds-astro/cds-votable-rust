@@ -1,5 +1,4 @@
 use std::{
-  array,
   error::Error,
   fmt::{Debug, Display, Formatter, Result},
   marker::Copy,
@@ -75,8 +74,8 @@ pub enum Tag {
   MIN,
   MAX,
   STREAM,
-  //// MIVOT
-  // VODML
+  // MIVOT related tags
+  VODML,
   // REPORT
   // MODEL
   // GLOBAL
@@ -110,6 +109,7 @@ const TAGS: [Tag; Tag::len()] = [
   Tag::MIN,
   Tag::MAX,
   Tag::STREAM,
+  Tag::VODML,
 ];
 
 impl Tag {
@@ -117,7 +117,7 @@ impl Tag {
     *self as usize
   }
   pub const fn len() -> usize {
-    Self::STREAM as usize + 1
+    Self::VODML as usize + 1
   }
   pub const fn array() -> [Tag; Tag::len()] {
     TAGS
@@ -130,6 +130,7 @@ impl Tag {
   }
   pub const fn new_array_of_vec<T>() -> [Vec<T>; Tag::len()] {
     [
+      Vec::new(),
       Vec::new(),
       Vec::new(),
       Vec::new(),
@@ -180,6 +181,7 @@ impl Tag {
       Self::MIN => b'n', // Final letter since both min and max start be 'm'
       Self::MAX => b'x', // Final letter since both min and max start be 'm'
       Self::STREAM => b's',
+      Self::VODML => b'M', // For 'M'ivot of vod'M'l
     }
   }
 }
@@ -192,12 +194,14 @@ impl FromStr for Tag {
       "VOTABLE" => Ok(Self::VOTABLE),
       "RESOURCE" => Ok(Self::RESOURCE),
       "TABLE" => Ok(Self::TABLE),
+      "DATA" => Ok(Self::DATA),
       "FIELD" => Ok(Self::FIELD),
       "PARAM" => Ok(Self::PARAM),
       "GROUP" => Ok(Self::GROUP),
       "VALUES" => Ok(Self::VALUES),
       "OPTION" => Ok(Self::OPTION),
       "COOSYS" => Ok(Self::COOSYS),
+      "DEFINITION" => Ok(Self::DEFINITION),
       "DESCRIPTION" => Ok(Self::DESCRIPTION),
       "TIMESYS" => Ok(Self::TIMESYS),
       "INFO" => Ok(Self::INFO),
@@ -206,6 +210,8 @@ impl FromStr for Tag {
       "PARAMRef" => Ok(Self::PARAMRef),
       "MIN" => Ok(Self::MIN),
       "MAX" => Ok(Self::MAX),
+      "STREAM" => Ok(Self::STREAM),
+      "VODML" => Ok(Self::VODML),
       _ => Err(format!("Tag '{}' not recognized.", s)),
     }
   }

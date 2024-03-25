@@ -39,13 +39,13 @@ impl VOTableVisitor<VoidTableDataContent> for ExplicitVizierOrgNamesVisitor {
 
   fn visit_votable_start(
     &mut self,
-    votable: &mut VOTable<VoidTableDataContent>,
+    _votable: &mut VOTable<VoidTableDataContent>,
   ) -> Result<(), Self::E> {
     Ok(())
   }
   fn visit_votable_ended(
     &mut self,
-    votable: &mut VOTable<VoidTableDataContent>,
+    _votable: &mut VOTable<VoidTableDataContent>,
   ) -> Result<(), Self::E> {
     Ok(())
   }
@@ -96,7 +96,7 @@ impl VOTableVisitor<VoidTableDataContent> for ExplicitVizierOrgNamesVisitor {
 
   fn visit_field_start(&mut self, field: &mut Field) -> Result<(), Self::E> {
     if let Some(desc) = &field.description {
-      let desc = desc.0.trim();
+      let desc = desc.get_content_unwrapped().trim();
       if desc.ends_with(')') {
         // Unwrap ok because we tested before that it ended with a ')'.
         if let Some((_, colname)) = desc.strip_suffix(')').unwrap().rsplit_once('(') {

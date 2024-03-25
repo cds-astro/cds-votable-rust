@@ -75,6 +75,10 @@ impl Input {
     self.input.is_none()
   }
 
+  pub fn is_streamable(&self) -> Result<bool, VOTableError> {
+    self.get_fmt().map(|f| f.is_xml())
+  }
+
   pub fn get_fmt(&self) -> Result<InputFormat, VOTableError> {
     match &self.input_fmt {
       Some(input_fmt) => Ok(*input_fmt),
