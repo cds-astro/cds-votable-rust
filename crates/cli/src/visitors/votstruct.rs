@@ -672,7 +672,7 @@ impl<C: TableDataContent> VOTableVisitor<C> for AsciiStructVisitor {
   }
   fn visit_values_min(&mut self, min: &mut Min) -> Result<(), Self::E> {
     const TAG: Tag = Tag::MIN;
-    let vid = self.get_sub_elem_vid(TAG, true);
+    let vid = self.get_sub_elem_vid(TAG, false);
     let mut tagp = TagPrinter::new(
       self.line_width,
       self.indent.as_str(),
@@ -686,7 +686,7 @@ impl<C: TableDataContent> VOTableVisitor<C> for AsciiStructVisitor {
 
   fn visit_values_max(&mut self, max: &mut Max) -> Result<(), Self::E> {
     const TAG: Tag = Tag::MAX;
-    let vid = self.get_sub_elem_vid(TAG, true);
+    let vid = self.get_sub_elem_vid(TAG, false);
     let mut tagp = TagPrinter::new(
       self.line_width,
       self.indent.as_str(),
@@ -701,7 +701,7 @@ impl<C: TableDataContent> VOTableVisitor<C> for AsciiStructVisitor {
   fn visit_values_opt_start(&mut self, opt: &mut Opt) -> Result<(), Self::E> {
     const TAG: Tag = Tag::OPTION;
     let curr_indent = self.indent.clone();
-    self.go_down(TAG, false);
+    self.go_down(TAG, true);
     let mut tagp = TagPrinter::new(
       self.line_width,
       curr_indent.as_str(),
