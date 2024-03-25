@@ -30,7 +30,7 @@ use crate::{
   table::{Table, TableElem},
   utils::{discard_comment, discard_event, is_empty},
   votable::{VOTable, VOTableWrapper},
-  QuickXmlReadWrite,
+  VOTableElement,
 };
 
 pub mod elems;

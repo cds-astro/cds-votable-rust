@@ -868,6 +868,8 @@ fn check_declaration(decl: &BytesDecl) {
 }
 
 impl<C: TableDataContent> VOTableElement for VOTable<C> {
+  const TAG: &'static str = "VOTABLE";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -922,7 +924,6 @@ impl<C: TableDataContent> VOTableElement for VOTable<C> {
 }
 
 impl<C: TableDataContent> QuickXmlReadWrite for VOTable<C> {
-  const TAG: &'static str = "VOTABLE";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(

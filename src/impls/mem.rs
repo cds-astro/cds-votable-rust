@@ -24,7 +24,7 @@ use crate::{
   },
   table::TableElem,
   utils::{discard_comment, is_empty, unexpected_event},
-  QuickXmlReadWrite, TableDataContent,
+  TableDataContent, VOTableElement,
 };
 
 /// Do not parse/contains any data.

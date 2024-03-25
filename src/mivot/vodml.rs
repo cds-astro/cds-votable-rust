@@ -126,6 +126,8 @@ impl Vodml {
 }
 
 impl VOTableElement for Vodml {
+  const TAG: &'static str = "VODML";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -167,7 +169,6 @@ impl VOTableElement for Vodml {
 }
 
 impl QuickXmlReadWrite for Vodml {
-  const TAG: &'static str = "VODML";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: std::io::BufRead>(

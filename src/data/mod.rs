@@ -303,6 +303,8 @@ impl<C: TableDataContent> Data<C> {
 }
 
 impl<C: TableDataContent> VOTableElement for Data<C> {
+  const TAG: &'static str = "DATA";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -336,7 +338,6 @@ impl<C: TableDataContent> VOTableElement for Data<C> {
 }
 
 impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
-  const TAG: &'static str = "DATA";
   type Context = Vec<TableElem>;
 
   fn read_sub_elements_by_ref<R: BufRead>(

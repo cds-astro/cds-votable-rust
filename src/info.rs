@@ -13,7 +13,7 @@ use serde_json::Value;
 use super::{
   error::VOTableError,
   utils::{discard_comment, discard_event},
-  QuickXmlReadWrite, VOTableElement,
+  HasContent, QuickXmlReadWrite, VOTableElement,
 };
 
 /// Struct corresponding to the `INFO` XML tag.
@@ -69,11 +69,13 @@ impl Info {
   impl_builder_opt_string_attr!(utype);
   // extra attributes
   impl_builder_insert_extra!();
-  // content
-  impl_builder_opt_string_attr!(content);
 }
 
+impl_has_content!(Info);
+
 impl VOTableElement for Info {
+  const TAG: &'static str = "INFO";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -155,7 +157,6 @@ impl VOTableElement for Info {
 }
 
 impl QuickXmlReadWrite for Info {
-  const TAG: &'static str = "INFO";
   type Context = ();
 
   impl_read_write_content_only!();

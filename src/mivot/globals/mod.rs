@@ -77,6 +77,8 @@ impl Globals {
 }
 
 impl VOTableElement for Globals {
+  const TAG: &'static str = "GLOBALS";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -110,7 +112,6 @@ impl VOTableElement for Globals {
 }
 
 impl QuickXmlReadWrite for Globals {
-  const TAG: &'static str = "GLOBALS";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(

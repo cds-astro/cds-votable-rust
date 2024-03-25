@@ -63,6 +63,8 @@ impl<C: TableDataContent> Binary<C> {
 }
 
 impl<C: TableDataContent> VOTableElement for Binary<C> {
+  const TAG: &'static str = "BINARY";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -96,7 +98,6 @@ impl<C: TableDataContent> VOTableElement for Binary<C> {
 }
 
 impl<C: TableDataContent> QuickXmlReadWrite for Binary<C> {
-  const TAG: &'static str = "BINARY";
   type Context = Vec<TableElem>;
 
   fn read_sub_elements_by_ref<R: BufRead>(

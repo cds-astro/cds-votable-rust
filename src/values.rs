@@ -35,6 +35,8 @@ impl Min {
 }
 
 impl VOTableElement for Min {
+  const TAG: &'static str = "MIN";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -89,7 +91,6 @@ impl VOTableElement for Min {
 }
 
 impl QuickXmlReadWrite for Min {
-  const TAG: &'static str = "MIN";
   type Context = ();
 
   impl_read_write_no_content_no_sub_elems!();
@@ -115,6 +116,8 @@ impl Max {
 }
 
 impl VOTableElement for Max {
+  const TAG: &'static str = "MAX";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -167,7 +170,6 @@ impl VOTableElement for Max {
 }
 
 impl QuickXmlReadWrite for Max {
-  const TAG: &'static str = "MAX";
   type Context = ();
 
   impl_read_write_no_content_no_sub_elems!();
@@ -211,6 +213,8 @@ impl Opt {
 }
 
 impl VOTableElement for Opt {
+  const TAG: &'static str = "OPTION";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -263,7 +267,6 @@ impl VOTableElement for Opt {
 }
 
 impl QuickXmlReadWrite for Opt {
-  const TAG: &'static str = "OPTION";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
@@ -370,6 +373,8 @@ impl Values {
 }
 
 impl VOTableElement for Values {
+  const TAG: &'static str = "VALUES";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -422,7 +427,6 @@ impl VOTableElement for Values {
 }
 
 impl QuickXmlReadWrite for Values {
-  const TAG: &'static str = "VALUES";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(

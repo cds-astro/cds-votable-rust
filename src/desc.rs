@@ -10,7 +10,7 @@ use quick_xml::{events::Event, Reader, Writer};
 use super::{
   error::VOTableError,
   utils::{discard_comment, discard_event, unexpected_attr_warn},
-  QuickXmlReadWrite, VOTableElement,
+  HasContent, QuickXmlReadWrite, VOTableElement,
 };
 
 /// Struct corresponding to the `DESCRIPTION` XML tag.
@@ -23,11 +23,17 @@ impl Description {
   }
 }
 
-impl Description {
-  pub fn set_content_by_ref<S: Into<String>>(&mut self, content: S) {
+impl HasContent for Description {
+  fn set_content<S: Into<String>>(mut self, content: S) -> Self {
+    self.set_content_by_ref(content);
+    self
+  }
+  fn set_content_by_ref<S: Into<String>>(&mut self, content: S) {
     self.0 = content.into()
   }
+}
 
+impl Description {
   pub fn get_content_unwrapped(&self) -> &str {
     self.0.as_str()
   }
@@ -52,6 +58,8 @@ impl Display for Description {
 }
 
 impl VOTableElement for Description {
+  const TAG: &'static str = "DESCRIPTION";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -89,7 +97,6 @@ impl VOTableElement for Description {
 }
 
 impl QuickXmlReadWrite for Description {
-  const TAG: &'static str = "DESCRIPTION";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(

@@ -12,7 +12,7 @@ use crate::{
   error::VOTableError,
   mivot::VodmlVisitor,
   utils::{discard_comment, discard_event, unexpected_attr_err},
-  QuickXmlReadWrite, VOTableElement,
+  HasContent, QuickXmlReadWrite, VOTableElement,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -70,8 +70,11 @@ impl Report {
     visitor.visit_report(self)
   }
 }
+impl_has_content!(Report);
 
 impl VOTableElement for Report {
+  const TAG: &'static str = "REPORT";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -131,7 +134,6 @@ impl VOTableElement for Report {
 }
 
 impl QuickXmlReadWrite for Report {
-  const TAG: &'static str = "REPORT";
   type Context = ();
 
   impl_read_write_content_only!();

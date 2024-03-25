@@ -154,6 +154,8 @@ impl AttributeChildOfInstance {
 }
 
 impl VOTableElement for AttributeChildOfInstance {
+  const TAG: &'static str = "ATTRIBUTE";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -236,7 +238,6 @@ impl VOTableElement for AttributeChildOfInstance {
 }
 
 impl QuickXmlReadWrite for AttributeChildOfInstance {
-  const TAG: &'static str = "ATTRIBUTE";
   type Context = ();
 
   impl_read_write_no_content_no_sub_elems!();
@@ -305,6 +306,8 @@ impl AttributeChildOfCollection {
 }
 
 impl VOTableElement for AttributeChildOfCollection {
+  const TAG: &'static str = "ATTRIBUTE";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -380,7 +383,6 @@ impl VOTableElement for AttributeChildOfCollection {
 }
 
 impl QuickXmlReadWrite for AttributeChildOfCollection {
-  const TAG: &'static str = "ATTRIBUTE";
   type Context = ();
 
   impl_read_write_no_content_no_sub_elems!();

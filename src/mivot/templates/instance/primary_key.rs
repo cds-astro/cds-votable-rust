@@ -32,6 +32,8 @@ impl PrimaryKey {
 }
 
 impl VOTableElement for PrimaryKey {
+  const TAG: &'static str = "PRIMARY_KEY";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -99,7 +101,6 @@ impl VOTableElement for PrimaryKey {
 }
 
 impl QuickXmlReadWrite for PrimaryKey {
-  const TAG: &'static str = "PRIMARY_KEY";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
@@ -164,6 +165,8 @@ impl PrimaryKeyDyn {
 }
 
 impl VOTableElement for PrimaryKeyDyn {
+  const TAG: &'static str = "PRIMARY_KEY";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -213,7 +216,6 @@ impl VOTableElement for PrimaryKeyDyn {
 }
 
 impl QuickXmlReadWrite for PrimaryKeyDyn {
-  const TAG: &'static str = "PRIMARY_KEY";
   type Context = ();
 
   impl_read_write_no_content_no_sub_elems!();

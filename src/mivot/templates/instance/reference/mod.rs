@@ -36,6 +36,8 @@ impl Reference {
 }
 
 impl VOTableElement for Reference {
+  const TAG: &'static str = "REFERENCE";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -107,7 +109,6 @@ impl VOTableElement for Reference {
 }
 
 impl QuickXmlReadWrite for Reference {
-  const TAG: &'static str = "REFERENCE";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
@@ -174,6 +175,8 @@ impl ReferenceDyn {
   }
 }
 impl VOTableElement for ReferenceDyn {
+  const TAG: &'static str = "REFERENCE";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -222,7 +225,6 @@ impl VOTableElement for ReferenceDyn {
   }
 }
 impl QuickXmlReadWrite for ReferenceDyn {
-  const TAG: &'static str = "REFERENCE";
   type Context = ();
 
   fn from_attributes(_attrs: Attributes) -> Result<Self, VOTableError> {

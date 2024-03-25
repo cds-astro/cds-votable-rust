@@ -346,6 +346,22 @@ macro_rules!  impl_builder_opt_subelem_delegated {
   };
 }
 
+macro_rules! impl_has_content {
+  ($tag:ident) => {
+    paste! {
+      impl HasContent for $tag {
+        fn set_content<S: Into<String>>(mut self, content: S) -> Self {
+          self.content = Some(content.into());
+          self
+        }
+        fn set_content_by_ref<S: Into<String>>(&mut self, content: S) {
+          self.content = Some(content.into());
+        }
+      }
+    }
+  };
+}
+
 /// E.g. `impl_builder_push_elem(CooSys, ResourceElem)` leads to
 /// ```ignore
 /// pub fn push_coosys(mut self, coosys: CooSys) -> Self {

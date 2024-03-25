@@ -117,6 +117,8 @@ impl Group {
 }
 
 impl VOTableElement for Group {
+  const TAG: &'static str = "GROUP";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -173,7 +175,6 @@ impl VOTableElement for Group {
 }
 
 impl QuickXmlReadWrite for Group {
-  const TAG: &'static str = "GROUP";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
@@ -337,6 +338,8 @@ impl TableGroup {
 }
 
 impl VOTableElement for TableGroup {
+  const TAG: &'static str = "GROUP";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -393,7 +396,6 @@ impl VOTableElement for TableGroup {
 }
 
 impl QuickXmlReadWrite for TableGroup {
-  const TAG: &'static str = "GROUP";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(

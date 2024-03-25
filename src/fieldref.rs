@@ -13,7 +13,7 @@ use serde_json::Value;
 use super::{
   error::VOTableError,
   utils::{discard_comment, discard_event},
-  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
+  HasContent, QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 /// Struct corresponding to the `FIELDRef` XML tag.
@@ -50,8 +50,6 @@ impl FieldRef {
   impl_builder_opt_string_attr!(utype);
   // extra attributes
   impl_builder_insert_extra!();
-  // content
-  impl_builder_opt_string_attr!(content);
 
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where
@@ -62,7 +60,11 @@ impl FieldRef {
   }
 }
 
+impl_has_content!(FieldRef);
+
 impl VOTableElement for FieldRef {
+  const TAG: &'static str = "FIELDref";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -126,7 +128,6 @@ impl VOTableElement for FieldRef {
 }
 
 impl QuickXmlReadWrite for FieldRef {
-  const TAG: &'static str = "FIELDref";
   type Context = ();
 
   impl_read_write_content_only!();

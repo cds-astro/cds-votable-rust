@@ -99,6 +99,8 @@ impl Instance {
 }
 
 impl VOTableElement for Instance {
+  const TAG: &'static str = "INSTANCE";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -155,7 +157,6 @@ impl VOTableElement for Instance {
 }
 
 impl QuickXmlReadWrite for Instance {
-  const TAG: &'static str = "INSTANCE";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(

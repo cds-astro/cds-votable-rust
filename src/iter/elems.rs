@@ -21,7 +21,7 @@ use crate::{
   iter::TableIter,
   table::Table,
   utils::{discard_comment, is_empty, unexpected_event},
-  Binary, Binary2, QuickXmlReadWrite, Stream, TableData,
+  Binary, Binary2, Stream, TableData, VOTableElement,
 };
 
 /// Possible iterators and a table row value.

@@ -42,6 +42,8 @@ impl Reference {
 }
 
 impl VOTableElement for Reference {
+  const TAG: &'static str = "REFERENCE";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -94,7 +96,6 @@ impl VOTableElement for Reference {
 }
 
 impl QuickXmlReadWrite for Reference {
-  const TAG: &'static str = "REFERENCE";
   type Context = ();
 
   impl_read_write_no_content_no_sub_elems!();

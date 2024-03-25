@@ -68,6 +68,8 @@ impl Templates {
 }
 
 impl VOTableElement for Templates {
+  const TAG: &'static str = "TEMPLATES";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -116,7 +118,6 @@ impl VOTableElement for Templates {
 }
 
 impl QuickXmlReadWrite for Templates {
-  const TAG: &'static str = "TEMPLATES";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: std::io::BufRead>(

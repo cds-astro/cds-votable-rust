@@ -14,7 +14,7 @@ use serde_json::Value;
 use super::{
   error::VOTableError,
   utils::{discard_comment, discard_event},
-  QuickXmlReadWrite, VOTableElement,
+  HasContent, QuickXmlReadWrite, VOTableElement,
 };
 
 /// Enum for the possible values of the `content-role` attriute.
@@ -94,11 +94,12 @@ impl Link {
   impl_builder_opt_string_attr!(href);
   // extra attributes
   impl_builder_insert_extra!();
-  // content
-  impl_builder_opt_string_attr!(content);
 }
+impl_has_content!(Link);
 
 impl VOTableElement for Link {
+  const TAG: &'static str = "LINK";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -166,7 +167,6 @@ impl VOTableElement for Link {
 }
 
 impl QuickXmlReadWrite for Link {
-  const TAG: &'static str = "LINK";
   type Context = ();
 
   impl_read_write_content_only!();

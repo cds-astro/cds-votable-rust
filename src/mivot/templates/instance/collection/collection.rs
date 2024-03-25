@@ -296,6 +296,8 @@ impl Collection {
 }
 
 impl VOTableElement for Collection {
+  const TAG: &'static str = "COLLECTION";
+
   fn from_attrs<K, V, I>(_attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -339,7 +341,6 @@ impl VOTableElement for Collection {
 }
 
 impl QuickXmlReadWrite for Collection {
-  const TAG: &'static str = "COLLECTION";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(

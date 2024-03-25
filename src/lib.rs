@@ -80,6 +80,19 @@ pub use self::{
 };
 
 pub trait VOTableElement: Sized {
+  /// XML Tag og the VOTable element.
+  const TAG: &'static str;
+  const TAG_BYTES: &'static [u8] = Self::TAG.as_bytes();
+
+  /// Returns the XML tag of this VOTable Element.
+  fn tag(&self) -> &str {
+    Self::TAG
+  }
+
+  fn tag_bytes(&self) -> &[u8] {
+    Self::TAG_BYTES
+  }
+
   /// Create a new object from a set of attributes.
   ///
   /// Usually, `from_attributes` simply call the object default constructor
@@ -133,6 +146,21 @@ pub trait VOTableElement: Sized {
   /// Returns `false` if this object contains sub-elements.
   fn has_no_sub_elements(&self) -> bool;
 }
+
+/// Tels that the element may contains text between its opening and closing tags.
+/// In the VOTable standard, tags possibly having a content do not have sub-elements
+pub trait HasContent: VOTableElement {
+  /// Set the optional content of this tag, taking the ownership and returning itself.
+  fn set_content<S: Into<String>>(self, content: S) -> Self;
+  /// Set the optional content of this tag, by mutable ref.
+  fn set_content_by_ref<S: Into<String>>(&mut self, content: S);
+}
+// IsEmtpyTag
+// HasSubElements
+
+/// Tels that the element may contains a description sub-elements.
+/// In the VOTable standard, at most one description sub-element can be present by element supporting it.
+pub trait HasDescription: VOTableElement {}
 
 pub trait TableDataContent: Default + PartialEq + serde::Serialize {
   fn new() -> Self {
@@ -203,17 +231,7 @@ pub trait TableDataContent: Default + PartialEq + serde::Serialize {
 }
 
 pub trait QuickXmlReadWrite: VOTableElement {
-  const TAG: &'static str;
-  const TAG_BYTES: &'static [u8] = Self::TAG.as_bytes();
   type Context;
-
-  fn tag(&self) -> &str {
-    Self::TAG
-  }
-
-  fn tag_bytes(&self) -> &[u8] {
-    Self::TAG_BYTES
-  }
 
   fn from_event_empty(e: &BytesStart) -> Result<Self, VOTableError> {
     Self::from_attributes(e.attributes())
@@ -364,7 +382,7 @@ pub trait QuickXmlReadWrite: VOTableElement {
 }
 
 // We visit all sub elements, bu we retrieve attributes from objects
-// We kinf of added a part of the context by prefixing some visit methods with the name of the
+// We kind of added a part of the context by prefixing some visit methods with the name of the
 // TAG it is called from.
 pub trait VOTableVisitor<C: TableDataContent> {
   type E: Error;
@@ -433,8 +451,6 @@ pub trait VOTableVisitor<C: TableDataContent> {
   fn visit_values_opt_ended(&mut self, opt: &mut Opt) -> Result<(), Self::E>;
   fn visit_values_ended(&mut self, values: &mut Values) -> Result<(), Self::E>;
 }
-
-// For Javascript, see https://rustwasm.github.io/wasm-bindgen/reference/arbitrary-data-with-serde.html
 
 #[cfg(test)]
 mod tests {

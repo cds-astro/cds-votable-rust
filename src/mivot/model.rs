@@ -38,6 +38,8 @@ impl Model {
   }
 }
 impl VOTableElement for Model {
+  const TAG: &'static str = "MODEL";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -97,7 +99,6 @@ impl VOTableElement for Model {
 }
 
 impl QuickXmlReadWrite for Model {
-  const TAG: &'static str = "MODEL";
   type Context = ();
 
   impl_read_write_no_content_no_sub_elems!();

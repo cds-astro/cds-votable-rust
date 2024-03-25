@@ -46,6 +46,8 @@ impl Fits {
 }
 
 impl VOTableElement for Fits {
+  const TAG: &'static str = "FITS";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -86,7 +88,6 @@ impl VOTableElement for Fits {
 }
 
 impl QuickXmlReadWrite for Fits {
-  const TAG: &'static str = "FITS";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(

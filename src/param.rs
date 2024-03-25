@@ -77,6 +77,8 @@ impl Param {
 }
 
 impl VOTableElement for Param {
+  const TAG: &'static str = "PARAM";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -196,7 +198,6 @@ impl VOTableElement for Param {
 }
 
 impl QuickXmlReadWrite for Param {
-  const TAG: &'static str = "PARAM";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(

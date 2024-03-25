@@ -82,6 +82,8 @@ impl Definitions {
 }
 
 impl VOTableElement for Definitions {
+  const TAG: &'static str = "DEFINITIONS";
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -115,7 +117,6 @@ impl VOTableElement for Definitions {
 }
 
 impl QuickXmlReadWrite for Definitions {
-  const TAG: &'static str = "DEFINITIONS";
   type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
