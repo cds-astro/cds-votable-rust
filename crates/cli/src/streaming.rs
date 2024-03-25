@@ -76,9 +76,6 @@ pub struct StreamConvert {
   /// Number of rows process by a same thread in `parallel` mode
   #[arg(long, default_value_t = 10_000_usize)]
   chunk_size: usize,
-  /// Robust TABLEDATA -> CSV conversion: to be used if rows contains comments or CDATA.
-  #[arg(short, long, value_name = "N")]
-  robust: bool,
 }
 
 impl StreamConvert {

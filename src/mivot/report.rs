@@ -122,7 +122,7 @@ impl VOTableElement for Report {
   }
 
   fn get_content(&self) -> Option<&str> {
-    self.content.as_ref().map(|x| x.as_str())
+    self.content.as_deref()
   }
 
   fn has_no_sub_elements(&self) -> bool {

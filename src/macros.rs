@@ -220,7 +220,7 @@ macro_rules! impl_builder_opt_attr_delegated {
     paste! {
       #[doc = concat!("Set the optional attribute `", stringify!($arg), "` taking the ownership and returning itself.")]
       pub fn [<set_ $arg>](mut self, $arg: $t) -> Self {
-        self.$del.$arg = Some($arg);
+        self.[<set_ $arg _by_ref>]($arg);
         self
       }
       #[doc = concat!("Set the optional attribute `", stringify!($arg), "` by mutable ref.")]
@@ -233,7 +233,7 @@ macro_rules! impl_builder_opt_attr_delegated {
     paste! {
       #[doc = concat!("Set the optional attribute `", stringify!($arg), "` taking the ownership and returning itself.")]
       pub fn [<set_ $alt>](mut self, $arg: $t) -> Self {
-        self.$del.$arg = Some($arg);
+        self.[<set_ $alt _by_ref>]($arg);
         self
       }
       #[doc = concat!("Set the optional attribute `", stringify!($arg), "` by mutable ref.")]
@@ -244,7 +244,7 @@ macro_rules! impl_builder_opt_attr_delegated {
   };
 }
 
-macro_rules!  impl_builder_opt_subelem {
+macro_rules! impl_builder_opt_subelem {
   ($arg: ident, $t: ident) => {
     paste! {
       #[doc = concat!("Set the optional sub-element `", stringify!($arg), "` taking the ownership and returning itself.")]
@@ -258,6 +258,15 @@ macro_rules!  impl_builder_opt_subelem {
           warn!(concat!("Multiple occurrence of ", stringify!($arg), ". All but the last one are discarded."));
         }
       }
+      #[doc = concat!("Reset the optional sub-element `", stringify!($arg), "` taking the ownership and returning itself.")]
+      pub fn [<reset_ $arg>](mut self, $arg: $t) -> Self {
+        self.[<reset_ $arg _by_ref>]($arg);
+        self
+      }
+      #[doc = concat!("Reset the optional sub-element `", stringify!($arg), "` by mutable ref.")]
+      pub fn [<reset_ $arg _by_ref>](&mut self, $arg: $t) {
+        let _ = self.$arg.replace($arg);
+      }
     }
   };
   ($arg: ident, $alt:ident, $t: ident) => {
@@ -269,7 +278,18 @@ macro_rules!  impl_builder_opt_subelem {
       }
       #[doc = concat!("Set the optional sub-element `", stringify!($arg), "` by mutable ref.")]
       pub fn [<set_ $alt _by_ref>](&mut self, $arg: $t) {
-        self.$arg = Some($arg);
+        if self.$arg.replace($arg).is_some() {
+          warn!(concat!("Multiple occurrence of ", stringify!($arg), ". All but the last one are discarded."));
+        }
+      }
+      #[doc = concat!("Reset the optional sub-element `", stringify!($arg), "` taking the ownership and returning itself.")]
+      pub fn [<reset_ $alt>](mut self, $arg: $t) -> Self {
+        self.[<reset_ $alt _by_ref>]($arg);
+        self
+      }
+      #[doc = concat!("Reset the optional sub-element `", stringify!($arg), "` by mutable ref.")]
+      pub fn [<reset_ $alt _by_ref>](&mut self, $arg: $t) {
+        let _ = self.$arg.replace($arg);
       }
     }
   };
@@ -289,6 +309,15 @@ macro_rules!  impl_builder_opt_subelem_delegated {
           warn!(concat!("Multiple occurrence of ", stringify!($arg), ". All but the last one are discarded."));
         }
       }
+      #[doc = concat!("Set the optional sub-element `", stringify!($arg), "` taking the ownership and returning itself.")]
+      pub fn [<reset_ $arg>](mut self, $arg: $t) -> Self {
+        self.[<reset_ $arg _by_ref>]($arg);
+        self
+      }
+      #[doc = concat!("Set the optional sub-element `", stringify!($arg), "` by mutable ref.")]
+      pub fn [<reset_ $arg _by_ref>](&mut self, $arg: $t) {
+        let _ = self.$del.$arg.replace($arg);
+      }
     }
   };
   ($arg: ident, $alt:ident, $t: ident, $del:ident) => {
@@ -300,7 +329,18 @@ macro_rules!  impl_builder_opt_subelem_delegated {
       }
       #[doc = concat!("Set the optional sub-element `", stringify!($arg), "` by mutable ref.")]
       pub fn [<set_ $alt _by_ref>](&mut self, $arg: $t) {
-        self.$del.$arg = Some($arg);
+        if self.$del.$arg.replace($arg).is_some() {
+          warn!(concat!("Multiple occurrence of ", stringify!($arg), ". All but the last one are discarded."));
+        }
+      }
+      #[doc = concat!("Set the optional sub-element `", stringify!($arg), "` taking the ownership and returning itself.")]
+      pub fn [<reset_ $alt>](mut self, $arg: $t) -> Self {
+        self.[<reset_ $alt _by_ref>]($arg);
+        self
+      }
+      #[doc = concat!("Set the optional sub-element `", stringify!($arg), "` by mutable ref.")]
+      pub fn [<set_ $alt _by_ref>](&mut self, $arg: $t) {
+        let _ = self.$del.$arg.replace($arg);
       }
     }
   };

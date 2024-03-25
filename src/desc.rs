@@ -23,6 +23,16 @@ impl Description {
   }
 }
 
+impl Description {
+  pub fn set_content_by_ref<S: Into<String>>(&mut self, content: S) {
+    self.0 = content.into()
+  }
+
+  pub fn get_content_unwrapped(&self) -> &str {
+    self.0.as_str()
+  }
+}
+
 impl From<&str> for Description {
   fn from(content: &str) -> Self {
     content.to_string().into()

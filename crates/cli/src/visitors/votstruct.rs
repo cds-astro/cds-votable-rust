@@ -19,7 +19,7 @@ use votable::{
   timesys::TimeSys,
   values::{Max, Min, Opt, Values},
   votable::VOTable,
-  TableDataContent, VOTableVisitor, VoidTableDataContent,
+  TableDataContent, VOTableElement, VOTableVisitor, VoidTableDataContent,
 };
 
 use super::{StringError, Tag};
@@ -328,7 +328,7 @@ impl<C: TableDataContent> VOTableVisitor<C> for AsciiStructVisitor {
       vid.as_str(),
       self.content_size_min,
     );
-    tagp.set_content(description.0.as_str());
+    tagp.set_content(description.get_content_unwrapped());
     tagp.print()
   }
 

@@ -202,7 +202,7 @@ pub trait TableDataContent: Default + PartialEq + serde::Serialize {
   ) -> Result<(), VOTableError>;
 }
 
-trait QuickXmlReadWrite: VOTableElement {
+pub trait QuickXmlReadWrite: VOTableElement {
   const TAG: &'static str;
   const TAG_BYTES: &'static [u8] = Self::TAG.as_bytes();
   type Context;

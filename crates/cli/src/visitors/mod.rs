@@ -1,10 +1,17 @@
 use std::{
+  array,
   error::Error,
   fmt::{Debug, Display, Formatter, Result},
+  marker::Copy,
+  slice::Iter,
+  str::FromStr,
 };
+
+use clap::ValueEnum;
 
 pub mod colnames;
 pub mod fieldarray;
+pub mod update;
 #[cfg(feature = "vizier")]
 pub mod viz_org_names;
 pub mod votstruct;
@@ -43,11 +50,11 @@ impl Debug for StringError {
   }
 }
 
-#[derive(Debug, Copy, Clone)]
 // Remark: only VALUES and DESCRIPTION are unique in a given tag
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 pub enum Tag {
   // Elements possibly having sub-elements
-  VOTABLE,
+  VOTABLE = 0,
   RESOURCE,
   TABLE,
   DATA,
@@ -68,9 +75,86 @@ pub enum Tag {
   MIN,
   MAX,
   STREAM,
+  //// MIVOT
+  // VODML
+  // REPORT
+  // MODEL
+  // GLOBAL
+  // TEMPLATE
+  // ATTRIBUTE / COLLECTION / INSTANCE / REFERENCE
+  // JOIN / WHERE / PRIMARY_KEY / FOREIGN_KEY
 }
+impl Default for Tag {
+  fn default() -> Self {
+    Self::VOTABLE
+  }
+}
+const TAGS: [Tag; Tag::len()] = [
+  Tag::VOTABLE,
+  Tag::RESOURCE,
+  Tag::TABLE,
+  Tag::DATA,
+  Tag::FIELD,
+  Tag::PARAM,
+  Tag::GROUP,
+  Tag::VALUES,
+  Tag::OPTION,
+  Tag::COOSYS,
+  Tag::DEFINITION,
+  Tag::DESCRIPTION,
+  Tag::TIMESYS,
+  Tag::INFO,
+  Tag::LINK,
+  Tag::FIELDRef,
+  Tag::PARAMRef,
+  Tag::MIN,
+  Tag::MAX,
+  Tag::STREAM,
+];
 
 impl Tag {
+  pub const fn index(&self) -> usize {
+    *self as usize
+  }
+  pub const fn len() -> usize {
+    Self::STREAM as usize + 1
+  }
+  pub const fn array() -> [Tag; Tag::len()] {
+    TAGS
+  }
+  pub const fn new_array<T>(default: T) -> [T; Tag::len()]
+  where
+    T: Copy,
+  {
+    [default; Tag::len()]
+  }
+  pub const fn new_array_of_vec<T>() -> [Vec<T>; Tag::len()] {
+    [
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+      Vec::new(),
+    ]
+  }
+  pub fn iterator() -> Iter<'static, Tag> {
+    TAGS.iter()
+  }
   /// # Remark
   /// * elements that may contains sub-elements are in upper case
   /// * elements that *cannot* contains sub-elemnts are in lower case
@@ -100,27 +184,35 @@ impl Tag {
   }
 }
 
+impl FromStr for Tag {
+  type Err = String;
+
+  fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+    match s {
+      "VOTABLE" => Ok(Self::VOTABLE),
+      "RESOURCE" => Ok(Self::RESOURCE),
+      "TABLE" => Ok(Self::TABLE),
+      "FIELD" => Ok(Self::FIELD),
+      "PARAM" => Ok(Self::PARAM),
+      "GROUP" => Ok(Self::GROUP),
+      "VALUES" => Ok(Self::VALUES),
+      "OPTION" => Ok(Self::OPTION),
+      "COOSYS" => Ok(Self::COOSYS),
+      "DESCRIPTION" => Ok(Self::DESCRIPTION),
+      "TIMESYS" => Ok(Self::TIMESYS),
+      "INFO" => Ok(Self::INFO),
+      "LINK" => Ok(Self::LINK),
+      "FIELDRef" => Ok(Self::FIELDRef),
+      "PARAMRef" => Ok(Self::PARAMRef),
+      "MIN" => Ok(Self::MIN),
+      "MAX" => Ok(Self::MAX),
+      _ => Err(format!("Tag '{}' not recognized.", s)),
+    }
+  }
+}
+
 impl Display for Tag {
   fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-    /*f.write_str(match self {
-      Self::VOTABLE => "VOTABLE",
-      Self::RESOURCE => "RESOURCE",
-      Self::TABLE => "TABLE",
-      Self::FIELD => "FIELD",
-      Self::PARAM => "PARAM",
-      Self::GROUP => "GROUP",
-      Self::VALUES => "VALUES",
-      Self::OPTION => "OPTION",
-      Self::COOSYS => "COOSYS",
-      Self::DESCRIPTION => "DESCRIPTION",
-      Self::TIMESYS => "TIMESYS",
-      Self::INFO => "INFO",
-      Self::LINK => "LINK",
-      Self::FIELDRef => "FIELDRef",
-      Self::PARAMRef => "PARAMRef",
-      Self::MIN => "MIN",
-      Self::MAX => "MAX",
-    })*/
     Debug::fmt(self, f)
   }
 }
