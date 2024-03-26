@@ -1,18 +1,14 @@
 //! Define the `PrimaryKey` structures which are specific to `TEMPLATES`.
 
-use std::{
-  io::{BufRead, Write},
-  str,
-};
+use std::str;
 
 use paste::paste;
-use quick_xml::{Reader, Writer};
 
 use crate::{
   error::VOTableError,
   mivot::{globals::instance::primary_key::PrimaryKeyStatic, VodmlVisitor},
   utils::unexpected_attr_err,
-  QuickXmlReadWrite, VOTableElement,
+  EmptyElem, VOTableElement,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -33,6 +29,8 @@ impl PrimaryKey {
 
 impl VOTableElement for PrimaryKey {
   const TAG: &'static str = "PRIMARY_KEY";
+
+  type MarkerType = EmptyElem;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -94,49 +92,6 @@ impl VOTableElement for PrimaryKey {
       PrimaryKey::Dynamic(pk) => pk.for_each_attribute(f),
     }
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for PrimaryKey {
-  type Context = ();
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    reader: &mut Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    match self {
-      PrimaryKey::Static(static_pk_ref_mut) => {
-        static_pk_ref_mut.read_sub_elements_by_ref(reader, reader_buff, context)
-      }
-      PrimaryKey::Dynamic(dyn_pk_ref_mut) => {
-        dyn_pk_ref_mut.read_sub_elements_by_ref(reader, reader_buff, context)
-      }
-    }
-  }
-
-  fn write<W: Write>(
-    &mut self,
-    writer: &mut Writer<W>,
-    context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    match self {
-      PrimaryKey::Static(pk) => pk.write(writer, context),
-      PrimaryKey::Dynamic(pk) => pk.write(writer, context),
-    }
-  }
-
-  fn write_sub_elements_by_ref<W: Write>(
-    &mut self,
-    _writer: &mut Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    unreachable!()
-  }
 }
 
 /// `Dynamic` primary key are only possible in `TEMPLATE` since
@@ -166,6 +121,8 @@ impl PrimaryKeyDyn {
 
 impl VOTableElement for PrimaryKeyDyn {
   const TAG: &'static str = "PRIMARY_KEY";
+
+  type MarkerType = EmptyElem;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -209,16 +166,6 @@ impl VOTableElement for PrimaryKeyDyn {
     f("dmtype", self.dmtype.as_str());
     f("ref", self.ref_.as_str());
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for PrimaryKeyDyn {
-  type Context = ();
-
-  impl_read_write_no_content_no_sub_elems!();
 }
 
 #[cfg(test)]

@@ -350,6 +350,9 @@ macro_rules! impl_has_content {
   ($tag:ident) => {
     paste! {
       impl HasContent for $tag {
+        fn get_content(&self) -> Option<&str> {
+          self.content.as_deref()
+        }
         fn set_content<S: Into<String>>(mut self, content: S) -> Self {
           self.content = Some(content.into());
           self
@@ -374,7 +377,7 @@ macro_rules! impl_builder_push_elem {
     paste! {
       #[doc = concat!("Add the given `", stringify!($e), "` to the element list.")]
       pub fn [<push_ $t:lower>](mut self, [<$t:lower>]: $t) -> Self {
-        self.elems.push($e::$t([<$t:lower>]));
+        self.[<push_ $t:lower _by_ref>]([<$t:lower>]);
         self
       }
       #[doc = concat!("Add the given `", stringify!($e), "` to the element list, by mutable ref.")]
@@ -387,7 +390,7 @@ macro_rules! impl_builder_push_elem {
     paste! {
       #[doc = concat!("Add the given `", stringify!($a), "` to the element list.")]
       pub fn [<push_ $t:lower>](mut self, [<$t:lower>]: $a) -> Self {
-        self.elems.push($e::$t([<$t:lower>]));
+        self.[<push_ $t:lower _by_ref>]([<$t:lower>]);
         self
       }
       #[doc = concat!("Add the given `", stringify!($a), "` to the element list, by mutable ref.")]
@@ -592,6 +595,7 @@ macro_rules! impl_builder_insert_extra_delegated {
   };
 }
 
+/*
 /// Read a tag content (without sub-elements)
 macro_rules! read_content_by_ref {
   ($Self:ident, $self:ident, $reader:ident, $reader_buff:ident) => {{
@@ -643,7 +647,7 @@ macro_rules! read_content_by_ref {
       }
     }
   }};
-}
+}*/
 
 /// E.g. `write_opt_string_attr(self, elem_writer, ID)` leads to
 /// ```ignore
@@ -715,27 +719,7 @@ macro_rules! for_each_extra_attribute_delegated {
   };
 }
 
-macro_rules! impl_read_write_no_content_no_sub_elems {
-  () => {
-    fn read_sub_elements_by_ref<R: BufRead>(
-      &mut self,
-      _reader: &mut Reader<R>,
-      _reader_buff: &mut Vec<u8>,
-      _context: &Self::Context,
-    ) -> Result<(), VOTableError> {
-      unreachable!()
-    }
-
-    fn write_sub_elements_by_ref<W: Write>(
-      &mut self,
-      _writer: &mut Writer<W>,
-      _context: &Self::Context,
-    ) -> Result<(), VOTableError> {
-      unreachable!()
-    }
-  };
-}
-
+/*
 macro_rules! impl_read_write_content_only {
   () => {
     fn read_sub_elements_by_ref<R: BufRead>(
@@ -755,7 +739,7 @@ macro_rules! impl_read_write_content_only {
       unreachable!()
     }
   };
-}
+}*/
 
 macro_rules! write_elem {
   ($self:ident, $elem:ident, $writer:ident, $context:ident) => {
@@ -792,28 +776,69 @@ macro_rules! write_elem_vec_empty_context {
 // We use a macro because of mutable borrowing issue with 'reader_buff' if we put this in a function.
 macro_rules! from_event_start_by_ref {
   ($elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {{
-    $elem::from_attributes($e.attributes()).and_then(|mut elem| {
-      elem
-        .read_sub_elements_and_clean_by_ref(&mut $reader, &mut $reader_buff, &())
-        .map(|()| elem)
-    })?
+    $elem::from_event_start($e)
+      .and_then(|elem| elem.read_content(&mut $reader, &mut $reader_buff, &()))?
   }};
   ($elem:ident, $reader:ident, $reader_buff:ident, $e:ident, $context:expr) => {{
-    $elem::from_attributes($e.attributes()).and_then(|mut elem| {
-      elem
-        .read_sub_elements_and_clean_by_ref(&mut $reader, &mut $reader_buff, &$context)
-        .map(|()| elem)
-    })?
+    $elem::from_event_start($e)
+      .and_then(|elem| elem.read_content(&mut $reader, &mut $reader_buff, &$context))?
   }};
 }
 
-macro_rules! from_event_start_desc_by_ref {
-  ($self:ident, $reader:ident, $reader_buff:ident, $e:ident) => {{
-    $self.set_description_by_ref(from_event_start_by_ref!(
-      Description,
-      $reader,
-      $reader_buff,
-      $e
-    ))
-  }};
+macro_rules! set_from_event_start {
+  ($self:ident, $elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {
+    paste! {
+      $elem::from_event_start($e)
+        .and_then(|elem| elem.read_content($reader, $reader_buff, &()))
+        .map(|elem| $self.[<set_ $elem:lower _by_ref>](elem))?
+    }
+  };
+  ($self:ident, $elem:ident, $reader:ident, $reader_buff:ident, $e:ident, $context:expr) => {
+    paste! {
+      $elem::from_event_start($e)
+        .and_then(|elem| elem.read_content($reader, $reader_buff, &$context))
+        .map(|elem| $self.[<set_ $elem:lower _by_ref>](elem))?
+    }
+  };
+}
+
+macro_rules! set_from_event_empty {
+  ($self:ident, $elem:ident, $e:ident) => {
+    paste! {
+      $elem::from_event_empty($e)
+        .map(|elem| $self.[<set_ $elem:lower _by_ref>](elem))?
+    }
+  };
+}
+
+macro_rules! set_desc_from_event_start {
+  ($self:ident, $reader:ident, $reader_buff:ident, $e:ident) => {
+    set_from_event_start!($self, Description, $reader, $reader_buff, $e)
+  };
+}
+
+macro_rules! push_from_event_start {
+  ($self:ident, $elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {
+    paste! {
+      $elem::from_event_start($e)
+      .and_then(|elem| elem.read_content(&mut $reader, &mut $reader_buff, &()))
+      .map(|elem| $self.[<push_ $elem:lower _by_ref>](elem))?
+    }
+  };
+  ($self:ident, $elem:ident, $reader:ident, $reader_buff:ident, $e:ident, $context:expr) => {
+    paste! {
+      $elem::from_event_start($e)
+      .and_then(|elem| elem.read_content(&mut $reader, &mut $reader_buff, &$context))
+      .map(|elem| $self.[<push_ $elem:lower _by_ref>](elem))?
+    }
+  };
+}
+
+macro_rules! push_from_event_empty {
+  ($self:ident, $elem:ident, $e:ident) => {
+    paste! {
+      $elem::from_event_empty($e)
+      .map(|elem| $self.[<push_ $elem:lower _by_ref>](elem))?
+    }
+  };
 }

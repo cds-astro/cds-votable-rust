@@ -11,7 +11,7 @@ use crate::{
   error::VOTableError,
   mivot::VodmlVisitor,
   utils::{discard_comment, discard_event, is_empty, unexpected_attr_err},
-  QuickXmlReadWrite, VOTableElement,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, VOTableElement,
 };
 
 pub mod instance;
@@ -47,13 +47,7 @@ impl Templates {
   pub fn push_where_by_ref(&mut self, where_: Where) {
     self.wheres.push(where_);
   }
-  pub fn push_instance(mut self, instance: Instance) -> Self {
-    self.push_instance_by_ref(instance);
-    self
-  }
-  pub fn push_instance_by_ref(&mut self, instance: Instance) {
-    self.instances.push(instance);
-  }
+  impl_builder_push!(Instance);
 
   pub fn visit<V: VodmlVisitor>(&mut self, visitor: &mut V) -> Result<(), V::E> {
     visitor.visit_templates_start(self)?;
@@ -69,6 +63,8 @@ impl Templates {
 
 impl VOTableElement for Templates {
   const TAG: &'static str = "TEMPLATES";
+
+  type MarkerType = HasSubElems;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -111,14 +107,15 @@ impl VOTableElement for Templates {
       f("tableref", tableref.as_ref());
     }
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
 }
 
-impl QuickXmlReadWrite for Templates {
+impl HasSubElements for Templates {
   type Context = ();
+
+  fn has_no_sub_elements(&self) -> bool {
+    // Note: Should always be true to be a valid VODML element
+    self.wheres.is_empty() && self.instances.is_empty()
+  }
 
   fn read_sub_elements_by_ref<R: std::io::BufRead>(
     &mut self,
@@ -130,9 +127,7 @@ impl QuickXmlReadWrite for Templates {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Instance::TAG_BYTES => {
-            self.push_instance_by_ref(from_event_start_by_ref!(Instance, reader, reader_buff, e))
-          }
+          Instance::TAG_BYTES => push_from_event_start!(self, Instance, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -141,8 +136,8 @@ impl QuickXmlReadWrite for Templates {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Where::TAG_BYTES => self.push_where_by_ref(Where::from_event_empty(e)?),
-          Instance::TAG_BYTES => self.push_instance_by_ref(Instance::from_event_empty(e)?),
+          Where::TAG_BYTES => push_from_event_empty!(self, Where, e),
+          Instance::TAG_BYTES => push_from_event_empty!(self, Instance, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),

@@ -13,7 +13,7 @@ use crate::{
   error::VOTableError,
   mivot::VodmlVisitor,
   utils::{discard_comment, discard_event, is_empty, unexpected_attr_err},
-  QuickXmlReadWrite, VOTableElement,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, VOTableElement,
 };
 
 pub mod r#where;
@@ -140,6 +140,8 @@ impl Join {
 impl VOTableElement for Join {
   const TAG: &'static str = "JOIN";
 
+  type MarkerType = HasSubElems;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -185,14 +187,14 @@ impl VOTableElement for Join {
   {
     self.attr.for_each_attribute(f)
   }
+}
+
+impl HasSubElements for Join {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     self.wheres.is_empty()
   }
-}
-
-impl QuickXmlReadWrite for Join {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,

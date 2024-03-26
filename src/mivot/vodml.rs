@@ -61,7 +61,7 @@ use serde_json::Value;
 use crate::{
   error::VOTableError,
   utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite, VOTableElement,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, VOTableElement,
 };
 
 use super::{globals::Globals, model::Model, report::Report, templates::Templates, VodmlVisitor};
@@ -128,6 +128,8 @@ impl Vodml {
 impl VOTableElement for Vodml {
   const TAG: &'static str = "VODML";
 
+  type MarkerType = HasSubElems;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -162,52 +164,33 @@ impl VOTableElement for Vodml {
     }
     for_each_extra_attribute!(self, f);
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
 }
 
-impl QuickXmlReadWrite for Vodml {
+impl HasSubElements for Vodml {
   type Context = ();
+
+  fn has_no_sub_elements(&self) -> bool {
+    // Note: Should always be true to be a valid VODML element
+    self.report.is_none()
+      && self.models.is_empty()
+      && self.globals.is_none()
+      && self.extra.is_empty()
+  }
 
   fn read_sub_elements_by_ref<R: std::io::BufRead>(
     &mut self,
     mut reader: &mut Reader<R>,
     mut reader_buff: &mut Vec<u8>,
     _context: &Self::Context,
-  ) -> Result<(), crate::error::VOTableError> {
+  ) -> Result<(), VOTableError> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Report::TAG_BYTES => {
-            if self
-              .report
-              .replace(from_event_start_by_ref!(Report, reader, reader_buff, e))
-              .is_some()
-            {
-              return Err(VOTableError::Custom(
-                "Maximum one <REPORT> tag should be present".to_owned(),
-              ));
-            }
-          }
-          Globals::TAG_BYTES => {
-            if self
-              .globals
-              .replace(from_event_start_by_ref!(Globals, reader, reader_buff, e))
-              .is_some()
-            {
-              return Err(VOTableError::Custom(
-                "Maximum one <GLOBALS> tag should be present".to_owned(),
-              ));
-            }
-          }
-          Templates::TAG_BYTES => {
-            self
-              .templates
-              .push(from_event_start_by_ref!(Templates, reader, reader_buff, e))
-          }
+          Report::TAG_BYTES => set_from_event_start!(self, Report, reader, reader_buff, e),
+          Model::TAG_BYTES => push_from_event_start!(self, Model, reader, reader_buff, e),
+          Globals::TAG_BYTES => set_from_event_start!(self, Globals, reader, reader_buff, e),
+          Templates::TAG_BYTES => push_from_event_start!(self, Templates, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -216,26 +199,10 @@ impl QuickXmlReadWrite for Vodml {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Report::TAG_BYTES => {
-            if self.report.replace(Report::from_event_empty(e)?).is_some() {
-              return Err(VOTableError::Custom(
-                "Maximum one <REPORT> tag should be present".to_owned(),
-              ));
-            }
-          }
-          Model::TAG_BYTES => self.models.push(Model::from_event_empty(e)?),
-          Globals::TAG_BYTES => {
-            if self
-              .globals
-              .replace(Globals::from_event_empty(e)?)
-              .is_some()
-            {
-              return Err(VOTableError::Custom(
-                "Maximum one <GLOBALS> tag should be present".to_owned(),
-              ));
-            }
-          }
-          Templates::TAG_BYTES => self.templates.push(Templates::from_event_empty(e)?),
+          Report::TAG_BYTES => set_from_event_empty!(self, Report, e),
+          Model::TAG_BYTES => push_from_event_empty!(self, Model, e),
+          Globals::TAG_BYTES => set_from_event_empty!(self, Globals, e),
+          Templates::TAG_BYTES => push_from_event_empty!(self, Templates, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -315,7 +282,7 @@ mod tests {
     test_read::<Vodml>(&xml); // Should read correctly
     let xml = get_xml("./resources/mivot/1/test_1_ko_1.10.xml");
     println!("testing 1.10"); // Only 1 GLOBALS subnode allowed.
-    test_error::<Vodml>(&xml, false);
+    test_read::<Vodml>(&xml); // It is OK, since we produce a WARNING
     let xml = get_xml("./resources/mivot/1/test_1_ko_1.11.xml");
     println!("testing 1.11"); // Includes invalid subnode.
     test_error::<Vodml>(&xml, false);

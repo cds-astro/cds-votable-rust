@@ -1,14 +1,9 @@
-use std::{
-  io::{BufRead, Write},
-  str,
-};
+use std::str;
 
 use paste::paste;
-use quick_xml::{Reader, Writer};
 
 use crate::{
-  error::VOTableError, mivot::VodmlVisitor, utils::unexpected_attr_err, QuickXmlReadWrite,
-  VOTableElement,
+  error::VOTableError, mivot::VodmlVisitor, utils::unexpected_attr_err, EmptyElem, VOTableElement,
 };
 
 /// `Static` primary key can be both in `GLOBALS` or in `TEMPLATES`, but `GLOBALS` contains only
@@ -37,6 +32,8 @@ impl PrimaryKeyStatic {
 
 impl VOTableElement for PrimaryKeyStatic {
   const TAG: &'static str = "PRIMARY_KEY";
+
+  type MarkerType = EmptyElem;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -80,16 +77,6 @@ impl VOTableElement for PrimaryKeyStatic {
     f("dmtype", self.dmtype.as_str());
     f("value", self.value.as_str());
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for PrimaryKeyStatic {
-  type Context = ();
-
-  impl_read_write_no_content_no_sub_elems!();
 }
 
 #[cfg(test)]

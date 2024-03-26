@@ -13,7 +13,7 @@ use crate::{
   error::VOTableError,
   mivot::{attribute::AttributeChildOfInstance as Attribute, VodmlVisitor},
   utils::{discard_comment, discard_event, is_empty, unexpected_attr_err},
-  QuickXmlReadWrite, VOTableElement,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, VOTableElement,
 };
 
 use super::{collection::Collection, primary_key::PrimaryKey, reference::Reference, InstanceElem};
@@ -67,6 +67,8 @@ impl Instance {
 
 impl VOTableElement for Instance {
   const TAG: &'static str = "INSTANCE";
+
+  type MarkerType = HasSubElems;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -122,14 +124,14 @@ impl VOTableElement for Instance {
     f("dmrole", self.dmrole.as_str());
     f("dmtype", self.dmtype.as_str());
   }
+}
+
+impl HasSubElements for Instance {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     false
   }
-}
-
-impl QuickXmlReadWrite for Instance {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -141,18 +143,9 @@ impl QuickXmlReadWrite for Instance {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Instance::TAG_BYTES => {
-            self.push_instance_by_ref(from_event_start_by_ref!(Instance, reader, reader_buff, e))
-          }
-          Reference::TAG_BYTES => {
-            self.push_reference_by_ref(from_event_start_by_ref!(Reference, reader, reader_buff, e))
-          }
-          Collection::TAG_BYTES => self.push_collection_by_ref(from_event_start_by_ref!(
-            Collection,
-            reader,
-            reader_buff,
-            e
-          )),
+          Instance::TAG_BYTES => push_from_event_start!(self, Instance, reader, reader_buff, e),
+          Reference::TAG_BYTES => push_from_event_start!(self, Reference, reader, reader_buff, e),
+          Collection::TAG_BYTES => push_from_event_start!(self, Collection, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -161,9 +154,9 @@ impl QuickXmlReadWrite for Instance {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          PrimaryKey::TAG_BYTES => self.push_primarykey_by_ref(PrimaryKey::from_event_empty(e)?),
-          Attribute::TAG_BYTES => self.push_attribute_by_ref(Attribute::from_event_empty(e)?),
-          Reference::TAG_BYTES => self.push_reference_by_ref(Reference::from_event_empty(e)?),
+          PrimaryKey::TAG_BYTES => push_from_event_empty!(self, PrimaryKey, e),
+          Attribute::TAG_BYTES => push_from_event_empty!(self, Attribute, e),
+          Reference::TAG_BYTES => push_from_event_empty!(self, Reference, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),

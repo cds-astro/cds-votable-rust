@@ -3,17 +3,12 @@
 //! A `REFERENCE` is made to be replaced by an `INSTANCE` or a `COLLECTION` that can be retrieved
 //! either dynamically (in `TEMPLATES`) or statically (in `GLOBALS` or in `TEMPLATES`).
 
-use std::{
-  io::{BufRead, Write},
-  str,
-};
+use std::str;
 
 use paste::paste;
-use quick_xml::{Reader, Writer};
 
 use crate::{
-  error::VOTableError, mivot::VodmlVisitor, utils::unexpected_attr_err, QuickXmlReadWrite,
-  VOTableElement,
+  error::VOTableError, mivot::VodmlVisitor, utils::unexpected_attr_err, EmptyElem, VOTableElement,
 };
 
 /// Static `REFERENCE` **child of** `COLLECTION` in `GLOBALS`.
@@ -39,6 +34,8 @@ impl Reference {
 
 impl VOTableElement for Reference {
   const TAG: &'static str = "REFERENCE";
+
+  type MarkerType = EmptyElem;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -81,14 +78,4 @@ impl VOTableElement for Reference {
   {
     f("dmref", self.dmref.as_str());
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for Reference {
-  type Context = ();
-
-  impl_read_write_no_content_no_sub_elems!();
 }

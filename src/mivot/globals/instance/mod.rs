@@ -13,7 +13,7 @@ use crate::{
   error::VOTableError,
   mivot::{attribute::AttributeChildOfInstance as Attribute, VodmlVisitor},
   utils::{discard_comment, discard_event, is_empty, unexpected_attr_err},
-  QuickXmlReadWrite, VOTableElement,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, VOTableElement,
 };
 
 pub mod collection;
@@ -101,6 +101,8 @@ impl Instance {
 impl VOTableElement for Instance {
   const TAG: &'static str = "INSTANCE";
 
+  type MarkerType = HasSubElems;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -150,14 +152,14 @@ impl VOTableElement for Instance {
     }
     f("dmtype", self.dmtype.as_str());
   }
+}
+
+impl HasSubElements for Instance {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     false
   }
-}
-
-impl QuickXmlReadWrite for Instance {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -172,9 +174,7 @@ impl QuickXmlReadWrite for Instance {
           InstanceChildOfInstance::TAG_BYTES => self.push_instance_by_ref(
             from_event_start_by_ref!(InstanceChildOfInstance, reader, reader_buff, e),
           ),
-          Reference::TAG_BYTES => {
-            self.push_reference_by_ref(from_event_start_by_ref!(Reference, reader, reader_buff, e))
-          }
+          Reference::TAG_BYTES => push_from_event_start!(self, Reference, reader, reader_buff, e),
           Collection::TAG_BYTES => {
             let (dmrole, dmid_opt) =
               Collection::get_dmrole_opt_dmid_from_atttributes(e.attributes())?;
@@ -195,9 +195,9 @@ impl QuickXmlReadWrite for Instance {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          PrimaryKey::TAG_BYTES => self.push_primarykey_by_ref(PrimaryKey::from_event_empty(e)?),
-          Attribute::TAG_BYTES => self.push_attribute_by_ref(Attribute::from_event_empty(e)?),
-          Reference::TAG_BYTES => self.push_reference_by_ref(Reference::from_event_empty(e)?),
+          PrimaryKey::TAG_BYTES => push_from_event_empty!(self, PrimaryKey, e),
+          Attribute::TAG_BYTES => push_from_event_empty!(self, Attribute, e),
+          Reference::TAG_BYTES => push_from_event_empty!(self, Reference, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),

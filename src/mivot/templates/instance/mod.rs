@@ -14,7 +14,7 @@ use crate::{
   error::VOTableError,
   mivot::{attribute::AttributeChildOfInstance as Attribute, VodmlVisitor},
   utils::{is_empty, unexpected_attr_err},
-  QuickXmlReadWrite, VOTableElement,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, VOTableElement,
 };
 
 pub mod collection;
@@ -100,6 +100,8 @@ impl Instance {
 impl VOTableElement for Instance {
   const TAG: &'static str = "INSTANCE";
 
+  type MarkerType = HasSubElems;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -149,14 +151,14 @@ impl VOTableElement for Instance {
     }
     f("dmtype", self.dmtype.as_str());
   }
+}
+
+impl HasSubElements for Instance {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     false
   }
-}
-
-impl QuickXmlReadWrite for Instance {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,

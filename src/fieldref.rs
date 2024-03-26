@@ -1,19 +1,12 @@
 //! Struct dedicated to the `FIELDref` tag.
 
-use std::{
-  collections::HashMap,
-  io::{BufRead, Write},
-  str,
-};
+use std::{collections::HashMap, str};
 
 use paste::paste;
-use quick_xml::{events::Event, Reader, Writer};
 use serde_json::Value;
 
 use super::{
-  error::VOTableError,
-  utils::{discard_comment, discard_event},
-  HasContent, QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
+  error::VOTableError, HasContent, HasContentElem, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 /// Struct corresponding to the `FIELDRef` XML tag.
@@ -64,6 +57,8 @@ impl_has_content!(FieldRef);
 
 impl VOTableElement for FieldRef {
   const TAG: &'static str = "FIELDref";
+
+  type MarkerType = HasContentElem;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -117,20 +112,6 @@ impl VOTableElement for FieldRef {
     }
     for_each_extra_attribute!(self, f);
   }
-
-  fn get_content(&self) -> Option<&str> {
-    self.content.as_deref()
-  }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for FieldRef {
-  type Context = ();
-
-  impl_read_write_content_only!();
 }
 
 #[cfg(test)]

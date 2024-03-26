@@ -12,7 +12,8 @@ use quick_xml::{events::Event, Reader, Writer};
 use super::{
   error::VOTableError,
   utils::{discard_comment, discard_event, is_empty, unexpected_attr_warn},
-  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
+  EmptyElem, HasSubElements, HasSubElems, QuickXmlReadWrite, TableDataContent, VOTableElement,
+  VOTableVisitor,
 };
 
 /// Struct corresponding to the `MIN` XML tag.
@@ -36,6 +37,8 @@ impl Min {
 
 impl VOTableElement for Min {
   const TAG: &'static str = "MIN";
+
+  type MarkerType = EmptyElem;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -84,16 +87,6 @@ impl VOTableElement for Min {
       f("inclusive", self.inclusive.to_string().as_str());
     }
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for Min {
-  type Context = ();
-
-  impl_read_write_no_content_no_sub_elems!();
 }
 
 /// Struct corresponding to the `MAX` XML tag.
@@ -117,6 +110,8 @@ impl Max {
 
 impl VOTableElement for Max {
   const TAG: &'static str = "MAX";
+
+  type MarkerType = EmptyElem;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -163,16 +158,6 @@ impl VOTableElement for Max {
       f("inclusive", self.inclusive.to_string().as_str());
     }
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for Max {
-  type Context = ();
-
-  impl_read_write_no_content_no_sub_elems!();
 }
 
 /// Struct corresponding to the `OPTION` XML tag.
@@ -214,6 +199,8 @@ impl Opt {
 
 impl VOTableElement for Opt {
   const TAG: &'static str = "OPTION";
+
+  type MarkerType = HasSubElems;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -260,14 +247,14 @@ impl VOTableElement for Opt {
     }
     f("value", self.value.as_str());
   }
+}
+
+impl HasSubElements for Opt {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     self.opts.is_empty()
   }
-}
-
-impl QuickXmlReadWrite for Opt {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -279,9 +266,7 @@ impl QuickXmlReadWrite for Opt {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.name() {
-          Self::TAG_BYTES => {
-            self.push_opt_by_ref(from_event_start_by_ref!(Opt, reader, reader_buff, e))
-          }
+          Self::TAG_BYTES => push_from_event_start!(self, Opt, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.name().to_vec(),
@@ -290,7 +275,7 @@ impl QuickXmlReadWrite for Opt {
           }
         },
         Event::Empty(ref e) => match e.name() {
-          Self::TAG_BYTES => self.push_opt_by_ref(Self::from_event_empty(e)?),
+          Self::TAG_BYTES => push_from_event_empty!(self, Opt, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.name().to_vec(),
@@ -375,6 +360,8 @@ impl Values {
 impl VOTableElement for Values {
   const TAG: &'static str = "VALUES";
 
+  type MarkerType = HasSubElems;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -420,14 +407,14 @@ impl VOTableElement for Values {
       f("ref", ref_.as_str());
     }
   }
+}
+
+impl HasSubElements for Values {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     self.min.is_none() && self.max.is_none() && self.opts.is_empty()
   }
-}
-
-impl QuickXmlReadWrite for Values {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -439,9 +426,7 @@ impl QuickXmlReadWrite for Values {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Opt::TAG_BYTES => self
-            .opts
-            .push(from_event_start_by_ref!(Opt, reader, reader_buff, e)),
+          Opt::TAG_BYTES => push_from_event_start!(self, Opt, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -450,9 +435,9 @@ impl QuickXmlReadWrite for Values {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Min::TAG_BYTES => self.min = Some(Min::from_event_empty(e)?),
-          Max::TAG_BYTES => self.max = Some(Max::from_event_empty(e)?),
-          Opt::TAG_BYTES => self.opts.push(Opt::from_event_empty(e)?),
+          Min::TAG_BYTES => set_from_event_empty!(self, Min, e),
+          Max::TAG_BYTES => set_from_event_empty!(self, Max, e),
+          Opt::TAG_BYTES => push_from_event_empty!(self, Opt, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),

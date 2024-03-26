@@ -18,7 +18,7 @@ use crate::{
   error::VOTableError,
   mivot::VodmlVisitor,
   utils::{discard_comment, discard_event, is_empty, unexpected_attr_err},
-  QuickXmlReadWrite, VOTableElement,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, VOTableElement,
 };
 
 pub mod collection;
@@ -79,6 +79,8 @@ impl Globals {
 impl VOTableElement for Globals {
   const TAG: &'static str = "GLOBALS";
 
+  type MarkerType = HasSubElems;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -88,13 +90,13 @@ impl VOTableElement for Globals {
     Self::new().set_attrs(attrs)
   }
 
-  fn set_attrs_by_ref<K, V, I>(&mut self, attrs: I) -> Result<(), VOTableError>
+  fn set_attrs_by_ref<K, V, I>(&mut self, mut attrs: I) -> Result<(), VOTableError>
   where
     K: AsRef<str> + Into<String>,
     V: AsRef<str> + Into<String>,
     I: Iterator<Item = (K, V)>,
   {
-    for (k, _) in attrs {
+    if let Some((k, _)) = attrs.next() {
       return Err(unexpected_attr_err(k.as_ref(), Self::TAG));
     }
     Ok(())
@@ -105,14 +107,14 @@ impl VOTableElement for Globals {
     F: FnMut(&str, &str),
   {
   }
+}
+
+impl HasSubElements for Globals {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     self.elems.is_empty()
   }
-}
-
-impl QuickXmlReadWrite for Globals {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -124,9 +126,7 @@ impl QuickXmlReadWrite for Globals {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Instance::TAG_BYTES => {
-            self.push_instance_by_ref(from_event_start_by_ref!(Instance, reader, reader_buff, e))
-          }
+          Instance::TAG_BYTES => push_from_event_start!(self, Instance, reader, reader_buff, e),
           Collection::TAG_BYTES => {
             let dmid = Collection::get_dmid_from_atttributes(e.attributes())?;
             let collection =
@@ -141,7 +141,7 @@ impl QuickXmlReadWrite for Globals {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Instance::TAG_BYTES => self.push_instance_by_ref(Instance::from_event_empty(e)?),
+          Instance::TAG_BYTES => push_from_event_empty!(self, Instance, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),

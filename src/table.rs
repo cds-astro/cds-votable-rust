@@ -24,7 +24,7 @@ use super::{
   link::Link,
   param::Param,
   utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -162,7 +162,7 @@ impl<C: TableDataContent> Table<C> {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
+          Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
           Field::TAG_BYTES => {
             self.push_field_by_ref(from_event_start_by_ref!(Field, reader, reader_buff, e))
           }
@@ -178,10 +178,7 @@ impl<C: TableDataContent> Table<C> {
           Link::TAG_BYTES => {
             self.push_link_by_ref(from_event_start_by_ref!(Link, reader, reader_buff, e))
           }
-          Data::<C>::TAG_BYTES => {
-            let data = Data::from_attributes(e.attributes())?;
-            return Ok(Some(data));
-          }
+          Data::<C>::TAG_BYTES => return Data::from_event_start(e).map(Some),
           Info::TAG_BYTES => {
             self.push_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
           }
@@ -303,6 +300,8 @@ impl<C: TableDataContent> Table<C> {
 impl<C: TableDataContent> VOTableElement for Table<C> {
   const TAG: &'static str = "TABLE";
 
+  type MarkerType = HasSubElems;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -357,6 +356,10 @@ impl<C: TableDataContent> VOTableElement for Table<C> {
     }
     for_each_extra_attribute!(self, f);
   }
+}
+
+impl<C: TableDataContent> HasSubElements for Table<C> {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     self.description.is_none()
@@ -365,10 +368,6 @@ impl<C: TableDataContent> VOTableElement for Table<C> {
       && self.data.is_none()
       && self.infos.is_empty()
   }
-}
-
-impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -383,7 +382,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Table<C> {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
+          Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
           Field::TAG_BYTES => {
             self.push_field_by_ref(from_event_start_by_ref!(Field, reader, reader_buff, e))
           }

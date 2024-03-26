@@ -16,7 +16,7 @@ use super::{
   param::Param,
   paramref::ParamRef,
   utils::{discard_comment, discard_event, unexpected_attr_warn},
-  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -119,6 +119,8 @@ impl Group {
 impl VOTableElement for Group {
   const TAG: &'static str = "GROUP";
 
+  type MarkerType = HasSubElems;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -168,14 +170,14 @@ impl VOTableElement for Group {
       f("utype", utype.as_str());
     }
   }
+}
+
+impl HasSubElements for Group {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     self.description.is_none() && self.elems.is_empty()
   }
-}
-
-impl QuickXmlReadWrite for Group {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -187,16 +189,10 @@ impl QuickXmlReadWrite for Group {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
-          ParamRef::TAG_BYTES => {
-            self.push_paramref_by_ref(from_event_start_by_ref!(ParamRef, reader, reader_buff, e))
-          }
-          Param::TAG_BYTES => {
-            self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
-          }
-          Group::TAG_BYTES => {
-            self.push_group_by_ref(from_event_start_by_ref!(Group, reader, reader_buff, e))
-          }
+          Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
+          ParamRef::TAG_BYTES => push_from_event_start!(self, ParamRef, reader, reader_buff, e),
+          Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
+          Group::TAG_BYTES => push_from_event_start!(self, Group, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -205,8 +201,8 @@ impl QuickXmlReadWrite for Group {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          ParamRef::TAG_BYTES => self.push_paramref_by_ref(ParamRef::from_event_empty(e)?),
-          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
+          ParamRef::TAG_BYTES => push_from_event_empty!(self, ParamRef, e),
+          Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -340,6 +336,8 @@ impl TableGroup {
 impl VOTableElement for TableGroup {
   const TAG: &'static str = "GROUP";
 
+  type MarkerType = HasSubElems;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -389,14 +387,14 @@ impl VOTableElement for TableGroup {
       f("utype", utype.as_str());
     }
   }
+}
+
+impl HasSubElements for TableGroup {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     self.description.is_none() && self.elems.is_empty()
   }
-}
-
-impl QuickXmlReadWrite for TableGroup {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -408,22 +406,11 @@ impl QuickXmlReadWrite for TableGroup {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
-          FieldRef::TAG_BYTES => {
-            self.push_fieldref_by_ref(from_event_start_by_ref!(FieldRef, reader, reader_buff, e))
-          }
-          ParamRef::TAG_BYTES => {
-            self.push_paramref_by_ref(from_event_start_by_ref!(ParamRef, reader, reader_buff, e))
-          }
-          Param::TAG_BYTES => {
-            self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
-          }
-          TableGroup::TAG_BYTES => self.push_tablegroup_by_ref(from_event_start_by_ref!(
-            TableGroup,
-            reader,
-            reader_buff,
-            e
-          )),
+          Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
+          FieldRef::TAG_BYTES => push_from_event_start!(self, FieldRef, reader, reader_buff, e),
+          ParamRef::TAG_BYTES => push_from_event_start!(self, ParamRef, reader, reader_buff, e),
+          Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
+          TableGroup::TAG_BYTES => push_from_event_start!(self, TableGroup, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -432,9 +419,9 @@ impl QuickXmlReadWrite for TableGroup {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          FieldRef::TAG_BYTES => self.push_fieldref_by_ref(FieldRef::from_event_empty(e)?),
-          ParamRef::TAG_BYTES => self.push_paramref_by_ref(ParamRef::from_event_empty(e)?),
-          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
+          FieldRef::TAG_BYTES => push_from_event_empty!(self, FieldRef, e),
+          ParamRef::TAG_BYTES => push_from_event_empty!(self, ParamRef, e),
+          Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -463,8 +450,10 @@ impl QuickXmlReadWrite for TableGroup {
 
 #[cfg(test)]
 mod tests {
-  use crate::tests::{test_read, test_writer};
-  use crate::{group::Group, VOTableElement};
+  use crate::{
+    group::Group,
+    tests::{test_read, test_writer},
+  };
 
   #[test]
   fn test_group_read_write() {
@@ -474,8 +463,8 @@ mod tests {
     assert_eq!(group.name, Some("Flux".to_string()));
     assert_eq!(group.ucd, Some("phot.flux;em.radio.200-400MHz".to_string()));
     assert_eq!(
-      group.description.as_ref().unwrap().get_content(),
-      Some("Flux measured at 352MHz")
+      group.description.as_ref().unwrap().get_content_unwrapped(),
+      "Flux measured at 352MHz"
     );
     assert_eq!(group.elems.len(), 3);
     test_writer(group, xml);

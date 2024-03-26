@@ -20,7 +20,7 @@ use crate::{
     VodmlVisitor,
   },
   utils::{discard_comment, discard_event, is_empty, unexpected_attr_err},
-  QuickXmlReadWrite, VOTableElement,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, VOTableElement,
 };
 
 use super::reference::Reference;
@@ -298,6 +298,8 @@ impl Collection {
 impl VOTableElement for Collection {
   const TAG: &'static str = "COLLECTION";
 
+  type MarkerType = HasSubElems;
+
   fn from_attrs<K, V, I>(_attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -334,14 +336,14 @@ impl VOTableElement for Collection {
       f("dmid", dmid.as_str());
     }
   }
+}
+
+impl HasSubElements for Collection {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     false
   }
-}
-
-impl QuickXmlReadWrite for Collection {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,

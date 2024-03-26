@@ -11,8 +11,8 @@ use quick_xml::{
 };
 
 use crate::{
-  error::VOTableError, table::TableElem, utils::*, QuickXmlReadWrite, TableDataContent,
-  VOTableElement,
+  error::VOTableError, table::TableElem, utils::*, QuickXmlReadWrite, SpecialElem,
+  TableDataContent, VOTableElement,
 };
 
 #[derive(Default, Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -258,6 +258,8 @@ impl<C: TableDataContent> TableData<C> {
 impl<C: TableDataContent> VOTableElement for TableData<C> {
   const TAG: &'static str = "TABLEDATA";
 
+  type MarkerType = SpecialElem;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -284,16 +286,12 @@ impl<C: TableDataContent> VOTableElement for TableData<C> {
     F: FnMut(&str, &str),
   {
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    false
-  }
 }
 
-impl<C: TableDataContent> QuickXmlReadWrite for TableData<C> {
+impl<C: TableDataContent> QuickXmlReadWrite<SpecialElem> for TableData<C> {
   type Context = Vec<TableElem>;
 
-  fn read_sub_elements_by_ref<R: BufRead>(
+  fn read_content_by_ref<R: BufRead>(
     &mut self,
     reader: &mut Reader<R>,
     reader_buff: &mut Vec<u8>,
@@ -313,13 +311,5 @@ impl<C: TableDataContent> QuickXmlReadWrite for TableData<C> {
       .write_to_data_beginning(writer)
       .and_then(|()| self.content.write_in_datatable(writer, context))
       .and_then(|()| self.write_from_data_end(writer))
-  }
-
-  fn write_sub_elements_by_ref<W: Write>(
-    &mut self,
-    _writer: &mut Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    unreachable!()
   }
 }

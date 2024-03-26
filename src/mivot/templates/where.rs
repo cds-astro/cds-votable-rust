@@ -1,16 +1,11 @@
 //! Defines the `WHERE` **child of** `TEMPLATES`.
 
-use std::{
-  io::{BufRead, Write},
-  str,
-};
+use std::str;
 
 use paste::paste;
-use quick_xml::{Reader, Writer};
 
 use crate::{
-  error::VOTableError, mivot::VodmlVisitor, utils::unexpected_attr_err, QuickXmlReadWrite,
-  VOTableElement,
+  error::VOTableError, mivot::VodmlVisitor, utils::unexpected_attr_err, EmptyElem, VOTableElement,
 };
 
 /// The `WHERE` when it is a **child of** `TEMPLATES`.
@@ -38,6 +33,8 @@ impl Where {
 
 impl VOTableElement for Where {
   const TAG: &'static str = "WHERE";
+
+  type MarkerType = EmptyElem;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -84,16 +81,6 @@ impl VOTableElement for Where {
     f("primarykey", self.primary_key.as_str());
     f("value", self.value.as_str());
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for Where {
-  type Context = ();
-
-  impl_read_write_no_content_no_sub_elems!();
 }
 
 #[cfg(test)]

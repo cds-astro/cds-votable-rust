@@ -1,20 +1,11 @@
 //! Struct dedicated to the `INFO` tag.
 
-use std::{
-  collections::HashMap,
-  io::{BufRead, Write},
-  str,
-};
+use std::{collections::HashMap, str};
 
 use paste::paste;
-use quick_xml::{events::Event, Reader, Writer};
 use serde_json::Value;
 
-use super::{
-  error::VOTableError,
-  utils::{discard_comment, discard_event},
-  HasContent, QuickXmlReadWrite, VOTableElement,
-};
+use super::{error::VOTableError, HasContent, HasContentElem, VOTableElement};
 
 /// Struct corresponding to the `INFO` XML tag.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -75,6 +66,8 @@ impl_has_content!(Info);
 
 impl VOTableElement for Info {
   const TAG: &'static str = "INFO";
+
+  type MarkerType = HasContentElem;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -146,28 +139,15 @@ impl VOTableElement for Info {
     }
     for_each_extra_attribute!(self, f);
   }
-
-  fn get_content(&self) -> Option<&str> {
-    self.content.as_deref()
-  }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for Info {
-  type Context = ();
-
-  impl_read_write_content_only!();
 }
 
 #[cfg(test)]
 mod tests {
   use std::io::Cursor;
 
-  use crate::{info::Info, QuickXmlReadWrite};
   use quick_xml::{events::Event, Reader, Writer};
+
+  use crate::{info::Info, QuickXmlReadWrite, VOTableElement};
 
   fn test_info_read(xml: &str) -> Info {
     let mut reader = Reader::from_reader(Cursor::new(xml.as_bytes()));
@@ -176,14 +156,13 @@ mod tests {
       let mut event = reader.read_event(&mut buff).unwrap();
       match &mut event {
         Event::Start(ref mut e) if e.local_name() == Info::TAG_BYTES => {
-          let mut info = Info::from_attributes(e.attributes()).unwrap();
-          info
-            .read_sub_elements_and_clean(reader, &mut buff, &())
+          let info = Info::from_event_start(&e)
+            .and_then(|info| info.read_content(&mut reader, &mut buff, &()))
             .unwrap();
           return info;
         }
         Event::Empty(ref mut e) if e.local_name() == Info::TAG_BYTES => {
-          let info = Info::from_attributes(e.attributes()).unwrap();
+          let info = Info::from_event_empty(&e).unwrap();
           return info;
         }
         Event::Text(ref mut e) if e.escaped().is_empty() => (), // First even read

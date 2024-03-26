@@ -4,16 +4,13 @@ use std::{
 };
 
 use paste::paste;
-use quick_xml::{
-  events::{attributes::Attributes, Event},
-  Reader, Writer,
-};
+use quick_xml::{events::Event, Reader, Writer};
 
 use crate::{
   error::VOTableError,
   mivot::{globals::instance::reference::Reference as ReferenceStatic, VodmlVisitor},
   utils::{discard_comment, discard_event, is_empty, unexpected_attr_err},
-  QuickXmlReadWrite, VOTableElement,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, SpecialElem, VOTableElement,
 };
 
 pub mod foreign_key;
@@ -37,6 +34,8 @@ impl Reference {
 
 impl VOTableElement for Reference {
   const TAG: &'static str = "REFERENCE";
+
+  type MarkerType = SpecialElem;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -99,27 +98,20 @@ impl VOTableElement for Reference {
       Reference::Dynamic(e) => e.for_each_attribute(f),
     }
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    match self {
-      Reference::Static(e) => e.has_no_sub_elements(),
-      Reference::Dynamic(e) => e.has_no_sub_elements(),
-    }
-  }
 }
 
-impl QuickXmlReadWrite for Reference {
+impl QuickXmlReadWrite<SpecialElem> for Reference {
   type Context = ();
 
-  fn read_sub_elements_by_ref<R: BufRead>(
+  fn read_content_by_ref<R: BufRead>(
     &mut self,
     reader: &mut Reader<R>,
     reader_buff: &mut Vec<u8>,
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
     match self {
-      Reference::Static(e) => e.read_sub_elements_by_ref(reader, reader_buff, context),
-      Reference::Dynamic(e) => e.read_sub_elements_by_ref(reader, reader_buff, context),
+      Reference::Static(e) => e.read_content_by_ref(reader, reader_buff, context),
+      Reference::Dynamic(e) => e.read_content_by_ref(reader, reader_buff, context),
     }
   }
 
@@ -132,14 +124,6 @@ impl QuickXmlReadWrite for Reference {
       Reference::Static(e) => e.write(writer, context),
       Reference::Dynamic(e) => e.write(writer, context),
     }
-  }
-
-  fn write_sub_elements_by_ref<W: Write>(
-    &mut self,
-    _writer: &mut Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    unreachable!()
   }
 }
 
@@ -176,6 +160,8 @@ impl ReferenceDyn {
 }
 impl VOTableElement for ReferenceDyn {
   const TAG: &'static str = "REFERENCE";
+
+  type MarkerType = HasSubElems;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -219,16 +205,12 @@ impl VOTableElement for ReferenceDyn {
     f("dmrole", self.dmrole.as_str());
     f("sourceref", self.sourceref.as_str());
   }
+}
+impl HasSubElements for ReferenceDyn {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     self.foreignkeys.is_empty()
-  }
-}
-impl QuickXmlReadWrite for ReferenceDyn {
-  type Context = ();
-
-  fn from_attributes(_attrs: Attributes) -> Result<Self, VOTableError> {
-    unreachable!("Should not be called directly!")
   }
 
   fn read_sub_elements_by_ref<R: BufRead>(

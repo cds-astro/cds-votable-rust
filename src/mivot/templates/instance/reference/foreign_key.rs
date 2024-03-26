@@ -1,14 +1,9 @@
-use std::{
-  io::{BufRead, Write},
-  str,
-};
+use std::str;
 
 use paste::paste;
-use quick_xml::{Reader, Writer};
 
 use crate::{
-  error::VOTableError, mivot::VodmlVisitor, utils::unexpected_attr_err, QuickXmlReadWrite,
-  VOTableElement,
+  error::VOTableError, mivot::VodmlVisitor, utils::unexpected_attr_err, EmptyElem, VOTableElement,
 };
 
 /// Only used in `REFERENCE` in `TEMPLATE`.
@@ -33,6 +28,8 @@ impl ForeignKey {
 
 impl VOTableElement for ForeignKey {
   const TAG: &'static str = "FOREIGN_KEY";
+
+  type MarkerType = EmptyElem;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -74,16 +71,6 @@ impl VOTableElement for ForeignKey {
   {
     f("ref", self.ref_.as_str());
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for ForeignKey {
-  type Context = ();
-
-  impl_read_write_no_content_no_sub_elems!();
 }
 
 #[cfg(test)]

@@ -29,7 +29,7 @@ use super::{
   table::Table,
   timesys::TimeSys,
   utils::{discard_comment, discard_event, is_empty},
-  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -266,6 +266,7 @@ impl<C: TableDataContent> Resource<C> {
   impl_builder_push_elem!(TimeSys, ResourceElem);
   impl_builder_push_elem!(Group, ResourceElem);
   impl_builder_push_elem!(Param, ResourceElem);
+
   pub fn push_elem(mut self, elem: ResourceElem) -> Self {
     self.push_elem_by_ref(elem);
     self
@@ -484,7 +485,7 @@ impl<C: TableDataContent> Resource<C> {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
+          Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
           Info::TAG_BYTES => {
             let info = from_event_start_by_ref!(Info, reader, reader_buff, e);
             if let Some(sub_elem) = self.sub_elems.last_mut() {
@@ -493,25 +494,16 @@ impl<C: TableDataContent> Resource<C> {
               self.push_info_by_ref(info)
             }
           }
-          CooSys::TAG_BYTES => {
-            self.push_coosys_by_ref(from_event_start_by_ref!(CooSys, reader, reader_buff, e))
-          }
-          Group::TAG_BYTES => {
-            self.push_group_by_ref(from_event_start_by_ref!(Group, reader, reader_buff, e))
-          }
-          Param::TAG_BYTES => {
-            self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
-          }
+          CooSys::TAG_BYTES => push_from_event_start!(self, CooSys, reader, reader_buff, e),
+          Group::TAG_BYTES => push_from_event_start!(self, Group, reader, reader_buff, e),
+          Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
           Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
           #[cfg(feature = "mivot")]
-          Vodml::TAG_BYTES => {
-            self.set_vodml_by_ref(from_event_start_by_ref!(Vodml, reader, reader_buff, e))
-          }
+          Vodml::TAG_BYTES => set_from_event_start!(self, Vodml, reader, reader_buff, e),
           Table::<C>::TAG_BYTES => {
-            let table = Table::<C>::from_attributes(e.attributes())?;
-            return Ok(Some(
-              ResourceSubElem::from_table(table).set_links(mem::take(&mut links)),
-            ));
+            return Table::<C>::from_event_start(e).map(|table| {
+              Some(ResourceSubElem::from_table(table).set_links(mem::take(&mut links)))
+            });
           }
           Resource::<C>::TAG_BYTES => {
             let resource = from_event_start_by_ref!(Resource, reader, reader_buff, e);
@@ -535,10 +527,10 @@ impl<C: TableDataContent> Resource<C> {
               self.infos.push(info)
             }
           }
-          TimeSys::TAG_BYTES => self.push_timesys_by_ref(TimeSys::from_event_empty(e)?),
-          CooSys::TAG_BYTES => self.push_coosys_by_ref(CooSys::from_event_empty(e)?),
-          Group::TAG_BYTES => self.push_group_by_ref(Group::from_event_empty(e)?),
-          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
+          TimeSys::TAG_BYTES => push_from_event_empty!(self, TimeSys, e),
+          CooSys::TAG_BYTES => push_from_event_empty!(self, CooSys, e),
+          Group::TAG_BYTES => push_from_event_empty!(self, Group, e),
+          Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
           Link::TAG_BYTES => links.push(Link::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
@@ -575,7 +567,7 @@ impl<C: TableDataContent> Resource<C> {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
+          Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
           Info::TAG_BYTES => {
             let info = from_event_start_by_ref!(Info, reader, reader_buff, e);
             if let Some(sub_elem) = self.sub_elems.last_mut() {
@@ -584,31 +576,21 @@ impl<C: TableDataContent> Resource<C> {
               self.push_info_by_ref(info)
             }
           }
-          CooSys::TAG_BYTES => {
-            self.push_coosys_by_ref(from_event_start_by_ref!(CooSys, reader, reader_buff, e))
-          }
-          Group::TAG_BYTES => {
-            self.push_group_by_ref(from_event_start_by_ref!(Group, reader, reader_buff, e))
-          }
-          Param::TAG_BYTES => {
-            self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
-          }
+          CooSys::TAG_BYTES => push_from_event_start!(self, CooSys, reader, reader_buff, e),
+          Group::TAG_BYTES => push_from_event_start!(self, Group, reader, reader_buff, e),
+          Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
           Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
           #[cfg(feature = "mivot")]
-          Vodml::TAG_BYTES => {
-            self.set_vodml_by_ref(from_event_start_by_ref!(Vodml, reader, reader_buff, e))
-          }
+          Vodml::TAG_BYTES => set_from_event_start!(self, Vodml, reader, reader_buff, e),
           Table::<C>::TAG_BYTES => {
-            let table = Table::<C>::from_attributes(e.attributes())?;
-            return Ok(Some(
-              ResourceSubElem::from_table(table).set_links(mem::take(&mut links)),
-            ));
+            return Table::<C>::from_event_start(e).map(|table| {
+              Some(ResourceSubElem::from_table(table).set_links(mem::take(&mut links)))
+            });
           }
           Resource::<C>::TAG_BYTES => {
-            let resource = Resource::<C>::from_attributes(e.attributes())?;
-            return Ok(Some(
-              ResourceSubElem::from_resource(resource).set_links(mem::take(&mut links)),
-            ));
+            return Resource::<C>::from_event_start(e).map(|resource| {
+              Some(ResourceSubElem::from_resource(resource).set_links(mem::take(&mut links)))
+            });
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -626,10 +608,10 @@ impl<C: TableDataContent> Resource<C> {
               self.infos.push(info)
             }
           }
-          TimeSys::TAG_BYTES => self.push_timesys_by_ref(TimeSys::from_event_empty(e)?),
-          CooSys::TAG_BYTES => self.push_coosys_by_ref(CooSys::from_event_empty(e)?),
-          Group::TAG_BYTES => self.push_group_by_ref(Group::from_event_empty(e)?),
-          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
+          TimeSys::TAG_BYTES => push_from_event_empty!(self, TimeSys, e),
+          CooSys::TAG_BYTES => push_from_event_empty!(self, CooSys, e),
+          Group::TAG_BYTES => push_from_event_empty!(self, Group, e),
+          Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
           Link::TAG_BYTES => links.push(Link::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
@@ -746,6 +728,8 @@ impl<C: TableDataContent> Resource<C> {
 impl<C: TableDataContent> VOTableElement for Resource<C> {
   const TAG: &'static str = "RESOURCE";
 
+  type MarkerType = HasSubElems;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -792,6 +776,10 @@ impl<C: TableDataContent> VOTableElement for Resource<C> {
     }
     for_each_extra_attribute!(self, f);
   }
+}
+
+impl<C: TableDataContent> HasSubElements for Resource<C> {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     #[cfg(not(feature = "mivot"))]
@@ -810,10 +798,6 @@ impl<C: TableDataContent> VOTableElement for Resource<C> {
         && self.vodml.is_none()
     }
   }
-}
-
-impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -826,7 +810,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
+          Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
           Info::TAG_BYTES => {
             let info = from_event_start_by_ref!(Info, reader, reader_buff, e);
             if let Some(sub_elem) = self.sub_elems.last_mut() {
@@ -835,12 +819,8 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
               self.push_info_by_ref(info)
             }
           }
-          Group::TAG_BYTES => {
-            self.push_group_by_ref(from_event_start_by_ref!(Group, reader, reader_buff, e))
-          }
-          Param::TAG_BYTES => {
-            self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
-          }
+          Group::TAG_BYTES => push_from_event_start!(self, Group, reader, reader_buff, e),
+          Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
           Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
           Table::<C>::TAG_BYTES => {
             let table = from_event_start_by_ref!(Table, reader, reader_buff, e);
@@ -855,9 +835,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
             );
           }
           #[cfg(feature = "mivot")]
-          Vodml::TAG_BYTES => {
-            self.set_vodml_by_ref(from_event_start_by_ref!(Vodml, reader, reader_buff, e))
-          }
+          Vodml::TAG_BYTES => set_from_event_start!(self, Vodml, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -874,10 +852,10 @@ impl<C: TableDataContent> QuickXmlReadWrite for Resource<C> {
               self.infos.push(info)
             }
           }
-          TimeSys::TAG_BYTES => self.push_timesys_by_ref(TimeSys::from_event_empty(e)?),
-          CooSys::TAG_BYTES => self.push_coosys_by_ref(CooSys::from_event_empty(e)?),
-          Group::TAG_BYTES => self.push_group_by_ref(Group::from_event_empty(e)?),
-          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
+          TimeSys::TAG_BYTES => push_from_event_empty!(self, TimeSys, e),
+          CooSys::TAG_BYTES => push_from_event_empty!(self, CooSys, e),
+          Group::TAG_BYTES => push_from_event_empty!(self, Group, e),
+          Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
           Link::TAG_BYTES => links.push(Link::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
@@ -922,7 +900,6 @@ mod tests {
     impls::mem::InMemTableDataRows,
     resource::Resource,
     tests::{test_read, test_writer},
-    VOTableElement,
   };
 
   #[test]
@@ -932,8 +909,12 @@ mod tests {
     assert_eq!(resource.id.as_ref().unwrap().as_str(), "yCat_5147");
     assert_eq!(resource.name.as_ref().unwrap().as_str(), "V/147");
     assert_eq!(
-      resource.description.as_ref().unwrap().get_content(),
-      Some("The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)")
+      resource
+        .description
+        .as_ref()
+        .unwrap()
+        .get_content_unwrapped(),
+      "The SDSS Photometric Catalogue, Release 12 (Alam+, 2015)"
     );
     assert_eq!(resource.sub_elems.len(), 2);
     assert_eq!(resource.infos.get(0).unwrap().name, "matches");

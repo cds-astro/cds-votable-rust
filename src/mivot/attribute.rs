@@ -1,17 +1,12 @@
 //! Contains common code for `ATTRIBUTE` child of `COLLECTION` and `INSTANCE`
 //! in both `GLOBALS` and `TEMPLATES`.
 
-use std::{
-  io::{BufRead, Write},
-  str,
-};
+use std::str;
 
 use paste::paste;
-use quick_xml::{Reader, Writer};
 
 use crate::{
-  error::VOTableError, mivot::VodmlVisitor, utils::unexpected_attr_err, QuickXmlReadWrite,
-  VOTableElement,
+  error::VOTableError, mivot::VodmlVisitor, utils::unexpected_attr_err, EmptyElem, VOTableElement,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -156,6 +151,8 @@ impl AttributeChildOfInstance {
 impl VOTableElement for AttributeChildOfInstance {
   const TAG: &'static str = "ATTRIBUTE";
 
+  type MarkerType = EmptyElem;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -231,16 +228,6 @@ impl VOTableElement for AttributeChildOfInstance {
       f("unit", unit.as_str());
     }
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for AttributeChildOfInstance {
-  type Context = ();
-
-  impl_read_write_no_content_no_sub_elems!();
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -307,6 +294,8 @@ impl AttributeChildOfCollection {
 
 impl VOTableElement for AttributeChildOfCollection {
   const TAG: &'static str = "ATTRIBUTE";
+
+  type MarkerType = EmptyElem;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -376,16 +365,6 @@ impl VOTableElement for AttributeChildOfCollection {
       f("unit", unit.as_str());
     }
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for AttributeChildOfCollection {
-  type Context = ();
-
-  impl_read_write_no_content_no_sub_elems!();
 }
 
 #[cfg(test)]

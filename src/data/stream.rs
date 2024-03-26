@@ -16,7 +16,7 @@ use crate::{
   error::VOTableError,
   impls::mem::VoidTableDataContent,
   utils::{discard_comment, discard_event, is_empty, unexpected_attr_warn},
-  QuickXmlReadWrite, TableDataContent, VOTableElement,
+  QuickXmlReadWrite, SpecialElem, TableDataContent, VOTableElement,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -151,8 +151,7 @@ impl Stream<VoidTableDataContent> {
         Event::Start(ref e) => match e.name() {
           Stream::<VoidTableDataContent>::TAG_BYTES => {
             // We could detect if current stream.content.is_some() to prevent from multi-stream...
-            let stream = Stream::<VoidTableDataContent>::from_attributes(e.attributes())?;
-            return Ok(stream);
+            return Stream::<VoidTableDataContent>::from_event_start(e);
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -163,8 +162,7 @@ impl Stream<VoidTableDataContent> {
         },
         Event::Empty(ref e) => match e.name() {
           Stream::<VoidTableDataContent>::TAG_BYTES => {
-            let stream = Stream::<VoidTableDataContent>::from_event_empty(e)?;
-            return Ok(stream);
+            return Stream::<VoidTableDataContent>::from_event_empty(e);
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -224,6 +222,8 @@ impl<C: TableDataContent> Stream<C> {
 
 impl<C: TableDataContent> VOTableElement for Stream<C> {
   const TAG: &'static str = "STREAM";
+
+  type MarkerType = SpecialElem;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -294,16 +294,12 @@ impl<C: TableDataContent> VOTableElement for Stream<C> {
       f("rights", rights.as_str());
     }
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
 }
 
-impl<C: TableDataContent> QuickXmlReadWrite for Stream<C> {
+impl<C: TableDataContent> QuickXmlReadWrite<SpecialElem> for Stream<C> {
   type Context = ();
 
-  fn read_sub_elements_by_ref<R: BufRead>(
+  fn read_content_by_ref<R: BufRead>(
     &mut self,
     _reader: &mut Reader<R>,
     _reader_buff: &mut Vec<u8>,
@@ -311,7 +307,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Stream<C> {
   ) -> Result<(), VOTableError> {
     Err(VOTableError::Custom(String::from(
       "Reading STREAM with a content must be taken in charge by the parent \
-    element (since the encoding depends on the parent: BINARY of BINARY2",
+    element (since the encoding depends on the parent: BINARY of BINARY2)",
     )))
   }
 
@@ -335,13 +331,5 @@ impl<C: TableDataContent> QuickXmlReadWrite for Stream<C> {
     // write_extra!(self, elem_writer);
     elem_writer.write_empty().map_err(VOTableError::Write)?;
     Ok(())
-  }
-
-  fn write_sub_elements_by_ref<W: Write>(
-    &mut self,
-    _writer: &mut Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    unreachable!()
   }
 }

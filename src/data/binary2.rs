@@ -15,7 +15,7 @@ use super::{
     error::VOTableError,
     table::TableElem,
     utils::{discard_comment, discard_event, is_empty, unexpected_attr_warn},
-    QuickXmlReadWrite, TableDataContent, VOTableElement,
+    QuickXmlReadWrite, SpecialElem, TableDataContent, VOTableElement,
   },
   stream::Stream,
 };
@@ -65,6 +65,8 @@ impl<C: TableDataContent> Binary2<C> {
 impl<C: TableDataContent> VOTableElement for Binary2<C> {
   const TAG: &'static str = "BINARY2";
 
+  type MarkerType = SpecialElem;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -91,20 +93,16 @@ impl<C: TableDataContent> VOTableElement for Binary2<C> {
     F: FnMut(&str, &str),
   {
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    false
-  }
 }
 
-impl<C: TableDataContent> QuickXmlReadWrite for Binary2<C> {
+impl<C: TableDataContent> QuickXmlReadWrite<SpecialElem> for Binary2<C> {
   type Context = Vec<TableElem>;
 
-  fn read_sub_elements_by_ref<R: BufRead>(
+  fn read_content_by_ref<R: BufRead>(
     &mut self,
     reader: &mut Reader<R>,
     reader_buff: &mut Vec<u8>,
-    context: &Self::Context,
+    context: &Vec<TableElem>,
   ) -> Result<(), VOTableError> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
@@ -112,7 +110,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary2<C> {
         Event::Start(ref e) => match e.name() {
           Stream::<C>::TAG_BYTES => {
             // We could detect if current stream.content.is_some() to prevent from multi-stream...
-            let mut stream = Stream::<C>::from_attributes(e.attributes())?;
+            let mut stream = Stream::<C>::from_event_start(e)?;
             let mut content = C::new();
             content.read_binary2_content(reader, reader_buff, context)?;
             stream.content = Some(content);
@@ -171,13 +169,5 @@ impl<C: TableDataContent> QuickXmlReadWrite for Binary2<C> {
           .write_in_binary2(writer, context)
       })
       .and_then(|()| self.write_from_data_end(writer))
-  }
-
-  fn write_sub_elements_by_ref<W: Write>(
-    &mut self,
-    _writer: &mut Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    unreachable!()
   }
 }

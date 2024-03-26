@@ -3,19 +3,13 @@
 use std::{
   collections::HashMap,
   fmt::{self, Debug},
-  io::{BufRead, Write},
   str::{self, FromStr},
 };
 
 use paste::paste;
-use quick_xml::{events::Event, Reader, Writer};
 use serde_json::Value;
 
-use super::{
-  error::VOTableError,
-  utils::{discard_comment, discard_event},
-  HasContent, QuickXmlReadWrite, VOTableElement,
-};
+use super::{error::VOTableError, HasContent, HasContentElem, VOTableElement};
 
 /// Enum for the possible values of the `content-role` attriute.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -100,6 +94,8 @@ impl_has_content!(Link);
 impl VOTableElement for Link {
   const TAG: &'static str = "LINK";
 
+  type MarkerType = HasContentElem;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -156,20 +152,6 @@ impl VOTableElement for Link {
     }
     for_each_extra_attribute!(self, f);
   }
-
-  fn get_content(&self) -> Option<&str> {
-    self.content.as_deref()
-  }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for Link {
-  type Context = ();
-
-  impl_read_write_content_only!();
 }
 
 #[cfg(test)]

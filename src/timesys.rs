@@ -2,14 +2,12 @@
 
 use std::{
   fmt::{self, Debug},
-  io::{BufRead, Write},
   str::{self, FromStr},
 };
 
 use paste::paste;
-use quick_xml::{Reader, Writer};
 
-use super::{error::VOTableError, utils::unexpected_attr_warn, QuickXmlReadWrite, VOTableElement};
+use super::{error::VOTableError, utils::unexpected_attr_warn, EmptyElem, VOTableElement};
 
 /// Struct corresponding to the `TIMESYS` XML tag.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -45,6 +43,8 @@ impl TimeSys {
 
 impl VOTableElement for TimeSys {
   const TAG: &'static str = "TIMESYS";
+
+  type MarkerType = EmptyElem;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -118,16 +118,6 @@ impl VOTableElement for TimeSys {
     f("timescale", self.timescale.to_string().as_str());
     f("refposition", self.refposition.to_string().as_str());
   }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for TimeSys {
-  type Context = ();
-
-  impl_read_write_no_content_no_sub_elems!();
 }
 
 pub struct Info {
@@ -305,7 +295,7 @@ mod tests {
 
   use crate::{
     timesys::{RefPosition, TimeScale, TimeSys},
-    QuickXmlReadWrite,
+    QuickXmlReadWrite, VOTableElement,
   };
 
   #[test]
@@ -318,7 +308,7 @@ mod tests {
       let mut event = reader.read_event(&mut buff).unwrap();
       match &mut event {
         Event::Empty(ref mut e) if e.local_name() == TimeSys::TAG_BYTES => {
-          let timesys = TimeSys::from_attributes(e.attributes()).unwrap();
+          let timesys = TimeSys::from_event_empty(e).unwrap();
           assert_eq!(timesys.id, "time_frame");
           assert_eq!(timesys.timeorigin, Some(2455197.5));
           assert_eq!(timesys.timescale, TimeScale::TCB);

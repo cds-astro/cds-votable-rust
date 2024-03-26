@@ -21,7 +21,7 @@ use super::{
   link::Link,
   utils::{discard_comment, discard_event, is_empty},
   values::Values,
-  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -500,6 +500,8 @@ impl Field {
 impl VOTableElement for Field {
   const TAG: &'static str = "FIELD";
 
+  type MarkerType = HasSubElems;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -606,14 +608,14 @@ impl VOTableElement for Field {
     }
     for_each_extra_attribute!(self, f);
   }
+}
+
+impl HasSubElements for Field {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     self.description.is_none() && self.values.is_none() && self.links.is_empty()
   }
-}
-
-impl QuickXmlReadWrite for Field {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -625,13 +627,11 @@ impl QuickXmlReadWrite for Field {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          Description::TAG_BYTES => from_event_start_desc_by_ref!(self, reader, reader_buff, e),
-          Values::TAG_BYTES => {
-            self.set_values_by_ref(from_event_start_by_ref!(Values, reader, reader_buff, e))
+          Description::TAG_BYTES => {
+            set_from_event_start!(self, Description, reader, reader_buff, e)
           }
-          Link::TAG_BYTES => {
-            self.push_link_by_ref(from_event_start_by_ref!(Link, reader, reader_buff, e))
-          }
+          Values::TAG_BYTES => set_from_event_start!(self, Values, reader, reader_buff, e),
+          Link::TAG_BYTES => push_from_event_start!(self, Link, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -640,8 +640,8 @@ impl QuickXmlReadWrite for Field {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Values::TAG_BYTES => self.set_values_by_ref(Values::from_event_empty(e)?),
-          Link::TAG_BYTES => self.push_link_by_ref(Link::from_event_empty(e)?),
+          Values::TAG_BYTES => set_from_event_empty!(self, Values, e),
+          Link::TAG_BYTES => push_from_event_empty!(self, Link, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -672,14 +672,15 @@ impl QuickXmlReadWrite for Field {
 
 #[cfg(test)]
 mod tests {
+
+  use std::str::FromStr;
+
   use crate::{
     datatype::Datatype,
     field::ArraySize,
     field::Field,
     tests::{test_read, test_writer},
-    VOTableElement,
   };
-  use std::str::FromStr;
 
   #[test]
   fn test_arraysize_from_str() {
@@ -757,8 +758,8 @@ mod tests {
     let xml = r#"<FIELD name="band" datatype="char" arraysize="*" ucd="instr.bandpass" utype="ssa:DataID.Bandpass"><DESCRIPTION>Description</DESCRIPTION></FIELD>"#;
     let field = test_read::<Field>(xml);
     assert_eq!(
-      field.description.as_ref().unwrap().get_content(),
-      Some("Description")
+      field.description.as_ref().unwrap().get_content_unwrapped(),
+      "Description"
     );
     // Test write
     test_writer(field, xml)

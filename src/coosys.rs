@@ -16,7 +16,7 @@ use crate::{
   paramref::ParamRef,
   timesys::RefPosition,
   utils::{discard_comment, discard_event, unexpected_attr_warn},
-  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -104,6 +104,8 @@ impl CooSys {
 
 impl VOTableElement for CooSys {
   const TAG: &'static str = "COOSYS";
+
+  type MarkerType = HasSubElems;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -197,14 +199,14 @@ impl VOTableElement for CooSys {
       f("refposition", refposition.to_string().as_str());
     }
   }
+}
+
+impl HasSubElements for CooSys {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     self.elems.is_empty()
   }
-}
-
-impl QuickXmlReadWrite for CooSys {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -216,22 +218,8 @@ impl QuickXmlReadWrite for CooSys {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
-          FieldRef::TAG_BYTES => self
-            .elems
-            .push(CooSysElem::FieldRef(from_event_start_by_ref!(
-              FieldRef,
-              reader,
-              reader_buff,
-              e
-            ))),
-          ParamRef::TAG_BYTES => self
-            .elems
-            .push(CooSysElem::ParamRef(from_event_start_by_ref!(
-              ParamRef,
-              reader,
-              reader_buff,
-              e
-            ))),
+          FieldRef::TAG_BYTES => push_from_event_start!(self, FieldRef, reader, reader_buff, e),
+          ParamRef::TAG_BYTES => push_from_event_start!(self, ParamRef, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -240,12 +228,8 @@ impl QuickXmlReadWrite for CooSys {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          FieldRef::TAG_BYTES => self
-            .elems
-            .push(CooSysElem::FieldRef(FieldRef::from_event_empty(e)?)),
-          ParamRef::TAG_BYTES => self
-            .elems
-            .push(CooSysElem::ParamRef(ParamRef::from_event_empty(e)?)),
+          FieldRef::TAG_BYTES => push_from_event_empty!(self, FieldRef, e),
+          ParamRef::TAG_BYTES => push_from_event_empty!(self, ParamRef, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -635,7 +619,7 @@ mod tests {
 
   use crate::{
     coosys::{CooSys, System},
-    QuickXmlReadWrite,
+    QuickXmlReadWrite, VOTableElement,
   };
 
   #[test]
@@ -648,7 +632,7 @@ mod tests {
       let mut event = reader.read_event(&mut buff).unwrap();
       match &mut event {
         Event::Empty(ref mut e) if e.local_name() == CooSys::TAG_BYTES => {
-          let coosys = CooSys::from_attributes(e.attributes()).unwrap();
+          let coosys = CooSys::from_event_empty(e).unwrap();
           assert_eq!(coosys.id, "J2000");
           match &coosys.coosys {
             System::EquatorialFK5 { equinox, epoch } => {

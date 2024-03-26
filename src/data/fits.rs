@@ -13,7 +13,8 @@ use super::{
     error::VOTableError,
     impls::mem::VoidTableDataContent,
     utils::{discard_comment, discard_event, unexpected_attr_warn},
-    QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
+    HasSubElements, HasSubElems, QuickXmlReadWrite, TableDataContent, VOTableElement,
+    VOTableVisitor,
   },
   stream::Stream,
 };
@@ -48,6 +49,8 @@ impl Fits {
 impl VOTableElement for Fits {
   const TAG: &'static str = "FITS";
 
+  type MarkerType = HasSubElems;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -81,14 +84,14 @@ impl VOTableElement for Fits {
       f("extnum", extnum.to_string().as_str());
     }
   }
+}
+
+impl HasSubElements for Fits {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     false
   }
-}
-
-impl QuickXmlReadWrite for Fits {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,

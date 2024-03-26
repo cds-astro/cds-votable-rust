@@ -1,16 +1,9 @@
 //! Struct dedicated to the `DESCRIPTION` tag.
 
-use std::{
-  fmt::{self, Display, Formatter},
-  io::{BufRead, Write},
-};
-
-use quick_xml::{events::Event, Reader, Writer};
+use std::fmt::{self, Display, Formatter};
 
 use super::{
-  error::VOTableError,
-  utils::{discard_comment, discard_event, unexpected_attr_warn},
-  HasContent, QuickXmlReadWrite, VOTableElement,
+  error::VOTableError, utils::unexpected_attr_warn, HasContent, HasContentElem, VOTableElement,
 };
 
 /// Struct corresponding to the `DESCRIPTION` XML tag.
@@ -24,6 +17,9 @@ impl Description {
 }
 
 impl HasContent for Description {
+  fn get_content(&self) -> Option<&str> {
+    Some(self.0.as_str())
+  }
   fn set_content<S: Into<String>>(mut self, content: S) -> Self {
     self.set_content_by_ref(content);
     self
@@ -60,6 +56,8 @@ impl Display for Description {
 impl VOTableElement for Description {
   const TAG: &'static str = "DESCRIPTION";
 
+  type MarkerType = HasContentElem;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -86,43 +84,15 @@ impl VOTableElement for Description {
     F: FnMut(&str, &str),
   {
   }
-
-  fn get_content(&self) -> Option<&str> {
-    Some(self.0.as_str())
-  }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for Description {
-  type Context = ();
-
-  fn read_sub_elements_by_ref<R: BufRead>(
-    &mut self,
-    reader: &mut Reader<R>,
-    reader_buff: &mut Vec<u8>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    read_content_by_ref!(Self, self, reader, reader_buff, 0)
-  }
-
-  fn write_sub_elements_by_ref<W: Write>(
-    &mut self,
-    _writer: &mut Writer<W>,
-    _context: &Self::Context,
-  ) -> Result<(), VOTableError> {
-    unreachable!()
-  }
 }
 
 #[cfg(test)]
 mod tests {
   use std::io::Cursor;
 
-  use crate::{desc::Description, QuickXmlReadWrite, VOTableElement};
   use quick_xml::{events::Event, Reader, Writer};
+
+  use crate::{desc::Description, HasContent, QuickXmlReadWrite, VOTableElement};
 
   #[test]
   fn test_description_readwrite() {
@@ -140,9 +110,8 @@ mod tests {
       let mut event = reader.read_event(&mut buff).unwrap();
       match &mut event {
         Event::Start(ref mut e) if e.local_name() == Description::TAG_BYTES => {
-          let mut desc = Description::from_attributes(e.attributes()).unwrap();
-          desc
-            .read_sub_elements_and_clean(reader, &mut buff, &())
+          let desc = Description::from_event_start(&e)
+            .and_then(|desc| desc.read_content(&mut reader, &mut buff, &()))
             .unwrap();
           assert_eq!(
             desc.get_content(),

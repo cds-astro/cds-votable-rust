@@ -18,7 +18,7 @@ use super::{
   link::Link,
   utils::{discard_comment, discard_event},
   values::Values,
-  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 /// Struct corresponding to the `PARAM` XML tag.
@@ -78,6 +78,8 @@ impl Param {
 
 impl VOTableElement for Param {
   const TAG: &'static str = "PARAM";
+
+  type MarkerType = HasSubElems;
 
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
@@ -187,18 +189,15 @@ impl VOTableElement for Param {
       f("ref", ref_.as_str());
     }
     for_each_extra_attribute_delegated!(self, field, f);
-    /*for (k, v) in &self.field.extra {
-      f(k.as_str(), v.to_string().as_str());
-    }*/
   }
+}
+
+impl HasSubElements for Param {
+  type Context = ();
 
   fn has_no_sub_elements(&self) -> bool {
     self.field.has_no_sub_elements()
   }
-}
-
-impl QuickXmlReadWrite for Param {
-  type Context = ();
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -211,22 +210,10 @@ impl QuickXmlReadWrite for Param {
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
           Description::TAG_BYTES => {
-            self.field.description = Some(from_event_start_by_ref!(
-              Description,
-              reader,
-              reader_buff,
-              e
-            ))
+            set_from_event_start!(self, Description, reader, reader_buff, e)
           }
-          Values::TAG_BYTES => {
-            self.field.values = Some(from_event_start_by_ref!(Values, reader, reader_buff, e))
-          }
-          Link::TAG_BYTES => {
-            self
-              .field
-              .links
-              .push(from_event_start_by_ref!(Link, reader, reader_buff, e))
-          }
+          Values::TAG_BYTES => set_from_event_start!(self, Values, reader, reader_buff, e),
+          Link::TAG_BYTES => push_from_event_start!(self, Link, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -235,8 +222,8 @@ impl QuickXmlReadWrite for Param {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Values::TAG_BYTES => self.field.values = Some(Values::from_event_empty(e)?),
-          Link::TAG_BYTES => self.field.links.push(Link::from_event_empty(e)?),
+          Values::TAG_BYTES => set_from_event_empty!(self, Values, e),
+          Link::TAG_BYTES => push_from_event_empty!(self, Link, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),

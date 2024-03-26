@@ -17,7 +17,7 @@ use super::{
   info::Info,
   table::TableElem,
   utils::{discard_comment, discard_event, is_empty, unexpected_attr_warn},
-  QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
+  HasSubElements, HasSubElems, QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 // Sub modules
@@ -67,16 +67,10 @@ impl<C: TableDataContent> DataElem<C> {
     context: &Vec<TableElem>,
   ) -> Result<(), VOTableError> {
     match self {
-      DataElem::TableData(ref mut e) => {
-        e.read_sub_elements_and_clean_by_ref(reader, reader_buff, context)
-      }
-      DataElem::Binary(ref mut e) => {
-        e.read_sub_elements_and_clean_by_ref(reader, reader_buff, context)
-      }
-      DataElem::Binary2(ref mut e) => {
-        e.read_sub_elements_and_clean_by_ref(reader, reader_buff, context)
-      }
-      DataElem::Fits(ref mut e) => e.read_sub_elements_and_clean_by_ref(reader, reader_buff, &()),
+      DataElem::TableData(ref mut e) => e.read_content_by_ref(reader, reader_buff, context),
+      DataElem::Binary(ref mut e) => e.read_content_by_ref(reader, reader_buff, context),
+      DataElem::Binary2(ref mut e) => e.read_content_by_ref(reader, reader_buff, context),
+      DataElem::Fits(ref mut e) => e.read_content_by_ref(reader, reader_buff, &()),
     }
   }
 
@@ -239,11 +233,7 @@ impl<C: TableDataContent> Data<C> {
               e
             ))))
           }
-          Info::TAG_BYTES => {
-            self
-              .infos
-              .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
-          }
+          Info::TAG_BYTES => push_from_event_start!(self, Info, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -252,7 +242,7 @@ impl<C: TableDataContent> Data<C> {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Info::TAG_BYTES => self.infos.push(Info::from_event_empty(e)?),
+          Info::TAG_BYTES => push_from_event_empty!(self, Info, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -305,6 +295,8 @@ impl<C: TableDataContent> Data<C> {
 impl<C: TableDataContent> VOTableElement for Data<C> {
   const TAG: &'static str = "DATA";
 
+  type MarkerType = HasSubElems;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -331,14 +323,14 @@ impl<C: TableDataContent> VOTableElement for Data<C> {
     F: FnMut(&str, &str),
   {
   }
+}
+
+impl<C: TableDataContent> HasSubElements for Data<C> {
+  type Context = Vec<TableElem>;
 
   fn has_no_sub_elements(&self) -> bool {
     false
   }
-}
-
-impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
-  type Context = Vec<TableElem>;
 
   fn read_sub_elements_by_ref<R: BufRead>(
     &mut self,
@@ -351,6 +343,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
           TableData::<C>::TAG_BYTES => {
+            // Nothing here because the default is a TableData
             self
               .data
               .read_sub_elements_by_ref(reader, reader_buff, context)?
@@ -370,11 +363,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
           Fits::TAG_BYTES => {
             self.data = DataElem::Fits(from_event_start_by_ref!(Fits, reader, reader_buff, e))
           }
-          Info::TAG_BYTES => {
-            self
-              .infos
-              .push(from_event_start_by_ref!(Info, reader, reader_buff, e))
-          }
+          Info::TAG_BYTES => push_from_event_start!(self, Info, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
@@ -383,7 +372,7 @@ impl<C: TableDataContent> QuickXmlReadWrite for Data<C> {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
-          Info::TAG_BYTES => self.infos.push(Info::from_event_empty(e)?),
+          Info::TAG_BYTES => push_from_event_empty!(self, Info, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),

@@ -204,14 +204,19 @@ pub trait VodmlVisitor {
 
 #[cfg(test)]
 mod test {
-  use crate::QuickXmlReadWrite;
-  use quick_xml::{events::Event, Reader};
   use std::{
     fs::File,
     io::{Cursor, Read},
   };
 
-  pub(crate) fn test_error<X: QuickXmlReadWrite<Context = ()>>(xml: &str, special_cond: bool) {
+  use quick_xml::{events::Event, Reader};
+
+  use crate::{QuickXmlReadWrite, VOTableElement};
+
+  pub(crate) fn test_error<X>(xml: &str, special_cond: bool)
+  where
+    X: VOTableElement + QuickXmlReadWrite<<X as VOTableElement>::MarkerType, Context = ()>,
+  {
     let mut reader = Reader::from_reader(Cursor::new(xml.as_bytes()));
     let mut buff: Vec<u8> = Vec::with_capacity(xml.len());
     loop {
@@ -219,23 +224,20 @@ mod test {
       match &mut event {
         Event::Start(ref mut e) if e.local_name() == X::TAG_BYTES => {
           if !special_cond {
-            let mut info = X::from_attributes(e.attributes()).unwrap();
-            assert!(info
-              .read_sub_elements_and_clean(reader.clone(), &mut buff, &())
-              .is_err());
+            let res = X::from_event_start(e)
+              .and_then(|info| info.read_content(&mut reader, &mut buff, &()));
+            assert!(res.is_err());
           } else {
-            assert!(X::from_attributes(e.attributes()).is_err())
+            assert!(X::from_event_start(e).is_err())
           }
           break;
         }
         Event::Empty(ref mut e) if e.local_name() == X::TAG_BYTES => {
           if special_cond {
-            let mut info = X::from_attributes(e.attributes()).unwrap();
-            assert!(info
-              .read_sub_elements_and_clean(reader.clone(), &mut buff, &())
-              .is_err());
+            let info = X::from_event_empty(e);
+            assert!(info.is_err());
           } else {
-            assert!(X::from_attributes(e.attributes()).is_err())
+            assert!(X::from_event_start(e).is_err())
           };
           break;
         }

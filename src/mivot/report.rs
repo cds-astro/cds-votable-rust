@@ -1,18 +1,12 @@
 //! Module dedicated to the `REPORT` tag.
 
-use std::{
-  io::{BufRead, Write},
-  str::{self, FromStr},
-};
+use std::str::{self, FromStr};
 
 use paste::paste;
-use quick_xml::{events::Event, Reader, Writer};
 
 use crate::{
-  error::VOTableError,
-  mivot::VodmlVisitor,
-  utils::{discard_comment, discard_event, unexpected_attr_err},
-  HasContent, QuickXmlReadWrite, VOTableElement,
+  error::VOTableError, mivot::VodmlVisitor, utils::unexpected_attr_err, HasContent, HasContentElem,
+  VOTableElement,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -75,6 +69,8 @@ impl_has_content!(Report);
 impl VOTableElement for Report {
   const TAG: &'static str = "REPORT";
 
+  type MarkerType = HasContentElem;
+
   fn from_attrs<K, V, I>(attrs: I) -> Result<Self, VOTableError>
   where
     K: AsRef<str> + Into<String>,
@@ -123,18 +119,4 @@ impl VOTableElement for Report {
   {
     f("status", self.status.to_string().as_str());
   }
-
-  fn get_content(&self) -> Option<&str> {
-    self.content.as_deref()
-  }
-
-  fn has_no_sub_elements(&self) -> bool {
-    true
-  }
-}
-
-impl QuickXmlReadWrite for Report {
-  type Context = ();
-
-  impl_read_write_content_only!();
 }
