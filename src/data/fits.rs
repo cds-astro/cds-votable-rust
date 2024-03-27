@@ -34,6 +34,13 @@ impl Fits {
   }
 
   impl_builder_opt_attr!(extnum, u32);
+  pub fn set_stream(mut self, stream: Stream<VoidTableDataContent>) -> Self {
+    self.set_stream_by_ref(stream);
+    self
+  }
+  pub fn set_stream_by_ref(&mut self, stream: Stream<VoidTableDataContent>) {
+    self.stream = stream;
+  }
 
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where
