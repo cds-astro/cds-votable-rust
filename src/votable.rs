@@ -132,7 +132,6 @@ pub enum VOTableElem {
   Group(Group),
   Param(Param),
   Info(Info),
-  Definitions(Definitions), // Deprecated since v1.1
 }
 
 impl VOTableElem {
@@ -147,7 +146,6 @@ impl VOTableElem {
       VOTableElem::Group(elem) => elem.visit(visitor),
       VOTableElem::Param(elem) => elem.visit(visitor),
       VOTableElem::Info(elem) => visitor.visit_info(elem),
-      VOTableElem::Definitions(elem) => elem.visit(visitor),
     }
   }
   fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
@@ -157,7 +155,6 @@ impl VOTableElem {
       VOTableElem::Group(elem) => elem.write(writer, &()),
       VOTableElem::Param(elem) => elem.write(writer, &()),
       VOTableElem::Info(elem) => elem.write(writer, &()),
-      VOTableElem::Definitions(elem) => elem.write(writer, &()),
     }
   }
 }
@@ -458,6 +455,9 @@ pub struct VOTable<C: TableDataContent> {
   // elements
   #[serde(skip_serializing_if = "Option::is_none")]
   pub description: Option<Description>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  /// `DEFINITIONS` is deprecated since VOTable 1.1
+  pub definitions: Option<Definitions>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub elems: Vec<VOTableElem>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -500,6 +500,7 @@ impl<C: TableDataContent> VOTable<C> {
       xsi_schema_location: None,
       extra: Default::default(),
       description: None,
+      definitions: None,
       elems: Default::default(),
       resources: Default::default(),
       post_infos: Default::default(),
@@ -525,6 +526,9 @@ impl<C: TableDataContent> VOTable<C> {
     visitor.visit_votable_start(self)?;
     if let Some(desc) = &mut self.description {
       visitor.visit_description(desc)?;
+    }
+    if let Some(e) = &mut self.definitions {
+      e.visit(visitor)?;
     }
     for e in self.elems.iter_mut() {
       e.visit(visitor)?;
@@ -594,13 +598,14 @@ impl<C: TableDataContent> VOTable<C> {
   impl_builder_insert_extra!();
 
   impl_builder_opt_subelem!(description, Description);
+  impl_builder_opt_subelem!(definitions, Definitions);
 
   impl_builder_push_elem!(CooSys, VOTableElem);
   impl_builder_push_elem!(TimeSys, VOTableElem);
   impl_builder_push_elem!(Group, VOTableElem);
   impl_builder_push_elem!(Param, VOTableElem);
   impl_builder_push_elem!(Info, VOTableElem);
-  impl_builder_push_elem!(Definitions, VOTableElem);
+
   pub fn push_elem(mut self, elem: VOTableElem) -> Self {
     self.push_elem_by_ref(elem);
     self
@@ -697,14 +702,14 @@ impl<C: TableDataContent> VOTable<C> {
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
           Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
+          Definitions::TAG_BYTES => {
+            set_from_event_start!(self, Definitions, reader, reader_buff, e)
+          }
           Info::TAG_BYTES if self.resources.is_empty() => {
             push_from_event_start!(self, Info, reader, reader_buff, e)
           }
           Group::TAG_BYTES => push_from_event_start!(self, Group, reader, reader_buff, e),
           Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
-          Definitions::TAG_BYTES => {
-            push_from_event_start!(self, Definitions, reader, reader_buff, e)
-          }
           Resource::<C>::TAG_BYTES => {
             return Resource::<C>::from_event_start(e).map(Some);
           }
@@ -719,6 +724,7 @@ impl<C: TableDataContent> VOTable<C> {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
+          Definitions::TAG_BYTES => set_from_event_empty!(self, Definitions, e),
           Info::TAG_BYTES => {
             let info = Info::from_event_empty(e)?;
             if self.resources.is_empty() {
@@ -731,7 +737,6 @@ impl<C: TableDataContent> VOTable<C> {
           TimeSys::TAG_BYTES => push_from_event_empty!(self, TimeSys, e),
           Group::TAG_BYTES => push_from_event_empty!(self, Group, e),
           Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
-          Definitions::TAG_BYTES => push_from_event_empty!(self, Definitions, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -808,6 +813,7 @@ impl<C: TableDataContent> VOTable<C> {
       .map_err(VOTableError::Write)?;
     // Write sub-elems
     write_elem!(self, description, writer, context);
+    write_elem!(self, definitions, writer, context);
     write_elem_vec_no_context!(self, elems, writer);
     for resource in self.resources.iter_mut() {
       if resource.write_to_data_beginning(writer, &(), stop_before_data)? {
@@ -950,14 +956,14 @@ impl<C: TableDataContent> HasSubElements for VOTable<C> {
       match &mut event {
         Event::Start(ref e) => match e.local_name() {
           Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
+          Definitions::TAG_BYTES => {
+            set_from_event_start!(self, Definitions, reader, reader_buff, e)
+          }
           Info::TAG_BYTES if self.resources.is_empty() => {
             push_from_event_start!(self, Info, reader, reader_buff, e)
           }
           Group::TAG_BYTES => push_from_event_start!(self, Group, reader, reader_buff, e),
           Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
-          Definitions::TAG_BYTES => {
-            push_from_event_start!(self, Definitions, reader, reader_buff, e)
-          }
           Resource::<C>::TAG_BYTES => {
             self.push_resource_by_ref(from_event_start_by_ref!(Resource, reader, reader_buff, e))
           }
@@ -972,6 +978,7 @@ impl<C: TableDataContent> HasSubElements for VOTable<C> {
           }
         },
         Event::Empty(ref e) => match e.local_name() {
+          Definitions::TAG_BYTES => set_from_event_empty!(self, Definitions, e),
           Info::TAG_BYTES => {
             let info = Info::from_event_empty(e)?;
             if self.resources.is_empty() {
@@ -984,7 +991,6 @@ impl<C: TableDataContent> HasSubElements for VOTable<C> {
           TimeSys::TAG_BYTES => push_from_event_empty!(self, TimeSys, e),
           Group::TAG_BYTES => push_from_event_empty!(self, Group, e),
           Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
-          Definitions::TAG_BYTES => push_from_event_empty!(self, Definitions, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
@@ -1015,6 +1021,7 @@ impl<C: TableDataContent> HasSubElements for VOTable<C> {
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
     write_elem!(self, description, writer, context);
+    write_elem!(self, definitions, writer, context);
     write_elem_vec_no_context!(self, elems, writer);
     write_elem_vec!(self, resources, writer, context);
     write_elem_vec!(self, post_infos, writer, context);
