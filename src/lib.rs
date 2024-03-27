@@ -88,11 +88,11 @@ pub trait VOTableElement: Sized {
   type MarkerType: VOTableElementType;
 
   /// Returns the XML tag of this VOTable Element.
-  fn tag(&self) -> &str {
+  fn tag(&self) -> &'static str {
     Self::TAG
   }
 
-  fn tag_bytes(&self) -> &[u8] {
+  fn tag_bytes(&self) -> &'static [u8] {
     Self::TAG_BYTES
   }
 
@@ -372,12 +372,6 @@ impl<T: HasSubElements> QuickXmlReadWrite<HasSubElems> for T {
     }
   }
 }
-
-/* TO BE DONE LATER
-/// Tels that the element may contains a description sub-elements.
-/// In the VOTable standard, at most one description sub-element can be present by element supporting it.
-pub trait HasDescription: HasSubElements {}
-*/
 
 pub trait TableDataContent: Default + PartialEq + serde::Serialize {
   fn new() -> Self {
