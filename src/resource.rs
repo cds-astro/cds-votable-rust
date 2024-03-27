@@ -274,6 +274,7 @@ impl<C: TableDataContent> Resource<C> {
   pub fn push_elem_by_ref(&mut self, elem: ResourceElem) {
     self.elems.push(elem);
   }
+
   // - sub-sequence elements
   pub fn push_sub_elem(mut self, sub_elem: ResourceSubElem<C>) -> Self {
     self.sub_elems.push(sub_elem);
@@ -282,6 +283,42 @@ impl<C: TableDataContent> Resource<C> {
   pub fn push_sub_elem_by_ref(&mut self, sub_elem: ResourceSubElem<C>) {
     self.sub_elems.push(sub_elem);
   }
+
+  /// Create and push a simple sub-elem only containing a table.
+  pub fn push_table(mut self, table: Table<C>) -> Self {
+    self.push_table_ref(table);
+    self
+  }
+  /// Create and push a simple sub-elem only containing a table.
+  pub fn push_table_ref(&mut self, table: Table<C>) {
+    self.sub_elems.push(ResourceSubElem::from_table(table));
+  }
+  /// Create and push a simple sub-elem only containing a resource.
+  pub fn push_resource(mut self, resource: Resource<C>) -> Self {
+    self.push_resource_ref(resource);
+    self
+  }
+  /// Create and push a simple sub-elem only containing a resource.
+  pub fn push_resource_ref(&mut self, resource: Resource<C>) {
+    self
+      .sub_elems
+      .push(ResourceSubElem::from_resource(resource));
+  }
+  /// Push the given link into the last sub-element.
+  pub fn push_link(mut self, link: Link) -> Result<Self, VOTableError> {
+    self.push_link_by_ref(link).map(|()| self)
+  }
+  /// Push the given link into the last sub-element
+  pub fn push_link_by_ref(&mut self, link: Link) -> Result<(), VOTableError> {
+    self
+      .sub_elems
+      .last_mut()
+      .map(|sub_elem| sub_elem.push_link_by_ref(link))
+      .ok_or(VOTableError::Custom(String::from(
+        "No sub-resource in which a link can be added",
+      )))
+  }
+
   // - extra optional element
   #[cfg(feature = "mivot")]
   impl_builder_opt_subelem!(vodml, Vodml);
