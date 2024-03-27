@@ -286,20 +286,20 @@ impl<C: TableDataContent> Resource<C> {
 
   /// Create and push a simple sub-elem only containing a table.
   pub fn push_table(mut self, table: Table<C>) -> Self {
-    self.push_table_ref(table);
+    self.push_table_by_ref(table);
     self
   }
   /// Create and push a simple sub-elem only containing a table.
-  pub fn push_table_ref(&mut self, table: Table<C>) {
+  pub fn push_table_by_ref(&mut self, table: Table<C>) {
     self.sub_elems.push(ResourceSubElem::from_table(table));
   }
   /// Create and push a simple sub-elem only containing a resource.
   pub fn push_resource(mut self, resource: Resource<C>) -> Self {
-    self.push_resource_ref(resource);
+    self.push_resource_by_ref(resource);
     self
   }
   /// Create and push a simple sub-elem only containing a resource.
-  pub fn push_resource_ref(&mut self, resource: Resource<C>) {
+  pub fn push_resource_by_ref(&mut self, resource: Resource<C>) {
     self
       .sub_elems
       .push(ResourceSubElem::from_resource(resource));
