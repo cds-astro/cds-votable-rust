@@ -34,6 +34,14 @@ impl<C: TableDataContent> Binary<C> {
     Self { stream }
   }
 
+  pub fn set_stream(mut self, stream: Stream<C>) -> Self {
+    self.set_stream_by_ref(stream);
+    self
+  }
+  pub fn set_stream_by_ref(&mut self, stream: Stream<C>) {
+    self.stream = stream;
+  }
+
   pub(crate) fn write_to_data_beginning<W: Write>(
     &mut self,
     writer: &mut Writer<W>,
