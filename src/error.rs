@@ -38,8 +38,8 @@ quick_error! {
     ParseFloat(err: ParseFloatError) {
       display("Error parsing a float: {}", err)
     }
-    ParseYear(err: ParseFloatError) {
-      display("Error parsing a Besselian or Julian year: {}", err)
+    ParseYear(year: String, err: ParseFloatError) {
+      display("Error parsing a Besselian or Julian year '{}': {}", year, err)
     }
     ParseDatatype(err: String) {
       display("Error parsing Datatype: {}", err)

@@ -7,6 +7,7 @@ use std::{
   str::{self, FromStr},
 };
 
+use log::trace;
 use paste::paste;
 use quick_xml::{events::Event, Reader, Writer};
 
@@ -267,6 +268,7 @@ impl FromStr for BesselianYear {
     } else {
       s
     };
+    trace!("Parse Besselian year: '{}'", decimal_year_str);
     decimal_year_str.parse::<f64>().map(BesselianYear)
   }
 }
@@ -288,6 +290,7 @@ impl FromStr for JulianYear {
     } else {
       s
     };
+    trace!("Parse Julian year: '{}'", decimal_year_str);
     decimal_year_str.parse::<f64>().map(JulianYear)
   }
 }
@@ -445,20 +448,20 @@ impl System {
     match system {
       "eq_FK4" => equinox
         .parse::<BesselianYear>()
-        .map_err(VOTableError::ParseYear)
+        .map_err(|e| VOTableError::ParseYear(equinox.to_string(), e))
         .map(|equinox| System::new_eq_fk4(equinox.0)),
       "eq_FK5" => equinox
         .parse::<JulianYear>()
-        .map_err(VOTableError::ParseYear)
+        .map_err(|e| VOTableError::ParseYear(equinox.to_string(), e))
         .map(|equinox| System::new_eq_fk5(equinox.0)),
       "ICRS" => Ok(System::new_icrs()),
       "ecl_FK4" => equinox
         .parse::<BesselianYear>()
-        .map_err(VOTableError::ParseYear)
+        .map_err(|e| VOTableError::ParseYear(equinox.to_string(), e))
         .map(|equinox| System::new_ecl_fk4(equinox.0)),
       "ecl_FK5" => equinox
         .parse::<JulianYear>()
-        .map_err(VOTableError::ParseYear)
+        .map_err(|e| VOTableError::ParseYear(equinox.to_string(), e))
         .map(|equinox| System::new_ecl_fk5(equinox.0)),
       "galactic" => Ok(System::new_galactic()),
       "supergalactic" => Ok(System::new_supergalactic()),
@@ -499,20 +502,20 @@ impl System {
     let equinox_str = equinox.as_ref();
     match self {
       System::EquatorialFK4 { equinox, .. } => equinox_str
-        .parse()
-        .map_err(VOTableError::ParseYear)
+        .parse::<BesselianYear>()
+        .map_err(|e| VOTableError::ParseYear(equinox_str.to_string(), e))
         .map(|new_equinox| *equinox = new_equinox),
       System::EcliptiqueFK4 { equinox, .. } => equinox_str
-        .parse()
-        .map_err(VOTableError::ParseYear)
+        .parse::<BesselianYear>()
+        .map_err(|e| VOTableError::ParseYear(equinox_str.to_string(), e))
         .map(|new_equinox| *equinox = new_equinox),
       System::EquatorialFK5 { equinox, .. } => equinox_str
-        .parse()
-        .map_err(VOTableError::ParseYear)
+        .parse::<JulianYear>()
+        .map_err(|e| VOTableError::ParseYear(equinox_str.to_string(), e))
         .map(|new_equinox| *equinox = new_equinox),
       System::EcliptiqueFK5 { equinox, .. } => equinox_str
-        .parse()
-        .map_err(VOTableError::ParseYear)
+        .parse::<JulianYear>()
+        .map_err(|e| VOTableError::ParseYear(equinox_str.to_string(), e))
         .map(|new_equinox| *equinox = new_equinox),
       _ => Ok(()),
     }
@@ -544,15 +547,23 @@ impl System {
   pub fn set_epoch_from_str_by_ref<S: AsRef<str>>(&mut self, epoch: S) -> Result<(), VOTableError> {
     let epoch_str = epoch.as_ref();
     match self {
-      System::EquatorialFK4 { equinox: _, epoch } => epoch_str.parse().map(|y| epoch.insert(y).0),
-      System::EcliptiqueFK4 { equinox: _, epoch } => epoch_str.parse().map(|y| epoch.insert(y).0),
-      System::EquatorialFK5 { equinox: _, epoch } => epoch_str.parse().map(|y| epoch.insert(y).0),
-      System::EcliptiqueFK5 { equinox: _, epoch } => epoch_str.parse().map(|y| epoch.insert(y).0),
-      System::ICRS { epoch } => epoch_str.parse().map(|y| epoch.insert(y).0),
-      System::Galactic { epoch } => epoch_str.parse().map(|y| epoch.insert(y).0),
-      System::SuperGalactic { epoch } => epoch_str.parse().map(|y| epoch.insert(y).0),
+      System::EquatorialFK4 { equinox: _, epoch } => epoch_str
+        .parse::<BesselianYear>()
+        .map(|y| epoch.insert(y).0),
+      System::EcliptiqueFK4 { equinox: _, epoch } => epoch_str
+        .parse::<BesselianYear>()
+        .map(|y| epoch.insert(y).0),
+      System::EquatorialFK5 { equinox: _, epoch } => {
+        epoch_str.parse::<JulianYear>().map(|y| epoch.insert(y).0)
+      }
+      System::EcliptiqueFK5 { equinox: _, epoch } => {
+        epoch_str.parse::<JulianYear>().map(|y| epoch.insert(y).0)
+      }
+      System::ICRS { epoch } => epoch_str.parse::<JulianYear>().map(|y| epoch.insert(y).0),
+      System::Galactic { epoch } => epoch_str.parse::<JulianYear>().map(|y| epoch.insert(y).0),
+      System::SuperGalactic { epoch } => epoch_str.parse::<JulianYear>().map(|y| epoch.insert(y).0),
     }
-    .map_err(VOTableError::ParseYear)
+    .map_err(|e| VOTableError::ParseYear(epoch_str.to_string(), e))
     .map(|_| ())
   }
 
