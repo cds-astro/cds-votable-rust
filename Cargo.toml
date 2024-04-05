@@ -1,6 +1,6 @@
 [package]
 name = "votable"
-version = "0.5.0"
+version = "0.6.0"
 authors = [
   "F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>",
   "T. Dumortier <thibault.dumortier@astro.unistra.fr>"
@@ -54,6 +54,7 @@ ucs2 = "0.3"
 bitvec = { version = "1", features = ["std", "alloc", "serde"] }
 bstringify = "0.1"
 log = "0.4"
+
 
 [features]
 default = []

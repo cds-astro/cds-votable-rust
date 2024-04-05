@@ -2,18 +2,20 @@
 
 ## 0.6.0
 
-Released 2024-XX-XX
+Released 2024-04-05
 
 ### Changed
 
-* ⚠️  BREAKING: the tag now in the `VOTableTrait` instead of the `QuickXmlReadWrite` trait 
+* ⚠️  BREAKING: the tag is now in the `VOTableTrait` instead of the `QuickXmlReadWrite` trait 
 * ⚠️  BREAKING: extra attribute names (allowed in some Tags in the lib, but not in the standard) 
   must contains ':'. If not, a prefix 'extra:' is automatically addded by the API (not when deserializing)
 * ⚠️  BREAKING: update the MIVOT visitor to consistent with the VOTable visitor
-* add `for_each_attribute` in MIVOT tags
-* add documentation
+* Add `for_each_attribute` in MIVOT tags
+* Add setters
+* Add documentation
 * Internal changes: 
     + add trait `VOTableElement` for more genericity and to lighten the role of the `QuickXMLReadWrite` trait 
+    + add markers trait to distinguish between several `VOTableElement` patterns
     + remove macros
 
 
