@@ -7,6 +7,7 @@ use std::{
 };
 
 use clap::ValueEnum;
+use votable::VOTableError;
 
 pub mod colnames;
 pub mod fieldarray;
@@ -187,7 +188,7 @@ impl Tag {
 }
 
 impl FromStr for Tag {
-  type Err = String;
+  type Err = VOTableError;
 
   fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
     match s {
@@ -212,7 +213,7 @@ impl FromStr for Tag {
       "MAX" => Ok(Self::MAX),
       "STREAM" => Ok(Self::STREAM),
       "VODML" => Ok(Self::VODML),
-      _ => Err(format!("Tag '{}' not recognized.", s)),
+      _ => Err(VOTableError::Custom(format!("Tag '{}' not recognized.", s))),
     }
   }
 }

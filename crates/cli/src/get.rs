@@ -15,7 +15,7 @@ use super::{
   },
 };
 
-/// Get information from a VOTable (streaming for XML files).
+/// Get information from a VOTable, like it structure or fields.
 #[derive(Debug, Args)]
 pub struct Get {
   #[command(flatten)]
@@ -73,7 +73,7 @@ impl Get {
 
 #[derive(Debug, Subcommand)]
 enum GetAction {
-  /// Print the VOTable structure
+  /// Print the VOTable structure (useful to get Virtual IDs)
   Struct {
     /// Output line width (min=80)
     #[arg(short = 'w', long = "line-width", default_value = "120")]

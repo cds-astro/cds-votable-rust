@@ -53,9 +53,8 @@ impl FromStr for OutputFormat {
   }
 }
 
-/// Convert a (large) single table VOTable in streaming mode.
-/// All information is preserved, even after the `</TABLE>` tag.
-/// The `TABLEDATA` to `CSV` conversion preserve fields formatting.
+/// Convert a single table XML VOTable in streaming mode.
+/// Tags after `</TABLE>` are preserved.
 #[derive(Debug, Args)]
 pub struct StreamConvert {
   /// Path of the input XML VOTable [default: read from stdin]

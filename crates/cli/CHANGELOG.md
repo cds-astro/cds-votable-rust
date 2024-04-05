@@ -1,5 +1,12 @@
 # `moc-cli` Change Log
 
+## 0.6.0
+
+Released 2023-04-05
+
+* Add sub-command 'edit' to modify a VOTable
+
+
 ## 0.5.0
 
 Released 2023-03-11

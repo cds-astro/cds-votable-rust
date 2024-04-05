@@ -76,13 +76,13 @@ impl OutputFormat {
 pub struct Output {
   /// Path of the output VOTable [default: write to stdout]
   #[clap(short = 'o', long = "out", value_name = "FILE")]
-  output: Option<PathBuf>,
+  pub output: Option<PathBuf>,
   /// Format of the output VOTable ('xml', 'xml-td', 'xml-bin', 'xml-bin2', 'json', 'yaml' or 'toml').
   #[clap(short = 'f', long = "out-fmt", value_enum)]
-  output_fmt: OutputFormat,
+  pub output_fmt: OutputFormat,
   /// Pretty print (for JSON and TOML)
   #[clap(short, long)]
-  pretty: bool,
+  pub pretty: bool,
 }
 
 impl Output {

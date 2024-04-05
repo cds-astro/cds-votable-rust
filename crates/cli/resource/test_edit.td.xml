@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VOTABLE version="1.3" xmlns="http://www.ivoa.net/xml/VOTable/v1.3">
+    <RESOURCE>
+        <RESOURCE>
+            <COOSYS ID="t4-coosys-1" system="eq_FK4" equinox="B1900"/>
+        </RESOURCE>
+	<!-- My nice comment -->
+	<TABLE name="I/238A/picat" nrows="8994">
+            <DESCRIPTION>
+The data file
+</DESCRIPTION>
+            <PARAM name="votable-version" datatype="char" value="1.99+ (14-Oct-2013)" arraysize="19">
+            </PARAM>
+            <PARAM name="-ref" datatype="char" value="VOTx25520" arraysize="9">
+            </PARAM>
+            <PARAM name="-out.max" datatype="char" value="50000" arraysize="5">
+            </PARAM>
+            <PARAM name="queryParameters" datatype="char" value="4" arraysize="1">
+                <DESCRIPTION>-oc.form=dec
+-source=I/238A
+-out.all
+-out.max=50000</DESCRIPTION>
+            </PARAM>
+            <FIELD name="recno" datatype="int" width="8" ucd="meta.record">
+                <DESCRIPTION>Record number assigned by the VizieR team. Should Not be used for identification.</DESCRIPTION>
+                <LINK title="LINK" href="http://vizier.u-strasbg.fr/viz-bin/VizieR-5?-info=XML&amp;-out.add=.&amp;-source=I/238A/picat&amp;recno=${recno}"/>
+            </FIELD>
+            <FIELD name="f_GCTP" datatype="char" ucd="meta.code" arraysize="1">
+                <DESCRIPTION>[*] Indicates a note in file &quot;errata.dat&quot;</DESCRIPTION>
+                <LINK title="LINK" href="http://vizier.u-strasbg.fr/viz-bin/VizieR?-6N&amp;-info=XML&amp;-out.add=.&amp;-source=I/238A/errata&amp;GCTP==${GCTP}"/>
+            </FIELD>
+            <FIELD name="GCTP" datatype="float" precision="2" width="7" ucd="meta.id;meta.main">
+                <DESCRIPTION>Catalog number</DESCRIPTION>
+                <LINK title="LINK" href="http://vizier.u-strasbg.fr/viz-bin/VizieR-5?-info=XML&amp;-out.add=.&amp;-source=I/238A/picat&amp;recno=${recno}"/>
+            </FIELD>
+            <FIELD name="comp" datatype="char" ucd="meta.code.multip" arraysize="1">
+                <DESCRIPTION>Double star component</DESCRIPTION>
+            </FIELD>
+            <FIELD name="RA1900" datatype="char" unit="&quot;h:m:s&quot;" ref="t4-coosys-1" ucd="pos.eq.ra;meta.main" arraysize="10">
+                <DESCRIPTION>?Right ascension hours (1900.0)</DESCRIPTION>
+            </FIELD>
+            <FIELD name="DE1900" datatype="char" unit="&quot;d:m:s&quot;" ref="t4-coosys-1" ucd="pos.eq.dec;meta.main" arraysize="9">
+                <DESCRIPTION>?Declination degrees (1900.0)</DESCRIPTION>
+            </FIELD>
+            <FIELD name="u_RA1900" datatype="char" ucd="meta.code.error;pos.eq.ra" arraysize="1">
+                <DESCRIPTION>[:C] : = lower precision position</DESCRIPTION>
+            </FIELD>
+            <FIELD name="Vmag" datatype="float" unit="mag" precision="2" width="5" ucd="phot.mag;em.opt.V">
+                <DESCRIPTION>?V magnitude or other magnitude</DESCRIPTION>
+            </FIELD>
+            <FIELD name="n_Vmag" datatype="char" ucd="meta.note" arraysize="1">
+                <DESCRIPTION>P indicates blue passband</DESCRIPTION>
+            </FIELD>
+            <FIELD name="B-V" datatype="float" unit="mag" precision="2" width="5" ucd="phot.color;em.opt.B;em.opt.V">
+                <DESCRIPTION>?B-V color</DESCRIPTION>
+            </FIELD>
+            <FIELD name="U-B" datatype="float" unit="mag" precision="2" width="5" ucd="phot.color;em.opt.U;em.opt.B">
+                <DESCRIPTION>?U-B color</DESCRIPTION>
+            </FIELD>
+            <FIELD name="r_Vmag" datatype="char" ucd="meta.ref;pos.frame" arraysize="1">
+                <DESCRIPTION>Source code for photometry</DESCRIPTION>
+                <LINK title="LINK" href="http://vizier.u-strasbg.fr/viz-bin/VizieR-n?-info=XML&amp;-source=I/238A/source&amp;type=ubv&amp;code==${r_Vmag}"/>
+            </FIELD>
+            <FIELD name="MK" datatype="char" ucd="src.spType" arraysize="*">
+                <DESCRIPTION>Spectral type</DESCRIPTION>
+            </FIELD>
+            <FIELD name="r_MK" datatype="char" ucd="meta.ref;pos.frame" arraysize="1">
+                <DESCRIPTION>Source code for spectral type</DESCRIPTION>
+                <LINK title="LINK" href="http://vizier.u-strasbg.fr/viz-bin/VizieR-n?-info=XML&amp;-source=I/238A/source&amp;type=sp&amp;code==${r_MK}"/>
+            </FIELD>
+            <FIELD name="var" datatype="char" ucd="meta.id" arraysize="9">
+                <DESCRIPTION>Variable star name</DESCRIPTION>
+            </FIELD>
+            <FIELD name="HR" datatype="short" width="4" ucd="meta.id">
+                <DESCRIPTION>?HR number [NULL integer written as an empty string]</DESCRIPTION>
+            </FIELD>
+            <FIELD name="supp" datatype="char" ucd="meta.note" arraysize="1">
+                <DESCRIPTION>[S] S=in Hoffleit BSS Cat. &lt;V/36&gt;</DESCRIPTION>
+            </FIELD>
+            <FIELD name="HD" datatype="char" ucd="meta.id" arraysize="7">
+                <DESCRIPTION>HD number and component</DESCRIPTION>
+            </FIELD>
+            <FIELD name="DM" datatype="char" ucd="meta.id" arraysize="10">
+                <DESCRIPTION>DM identification and component</DESCRIPTION>
+            </FIELD>
+            <FIELD name="name" datatype="char" ucd="meta.id" arraysize="*">
+                <DESCRIPTION>Star name</DESCRIPTION>
+            </FIELD>
+            <FIELD name="pm" datatype="float" unit="arcsec/yr" precision="3" width="6" ref="t4-coosys-1" ucd="pos.pm">
+                <DESCRIPTION>?Total Proper motion</DESCRIPTION>
+            </FIELD>
+            <FIELD name="pmPA" datatype="short" unit="deg" width="3" ref="t4-coosys-1" ucd="pos.posAng;pos.pm">
+                <DESCRIPTION>?Proper motion position angle [NULL integer written as an empty string]</DESCRIPTION>
+            </FIELD>
+            <FIELD name="pi" datatype="float" unit="arcsec" precision="4" width="7" ucd="pos.parallax.trig">
+                <DESCRIPTION>?Weighted absolute parallax</DESCRIPTION>
+            </FIELD>
+            <FIELD name="e_pi" datatype="float" unit="mas" precision="1" width="4" ucd="stat.error">
+                <DESCRIPTION>?Standard error of parallax</DESCRIPTION>
+            </FIELD>
+            <FIELD name="q_pi" datatype="char" ucd="meta.code.qual" arraysize="1">
+                <DESCRIPTION>[ GFPX]Quality of interagreement</DESCRIPTION>
+            </FIELD>
+            <FIELD name="o_pi" datatype="short" width="2" ucd="meta.number" viz:default="true" qat2s:name="tata" viz:orgname="toto" vizname="tutu">
+                <DESCRIPTION>?Number of parallax observations [NULL integer written as an empty string]</DESCRIPTION>
+            </FIELD>
+            <FIELD name="Simbad" datatype="char" ucd="meta.ref.url" arraysize="*">
+                <DESCRIPTION>SIMBAD data for this star</DESCRIPTION>
+                <LINK title="LINK" href="http://vizier.u-strasbg.fr/viz-bin/nph-htx/A?%5cifmatch%7b%2a.00%7d%7b${GCTP}%7d%5cobjS%7bPLX%20${GCTP$.1}%7d%7b${Simbad}%7d%5celsifmatch%7b%2a0%7d%7b${GCTP}%7d%5cobjS%7bPLX%20${GCTP$1-6}%7d%7b${Simbad}%7d%5celse%5cobject%7b${Simbad}%7d%5cfi"/>
+            </FIELD>
+            <FIELD name="_RA.icrs" datatype="char" unit="&quot;h:m:s&quot;" ucd="pos.eq.ra" arraysize="10">
+                <DESCRIPTION>Right ascension (ICRS) at Epoch=J2000, proper motions taken into account  (computed by VizieR, not part of the original data)</DESCRIPTION>
+            </FIELD>
+            <FIELD name="_DE.icrs" datatype="char" unit="&quot;d:m:s&quot;" ucd="pos.eq.dec" arraysize="9">
+                <DESCRIPTION>Declination (ICRS) at Epoch=J2000, proper motions taken into account  (computed by VizieR, not part of the original data)</DESCRIPTION>
+            </FIELD>
+            <DATA>
+                <TABLEDATA>
+<TR>
+    <TD>1</TD>
+    <TD></TD>
+    <TD>1.0</TD>
+    <TD></TD>
+    <TD>00 00 12.7</TD>
+    <TD>+08 13 57</TD>
+    <TD></TD>
+    <TD>8.22</TD>
+    <TD></TD>
+    <TD>1.09</TD>
+    <TD>0.53</TD>
+    <TD>N</TD>
+    <TD>G5:  Ba2.*</TD>
+    <TD>2</TD>
+    <TD></TD>
+    <TD></TD>
+    <TD></TD>
+    <TD>    26</TD>
+    <TD>B+07 5128</TD>
+    <TD>CI 1</TD>
+    <TD>0.274</TD>
+    <TD>103</TD>
+    <TD>-4.0E-4</TD>
+    <TD>7.5</TD>
+    <TD>G</TD>
+    <TD>2</TD>
+    <TD>Simbad</TD>
+    <TD>00 05 22.2</TD>
+    <TD>+08 47 15</TD>
+</TR>
+                </TABLEDATA>
+            </DATA>
+        </TABLE>
+    </RESOURCE>
+</VOTABLE>
