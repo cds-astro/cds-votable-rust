@@ -2,7 +2,7 @@
 
 # `votable` or `VOTLibRust`
 
-Library to build, read and write [VOTables](https://www.ivoa.net/documents/VOTable/)
+Library to build, edit, read and write [VOTables](https://www.ivoa.net/documents/VOTable/)
 in Rust and to convert them efficiently back and forth in JSON, YAML, TOML, XML-TABLEDATA, XML-BINARY and XML-BINARY2
 while preserving all elements (except comments) and their order.
 
@@ -13,7 +13,7 @@ while preserving all elements (except comments) and their order.
 
 VOT Lib Rust is used in:
 * [VOTCli](https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli) 
-  convert VOTables from the command line;
+  edit and convert VOTables from the command line;
 * [VOTWasm](https://github.com/cds-astro/cds-votable-rust/tree/main/crates/wasm) 
   read/write and convert VOTables in Web Browsers.
 * [Aladin Lite V3](https://github.com/cds-astro/aladin-lite)
@@ -25,7 +25,7 @@ The code contains all main functionalities:
 * supports CDATA in rows, StAX mode for streaming
 * supports MIVOT block parsing
 
-But it is far from been as clean and documented as I would like.
+But is not yet as clean and documented as I would like.
 If you want to use this crate in a Rust project, you should probably have a look 
 at the VOTCli code.
 
