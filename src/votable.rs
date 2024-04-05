@@ -615,6 +615,7 @@ impl<C: TableDataContent> VOTable<C> {
   }
 
   impl_builder_push!(Resource, C);
+  impl_builder_prepend!(Resource, C);
 
   impl_builder_push_post_info!();
 

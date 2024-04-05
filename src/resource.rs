@@ -71,6 +71,16 @@ pub enum ResourceOrTable<C: TableDataContent> {
   Table(Table<C>),
 }
 impl<C: TableDataContent> ResourceOrTable<C> {
+  /// # WARNING
+  /// Call only for a resource, not for a table with actual data.
+  fn from_void_table_data_content(value: ResourceOrTable<VoidTableDataContent>) -> Self {
+    match value {
+      ResourceOrTable::<VoidTableDataContent>::Resource(e) => {
+        Self::Resource(Resource::from_void_table_data_content(e))
+      }
+      ResourceOrTable::<VoidTableDataContent>::Table(_) => todo!(), // No supposed to call this!!
+    }
+  }
   fn write<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
     match self {
       ResourceOrTable::Resource(elem) => elem.write(writer, &()),
@@ -110,6 +120,19 @@ impl<C: TableDataContent> ResourceSubElem<C> {
       links: Default::default(),
       resource_or_table: ResourceOrTable::Table(table),
       infos: Default::default(),
+    }
+  }
+
+  pub fn from_void_table_data_content(value: ResourceSubElem<VoidTableDataContent>) -> Self {
+    let ResourceSubElem {
+      links,
+      resource_or_table,
+      infos,
+    } = value;
+    Self {
+      links,
+      resource_or_table: ResourceOrTable::from_void_table_data_content(resource_or_table),
+      infos,
     }
   }
 
@@ -251,6 +274,36 @@ impl<C: TableDataContent> Resource<C> {
     Default::default()
   }
 
+  pub fn from_void_table_data_content(value: Resource<VoidTableDataContent>) -> Self {
+    let Resource {
+      id,
+      name,
+      type_,
+      utype,
+      extra,
+      description,
+      infos,
+      elems,
+      mut sub_elems,
+      vodml,
+    } = value;
+    Self {
+      id,
+      name,
+      type_,
+      utype,
+      extra,
+      description,
+      infos,
+      elems,
+      sub_elems: sub_elems
+        .drain(..)
+        .map(ResourceSubElem::from_void_table_data_content)
+        .collect(),
+      vodml,
+    }
+  }
+
   // Optional attributes
   impl_builder_opt_string_attr!(id);
   impl_builder_opt_string_attr!(name);
@@ -303,6 +356,17 @@ impl<C: TableDataContent> Resource<C> {
     self
       .sub_elems
       .push(ResourceSubElem::from_resource(resource));
+  }
+  /// Create and prepend a simple sub-elem only containing a resource.
+  pub fn prepend_resource(mut self, resource: Resource<C>) -> Self {
+    self.prepend_resource_by_ref(resource);
+    self
+  }
+  /// Create and prepend a simple sub-elem only containing a resource.
+  pub fn prepend_resource_by_ref(&mut self, resource: Resource<C>) {
+    self
+      .sub_elems
+      .insert(0, ResourceSubElem::from_resource(resource));
   }
   /// Push the given link into the last sub-element.
   pub fn push_link(mut self, link: Link) -> Result<Self, VOTableError> {

@@ -401,6 +401,36 @@ macro_rules! impl_builder_push_elem {
   };
 }
 
+/*
+macro_rules! impl_builder_prepend_elem {
+  ($t: ident, $e: expr) => {
+    paste! {
+      #[doc = concat!("Add the given `", stringify!($e), "` to the element list.")]
+      pub fn [<push_ $t:lower>](mut self, [<$t:lower>]: $t) -> Self {
+        self.[<push_ $t:lower _by_ref>]([<$t:lower>]);
+        self
+      }
+      #[doc = concat!("Add the given `", stringify!($e), "` to the element list, by mutable ref.")]
+      pub fn [<push_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $t) {
+        self.elems.insert(0, $e::$t([<$t:lower>]));
+      }
+    }
+  };
+  ($t: ident, $e: expr, $a: ident) => {
+    paste! {
+      #[doc = concat!("Add the given `", stringify!($a), "` to the element list.")]
+      pub fn [<push_ $t:lower>](mut self, [<$t:lower>]: $a) -> Self {
+        self.[<push_ $t:lower _by_ref>]([<$t:lower>]);
+        self
+      }
+      #[doc = concat!("Add the given `", stringify!($a), "` to the element list, by mutable ref.")]
+      pub fn [<push_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $a) {
+        self.elems.insert(0, $e::$t([<$t:lower>]));
+      }
+    }
+  };
+}*/
+
 /// E.g. `impl_builder_push(Info)` leads to
 /// ```ignore
 /// pub fn push_info(mut self, info: Info) -> Self {
@@ -432,6 +462,35 @@ macro_rules! impl_builder_push {
       #[doc = concat!("Add the given object to the list of `", stringify!($t), "`, by mutable ref.")]
       pub fn [<push_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $t<$c>) {
         self.[<$t:lower s>].push([<$t:lower>]);
+      }
+    }
+  };
+}
+
+macro_rules! impl_builder_prepend {
+  ($t: ident) => {
+    paste! {
+      #[doc = concat!("Prepend the given object to the list of `", stringify!($t), "`.")]
+      pub fn [<prepend_ $t:lower>](mut self, [<$t:lower>]: $t) -> Self {
+        self.[<prepend_ $t:lower _by_ref>]([<$t:lower>]);
+        self
+      }
+      #[doc = concat!("Prepend the given object to the list of `", stringify!($t), "`, by mutable ref.")]
+      pub fn [<prepend_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $t) {
+        self.[<$t:lower s>].insert(0, [<$t:lower>]);
+      }
+    }
+  };
+  ($t: ident, $c: ident) => {
+    paste! {
+      #[doc = concat!("Prepend the given object to the list of `", stringify!($t), "`.")]
+      pub fn [<prepend_ $t:lower>](mut self, [<$t:lower>]: $t<$c>) -> Self {
+        self.[<prepend_ $t:lower _by_ref>]([<$t:lower>]);
+        self
+      }
+      #[doc = concat!("Prepend the given object to the list of `", stringify!($t), "`, by mutable ref.")]
+      pub fn [<prepend_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $t<$c>) {
+        self.[<$t:lower s>].insert(0, [<$t:lower>]);
       }
     }
   };
