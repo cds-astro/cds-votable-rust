@@ -25,6 +25,8 @@ extern "C" {
   fn log(s: &str);
 }
 
+// For Javascript, see https://rustwasm.github.io/wasm-bindgen/reference/arbitrary-data-with-serde.html
+
 /// Activate debugging mode (Rust stacktrace)
 #[wasm_bindgen(js_name = "debugOn")]
 pub fn debug_on() {

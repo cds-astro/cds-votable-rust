@@ -1,6 +1,13 @@
 # `vot-wasm` Change Log
 
-## 0.45.0
+## 0.6.0
+
+Released 2023-04-05
+
+* Changes in the lib and the cli, no effect on vot-wasm
+
+
+## 0.5.0
 
 Released 2023-03-11
 
