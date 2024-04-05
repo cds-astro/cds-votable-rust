@@ -275,32 +275,63 @@ impl<C: TableDataContent> Resource<C> {
   }
 
   pub fn from_void_table_data_content(value: Resource<VoidTableDataContent>) -> Self {
-    let Resource {
-      id,
-      name,
-      type_,
-      utype,
-      extra,
-      description,
-      infos,
-      elems,
-      mut sub_elems,
-      vodml,
-    } = value;
-    Self {
-      id,
-      name,
-      type_,
-      utype,
-      extra,
-      description,
-      infos,
-      elems,
-      sub_elems: sub_elems
-        .drain(..)
-        .map(ResourceSubElem::from_void_table_data_content)
-        .collect(),
-      vodml,
+    #[cfg(feature = "mivot")]
+    {
+      let Resource {
+        id,
+        name,
+        type_,
+        utype,
+        extra,
+        description,
+        infos,
+        elems,
+        mut sub_elems,
+        vodml,
+      } = value;
+      Self {
+        id,
+        name,
+        type_,
+        utype,
+        extra,
+        description,
+        infos,
+        elems,
+        sub_elems: sub_elems
+          .drain(..)
+          .map(ResourceSubElem::from_void_table_data_content)
+          .collect(),
+        vodml,
+      }
+    }
+    #[cfg(not(feature = "mivot"))]
+    {
+      let Resource {
+        id,
+        name,
+        type_,
+        utype,
+        extra,
+        description,
+        infos,
+        elems,
+        mut sub_elems,
+      } = value;
+      Self {
+        id,
+        name,
+        type_,
+        utype,
+        extra,
+        description,
+        infos,
+        elems,
+        sub_elems: sub_elems
+          .drain(..)
+          .map(ResourceSubElem::from_void_table_data_content)
+          .collect(),
+      }
     }
   }
 
