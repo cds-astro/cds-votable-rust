@@ -2,19 +2,12 @@
 
 # `votable-cli` or `VOTCli`
 
-Command-line to extract/edit information from IVOA VOTables](https://www.ivoa.net/documents/VOTable/20191021/REC-VOTable-1.4-20191021.html)
+Command-line to extract/edit information from [IVOA VOTables](https://www.ivoa.net/documents/VOTable/20191021/REC-VOTable-1.4-20191021.html)
 and to convert efficiently VOTables back and forth in XML, JSON, YAML, TOML (and to CSV) while preserving all elements (except in CSV).
 
 ## Status
 
-The [library](https://github.com/cds-astro/cds-votable-rust) this CLI 
-is based on is in an early stage of development.
-We are (reasonably) open to changes in the various format, e.g.:
-* we could flag attributes with a '@' prefix
-* we could use upper case elements tag names
-* we could remove the 's' suffix in elements arrays
-* we could change the `pos_infos` name for something else
-* ...
+The CLI is in active development.
 
 More testing is required, especially the bit type and arrays.
 Please, provide us with VOTable examples!
@@ -265,10 +258,47 @@ vot get --in my_votable.xml --early-stop colnames --separator '▮'
 vot get -in my_votable.xml fields-array index,name,datatype,arraysize,width,precision,unit,ucd,description --separator ,
 ```
 
+Example: see chosen column metadata of [this votable](resource/test_edit.td.xml)
+```
+> vot get --in test_edit.td.xml fields-array name,datatype,arraysize,width,precision,unit,ucd
+    name    dt  a w p   unit    ucd                         
+   recno   int    8             meta.record                 
+  f_GCTP  char  1               meta.code                   
+    GCTP float    7 2           meta.id;meta.main           
+    comp  char  1               meta.code.multip            
+  RA1900  char 10      "h:m:s"  pos.eq.ra;meta.main         
+  DE1900  char  9      "d:m:s"  pos.eq.dec;meta.main        
+u_RA1900  char  1               meta.code.error;pos.eq.ra   
+    Vmag float    5 2    mag    phot.mag;em.opt.V           
+  n_Vmag  char  1               meta.note                   
+     B-V float    5 2    mag    phot.color;em.opt.B;em.opt.V
+     U-B float    5 2    mag    phot.color;em.opt.U;em.opt.B
+  r_Vmag  char  1               meta.ref;pos.frame          
+      MK  char  *               src.spType                  
+    r_MK  char  1               meta.ref;pos.frame          
+     var  char  9               meta.id                     
+      HR short    4             meta.id                     
+    supp  char  1               meta.note                   
+      HD  char  7               meta.id                     
+      DM  char 10               meta.id                     
+    name  char  *               meta.id                     
+      pm float    6 3 arcsec/yr pos.pm                      
+    pmPA short    3      deg    pos.posAng;pos.pm           
+      pi float    7 4  arcsec   pos.parallax.trig           
+    e_pi float    4 1    mas    stat.error                  
+    q_pi  char  1               meta.code.qual              
+    o_pi short    2             meta.number                 
+  Simbad  char  *               meta.ref.url                
+_RA.icrs  char 10      "h:m:s"  pos.eq.ra                   
+_DE.icrs  char  9      "d:m:s"  pos.eq.dec           
+```
+
+
 ### Edit
 
-When editing a VOTable, you probably need Virutal IDs (vid) provided by the `get` subcommand. 
-So use it firt!
+When editing a VOTable, you probably need Virtual IDs (vid) to select tags you want to remove or to modify.
+One Virtual ID is attributed by votable-cli to each tag of the VOTable.
+To know the vid attributed to each tag, you can use the `vot get ... struct` subcommand. 
 
 In the following example, we modify [this votable](resource/test_edit.td.xml) to:
 * remove the first sub-RESOURCE
@@ -284,10 +314,17 @@ In the following example, we modify [this votable](resource/test_edit.td.xml) to
 
 
 ```bash
-# Command unse to get the vid of tags having neither ID not name
-RUST_LOG=warn vot get --in test_edit.td.xml struct 
+# Command used to get the vid (Virtual ID) of each tag in the VOTable
+vot get --in test_edit.td.xml struct 
 
-RUST_LOG=warn vot edit --in test_edit.td.xml --out-fmt xml-td --streaming \
+# Command used to rename column 'recno' into 'RecordNumber'
+# (the 'streaming' option on such a small table is useless)
+vot edit --in test_edit.td.xml --out-fmt xml-td --streaming \
+  -e 'FIELD name=recno set_attrs name=RecordNumber'
+
+# Command used to edit the VOTable
+# (the 'streaming' option on such a small table is useless)
+vot edit --in test_edit.td.xml --out-fmt xml-td --streaming \
   -e 'RESOURCE vid=DR1R1 rm' \
   -e 'RESOURCE vid=DR1 set_attrs ID=R1 name=main_resource' \
   -e 'RESOURCE vid=DR1 set_description The main resource containing my super table' \
