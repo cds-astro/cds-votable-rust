@@ -84,7 +84,16 @@ cargo install --path crates/cli
 ```
 
 
-## Help message
+## Check 'vot' tool version
+
+Once installed, check the version number using:
+```
+> vot --version
+votable-cli 0.6.0
+``
+
+
+## Help messages
 
 ```bash
 > vot --help
@@ -219,7 +228,7 @@ Options:
   -h, --help                  Print help
 ```
 
-## Example
+## Examples
 
 ### XML/JSON/TOML/YAML convertion 
 
@@ -252,37 +261,37 @@ vot get -in my_votable.xml fields-array index,name,datatype,arraysize,width,prec
 
 Example: see chosen column metadata of [this votable](resource/test_edit.td.xml)
 ```
-> vot get --in test_edit.td.xml fields-array name,datatype,arraysize,width,precision,unit,ucd
-    name    dt  a w p   unit    ucd                         
-   recno   int    8             meta.record                 
-  f_GCTP  char  1               meta.code                   
-    GCTP float    7 2           meta.id;meta.main           
-    comp  char  1               meta.code.multip            
-  RA1900  char 10      "h:m:s"  pos.eq.ra;meta.main         
-  DE1900  char  9      "d:m:s"  pos.eq.dec;meta.main        
-u_RA1900  char  1               meta.code.error;pos.eq.ra   
-    Vmag float    5 2    mag    phot.mag;em.opt.V           
-  n_Vmag  char  1               meta.note                   
-     B-V float    5 2    mag    phot.color;em.opt.B;em.opt.V
-     U-B float    5 2    mag    phot.color;em.opt.U;em.opt.B
-  r_Vmag  char  1               meta.ref;pos.frame          
-      MK  char  *               src.spType                  
-    r_MK  char  1               meta.ref;pos.frame          
-     var  char  9               meta.id                     
-      HR short    4             meta.id                     
-    supp  char  1               meta.note                   
-      HD  char  7               meta.id                     
-      DM  char 10               meta.id                     
-    name  char  *               meta.id                     
-      pm float    6 3 arcsec/yr pos.pm                      
-    pmPA short    3      deg    pos.posAng;pos.pm           
-      pi float    7 4  arcsec   pos.parallax.trig           
-    e_pi float    4 1    mas    stat.error                  
-    q_pi  char  1               meta.code.qual              
-    o_pi short    2             meta.number                 
-  Simbad  char  *               meta.ref.url                
-_RA.icrs  char 10      "h:m:s"  pos.eq.ra                   
-_DE.icrs  char  9      "d:m:s"  pos.eq.dec           
+> vot get --in test_edit.td.xml fields-array name,datatype,arraysize,width,precision,unit,ucd,description
+    name    dt  a w p   unit    ucd                          desc                                                                                                                         
+   recno   int    8             meta.record                  Record number assigned by the VizieR team. Should Not be used for identification.                                            
+  f_GCTP  char  1               meta.code                    [*] Indicates a note in file "errata.dat"                                                                                    
+    GCTP float    7 2           meta.id;meta.main            Catalog number                                                                                                               
+    comp  char  1               meta.code.multip             Double star component                                                                                                        
+  RA1900  char 10      "h:m:s"  pos.eq.ra;meta.main          ?Right ascension hours (1900.0)                                                                                              
+  DE1900  char  9      "d:m:s"  pos.eq.dec;meta.main         ?Declination degrees (1900.0)                                                                                                
+u_RA1900  char  1               meta.code.error;pos.eq.ra    [:C] : = lower precision position                                                                                            
+    Vmag float    5 2    mag    phot.mag;em.opt.V            ?V magnitude or other magnitude                                                                                              
+  n_Vmag  char  1               meta.note                    P indicates blue passband                                                                                                    
+     B-V float    5 2    mag    phot.color;em.opt.B;em.opt.V ?B-V color                                                                                                                   
+     U-B float    5 2    mag    phot.color;em.opt.U;em.opt.B ?U-B color                                                                                                                   
+  r_Vmag  char  1               meta.ref;pos.frame           Source code for photometry                                                                                                   
+      MK  char  *               src.spType                   Spectral type                                                                                                                
+    r_MK  char  1               meta.ref;pos.frame           Source code for spectral type                                                                                                
+     var  char  9               meta.id                      Variable star name                                                                                                           
+      HR short    4             meta.id                      ?HR number [NULL integer written as an empty string]                                                                         
+    supp  char  1               meta.note                    [S] S=in Hoffleit BSS Cat. <V/36>                                                                                            
+      HD  char  7               meta.id                      HD number and component                                                                                                      
+      DM  char 10               meta.id                      DM identification and component                                                                                              
+    name  char  *               meta.id                      Star name                                                                                                                    
+      pm float    6 3 arcsec/yr pos.pm                       ?Total Proper motion                                                                                                         
+    pmPA short    3      deg    pos.posAng;pos.pm            ?Proper motion position angle [NULL integer written as an empty string]                                                      
+      pi float    7 4  arcsec   pos.parallax.trig            ?Weighted absolute parallax                                                                                                  
+    e_pi float    4 1    mas    stat.error                   ?Standard error of parallax                                                                                                  
+    q_pi  char  1               meta.code.qual               [ GFPX]Quality of interagreement                                                                                             
+    o_pi short    2             meta.number                  ?Number of parallax observations [NULL integer written as an empty string]                                                   
+  Simbad  char  *               meta.ref.url                 SIMBAD data for this star                                                                                                    
+_RA.icrs  char 10      "h:m:s"  pos.eq.ra                    Right ascension (ICRS) at Epoch=J2000, proper motions taken into account  (computed by VizieR, not part of the original data)
+_DE.icrs  char  9      "d:m:s"  pos.eq.dec                   Declination (ICRS) at Epoch=J2000, proper motions taken into account  (computed by VizieR, not part of the original data) 
 ```
 
 
@@ -356,6 +365,94 @@ RUST_LOG="trace" vot get --in my_votable.xml struct
 ```
 
 See [env_logger](https://docs.rs/env_logger/latest/env_logger/) for more details.
+
+
+## Performances
+
+To convert large tables, use the `sconvert` sub-command with the `--parallel` option.
+
+WARNING: so far, the `--parallel` option does not preserve the rows order, 
+let me know if it is problematic.
+
+Test on my computer:
+* Intel(R) Core(TM) i5-6600 (4 cores, 4 threads)
+* NVMe SSD
+
+Input file: `gaia_dr3.vot`
+* 2.8 GB
+* 225 columns
+* 999999 rows
+
+```bash
+# Convert from TABLEDATA to BINARY
+time vot sconvert --in gaia_dr3.vot --out out.bin.vot --out-fmt xml-bin --parallel 3
+
+real	0m14,225s
+user	0m39,656s
+sys	0m2,059s
+
+# Convert from TABLEDATA to BINARY2
+time vot sconvert --in gaia_dr3.vot --out out.bin2.vot --out-fmt xml-bin2 --parallel 3
+
+real	0m17,157s
+user	0m43,255s
+sys	0m2,297s
+
+
+# Convert from TABLEDATA to CSV
+time vot sconvert --in gaia_dr3.vot --out out.csv --out-fmt csv --parallel 3
+
+real	0m11,392s
+user	0m33,875s
+sys	0m1,413s
+
+
+# Convert from TABLEDATA to CSV
+time vot sconvert --in out.bin.vot --out out.csv --out-fmt csv --parallel 3
+
+real	0m18,903s
+user	0m32,819s
+sys	0m1,833s
+```
+
+With `out.bin.vot` and `out.bin2.vot` about 1.5 and 1.6 GB respectively, 
+and `out.csv` about 1.1 and 0.99 GB respectively.
+
+
+Same test on a fast server (lot of CPUs, NVMe RAID) with 20 threads:
+```
+# Convert from TABLEDATA to BINARY
+time vot sconvert --in gaia_dr3.vot --out out.bin.vot --out-fmt xml-bin --parallel 20
+
+real	0m5,123s
+user	1m6,248s
+sys	0m4,619s
+
+
+# Convert from TABLEDATA to BINARY2
+time vot sconvert --in gaia_dr3.vot --out out.bin2.vot --out-fmt xml-bin2 --parallel 20
+
+real	0m5,465s
+user	1m9,436s
+sys	0m4,106s
+
+
+# Convert from TABLEDATA to CSV
+time vot sconvert --in gaia_dr3.vot --out out.csv --out-fmt csv --parallel 20
+
+real	0m4,539s
+user	0m53,226s
+sys	0m3,574s
+
+
+# Convert from TABLEDATA to CSV
+time vot sconvert --in out.bin.vot --out out.csv --out-fmt csv --parallel 20
+
+real	0m12,416s
+user	0m47,123s
+sys	0m2,302s
+```
+
 
 ## To-Do list
 
