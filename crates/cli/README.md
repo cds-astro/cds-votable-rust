@@ -10,16 +10,8 @@ and to convert efficiently VOTables back and forth in XML, JSON, YAML, TOML (and
 The CLI is in active development.
 
 More testing is required, especially the bit type and arrays.
-Please, provide us with VOTable examples!
+Please, provide us with VOTable examples and/or usecases!
 
-## To-Do list
-
-* [X] Support `CDATA` in `TD` tags
-* [X] Use the iterator to implement streaming transformations between DATATABLE/BINARY/BINARY2.
-* [X] Also implement streaming conversion to CSV.
-* [X] Add commands to modify a VOTable metadata.
-* [ ] Implement streaming mode for multiple tables (if it is really useful, please tell me).
-* [ ] Add commands to select/compute columns and filter rows?
  
 ## Install
 
@@ -364,6 +356,15 @@ RUST_LOG="trace" vot get --in my_votable.xml struct
 ```
 
 See [env_logger](https://docs.rs/env_logger/latest/env_logger/) for more details.
+
+## To-Do list
+
+* [X] Support `CDATA` in `TD` tags
+* [X] Use the iterator to implement streaming transformations between DATATABLE/BINARY/BINARY2.
+* [X] Also implement streaming conversion to CSV.
+* [X] Add commands to modify a VOTable metadata.
+* [ ] Implement streaming mode for multiple tables (if it is really useful, please tell me).
+* [ ] Add commands to select/compute columns and filter rows?
 
 
 ## License
