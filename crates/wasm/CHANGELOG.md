@@ -2,28 +2,28 @@
 
 ## 0.6.0
 
-Released 2023-04-05
+Released 2024-04-05
 
 * Changes in the lib and the cli, no effect on vot-wasm
 
 
 ## 0.5.0
 
-Released 2023-03-11
+Released 2024-03-11
 
 * Add support for `CDATA` in `TD` tags
 
 
 ## 0.4.0
 
-Released 2023-02-06
+Released 2024-02-06
 
 * Version and xmlns now mandatory in VOTable (with v1.4 as default)
 
 
 ## 0.3.0
 
-Released 2023-01-12
+Released 2024-01-12
 
 * Add conversions between TABLEDATA/BINARY/BINARY2
 * Supports VOTable 1.5

@@ -90,7 +90,7 @@ Once installed, check the version number using:
 ```
 > vot --version
 votable-cli 0.6.0
-``
+```
 
 
 ## Help messages
@@ -237,10 +237,10 @@ Options:
 vot convert --in my_votable.xml --out my_votable.json --out-fmt json
 ```
 
-### Streaming conversion XML-TD, XML-BIN, CML-BIN2 and CSV
+### Streaming conversion XML-TD, XML-BIN, XML-BIN2 and CSV
 
 ```bash
-# Streaming conversion of a VOTable from XML-TABLEDATA to XML-BINARY2
+# Streaming conversion of a VOTable from XML-TABLEDATA to XML-BINARY
 vot sconvert --in my_votable.xml --out my_votable.xml.b64  --out-fmt xml-bin
 # Streaming conversion from XML to CSV, in parallel, of a single large table
 vot sconvert --in my_votable.xml --out my_votable.csv --out-fmt csv --parallel 6
@@ -251,16 +251,16 @@ vot sconvert --in my_votable.xml --out my_votable.csv --out-fmt csv --parallel 6
 ```bash
 # Get the structure of a VOTable with virtual identifier for each element
 vot get --in my_votable.xml struct --line-width 120
-# Get the structure of alarge VOTable till DATA is reached
+# Get the structure of a large VOTable till first DATA tag is reached
 vot get --in my_votable.xml --early-stop struct --line-width 120
 # Get only the colum names of a large table, with a non-ascii separator
 vot get --in my_votable.xml --early-stop colnames --separator '▮'
-# Get a field metadata array with selected info
+# Get an array of fields metadata with selected informations
 vot get -in my_votable.xml fields-array index,name,datatype,arraysize,width,precision,unit,ucd,description --separator ,
 ```
 
-Example: see chosen column metadata of [this votable](resource/test_edit.td.xml)
-```
+See chosen column metadata of [this votable](resource/test_edit.td.xml)
+```bash
 > vot get --in test_edit.td.xml fields-array name,datatype,arraysize,width,precision,unit,ucd,description
     name    dt  a w p   unit    ucd                          desc                                                                                                                         
    recno   int    8             meta.record                  Record number assigned by the VizieR team. Should Not be used for identification.                                            
@@ -294,6 +294,26 @@ _RA.icrs  char 10      "h:m:s"  pos.eq.ra                    Right ascension (IC
 _DE.icrs  char  9      "d:m:s"  pos.eq.dec                   Declination (ICRS) at Epoch=J2000, proper motions taken into account  (computed by VizieR, not part of the original data) 
 ```
 
+See the `structure` (with Virtual IDs) of the previous table:
+```bash
+> vot get --in test_edit.td.xml struct
+VOTABLE vid=D
+  RESOURCE vid=DR1
+    RESOURCE vid=DR1R1
+      COOSYS vid=DR1R1C1 ID=t4-coosys-1 system=eq_FK4 equinox=B1900
+    TABLE vid=DR1T1 name=I/238A/picat nrows=8994
+      DESCRIPTION vid=DR1T1d content=The data file
+      PARAM vid=DR1T1P1 name=votable-version datatype=char value=1.99+ (14-Oct-2013) arraysize=19
+      PARAM vid=DR1T1P2 name=-ref datatype=char value=VOTx25520 arraysize=9
+      PARAM vid=DR1T1P3 name=-out.max datatype=char value=50000 arraysize=5
+      PARAM vid=DR1T1P4 name=queryParameters datatype=char value=4 arraysize=1
+        DESCRIPTION vid=DR1T1P4d content=-oc.form=dec\n-source=I/238A\n-out.all\n-out.max=50000
+      FIELD vid=DR1T1F1 name=recno datatype=int width=8 ucd=meta.record
+        DESCRIPTION vid=DR1T1F1d content=Record number assigned by the VizieR team. Should Not be used for identific...
+        LINK vid=DR1T1F1l1 title=LINK
+          href=http://vizier.u-strasbg.fr/viz-bin/VizieR-5?-info=XML&-out.add=.&-source=I/238A/picat&recno=${recno}
+      ...
+```
 
 ### Edit
 

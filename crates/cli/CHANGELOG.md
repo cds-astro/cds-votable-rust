@@ -2,14 +2,14 @@
 
 ## 0.6.0
 
-Released 2023-04-05
+Released 2024-04-05
 
 * Add sub-command 'edit' to modify a VOTable
 
 
 ## 0.5.0
 
-Released 2023-03-11
+Released 2024-03-11
 
 * ⚠️  BREAKING: new options and hence new command layout
 * Add the 'convert' sub-command, and conversion from XML to CSV
@@ -20,7 +20,7 @@ Released 2023-03-11
 
 ## 0.4.0
 
-Released 2023-02-06
+Released 2024-02-06
 
 * Add logger to control stderr messages
 * Version and xmlns now mandatory in VOTable (with v1.4 as default)
@@ -28,7 +28,7 @@ Released 2023-02-06
 
 ## 0.3.0
 
-Released 2023-01-12
+Released 2024-01-12
 
 * Add conversions between TABLEDATA/BINARY/BINARY2
 * Supports VOTable 1.5
