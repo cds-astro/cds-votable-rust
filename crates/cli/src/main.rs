@@ -1,5 +1,3 @@
-use std::io::{stderr, stdout, Write};
-
 use clap::Parser;
 
 use votable::error::VOTableError;
@@ -29,13 +27,5 @@ impl CliArgs {
 fn main() -> Result<(), VOTableError> {
   let args = CliArgs::parse();
   env_logger::init();
-  args.exec().map_err(|e| {
-    if let Err(e) = stdout().flush() {
-      eprintln!("Error flushing stdout: {:?}", e);
-    }
-    if let Err(e) = stderr().flush() {
-      eprintln!("Error flushing stderr: {:?}", e);
-    }
-    e
-  })
+  args.exec()
 }

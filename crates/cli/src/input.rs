@@ -65,7 +65,7 @@ pub struct Input {
   /// Path of the input VOTable [default: read from stdin]
   #[clap(short = 'i', long = "in", value_name = "FILE")]
   pub input: Option<PathBuf>,
-  /// Format of the input VOTable ('xml', 'json', 'yaml' or 'toml') [default: guess from file extension]
+  /// Format of the input VOTable (standard: 'xml'; not standard: 'json', 'yaml' or 'toml') [default: guess from file extension]
   #[clap(short = 't', long = "in-fmt", value_enum)]
   pub input_fmt: Option<InputFormat>,
 }

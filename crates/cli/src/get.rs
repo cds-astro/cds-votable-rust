@@ -15,12 +15,12 @@ use super::{
   },
 };
 
-/// Get information from a VOTable, like it structure or fields.
+/// Get information from a VOTable: e.g. its structure or fields metadata.
 #[derive(Debug, Args)]
 pub struct Get {
   #[command(flatten)]
   input: Input,
-  /// Stop parsing before reading first data ('xml' input only).
+  /// Stop parsing before reading first data ('xml' input only): useful for large single-table files.
   #[arg(short = 's', long = "early-stop")]
   stop_at_first_data: bool,
   #[command(subcommand)]
@@ -73,7 +73,7 @@ impl Get {
 
 #[derive(Debug, Subcommand)]
 enum GetAction {
-  /// Print the VOTable structure (useful to get Virtual IDs)
+  /// Print the VOTable structure: useful to get Virtual IDs used in edition.
   Struct {
     /// Output line width (min=80)
     #[arg(short = 'w', long = "line-width", default_value = "120")]
@@ -83,15 +83,10 @@ enum GetAction {
     #[arg(short = 'c', long = "content-size-min", default_value = "30")]
     content_size_min: usize,
   },
-  /// Print column names, one separated values line per table.
-  ///
-  /// TIP to get the list of the columns of a single table as a column on Linux:
-  ///   vot -i myvot.xml get -s colnames | tr '▮' '\n' | egrep -v '^$'
-  /// or (if no ',' in any names):
-  ///   vot -i myvot.xml get -s colnames -s , | tr ',' '\n'
+  /// Print column names, one line per table.
   #[command(verbatim_doc_comment)]
   Colnames {
-    /// Separator use between each column names.
+    /// Column names separator.
     #[arg(short, long, default_value_t = '▮')]
     separator: char,
   },
@@ -100,10 +95,10 @@ enum GetAction {
     /// Coma separated list of columns we want in the array of fields attributes
     #[arg(value_enum, value_delimiter(','))]
     fields: Vec<FieldElem>,
-    /// Separator use between each column
+    /// Column separator
     #[arg(short, long, default_value_t = ' ')]
     separator: char,
-    /// Do not requires columns to be aligned
+    /// Do not align columns
     #[arg(short, long)]
     not_aligned: bool,
   },

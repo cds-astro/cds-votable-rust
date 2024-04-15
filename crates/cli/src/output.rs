@@ -77,7 +77,7 @@ pub struct Output {
   /// Path of the output VOTable [default: write to stdout]
   #[clap(short = 'o', long = "out", value_name = "FILE")]
   pub output: Option<PathBuf>,
-  /// Format of the output VOTable ('xml', 'xml-td', 'xml-bin', 'xml-bin2', 'json', 'yaml' or 'toml').
+  /// Format of the output VOTable (standard: 'xml', 'xml-td', 'xml-bin', 'xml-bin2'; not standard: 'json', 'yaml', 'toml').
   #[clap(short = 'f', long = "out-fmt", value_enum)]
   pub output_fmt: OutputFormat,
   /// Pretty print (for JSON and TOML)

@@ -1,5 +1,6 @@
 //! Retrieve original column name from VizieR column description.
 
+use std::marker::PhantomData;
 use votable::{
   coosys::CooSys,
   data::{fits::Fits, stream::Stream, tabledata::TableData, Data},
@@ -19,34 +20,38 @@ use votable::{
   timesys::TimeSys,
   values::{Max, Min, Opt, Values},
   votable::VOTable,
-  VOTableVisitor,
+  TableDataContent, VOTableVisitor,
 };
 
 use super::StringError;
 
 /// Retrieve original column name from VizieR column description and put it
-/// in the 'vizier:org_namee' attribute.
+/// in the 'viz:org_name' attribute.
 /// # Warning
 /// * Based on the content of the parenthesis at the end of the description.
 /// * Use **only** if you are sure that the table description contain the original names
 /// * Else, the ending parenthesis may contain other information (like 'J2000') so you will get rubbish...
-struct ExplicitVizierOrgNamesVisitor;
+pub struct ExplicitVizierOrgNamesVisitor<C: TableDataContent> {
+  _phantom_data: PhantomData<C>,
+}
 
-impl VOTableVisitor<VoidTableDataContent> for ExplicitVizierOrgNamesVisitor {
+impl<C: TableDataContent> ExplicitVizierOrgNamesVisitor<C> {
+  pub fn new() -> Self {
+    Self {
+      _phantom_data: PhantomData,
+    }
+  }
+}
+
+impl<C: TableDataContent> VOTableVisitor<C> for ExplicitVizierOrgNamesVisitor<C> {
   type E = StringError;
 
   type M = DoNothing<Self::E>;
 
-  fn visit_votable_start(
-    &mut self,
-    _votable: &mut VOTable<VoidTableDataContent>,
-  ) -> Result<(), Self::E> {
+  fn visit_votable_start(&mut self, _votable: &mut VOTable<C>) -> Result<(), Self::E> {
     Ok(())
   }
-  fn visit_votable_ended(
-    &mut self,
-    _votable: &mut VOTable<VoidTableDataContent>,
-  ) -> Result<(), Self::E> {
+  fn visit_votable_ended(&mut self, _votable: &mut VOTable<C>) -> Result<(), Self::E> {
     Ok(())
   }
 
@@ -103,7 +108,7 @@ impl VOTableVisitor<VoidTableDataContent> for ExplicitVizierOrgNamesVisitor {
           let colname = colname.trim();
           // No space (unlike in comments) and not an integer (unlike in note reference)
           if !colname.contains(' ') && colname.parse::<u16>().is_err() && colname != "J2000" {
-            field.insert_extra_by_ref("vizier:org_name", colname.into());
+            field.insert_extra_by_ref("viz:org_name", colname.into());
           }
         }
       }
@@ -124,16 +129,10 @@ impl VOTableVisitor<VoidTableDataContent> for ExplicitVizierOrgNamesVisitor {
     Ok(())
   }
 
-  fn visit_resource_start(
-    &mut self,
-    _resource: &mut Resource<VoidTableDataContent>,
-  ) -> Result<(), Self::E> {
+  fn visit_resource_start(&mut self, _resource: &mut Resource<C>) -> Result<(), Self::E> {
     Ok(())
   }
-  fn visit_resource_ended(
-    &mut self,
-    _resource: &mut Resource<VoidTableDataContent>,
-  ) -> Result<(), Self::E> {
+  fn visit_resource_ended(&mut self, _resource: &mut Resource<C>) -> Result<(), Self::E> {
     Ok(())
   }
 
@@ -152,36 +151,27 @@ impl VOTableVisitor<VoidTableDataContent> for ExplicitVizierOrgNamesVisitor {
     Ok(())
   }
 
-  fn visit_table_start(&mut self, _table: &mut Table<VoidTableDataContent>) -> Result<(), Self::E> {
+  fn visit_table_start(&mut self, _table: &mut Table<C>) -> Result<(), Self::E> {
     Ok(())
   }
-  fn visit_table_ended(&mut self, _table: &mut Table<VoidTableDataContent>) -> Result<(), Self::E> {
-    Ok(())
-  }
-
-  fn visit_data_start(&mut self, _table: &mut Data<VoidTableDataContent>) -> Result<(), Self::E> {
-    Ok(())
-  }
-  fn visit_data_ended(&mut self, _table: &mut Data<VoidTableDataContent>) -> Result<(), Self::E> {
+  fn visit_table_ended(&mut self, _table: &mut Table<C>) -> Result<(), Self::E> {
     Ok(())
   }
 
-  fn visit_tabledata(
-    &mut self,
-    _table: &mut TableData<VoidTableDataContent>,
-  ) -> Result<(), Self::E> {
+  fn visit_data_start(&mut self, _table: &mut Data<C>) -> Result<(), Self::E> {
     Ok(())
   }
-  fn visit_binary_stream(
-    &mut self,
-    _stream: &mut Stream<VoidTableDataContent>,
-  ) -> Result<(), Self::E> {
+  fn visit_data_ended(&mut self, _table: &mut Data<C>) -> Result<(), Self::E> {
     Ok(())
   }
-  fn visit_binary2_stream(
-    &mut self,
-    _stream: &mut Stream<VoidTableDataContent>,
-  ) -> Result<(), Self::E> {
+
+  fn visit_tabledata(&mut self, _table: &mut TableData<C>) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_binary_stream(&mut self, _stream: &mut Stream<C>) -> Result<(), Self::E> {
+    Ok(())
+  }
+  fn visit_binary2_stream(&mut self, _stream: &mut Stream<C>) -> Result<(), Self::E> {
     Ok(())
   }
   fn visit_fits_start(&mut self, _fits: &mut Fits) -> Result<(), Self::E> {

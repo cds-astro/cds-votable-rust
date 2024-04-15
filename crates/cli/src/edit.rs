@@ -14,6 +14,8 @@ use votable::{
   VoidTableDataContent,
 };
 
+#[cfg(feature = "vizier")]
+use super::visitors::viz_org_names::ExplicitVizierOrgNamesVisitor;
 use super::{
   input::Input,
   output::{Output, OutputFormat},
@@ -78,6 +80,11 @@ pub struct Edit {
   ///   Remark: `@@xxx` is a short version of `@> @xxx`.
   #[arg(short = 'e', long = "edit", verbatim_doc_comment)]
   elems: Vec<TagConditionAction>,
+  /// Extract original column names from VizieR description ending by '(org_name)' and put it inn
+  /// the non-standard 'viz:org_name' attribute, be aware of the risk of false-detections!
+  #[cfg(feature = "vizier")]
+  #[arg(short = 'z', long = "vizier-org-names")]
+  vizier_org_names: bool,
   /// Use streaming mode: only for large XML files with a single table, and if the input format
   /// is the same as the output format.
   #[arg(short, long)]
@@ -91,7 +98,7 @@ impl Edit {
         self.choose_input_and_exec()
       } else {
         Err(VOTableError::Custom(
-          "Only the 'xml' input format is supporting with option '--streaming'.".into(),
+          "Only the 'xml' input format is supported with option '--streaming'.".into(),
         ))
       }
     } else {
@@ -104,6 +111,18 @@ impl Edit {
           vot
             .visit(&mut visitor)
             .map_err(|e| VOTableError::Custom(e.to_string()))
+            .and_then(|_| {
+              #[cfg(feature = "vizier")]
+              if self.vizier_org_names {
+                vot
+                  .visit(&mut ExplicitVizierOrgNamesVisitor::new())
+                  .map_err(|e| VOTableError::Custom(e.to_string()))
+              } else {
+                Ok(())
+              }
+              #[cfg(not(feature = "vizier"))]
+              Ok(())
+            })
             .map(|_| vot.wrap())
         })
         .and_then(|vot| self.output.save(vot))
@@ -151,11 +170,10 @@ impl Edit {
     R: BufRead + Send,
     W: Write,
   {
-    let visitor = UpdateVisitor::new(self.elems);
     match (it.data_type(), self.output.output_fmt) {
-      (TableOrBinOrBin2::TableData, OutputFormat::XmlTabledata) => to_same(it, write, visitor),
-      (TableOrBinOrBin2::Binary, OutputFormat::XmlBinary) => to_same(it, write, visitor),
-      (TableOrBinOrBin2::Binary2, OutputFormat::XmlBinary2) => to_same(it, write, visitor),
+      (TableOrBinOrBin2::TableData, OutputFormat::XmlTabledata) => self.to_same(it, write),
+      (TableOrBinOrBin2::Binary, OutputFormat::XmlBinary) => self.to_same(it, write),
+      (TableOrBinOrBin2::Binary2, OutputFormat::XmlBinary2) => self.to_same(it, write),
       _ => Err(VOTableError::Custom(format!(
         "Input format '{:?}' not compatible with output format '{:?}'",
         it.data_type(),
@@ -163,27 +181,34 @@ impl Edit {
       ))),
     }
   }
-}
 
-fn to_same<R: BufRead, W: Write>(
-  mut it: SimpleVOTableRowIterator<R>,
-  write: W,
-  mut visitor: UpdateVisitor,
-) -> Result<(), VOTableError> {
-  let mut writer = new_xml_writer(write, None, None);
-  let mut vot = it.votable.clone();
-  vot.visit(&mut visitor)?; // Modif and write the cloned version to avoid destructive modifications
-  if vot.write_to_data_beginning(&mut writer, &(), false)? {
-    it.copy_remaining_data(&mut writer.inner())
-      .and_then(|_| it.read_to_end())
-      .and_then(|mut out_vot| {
-        out_vot
-          .visit(&mut visitor) // Re-visit the full VOTable before writting its tail
-          .and_then(|()| out_vot.write_from_data_end(&mut writer, &(), false))
-      })
-  } else {
-    // No table in the VOTable
-    Ok(())
+  fn to_same<R: BufRead, W: Write>(
+    self,
+    mut it: SimpleVOTableRowIterator<R>,
+    write: W,
+  ) -> Result<(), VOTableError> {
+    let mut writer = new_xml_writer(write, None, None);
+    let mut vot = it.votable.clone();
+    let mut visitor = UpdateVisitor::new(self.elems);
+    vot.visit(&mut visitor)?; // Modif and write the cloned version to avoid destructive modifications
+    #[cfg(feature = "vizier")]
+    if self.vizier_org_names {
+      vot
+        .visit(&mut ExplicitVizierOrgNamesVisitor::new())
+        .map_err(|e| VOTableError::Custom(e.to_string()))?;
+    }
+    if vot.write_to_data_beginning(&mut writer, &(), false)? {
+      it.copy_remaining_data(&mut writer.inner())
+        .and_then(|_| it.read_to_end())
+        .and_then(|mut out_vot| {
+          out_vot
+            .visit(&mut visitor) // Re-visit the full VOTable before writting its tail
+            .and_then(|()| out_vot.write_from_data_end(&mut writer, &(), false))
+        })
+    } else {
+      // No table in the VOTable
+      Ok(())
+    }
   }
 }
 
