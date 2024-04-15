@@ -714,145 +714,187 @@ impl<'a, C: TableDataContent> VOTableWrappedElemMut<'a, C> {
 
   pub fn set_content<S: Into<String>>(self, content: S) -> Result<(), VOTableError> {
     match self {
-      Self::Description(e) => Ok(e.set_content_by_ref(content)),
-      Self::Info(e) => Ok(e.set_content_by_ref(content)),
-      Self::Link(e) => Ok(e.set_content_by_ref(content)),
-      Self::ParamRef(e) => Ok(e.set_content_by_ref(content)),
-      Self::FieldRef(e) => Ok(e.set_content_by_ref(content)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot have a content.",
-        self.tag(),
-      ))),
+      Self::Description(e) => e.set_content_by_ref(content),
+      Self::Info(e) => e.set_content_by_ref(content),
+      Self::Link(e) => e.set_content_by_ref(content),
+      Self::ParamRef(e) => e.set_content_by_ref(content),
+      Self::FieldRef(e) => e.set_content_by_ref(content),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot have a content.",
+          self.tag(),
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn set_description(self, description: Description) -> Result<(), VOTableError> {
     match self {
-      Self::VOTable(e) => Ok(e.reset_description_by_ref(description)),
-      Self::Resource(e) => Ok(e.reset_description_by_ref(description)),
-      Self::Table(e) => Ok(e.reset_description_by_ref(description)),
-      Self::Field(e) => Ok(e.reset_description_by_ref(description)),
-      Self::Param(e) => Ok(e.reset_description_by_ref(description)),
-      Self::Group(e) => Ok(e.reset_description_by_ref(description)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        description.tag()
-      ))),
+      Self::VOTable(e) => e.reset_description_by_ref(description),
+      Self::Resource(e) => e.reset_description_by_ref(description),
+      Self::Table(e) => e.reset_description_by_ref(description),
+      Self::Field(e) => e.reset_description_by_ref(description),
+      Self::Param(e) => e.reset_description_by_ref(description),
+      Self::Group(e) => e.reset_description_by_ref(description),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          description.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn set_definitions(self, definitions: Definitions) -> Result<(), VOTableError> {
     match self {
-      Self::VOTable(e) => Ok(e.reset_definitions_by_ref(definitions)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        definitions.tag()
-      ))),
+      Self::VOTable(e) => e.reset_definitions_by_ref(definitions),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          definitions.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn set_values(self, values: Values) -> Result<(), VOTableError> {
     match self {
-      Self::Field(e) => Ok(e.reset_values_by_ref(values)),
-      Self::Param(e) => Ok(e.reset_values_by_ref(values)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        values.tag()
-      ))),
+      Self::Field(e) => e.reset_values_by_ref(values),
+      Self::Param(e) => e.reset_values_by_ref(values),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          values.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn set_min(self, min: Min) -> Result<(), VOTableError> {
     match self {
-      Self::Values(e) => Ok(e.reset_min_by_ref(min)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        min.tag()
-      ))),
+      Self::Values(e) => e.reset_min_by_ref(min),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          min.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn set_max(self, max: Max) -> Result<(), VOTableError> {
     match self {
-      Self::Values(e) => Ok(e.reset_max_by_ref(max)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        max.tag()
-      ))),
+      Self::Values(e) => e.reset_max_by_ref(max),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          max.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn push_option(self, opt: Opt) -> Result<(), VOTableError> {
     match self {
-      Self::Values(e) => Ok(e.push_opt_by_ref(opt)),
-      Self::Option(e) => Ok(e.push_opt_by_ref(opt)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        opt.tag()
-      ))),
+      Self::Values(e) => e.push_opt_by_ref(opt),
+      Self::Option(e) => e.push_opt_by_ref(opt),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          opt.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn push_info(self, info: Info) -> Result<(), VOTableError> {
     match self {
-      Self::VOTable(e) => Ok(e.push_info_by_ref(info)),
-      Self::Resource(e) => Ok(e.push_info_by_ref(info)),
-      Self::Table(e) => Ok(e.push_info_by_ref(info)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        info.tag()
-      ))),
+      Self::VOTable(e) => e.push_info_by_ref(info),
+      Self::Resource(e) => e.push_info_by_ref(info),
+      Self::Table(e) => e.push_info_by_ref(info),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          info.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn push_post_info(self, info: Info) -> Result<(), VOTableError> {
     match self {
-      Self::VOTable(e) => Ok(e.push_post_info_by_ref(info)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a post-{} tag.",
-        self.tag(),
-        info.tag()
-      ))),
+      Self::VOTable(e) => e.push_post_info_by_ref(info),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a post-{} tag.",
+          self.tag(),
+          info.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn push_coosys(self, coosys: CooSys) -> Result<(), VOTableError> {
     match self {
-      Self::VOTable(e) => Ok(e.push_coosys_by_ref(coosys)),
-      Self::Resource(e) => Ok(e.push_coosys_by_ref(coosys)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {} tag.",
-        self.tag(),
-        coosys.tag()
-      ))),
+      Self::VOTable(e) => e.push_coosys_by_ref(coosys),
+      Self::Resource(e) => e.push_coosys_by_ref(coosys),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {} tag.",
+          self.tag(),
+          coosys.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn push_timesys(self, timesys: TimeSys) -> Result<(), VOTableError> {
     match self {
-      Self::VOTable(e) => Ok(e.push_timesys_by_ref(timesys)),
-      Self::Resource(e) => Ok(e.push_timesys_by_ref(timesys)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        timesys.tag()
-      ))),
+      Self::VOTable(e) => e.push_timesys_by_ref(timesys),
+      Self::Resource(e) => e.push_timesys_by_ref(timesys),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          timesys.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn push_link(self, link: Link) -> Result<(), VOTableError> {
     match self {
       Self::Resource(e) => e.push_link_by_ref(link),
-      Self::Table(e) => Ok(e.push_link_by_ref(link)),
-      Self::Field(e) => Ok(e.push_link_by_ref(link)),
-      Self::Param(e) => Ok(e.push_link_by_ref(link)),
+      Self::Table(e) => {
+        e.push_link_by_ref(link);
+        Ok(())
+      }
+      Self::Field(e) => {
+        e.push_link_by_ref(link);
+        Ok(())
+      }
+      Self::Param(e) => {
+        e.push_link_by_ref(link);
+        Ok(())
+      }
       _ => Err(VOTableError::Custom(format!(
         "Tag '{}' cannot contain a {}.",
         self.tag(),
@@ -863,177 +905,222 @@ impl<'a, C: TableDataContent> VOTableWrappedElemMut<'a, C> {
 
   pub fn push_field(self, field: Field) -> Result<(), VOTableError> {
     match self {
-      Self::Table(e) => Ok(e.push_field_by_ref(field)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        field.tag()
-      ))),
+      Self::Table(e) => e.push_field_by_ref(field),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          field.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn push_param(self, param: Param) -> Result<(), VOTableError> {
     match self {
-      Self::VOTable(e) => Ok(e.push_param_by_ref(param)),
-      Self::Resource(e) => Ok(e.push_param_by_ref(param)),
-      Self::Table(e) => Ok(e.push_param_by_ref(param)),
-      Self::Group(e) => Ok(e.push_param_by_ref(param)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        param.tag()
-      ))),
+      Self::VOTable(e) => e.push_param_by_ref(param),
+      Self::Resource(e) => e.push_param_by_ref(param),
+      Self::Table(e) => e.push_param_by_ref(param),
+      Self::Group(e) => e.push_param_by_ref(param),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          param.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn push_fieldref(self, fieldref: FieldRef) -> Result<(), VOTableError> {
     match self {
-      Self::CooSys(e) => Ok(e.push_fieldref_by_ref(fieldref)),
-      Self::TableGroup(e) => Ok(e.push_fieldref_by_ref(fieldref)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        fieldref.tag()
-      ))),
+      Self::CooSys(e) => e.push_fieldref_by_ref(fieldref),
+      Self::TableGroup(e) => e.push_fieldref_by_ref(fieldref),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          fieldref.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn push_paramref(self, paramref: ParamRef) -> Result<(), VOTableError> {
     match self {
-      Self::CooSys(e) => Ok(e.push_paramref_by_ref(paramref)),
-      Self::Group(e) => Ok(e.push_paramref_by_ref(paramref)),
-      Self::TableGroup(e) => Ok(e.push_paramref_by_ref(paramref)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        paramref.tag()
-      ))),
+      Self::CooSys(e) => e.push_paramref_by_ref(paramref),
+      Self::Group(e) => e.push_paramref_by_ref(paramref),
+      Self::TableGroup(e) => e.push_paramref_by_ref(paramref),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          paramref.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn push_group(self, group: Group) -> Result<(), VOTableError> {
     match self {
-      Self::VOTable(e) => Ok(e.push_group_by_ref(group)),
-      Self::Resource(e) => Ok(e.push_group_by_ref(group)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        group.tag()
-      ))),
+      Self::VOTable(e) => e.push_group_by_ref(group),
+      Self::Resource(e) => e.push_group_by_ref(group),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          group.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn push_tablegroup(self, group: TableGroup) -> Result<(), VOTableError> {
     match self {
-      Self::Table(e) => Ok(e.push_tablegroup_by_ref(group)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        group.tag()
-      ))),
+      Self::Table(e) => e.push_tablegroup_by_ref(group),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          group.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn push_resource(self, resource: Resource<C>) -> Result<(), VOTableError> {
     match self {
-      Self::VOTable(e) => Ok(e.push_resource_by_ref(resource)),
-      Self::Resource(e) => Ok(e.push_resource_by_ref(resource)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        resource.tag()
-      ))),
+      Self::VOTable(e) => e.push_resource_by_ref(resource),
+      Self::Resource(e) => e.push_resource_by_ref(resource),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          resource.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn prepend_resource(self, resource: Resource<C>) -> Result<(), VOTableError> {
     match self {
-      Self::VOTable(e) => Ok(e.prepend_resource_by_ref(resource)),
-      Self::Resource(e) => Ok(e.prepend_resource_by_ref(resource)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        resource.tag()
-      ))),
+      Self::VOTable(e) => e.prepend_resource_by_ref(resource),
+      Self::Resource(e) => e.prepend_resource_by_ref(resource),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          resource.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn push_table(self, table: Table<C>) -> Result<(), VOTableError> {
     match self {
-      Self::Resource(e) => Ok(e.push_table_by_ref(table)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        table.tag()
-      ))),
+      Self::Resource(e) => e.push_table_by_ref(table),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          table.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn set_data(self, data: Data<C>) -> Result<(), VOTableError> {
     match self {
-      Self::Table(e) => Ok(e.set_data_by_ref(data)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        data.tag()
-      ))),
+      Self::Table(e) => e.set_data_by_ref(data),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          data.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn set_binary(self, binary: Binary<C>) -> Result<(), VOTableError> {
     match self {
-      Self::Data(e) => Ok(e.set_binary_by_ref(binary)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        binary.tag()
-      ))),
+      Self::Data(e) => e.set_binary_by_ref(binary),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          binary.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn set_binary2(self, binary: Binary2<C>) -> Result<(), VOTableError> {
     match self {
-      Self::Data(e) => Ok(e.set_binary2_by_ref(binary)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        binary.tag()
-      ))),
+      Self::Data(e) => e.set_binary2_by_ref(binary),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          binary.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn set_fits(self, fits: Fits) -> Result<(), VOTableError> {
     match self {
-      Self::Data(e) => Ok(e.set_fits_by_ref(fits)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        fits.tag()
-      ))),
+      Self::Data(e) => e.set_fits_by_ref(fits),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          fits.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn set_stream(self, stream: Stream<C>) -> Result<(), VOTableError> {
     match self {
-      Self::Binary(e) => Ok(e.set_stream_by_ref(stream)),
-      Self::Binary2(e) => Ok(e.set_stream_by_ref(stream)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        stream.tag()
-      ))),
+      Self::Binary(e) => e.set_stream_by_ref(stream),
+      Self::Binary2(e) => e.set_stream_by_ref(stream),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          stream.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn set_fits_stream(self, stream: Stream<VoidTableDataContent>) -> Result<(), VOTableError> {
     match self {
-      Self::Fits(e) => Ok(e.set_stream_by_ref(stream)),
-      _ => Err(VOTableError::Custom(format!(
-        "Tag '{}' cannot contain a {}.",
-        self.tag(),
-        stream.tag()
-      ))),
+      Self::Fits(e) => e.set_stream_by_ref(stream),
+      _ => {
+        return Err(VOTableError::Custom(format!(
+          "Tag '{}' cannot contain a {}.",
+          self.tag(),
+          stream.tag()
+        )))
+      }
     }
+    Ok(())
   }
 
   pub fn push(self, elem: VOTableWrappedElem<C>) -> Result<(), VOTableError> {

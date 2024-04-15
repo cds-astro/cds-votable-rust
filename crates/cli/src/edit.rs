@@ -359,7 +359,7 @@ impl Action {
         if let Some((val, next_key)) = rem.rsplit_once(' ') {
           kv.push((key.to_string(), val.trim().to_string()));
           key = next_key.trim();
-        } else if !it.next().is_none() {
+        } else if it.next().is_some() {
           panic!("Unable to parse value and key in {}", rem)
         } else {
           kv.push((key.to_string(), rem.trim().to_string()));

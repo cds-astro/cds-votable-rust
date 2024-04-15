@@ -40,10 +40,10 @@ impl FromStr for OutputFormat {
 }
 impl OutputFormat {
   pub fn is_streamable(&self) -> bool {
-    match self {
-      Self::Xml | Self::XmlTabledata | Self::XmlBinary | Self::XmlBinary2 => true,
-      _ => false,
-    }
+    matches!(
+      self,
+      Self::Xml | Self::XmlTabledata | Self::XmlBinary | Self::XmlBinary2
+    )
   }
   fn put<W: Write>(
     self,

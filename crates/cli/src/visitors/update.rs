@@ -177,7 +177,7 @@ impl UpdateVisitor {
   }
 }
 
-fn append_to_rm_list(tagvid_to_rm_stack: &mut Vec<Vec<(Tag, String)>>, tag: Tag, vid: String) {
+fn append_to_rm_list(tagvid_to_rm_stack: &mut [Vec<(Tag, String)>], tag: Tag, vid: String) {
   tagvid_to_rm_stack.last_mut().unwrap().push((tag, vid));
 }
 
@@ -1048,12 +1048,9 @@ impl<C: TableDataContent> VOTableVisitor<C> for UpdateVisitor {
     // Going reverse, we do not change the vid of the elements before the ones already removed
     for (tag_to_rm, vid_to_rm) in self.tagvid_to_rm_stack.pop().unwrap().into_iter().rev() {
       trace!("In {}, rm tag {} vid={}", opt.tag(), tag_to_rm, vid_to_rm);
-      match tag_to_rm {
-        Tag::OPTION => {
-          let index = Self::extract_last_digit(vid_to_rm.as_str()) - 1;
-          opt.opts.remove(index);
-        }
-        _ => {}
+      if tag_to_rm == Tag::OPTION {
+        let index = Self::extract_last_digit(vid_to_rm.as_str()) - 1;
+        opt.opts.remove(index);
       }
     }
     // First remove, and then apply other modifications
