@@ -68,12 +68,9 @@ pub struct StreamConvert {
   /// Separator used for the 'csv' format.
   #[arg(short, long, default_value_t = ',')]
   separator: char,
-  /// Exec concurrently using N threads (row order not preserved!)
+  /// Exec concurrently using N threads
   #[arg(long, value_name = "N")]
   parallel: Option<usize>,
-  /// In parallel mode, keep the input table row order
-  #[arg(long, value_name = "keep_row_order")]
-  keep_row_order: bool,
   /// Number of rows process by a same thread in `parallel` mode
   #[arg(long, default_value_t = 10_000_usize)]
   chunk_size: usize,
@@ -131,15 +128,11 @@ impl StreamConvert {
           OutputFormat::XmlTabledata => to_same(it, write),
           OutputFormat::XmlBinary => match self.parallel {
             None => to_binary(it, write),
-            Some(n_threads) => {
-              td_to_binary_par(it, write, n_threads, self.chunk_size, self.keep_row_order)
-            }
+            Some(n_threads) => td_to_binary_par(it, write, n_threads, self.chunk_size),
           },
           OutputFormat::XmlBinary2 => match self.parallel {
             None => to_binary2(it, write),
-            Some(n_threads) => {
-              td_to_binary2_par(it, write, n_threads, self.chunk_size, self.keep_row_order)
-            }
+            Some(n_threads) => td_to_binary2_par(it, write, n_threads, self.chunk_size),
           },
           OutputFormat::CSV => {
             let mut raw_row_it = it.to_owned_tabledata_row_iterator();
@@ -174,7 +167,6 @@ impl StreamConvert {
                   self.separator,
                   n_threads,
                   self.chunk_size,
-                  self.keep_row_order,
                 )
               }
             }
@@ -184,16 +176,12 @@ impl StreamConvert {
       TableOrBinOrBin2::Binary => match self.output_fmt {
         OutputFormat::XmlTabledata => match self.parallel {
           None => to_tabledata(it, write),
-          Some(n_threads) => {
-            binary_to_td_par(it, write, n_threads, self.chunk_size, self.keep_row_order)
-          }
+          Some(n_threads) => binary_to_td_par(it, write, n_threads, self.chunk_size),
         },
         OutputFormat::XmlBinary => to_same(it, write),
         OutputFormat::XmlBinary2 => match self.parallel {
           None => to_binary2(it, write),
-          Some(n_threads) => {
-            binary_to_binary2_par(it, write, n_threads, self.chunk_size, self.keep_row_order)
-          }
+          Some(n_threads) => binary_to_binary2_par(it, write, n_threads, self.chunk_size),
         },
         OutputFormat::CSV => match self.parallel {
           None => to_csv(it, write, self.separator),
@@ -211,7 +199,6 @@ impl StreamConvert {
               self.separator,
               n_threads,
               self.chunk_size,
-              self.keep_row_order,
             )
           }
         },
@@ -219,15 +206,11 @@ impl StreamConvert {
       TableOrBinOrBin2::Binary2 => match self.output_fmt {
         OutputFormat::XmlTabledata => match self.parallel {
           None => to_tabledata(it, write),
-          Some(n_threads) => {
-            binary2_to_td_par(it, write, n_threads, self.chunk_size, self.keep_row_order)
-          }
+          Some(n_threads) => binary2_to_td_par(it, write, n_threads, self.chunk_size),
         },
         OutputFormat::XmlBinary => match self.parallel {
           None => to_binary(it, write),
-          Some(n_threads) => {
-            binary2_to_binary_par(it, write, n_threads, self.chunk_size, self.keep_row_order)
-          }
+          Some(n_threads) => binary2_to_binary_par(it, write, n_threads, self.chunk_size),
         },
         OutputFormat::XmlBinary2 => to_same(it, write),
         OutputFormat::CSV => match self.parallel {
@@ -246,7 +229,6 @@ impl StreamConvert {
               self.separator,
               n_threads,
               self.chunk_size,
-              self.keep_row_order,
             )
           }
         },
@@ -540,7 +522,6 @@ fn td_to_binary_par<R: BufRead + Send, W: Write>(
   write: W,
   n_threads: usize,
   chunk_size: usize,
-  keep_row_order: bool,
 ) -> Result<(), VOTableError> {
   let mut writer = new_xml_writer(write, None, None);
   if it
@@ -587,7 +568,6 @@ fn td_to_binary_par<R: BufRead + Send, W: Write>(
       ' ',
       n_threads,
       chunk_size,
-      keep_row_order,
     )
     .and_then(|_| raw_row_it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
@@ -602,7 +582,6 @@ fn td_to_binary2_par<R: BufRead + Send, W: Write>(
   write: W,
   n_threads: usize,
   chunk_size: usize,
-  keep_row_order: bool,
 ) -> Result<(), VOTableError> {
   let mut writer = new_xml_writer(write, None, None);
   if it
@@ -638,7 +617,6 @@ fn td_to_binary2_par<R: BufRead + Send, W: Write>(
       ' ',
       n_threads,
       chunk_size,
-      keep_row_order,
     )
     .and_then(|_| raw_row_it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
@@ -653,7 +631,6 @@ fn binary_to_td_par<R: BufRead + Send, W: Write>(
   write: W,
   n_threads: usize,
   chunk_size: usize,
-  keep_row_order: bool,
 ) -> Result<(), VOTableError> {
   let mut writer = new_xml_writer(write, None, None);
   if it
@@ -683,7 +660,6 @@ fn binary_to_td_par<R: BufRead + Send, W: Write>(
       ' ',
       n_threads,
       chunk_size,
-      keep_row_order,
     )
     .and_then(|_| raw_row_it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
@@ -698,7 +674,6 @@ fn binary_to_binary2_par<R: BufRead + Send, W: Write>(
   write: W,
   n_threads: usize,
   chunk_size: usize,
-  keep_row_order: bool,
 ) -> Result<(), VOTableError> {
   let mut writer = new_xml_writer(write, None, None);
   if it
@@ -728,7 +703,6 @@ fn binary_to_binary2_par<R: BufRead + Send, W: Write>(
       ' ',
       n_threads,
       chunk_size,
-      keep_row_order,
     )
     .and_then(|_| raw_row_it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
@@ -744,7 +718,6 @@ fn binary2_to_td_par<R: BufRead + Send, W: Write>(
   write: W,
   n_threads: usize,
   chunk_size: usize,
-  keep_row_order: bool,
 ) -> Result<(), VOTableError> {
   let mut writer = new_xml_writer(write, None, None);
   if it
@@ -778,7 +751,6 @@ fn binary2_to_td_par<R: BufRead + Send, W: Write>(
       ' ',
       n_threads,
       chunk_size,
-      keep_row_order,
     )
     .and_then(|_| raw_row_it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
@@ -793,7 +765,6 @@ fn binary2_to_binary_par<R: BufRead + Send, W: Write>(
   write: W,
   n_threads: usize,
   chunk_size: usize,
-  keep_row_order: bool,
 ) -> Result<(), VOTableError> {
   let mut writer = new_xml_writer(write, None, None);
   if it
@@ -827,7 +798,6 @@ fn binary2_to_binary_par<R: BufRead + Send, W: Write>(
       ' ',
       n_threads,
       chunk_size,
-      keep_row_order,
     )
     .and_then(|_| raw_row_it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
@@ -862,124 +832,76 @@ fn convert_par<I, W>(
   separator: char,
   n_threads: usize,
   chunk_size: usize,
-  keep_order: bool,
 ) -> Result<(), VOTableError>
 where
   I: Iterator<Item = Result<Vec<u8>, VOTableError>> + Send,
   W: Write,
 {
-  let schema = schema;
-  if keep_order {
-    let n_threads = n_threads.max(1);
-    let (mut senders1, receivers1): (Vec<Sender<_>>, Vec<Receiver<_>>) =
-      (0..n_threads).map(|_| bounded(1)).unzip();
-    let (mut senders2, receivers2): (Vec<Sender<_>>, Vec<Receiver<_>>) =
-      (0..n_threads).map(|_| bounded(1)).unzip();
-    scope(|s| {
-      // Producer thread
-      s.spawn(|| {
-        {
-          let mut rows_chunk = load_n(raw_row_it, chunk_size);
-          let mut senders_it = senders1.iter().cycle();
-          while !rows_chunk.is_empty() {
-            senders_it
-              .next()
-              .unwrap()
-              .send(rows_chunk)
-              .expect("Unexpected error sending raw rows");
-            rows_chunk = load_n(raw_row_it, chunk_size);
-          }
-        }
-        // Close the channels, otherwise sink will never exit the for-loop
-        senders1.drain(..).for_each(|sender| drop(sender));
-      });
-      // Parallel processing by n_threads
-      for (sendr2, recvr1) in senders2.iter().cloned().zip(receivers1.iter().cloned()) {
-        // Send to sink, receive from producer
-        let schema = schema.clone();
-        // Spawn workers in separate threads
-        s.spawn(move || {
-          // Receive until channel closes
-          for raw_rows_chunk in recvr1.iter() {
-            let converted_raw_rows_chunk = raw_rows_chunk
-              .iter()
-              .map(|raw_row| convert(raw_row, &schema, separator))
-              .collect::<Vec<Box<[u8]>>>();
-            sendr2
-              .send(converted_raw_rows_chunk)
-              .expect("Unexpected error sending converted rows");
-          }
-        });
-      }
-      // Close the channel, otherwise sink will never exit the for-loop
-      senders2.drain(..).for_each(|sender| drop(sender));
-      // Sink
-      for recvr2 in receivers2.iter().cycle() {
-        match recvr2.recv() {
-          Ok(raw_rows) => {
-            for raw_row in raw_rows {
-              match write.write_all(&raw_row) {
-                Ok(()) => (),
-                Err(e) => panic!("Error writing in parallel: {:?}", e),
-              }
-            }
-          }
-          Err(_) => {
-            // No more date to be written
-            break;
-          }
-        }
-      }
-    });
-  } else {
-    // Usage of crossbeam from https://rust-lang-nursery.github.io/rust-cookbook/concurrency/threads.html
-    let (snd1, rcv1) = bounded(1);
-    let (snd2, rcv2) = bounded(1);
-    scope(|s| {
-      // Producer thread
-      s.spawn(|| {
+  let n_threads = n_threads.max(1);
+  // Here we decided to create one (sender, receiver) pairs per thread and iterate on the
+  // ordered sender/receiver to preserve the original row order.
+  // See previous state of the code (before 2024/04/15) for a version which does not preserve
+  // raw order.
+  let (mut senders1, receivers1): (Vec<Sender<_>>, Vec<Receiver<_>>) =
+    (0..n_threads).map(|_| bounded(1)).unzip();
+  let (mut senders2, receivers2): (Vec<Sender<_>>, Vec<Receiver<_>>) =
+    (0..n_threads).map(|_| bounded(1)).unzip();
+  scope(|s| {
+    // Producer thread
+    s.spawn(|| {
+      {
         let mut rows_chunk = load_n(raw_row_it, chunk_size);
+        let mut senders_it = senders1.iter().cycle();
         while !rows_chunk.is_empty() {
-          snd1
+          senders_it
+            .next()
+            .unwrap()
             .send(rows_chunk)
             .expect("Unexpected error sending raw rows");
           rows_chunk = load_n(raw_row_it, chunk_size);
         }
-        // Close the channel, otherwise sink will never exit the for-loop
-        drop(snd1);
-      });
-      // Parallel processing by n_threads
-      for _ in 0..n_threads {
-        // Send to sink, receive from source
-        let (sendr, recvr) = (snd2.clone(), rcv1.clone());
-        let schema = schema.clone();
-        // Spawn workers in separate threads
-        s.spawn(move || {
-          // Receive until channel closes
-          for raw_rows_chunk in recvr.iter() {
-            let converted_raw_rows_chunk = raw_rows_chunk
-              .iter()
-              .map(|raw_row| convert(raw_row, &schema, separator))
-              .collect::<Vec<Box<[u8]>>>();
-            sendr
-              .send(converted_raw_rows_chunk)
-              .expect("Unexpected error sending converted rows");
-          }
-        });
       }
-      // Close the channel, otherwise sink will never exit the for-loop
-      drop(snd2);
-      // Sink
-      for raw_rows in rcv2.iter() {
-        for raw_row in raw_rows {
-          match write.write_all(&raw_row) {
-            Ok(()) => (),
-            Err(e) => panic!("Error writing in parallel: {:?}", e),
+      // Close the channels, otherwise sink will never exit the for-loop
+      senders1.drain(..).for_each(drop);
+    });
+    // Parallel processing by n_threads
+    for (sendr2, recvr1) in senders2.iter().cloned().zip(receivers1.iter().cloned()) {
+      // Send to sink, receive from producer
+      let schema = schema.clone();
+      // Spawn workers in separate threads
+      s.spawn(move || {
+        // Receive until channel closes
+        for raw_rows_chunk in recvr1.iter() {
+          let converted_raw_rows_chunk = raw_rows_chunk
+            .iter()
+            .map(|raw_row| convert(raw_row, &schema, separator))
+            .collect::<Vec<Box<[u8]>>>();
+          sendr2
+            .send(converted_raw_rows_chunk)
+            .expect("Unexpected error sending converted rows");
+        }
+      });
+    }
+    // Close the channel, otherwise sink will never exit the for-loop
+    senders2.drain(..).for_each(drop);
+    // Sink in the current thread
+    for recvr2 in receivers2.iter().cycle() {
+      match recvr2.recv() {
+        Ok(raw_rows) => {
+          for raw_row in raw_rows {
+            match write.write_all(&raw_row) {
+              Ok(()) => (),
+              Err(e) => panic!("Error writing in parallel: {:?}", e),
+            }
           }
         }
+        Err(_) => {
+          // No more data to be written
+          break;
+        }
       }
-    });
-  }
+    }
+  });
   Ok(())
 }
 
