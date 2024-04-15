@@ -2,14 +2,14 @@
 
 # `votable-cli` or `VOTCli`
 
-Command-line to extract/edit information from [IVOA VOTables](https://www.ivoa.net/documents/VOTable/20191021/REC-VOTable-1.4-20191021.html)
-and to convert efficiently VOTables back and forth in XML, JSON, YAML, TOML (and to CSV) while preserving all elements (except in CSV).
+Command-line to extract/edit metadata from [IVOA VOTables](https://www.ivoa.net/documents/VOTable/20191021/REC-VOTable-1.4-20191021.html)
+and to convert efficiently VOTables back and forth in XML-TABLEDATA, XML-BINARY, XML-BINARY2, non-standard JSON/YAML/TOML and to CSV.
 
 ## Status
 
 The CLI is in active development.
 
-More testing is required, especially the bit type and arrays.
+More testing is required, especially for the bit type and arrays.
 Please, provide us with VOTable examples and/or usecases!
 
  
@@ -80,7 +80,7 @@ git clone https://github.com/cds-astro/cds-votable-rust
 ```
 Install from using `cargo`:
 ```bash
-cargo install --path crates/cli
+cargo install --all-features --path crates/cli
 ```
 
 
@@ -89,7 +89,7 @@ cargo install --path crates/cli
 Once installed, check the version number using:
 ```
 > vot --version
-votable-cli 0.6.0
+votable-cli 0.6.1
 ```
 
 
@@ -97,21 +97,20 @@ votable-cli 0.6.0
 
 ```bash
 > vot --help
-Command-line to extract information from IVOA VOTables and to convert VOTable  back and forth in XML, JSON, YAML, TOML (and to CSV) while preserving all elements (except in CSV).
+Command-line to extract/edit metadata from IVOA VOTables and to convert efficiently VOTable back and forth in XML-TABLEDATA, XML-BINARY, XML-BINARY2, non-standard JSON/YAML/TOML (and to CSV).
 
 Usage: vot <COMMAND>
 
 Commands:
   convert   Convert a VOTable from one format to another (full table loaded in memory)
-  sconvert  Convert a single table XML VOTable in streaming mode. Tags after `</TABLE>` are preserved
+  sconvert  Convert a single table XML VOTable in streaming mode
   edit      Edit metadata adding/removing/updating attributes and/or elements
-  get       Get information from a VOTable, like it structure or fields
+  get       Get information from a VOTable: e.g. its structure or fields metadata
   help      Print this message or the help of the given subcommand(s)
 
 Options:
   -h, --help     Print help
   -V, --version  Print version
-
 ```
 
 ```bash
@@ -122,16 +121,16 @@ Usage: vot convert [OPTIONS] --out-fmt <OUTPUT_FMT>
 
 Options:
   -i, --in <FILE>             Path of the input VOTable [default: read from stdin]
-  -t, --in-fmt <INPUT_FMT>    Format of the input VOTable ('xml', 'json', 'yaml' or 'toml') [default: guess from file extension]
+  -t, --in-fmt <INPUT_FMT>    Format of the input VOTable (standard: 'xml'; not standard: 'json', 'yaml' or 'toml') [default: guess from file extension]
   -o, --out <FILE>            Path of the output VOTable [default: write to stdout]
-  -f, --out-fmt <OUTPUT_FMT>  Format of the output VOTable ('xml', 'xml-td', 'xml-bin', 'xml-bin2', 'json', 'yaml' or 'toml')
+  -f, --out-fmt <OUTPUT_FMT>  Format of the output VOTable (standard: 'xml', 'xml-td', 'xml-bin', 'xml-bin2'; not standard: 'json', 'yaml', 'toml')
   -p, --pretty                Pretty print (for JSON and TOML)
   -h, --help                  Print help
 ```
 
 ```bash
 > vot sconvert --help
-Convert a single table XML VOTable in streaming mode. Tags after `</TABLE>` are preserved
+Convert a single table XML VOTable in streaming mode
 
 Usage: vot sconvert [OPTIONS] --out-fmt <OUTPUT_FMT>
 
@@ -140,27 +139,27 @@ Options:
   -o, --out <FILE>               Path of the output file [default: write to stdout]
   -f, --out-fmt <OUTPUT_FMT>     Format of the output file ('xml-td', 'xml-bin', 'xml-bin2' or 'csv')
   -s, --separator <SEPARATOR>    Separator used for the 'csv' format [default: ,]
-      --parallel <N>             Exec concurrently using N threads (row order not preserved!)
+      --parallel <N>             Exec concurrently using N threads
       --chunk-size <CHUNK_SIZE>  Number of rows process by a same thread in `parallel` mode [default: 10000]
   -h, --help                     Print help
 ```
 
 ```bash
 > vot get --help
-Get information from a VOTable, like it structure or fields
+Get information from a VOTable: e.g. its structure or fields metadata
 
 Usage: vot get [OPTIONS] <COMMAND>
 
 Commands:
-  struct        Print the VOTable structure (useful to get Virtual IDs)
-  colnames      Print column names, one separated values line per table.
+  struct        Print the VOTable structure: useful to get Virtual IDs used in edition
+  colnames      Print column names, one line per table.
   fields-array  Print selected field information as an array
   help          Print this message or the help of the given subcommand(s)
 
 Options:
   -i, --in <FILE>           Path of the input VOTable [default: read from stdin]
-  -t, --in-fmt <INPUT_FMT>  Format of the input VOTable ('xml', 'json', 'yaml' or 'toml') [default: guess from file extension]
-  -s, --early-stop          Stop parsing before reading first data ('xml' input only)
+  -t, --in-fmt <INPUT_FMT>  Format of the input VOTable (standard: 'xml'; not standard: 'json', 'yaml' or 'toml') [default: guess from file extension]
+  -s, --early-stop          Stop parsing before reading first data ('xml' input only): useful for large single-table files
   -h, --help                Print help
 ```
 
@@ -172,9 +171,9 @@ Usage: vot edit [OPTIONS] --out-fmt <OUTPUT_FMT>
 
 Options:
   -i, --in <FILE>             Path of the input VOTable [default: read from stdin]
-  -t, --in-fmt <INPUT_FMT>    Format of the input VOTable ('xml', 'json', 'yaml' or 'toml') [default: guess from file extension]
+  -t, --in-fmt <INPUT_FMT>    Format of the input VOTable (standard: 'xml'; not standard: 'json', 'yaml' or 'toml') [default: guess from file extension]
   -o, --out <FILE>            Path of the output VOTable [default: write to stdout]
-  -f, --out-fmt <OUTPUT_FMT>  Format of the output VOTable ('xml', 'xml-td', 'xml-bin', 'xml-bin2', 'json', 'yaml' or 'toml')
+  -f, --out-fmt <OUTPUT_FMT>  Format of the output VOTable (standard: 'xml', 'xml-td', 'xml-bin', 'xml-bin2'; not standard: 'json', 'yaml', 'toml')
   -p, --pretty                Pretty print (for JSON and TOML)
   -e, --edit <ELEMS>          List of "TAG CONDITION ACTION ARGS", e.g.:
                               -e 'INFO name=Target rm' -e 'FIELD ID=RA set_attrs ucd=pos.eq.ra;meta.main unit=deg'
@@ -224,6 +223,7 @@ Options:
                                   `push_group ... @push_group ... @push_group @@push_group @@push_group (@<@<)`
                                   `push_group ... @push_group ... @push_group @@push_group @< @push_group`
                                 Remark: `@@xxx` is a short version of `@> @xxx`.
+  -z, --vizier-org-names      Extract original column names from VizieR description ending by '(org_name)' and put it inn the non-standard 'viz:org_name' attribute, be aware of the risk of false-detections!
   -s, --streaming             Use streaming mode: only for large XML files with a single table, and if the input format is the same as the output format
   -h, --help                  Print help
 ```
@@ -407,9 +407,10 @@ Input file: `gaia_dr3.vot`
 # Convert from TABLEDATA to BINARY
 time vot sconvert --in gaia_dr3.vot --out out.bin.vot --out-fmt xml-bin --parallel 3
 
-real	0m14,225s
-user	0m39,656s
-sys	0m2,059s
+real	0m15,339s
+user	0m40,220s
+sys	0m2,273s
+
 
 # Convert from TABLEDATA to BINARY2
 time vot sconvert --in gaia_dr3.vot --out out.bin2.vot --out-fmt xml-bin2 --parallel 3
@@ -472,6 +473,37 @@ real	0m12,416s
 user	0m47,123s
 sys	0m2,302s
 ```
+
+## Similar tool
+
+(Please let me known if you want me to add another tool here!) 
+
+### Astropy
+
+Not really a CLI tool, but you can write python scripts (and thus probably do anything you want)
+using the [astropy.io.votable](https://docs.astropy.org/en/stable/io/votable/index.html) package.
+So far, the main limitations seems to be related to [large files](https://github.com/astropy/astropy/issues/14577)
+and performances (?).
+
+
+### STILTS
+
+The main other CLI tool I am aware of to convert between possibly large 
+XML-TABLEDATA/XML-BINARY/XML-BINARY2 (and to CSV) is 
+[stilts](https://www.star.bris.ac.uk/~mbt/stilts/) with the 
+[votcopy](https://www.star.bristol.ac.uk/mbt/stilts/sun256/votcopy-usage.html) command.
+
+Stilts also allows for metadata edition, see [tpipe](https://www.star.bris.ac.uk/~mbt/stilts/sun256/tpipe-usage.html)
+command with [colmeta](https://www.star.bris.ac.uk/~mbt/stilts/sun256/colmeta.html) or [setparam](https://www.star.bris.ac.uk/~mbt/stilts/sun256/setparam.html) 
+[procesing filter](https://www.star.bris.ac.uk/~mbt/stilts/sun256/filterSteps.html), but:
+* if data/metadata editing is required, VOTable structure may change
+* editing of VOTable-specific metadata is not always possible
+
+Stilts is a very general, rich, efficient and robust tool with a lot of options to be explored.
+
+Regarding performances, the single threaded version of `vot-cli` shows performances similar to `stilts vocopy`.
+The multi-threaded version of `vot sconvert` (i.e. with `--parallel` option) may increase performances up to x10 
+depending on the hardware, the VOTable file and the type of conversion.
 
 
 ## To-Do list

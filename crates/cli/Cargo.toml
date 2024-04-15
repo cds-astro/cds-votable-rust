@@ -1,8 +1,8 @@
 [package]
 name = "votable-cli"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>"]
-description = "Command-line to extract information from IVOA VOTables and to convert VOTable  back and forth in XML, JSON, YAML, TOML (and to CSV) while preserving all elements (except in CSV)."
+description = "Command-line to extract/edit metadata from IVOA VOTables and to convert efficiently VOTable back and forth in XML-TABLEDATA, XML-BINARY, XML-BINARY2, non-standard JSON/YAML/TOML (and to CSV)."
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 categories = ["command-line-utilities", "science", "data-structures"]
@@ -47,13 +47,8 @@ assets = [
     ["LICENSE-APACHE", "usr/share/doc/vot/", "644"],
     ["CHANGELOG.md", "usr/share/doc/vot/CHANGELOG", "644"],
     ["README.md", "usr/share/doc/vot/README", "644"],
-    #["FAQ.md", "usr/share/doc/vot/FAQ", "644"],
     ["doc/vot.1", "usr/share/man/man1/vot.1", "644"],
-    # Similarly for shell completions.
-    #["deployment/deb/vot.bash", "usr/share/bash-completion/completions/vot", "644"],
-    #["deployment/deb/vot.fish", "usr/share/fish/vendor_completions.d/vot.fish", "644"],
-    #["deployment/deb/_vot", "usr/share/zsh/vendor-completions/", "644"],
 ]
 extended-description = """\
-vot is a command-line to convert VOTable is various formats such as JSON, TOML and YAML and back to XML
+Command-line to extract/edit metadata from IVOA VOTables and to convert efficiently VOTable back and forth in XML-TABLEDATA, XML-BINARY, XML-BINARY2, non-standard JSON/YAML/TOML (and to CSV).
 """

@@ -1,5 +1,14 @@
 # `moc-cli` Change Log
 
+## 0.6.1
+
+Released 2024-04-15
+
+* Reword/fix typo in the documentation/help messages
+* Row order is now preserved in `streaming` mode with `parallel` option
+* Add `vizier-org-names` option in `edit` command (visitor code was ready but we forget to add the option)
+
+
 ## 0.6.0
 
 Released 2024-04-05

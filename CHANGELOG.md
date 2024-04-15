@@ -1,5 +1,13 @@
 # `votable` Change Log
 
+## 0.6.1
+
+Released 2024-04-15
+
+* Mainly changes in the cli
+* Minor README modifications
+
+
 ## 0.6.0
 
 Released 2024-04-05

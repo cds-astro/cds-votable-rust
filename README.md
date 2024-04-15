@@ -3,7 +3,8 @@
 # `votable` or `VOTLibRust`
 
 Library to build, edit, read and write [VOTables](https://www.ivoa.net/documents/VOTable/)
-in Rust and to convert them efficiently back and forth in JSON, YAML, TOML, XML-TABLEDATA, XML-BINARY and XML-BINARY2
+in Rust and to convert them efficiently back and forth in standard XML-TABLEDATA, XML-BINARY, XML-BINARY2
+and non-standard JSON, YAML and TOML
 while preserving all elements (except comments) and their order.
 
 [![](https://img.shields.io/crates/v/votable.svg)](https://crates.io/crates/votable)
@@ -106,6 +107,28 @@ names (all in camel case).
 
 * TOML does not support `null` (we so far convert `null` values by an empty string).
 * Conversions from/to TOML/JSON/YAML requires all data to be loaded in memory, it is not adapted for large files.
+* We do not support VOTable such as (example provided by Mark Taylor):
+```xml
+ <?xml version='1.0'?>
+<!DOCTYPE VOTABLE [ <!ENTITY td3 '<TD>4</TD>'> ]>
+<VOTABLE version="1.4" xmlns="http://www.ivoa.net/xml/VOTable/v1.3">
+  <RESOURCE>
+    <TABLE>
+      <FIELD datatype="int" name="i"/>
+      <DATA>
+        <TABLEDATA>
+          <TR><TD>0</TD></TR>
+          <TR><TD>1</TD></TR >
+          <TR><TD>2</TD></TR>
+          <TR>&td3;</TR>
+        </TABLEDATA>
+      </DATA>
+    </TABLE>
+  </RESOURCE>
+</VOTABLE> 
+```
+since [quick_xml](https://github.com/tafia/quick-xml) so far does not cope with declared entities, 
+see [this issue](https://github.com/tafia/quick-xml/issues/258).
 
 ## Other way to convert from VOTable to JSON
 
