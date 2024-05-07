@@ -115,9 +115,9 @@ impl<C: TableDataContent> DataElem<C> {
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Data<C: TableDataContent> {
   #[serde(flatten)]
-  data: DataElem<C>,
+  pub data: DataElem<C>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  infos: Vec<Info>,
+  pub infos: Vec<Info>,
 }
 
 impl<C: TableDataContent> Data<C> {

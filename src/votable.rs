@@ -1058,10 +1058,11 @@ impl<C: TableDataContent> QuickXmlReadWrite<HasSubElems> for VOTable<C> {
 
 #[cfg(test)]
 mod tests {
+  use crate::data::DataElem;
   use crate::votable::VOTableWrapper;
   use crate::{
     impls::mem::{InMemTableDataRows, InMemTableDataStringRows},
-    QuickXmlReadWrite,
+    QuickXmlReadWrite, TableElem,
   };
   use quick_xml::Writer;
 
@@ -1357,6 +1358,55 @@ mod tests {
       Err(e) => {
         eprintln!("Error: {}", e.to_string());
         assert!(false);
+      }
+    }
+  }
+
+  #[test]
+  fn test_svo_filter_service_file() {
+    // http://svo2.cab.inta-csic.es/theory/fps/fps.php?ID=2MASS/2MASS.H
+    let path = "resources/SVO_FILTER_2MASS_H.xml";
+    let vot = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file(path)
+      .unwrap()
+      .unwrap();
+    if let Some(table) = vot.get_first_table() {
+      // Print params
+      table
+        .elems
+        .iter()
+        .filter_map(|e| match e {
+          TableElem::Param(param) => Some(param),
+          _ => None,
+        })
+        .for_each(|param| {
+          println!(
+            "PARAM. name: {}; datatype: {}, value: {} ",
+            param.field.name, param.field.datatype, param.value
+          )
+        });
+      // Print field
+      table
+        .elems
+        .iter()
+        .filter_map(|e| match e {
+          TableElem::Field(field) => Some(field),
+          _ => None,
+        })
+        .for_each(|field| println!("FIELD. name: {}; datatype: {}", field.name, field.datatype));
+      // Print rows
+      println!("ROWS: ");
+      if let Some(data) = &table.data {
+        match &data.data {
+          DataElem::TableData(tabledata) => {
+            for row in &tabledata.content.rows {
+              for field in row {
+                print!("{} , ", field.to_string());
+              }
+              println!();
+            }
+          }
+          _ => todo!(),
+        }
       }
     }
   }

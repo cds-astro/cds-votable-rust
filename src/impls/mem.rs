@@ -109,7 +109,7 @@ impl TableDataContent for VoidTableDataContent {
 /// we should save each field as a `&str`).
 #[derive(Default, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct InMemTableDataStringRows {
-  rows: Vec<Vec<String>>,
+  pub rows: Vec<Vec<String>>,
 }
 
 impl InMemTableDataStringRows {
@@ -228,7 +228,7 @@ impl TableDataContent for InMemTableDataStringRows {
 /// Each field is `VOTableValue` parse according to the table schema.
 #[derive(Default, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct InMemTableDataRows {
-  rows: Vec<Vec<VOTableValue>>,
+  pub rows: Vec<Vec<VOTableValue>>,
 }
 
 impl InMemTableDataRows {
