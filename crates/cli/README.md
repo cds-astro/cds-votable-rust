@@ -65,7 +65,7 @@ tar xzvf vot-vxx-yyy.tar.gz
 ```
 
 
-### Compile from source code
+### Compile from source code (ensures best performances)
 
 [Install rust](https://www.rust-lang.org/tools/install)
 (and check that `~/.cargo/bin/` is in your path),
@@ -80,7 +80,7 @@ git clone https://github.com/cds-astro/cds-votable-rust
 ```
 Install from using `cargo`:
 ```bash
-cargo install --all-features --path crates/cli
+RUSTFLAGS='-C target-cpu=native' cargo install --all-features --path crates/cli
 ```
 
 
