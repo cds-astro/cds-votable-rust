@@ -292,8 +292,8 @@ impl Schema {
                         "0" | "f" | "F" => VOTableValue::Bool(false),
                         "1" | "t" | "T" => VOTableValue::Bool(true),
                         _ => {
-                          s.parse::<bool>().map(VOTableValue::Bool).map_err(|_| VOTableError::Custom(
-                            format!("Unable too parse boolean value. Expected: '0', '1', 't', 'f', 'T', 'F' or 'true', 'false'. Actual: '{}'", s))
+                          s.to_lowercase().parse::<bool>().map(VOTableValue::Bool).map_err(|_| VOTableError::Custom(
+                            format!("Unable to parse boolean value. Expected: '0', '1', 't', 'f', 'T', 'F' or 'true', 'false'. Actual: '{}'", s))
                           )?
                         }
                       }
