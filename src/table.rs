@@ -80,13 +80,15 @@ pub struct Table<C: TableDataContent> {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub description: Option<Description>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub infos: Vec<Info>,
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub elems: Vec<TableElem>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub links: Vec<Link>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub data: Option<Data<C>>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
-  pub infos: Vec<Info>,
+  pub post_infos: Vec<Info>,
 }
 
 impl<C: TableDataContent> Table<C> {
@@ -105,6 +107,8 @@ impl<C: TableDataContent> Table<C> {
 
   impl_builder_opt_subelem!(description, Description);
 
+  impl_builder_push!(Info);
+
   impl_builder_push_elem!(Field, TableElem);
   impl_builder_push_elem!(Param, TableElem);
   impl_builder_push_elem!(TableGroup, TableElem);
@@ -120,7 +124,7 @@ impl<C: TableDataContent> Table<C> {
     self.data = Some(data);
   }
 
-  impl_builder_push!(Info);
+  impl_builder_push_post_info!();
 
   pub fn visit<V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where
@@ -129,6 +133,9 @@ impl<C: TableDataContent> Table<C> {
     visitor.visit_table_start(self)?;
     if let Some(description) = &mut self.description {
       visitor.visit_description(description)?;
+    }
+    for i in &mut self.infos {
+      visitor.visit_info(i)?;
     }
     for e in &mut self.elems {
       e.visit(visitor)?;
@@ -139,8 +146,8 @@ impl<C: TableDataContent> Table<C> {
     if let Some(data) = &mut self.data {
       data.visit(visitor)?;
     }
-    for i in &mut self.infos {
-      visitor.visit_info(i)?;
+    for i in self.post_infos.iter_mut() {
+      visitor.visit_post_info(i)?;
     }
     visitor.visit_table_ended(self)
   }
@@ -180,7 +187,11 @@ impl<C: TableDataContent> Table<C> {
           }
           Data::<C>::TAG_BYTES => return Data::from_event_start(e).map(Some),
           Info::TAG_BYTES => {
-            self.push_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
+            if self.elems.is_empty() && self.links.is_empty() && self.data.is_none() {
+              self.push_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
+            } else {
+              self.push_post_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
+            }
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -228,6 +239,7 @@ impl<C: TableDataContent> Table<C> {
       .map_err(VOTableError::Write)?;
     // Write sub-elems
     write_elem!(self, description, writer, context);
+    write_elem_vec!(self, infos, writer, context);
     write_elem_vec_no_context!(self, elems, writer);
     write_elem_vec!(self, links, writer, context);
     if !stop_before_data {
@@ -253,7 +265,7 @@ impl<C: TableDataContent> Table<C> {
       }
     }
 
-    write_elem_vec!(self, infos, writer, context);
+    write_elem_vec!(self, post_infos, writer, context);
     // Close tag
     writer
       .write_event(Event::End(tag.to_end()))
@@ -408,7 +420,11 @@ impl<C: TableDataContent> HasSubElements for Table<C> {
             ))
           }
           Info::TAG_BYTES => {
-            self.push_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
+            if self.elems.is_empty() && self.links.is_empty() && self.data.is_none() {
+              self.push_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
+            } else {
+              self.push_post_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
+            }
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -444,12 +460,13 @@ impl<C: TableDataContent> HasSubElements for Table<C> {
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
     write_elem!(self, description, writer, context);
+    write_elem_vec!(self, infos, writer, context);
     write_elem_vec_no_context!(self, elems, writer);
     write_elem_vec!(self, links, writer, context);
     if let Some(elem) = &mut self.data {
       elem.write(writer, &self.elems)?;
     }
-    write_elem_vec!(self, infos, writer, context);
+    write_elem_vec!(self, post_infos, writer, context);
     Ok(())
   }
 }

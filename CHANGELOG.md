@@ -1,5 +1,14 @@
 # `votable` Change Log
 
+## 0.6.2
+
+Released xxxx-xx-xx
+
+* Fix boolean value to support any mix of case
+* Set additional attributes public
+* Replace `info` by `post_info` and add `info` in `TABLE` (see standard XSD, pre-INFo missing in the schema)
+ 
+
 ## 0.6.1
 
 Released 2024-04-15
