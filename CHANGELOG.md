@@ -2,7 +2,7 @@
 
 ## 0.6.2
 
-Released xxxx-xx-xx
+Released 2024-10-18
 
 * Fix boolean value to support any mix of case
 * Set additional attributes public
