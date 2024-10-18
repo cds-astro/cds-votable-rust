@@ -1,5 +1,13 @@
 # `moc-cli` Change Log
 
+## 0.6.2
+
+Released 2024-10-18
+
+* Fix boolean value to support any mix of case
+* Supports `info` and `post_info` in `TABLE`
+
+
 ## 0.6.1
 
 Released 2024-04-15

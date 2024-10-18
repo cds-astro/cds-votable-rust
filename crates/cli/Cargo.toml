@@ -1,6 +1,6 @@
 [package]
 name = "votable-cli"
-version = "0.6.1"
+version = "0.6.2"
 authors = ["F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>"]
 description = "Command-line to extract/edit metadata from IVOA VOTables and to convert efficiently VOTable back and forth in XML-TABLEDATA, XML-BINARY, XML-BINARY2, non-standard JSON/YAML/TOML (and to CSV)."
 license = "MIT OR Apache-2.0"

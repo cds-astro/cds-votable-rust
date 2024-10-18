@@ -1,6 +1,6 @@
 [package]
 name = "votable-wasm"
-version = "0.6.1"
+version = "0.6.2"
 authors = ["F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>"]
 description = "Convert, in WASM, IVOA VOTables in XML, JSON, YAML and TOML"
 license = "MIT OR Apache-2.0"

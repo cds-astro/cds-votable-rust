@@ -9,10 +9,11 @@ classifiers = [
 repository = "https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli"
 
 [build-system]
-requires = ["maturin>=0.13,<0.14"]
+requires = ["maturin>=0.17"]
 build-backend = "maturin"
 
 [tool.maturin]
+sdist-include = ["README.md"]
 # Bindings type
 bindings = "bin"
 # Strip the library for minimum file size
