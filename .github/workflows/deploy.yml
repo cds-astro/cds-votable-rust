@@ -26,7 +26,7 @@ jobs:
        run: |
          source $HOME/.cargo/env
          cd crates/cli
-         for PYBIN in /opt/python/cp38*/bin; do
+         for PYBIN in /opt/python/cp312-*/bin; do
            "${PYBIN}/pip" install maturin
            "${PYBIN}/maturin" publish -b bin -i "${PYBIN}/python" --skip-existing --compatibility manylinux_2_28
          done
@@ -52,7 +52,7 @@ jobs:
        run: |
          source $HOME/.cargo/env
          cd crates/cli
-         for PYBIN in /opt/python/cp38*/bin; do
+         for PYBIN in /opt/python/cp312-*/bin; do
            "${PYBIN}/pip" install maturin
            "${PYBIN}/maturin" publish -b bin -i "${PYBIN}/python" --skip-existing --compatibility manylinux2014
          done 
@@ -76,7 +76,7 @@ jobs:
          bash -exc 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-host aarch64-unknown-linux-gnu -y && \
            source $HOME/.cargo/env && \
            cd crates/cli && \
-           for PYBIN in /opt/python/cp38*/bin; do
+           for PYBIN in /opt/python/cp312-*/bin; do
              "${PYBIN}/pip" install maturin
              "${PYBIN}/maturin" publish -b bin -i "${PYBIN}/python" --skip-existing --compatibility manylinux2014 --config "net.git-fetch-with-cli = true"
            done'
@@ -92,7 +92,7 @@ jobs:
       fail-fast: false      
       matrix:
         os: [windows-latest]
-        python-version: ['3.8']
+        python-version: ['3.12']
     steps:
      - uses: actions/checkout@v2
      - name: Set up Python ${{ matrix.python-version }} on ${{ matrix.os }}
@@ -119,7 +119,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macOS-latest]
-        python-version: ['3.8']
+        python-version: ['3.12']
     steps:
      - uses: actions/checkout@v2
      - name: Set up Python ${{ matrix.python-version }} on ${{ matrix.os }}
@@ -134,7 +134,9 @@ jobs:
         MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN_FXP }}
        run: |
          rustup target add aarch64-apple-darwin
+         rustup target add x86_64-apple-darwin
          pip install maturin
          cd crates/cli
          maturin publish -b bin --interpreter python${{matrix.python_version}} --target universal2-apple-darwin --skip-existing 
+         maturin publish -b bin --interpreter python${{matrix.python_version}} --skip-existing 
 

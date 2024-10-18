@@ -10,7 +10,7 @@ Rust implementation of a VOTable serializer/deserializer with support for
 format other than XML, such as JSON, TOML or YAML.
 """
 license = "Apache-2.0 OR MIT"
-readme = "README.md"
+# readme = "README.md"
 categories = ["encoding", "science"]
 keywords = ["ivoa", "votable", "xml", "json", "toml"]
 documentation = "https://docs.rs/votable"

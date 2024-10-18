@@ -4,6 +4,7 @@ name = "votable-cli"
 classifiers = [
     "Programming Language :: Rust",
 ]
+readme = "README.md"
 
 [project.urls]
 repository = "https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli"
@@ -13,7 +14,7 @@ requires = ["maturin>=0.17"]
 build-backend = "maturin"
 
 [tool.maturin]
-sdist-include = ["README.md"]
+#sdist-include = ["README.md"]
 # Bindings type
 bindings = "bin"
 # Strip the library for minimum file size
