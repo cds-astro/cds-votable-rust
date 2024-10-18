@@ -71,8 +71,7 @@ jobs:
      - name: Install dependencies
        run: |
          docker run --rm -v ${{ github.workspace }}:/ws:rw --workdir=/ws \
-         -e MATURIN_USERNAME=${{ env.MATURIN_USERNAME }} \
-         -e MATURIN_PASSWORD=${{ env.MATURIN_PASSWORD}} \
+         -e MATURIN_PYPI_TOKEN=${{ secrets.PYPI_API_TOKEN_FXP }} \
          ${{ env.img }} \
          bash -exc 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-host aarch64-unknown-linux-gnu -y && \
            source $HOME/.cargo/env && \
