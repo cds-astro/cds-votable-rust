@@ -1,8 +1,11 @@
 pub mod convert;
 pub mod edit;
 pub mod get;
+pub mod hcidx;
+pub mod hpxsort;
 pub mod input;
 pub mod output;
+pub mod qhcidx;
 pub mod streaming;
 pub mod visitors;
 pub mod wrappedelems;

@@ -411,7 +411,7 @@ fn to_same<R: BufRead, W: Write>(
       .and_then(|_| it.read_to_end())
       .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {
-    // No table in the VOTable
+    // No table in the VOTable (all the VOTable already written in output).
     Ok(())
   }
 }
@@ -438,7 +438,7 @@ fn to_tabledata<R: BufRead, W: Write>(
     .and_then(|_| it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {
-    // No table in the VOTable
+    // No table in the VOTable (all the VOTable already written in output).
     Ok(())
   }
 }
@@ -465,7 +465,7 @@ fn to_binary<R: BufRead, W: Write>(
     .and_then(|_| it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {
-    // No table in the VOTable
+    // No table in the VOTable (all the VOTable already written in output).
     Ok(())
   }
 }
@@ -492,7 +492,7 @@ fn to_binary2<R: BufRead, W: Write>(
     .and_then(|_| it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {
-    // No table in the VOTable
+    // No table in the VOTable (all the VOTable already written in output).
     Ok(())
   }
 }
@@ -572,7 +572,7 @@ fn td_to_binary_par<R: BufRead + Send, W: Write>(
     .and_then(|_| raw_row_it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {
-    // No table in the VOTable
+    // No table in the VOTable (all the VOTable already written in output).
     Ok(())
   }
 }
@@ -621,7 +621,7 @@ fn td_to_binary2_par<R: BufRead + Send, W: Write>(
     .and_then(|_| raw_row_it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {
-    // No table in the VOTable
+    // No table in the VOTable (all the VOTable already written in output).
     Ok(())
   }
 }
@@ -664,7 +664,7 @@ fn binary_to_td_par<R: BufRead + Send, W: Write>(
     .and_then(|_| raw_row_it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {
-    // No table in the VOTable
+    // No table in the VOTable (all the VOTable already written in output).
     Ok(())
   }
 }
@@ -707,7 +707,7 @@ fn binary_to_binary2_par<R: BufRead + Send, W: Write>(
     .and_then(|_| raw_row_it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {
-    // No table in the VOTable
+    // No table in the VOTable (all the VOTable already written in output).
     Ok(())
   }
 }
@@ -755,7 +755,7 @@ fn binary2_to_td_par<R: BufRead + Send, W: Write>(
     .and_then(|_| raw_row_it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {
-    // No table in the VOTable
+    // No table in the VOTable (all the VOTable already written in output).
     Ok(())
   }
 }
@@ -802,7 +802,7 @@ fn binary2_to_binary_par<R: BufRead + Send, W: Write>(
     .and_then(|_| raw_row_it.read_to_end())
     .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {
-    // No table in the VOTable
+    // No table in the VOTable (all the VOTable already written in output).
     Ok(())
   }
 }
