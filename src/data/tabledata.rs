@@ -166,7 +166,7 @@ impl<'a, R: BufRead> Iterator for FieldIterator<'a, R> {
   }
 }
 
-/// Same as 'FieldIterator' but from a slice (hence, no buffering needed) contaniing niehter '<TR>'
+/// Same as 'FieldIterator' but from a slice (hence, no buffering needed) containing neither '<TR>'
 /// nor '</TR>' (so ends with EOF).
 pub struct FieldIteratorUnbuffered<'a> {
   reader: Reader<&'a [u8]>,

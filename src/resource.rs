@@ -1021,7 +1021,7 @@ impl<C: TableDataContent> HasSubElements for Resource<C> {
     write_elem_vec_no_context!(self, elems, writer);
     write_elem_vec_no_context!(self, sub_elems, writer);
     #[cfg(feature = "mivot")]
-    write_elem_vec!(self, vodml, writer, context);
+    write_elem!(self, vodml, writer, context);
     Ok(())
   }
 }

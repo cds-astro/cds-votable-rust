@@ -441,12 +441,12 @@ pub struct VOTable<C: TableDataContent> {
   #[serde(rename = "ID", skip_serializing_if = "Option::is_none")]
   pub id: Option<String>,
   pub version: Version,
-  /// E.g. "http://www.ivoa.net/xml/VOTable/v1.3", see method in the `Version` enum.
+  /// E.g. "http://www.ivoa.net/xml/VOTable/v1.4", see method in the `Version` enum.
   pub xmlns: String,
   #[serde(rename = "xmlns:xsi", skip_serializing_if = "Option::is_none")]
   /// E.g. "http://www.w3.org/2001/XMLSchema-instance"
   pub xmlns_xsi: Option<String>,
-  /// E.g. ""http://www.ivoa.net/xml/VOTable/v1.3 http://www.ivoa.net/xml/VOTable/v1.3""
+  /// E.g. "http://www.ivoa.net/xml/VOTable/v1.4 http://www.ivoa.net/xml/VOTable/v1.4"
   #[serde(rename = "xsi:schemaLocation", skip_serializing_if = "Option::is_none")]
   pub xsi_schema_location: Option<String>,
   // extra attributes
@@ -1070,8 +1070,8 @@ mod tests {
   fn test_votable_read_from_str() {
     let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <VOTABLE version="1.4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xmlns="http://www.ivoa.net/xml/VOTable/v1.3"
-  xsi:schemaLocation="http://www.ivoa.net/xml/VOTable/v1.3 http://www.ivoa.net/xml/VOTable/v1.3">
+  xmlns="http://www.ivoa.net/xml/VOTable/v1.4"
+  xsi:schemaLocation="http://www.ivoa.net/xml/VOTable/v1.4 http://www.ivoa.net/xml/VOTable/v1.4">
     <DESCRIPTION>
    VizieR Astronomical Server vizier.u-strasbg.fr
     Date: 2022-04-19T13:38:24 [V1.99+ (14-Oct-2013)]
