@@ -3,6 +3,7 @@
 use std::{
   fs::File,
   io::{BufRead, BufReader, Write},
+  ops::Range,
   path::Path,
 };
 
@@ -144,8 +145,107 @@ fn next_tabledata_row<T: BufRead>(
   }
 }
 
+/// Iterate over the raw rows (i.e. everything inside the `<TR>`/`</TR>` tags).
+/// Also, provide the index of the starting `<TR>` byte in the file.
+/// We assume the `<TABLEDATA>` tag has already been consumed and this iterator will consume
+/// the `</TABLEDATA>` tag.
+pub struct OwnedTabledataRowIteratorWithPosition<R: BufRead> {
+  pub reader: Reader<R>,
+  pub reader_buff: Vec<u8>,
+  pub votable: VOTable<VoidTableDataContent>,
+  pub has_next: bool,
+  pub n_bytes_readen_cumul: usize,
+}
+
+impl<R: BufRead> OwnedTabledataRowIteratorWithPosition<R> {
+  pub fn skip_remaining_data(&mut self) -> Result<(), VOTableError> {
+    self
+      .reader
+      .read_to_end(
+        TableData::<VoidTableDataContent>::TAG_BYTES,
+        &mut self.reader_buff,
+      )
+      .map_err(VOTableError::Read)
+  }
+
+  pub fn read_to_end(self) -> Result<VOTable<VoidTableDataContent>, VOTableError> {
+    let Self {
+      mut reader,
+      mut reader_buff,
+      mut votable,
+      has_next: _,
+      n_bytes_readen_cumul: _,
+    } = self;
+    votable
+      .read_from_data_end_to_end(&mut reader, &mut reader_buff)
+      .map(|()| votable)
+  }
+}
+
+impl<R: BufRead> Iterator for OwnedTabledataRowIteratorWithPosition<R> {
+  type Item = Result<(Range<usize>, Vec<u8>), VOTableError>;
+
+  fn next(&mut self) -> Option<Self::Item> {
+    next_tabledata_row_with_position(
+      &mut self.reader,
+      &mut self.reader_buff,
+      &mut self.has_next,
+      &mut self.n_bytes_readen_cumul,
+    )
+  }
+}
+
+/// Returns the position of the bytes of the the row, from the first `<` of the `<TR>` tag (inclusive)
+/// to the first character ofter the `>` of the `</TR>` tag.
+/// # Note
+/// The method `read_to_end(b"TR", &mut buff)` do not put the parsed eleemnts in the `buff`, so we cannot use it.
+fn next_tabledata_row_with_position<T: BufRead>(
+  reader: &mut Reader<T>,
+  reader_buff: &mut Vec<u8>,
+  has_next: &mut bool,
+  n_bytes_readen_cumul: &mut usize,
+) -> Option<Result<(Range<usize>, Vec<u8>), VOTableError>> {
+  if *has_next {
+    reader_buff.clear();
+    loop {
+      // Save position before reading the next event
+      let pos = reader.buffer_position();
+      let event = reader.read_event(reader_buff);
+      match event {
+        Ok(Event::Start(ref e)) if e.name() == b"TR" => {
+          let mut raw_row: Vec<u8> = Vec::with_capacity(256);
+          return match read_until_found(TR_END_FINDER.as_ref(), reader, &mut raw_row) {
+            Ok(n_bytes_readen) => {
+              let start = pos + *n_bytes_readen_cumul;
+              *n_bytes_readen_cumul += n_bytes_readen;
+              let end = reader.buffer_position() + *n_bytes_readen_cumul;
+              Some(Ok((start..end, raw_row)))
+            }
+            Err(e) => Some(Err(e)),
+          };
+        }
+        Ok(Event::End(ref e)) if e.name() == TableData::<VoidTableDataContent>::TAG_BYTES => {
+          *has_next = false;
+          return None;
+        }
+        Ok(Event::Eof) => return Some(Err(VOTableError::PrematureEOF("reading rows"))),
+        Ok(Event::Text(ref e)) if is_empty(e) => {}
+        Ok(Event::Comment(ref e)) => {
+          discard_comment(e, reader, TableData::<VoidTableDataContent>::TAG)
+        }
+        Ok(event) => discard_event(event, TableData::<VoidTableDataContent>::TAG),
+        Err(e) => return Some(Err(VOTableError::Read(e))),
+      }
+    }
+  } else {
+    None
+  }
+}
+
 /// Same as `read_until` but taking a `memchr::memmem::Finder` for better performances when
 /// a same `needle` has to be used several times.
+/// # Returns
+/// the number of bytes read.
 fn read_until_found<T: BufRead>(
   finder: Finder<'_>,
   reader: &mut Reader<T>,
@@ -581,6 +681,21 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
       reader_buff: self.reader_buff,
       votable: self.votable,
       has_next: true,
+    }
+  }
+
+  /// Before calling this method, you **must** ensure that `self.data_type()` returns `TableOrBinOrBin2::TableData`.
+  /// In addition to the raw row, also provide the position (byte number) of the starting `<TR>` row tag in the file.
+  pub fn to_owned_tabledata_row_iterator_with_position(
+    self,
+  ) -> OwnedTabledataRowIteratorWithPosition<R> {
+    assert!(matches!(self.data_type, TableOrBinOrBin2::TableData));
+    OwnedTabledataRowIteratorWithPosition {
+      reader: self.reader,
+      reader_buff: self.reader_buff,
+      votable: self.votable,
+      has_next: true,
+      n_bytes_readen_cumul: 0,
     }
   }
 
