@@ -1,5 +1,13 @@
 # `votable` Change Log
 
+## 0.6.3
+
+Released 2025-09-24
+
+* Bump `base64` versions
+* Use `String::from_utf8_lossy` method instead of  (bad import!) an internal serde one.
+
+
 ## 0.6.2
 
 Released 2024-10-18

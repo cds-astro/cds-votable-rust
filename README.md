@@ -17,7 +17,8 @@ VOT Lib Rust is used in:
   edit and convert VOTables from the command line;
 * [VOTWasm](https://github.com/cds-astro/cds-votable-rust/tree/main/crates/wasm) 
   read/write and convert VOTables in Web Browsers.
-* [Aladin Lite V3](https://github.com/cds-astro/aladin-lite)
+* [ATSS / QATSS](https://adass2023.lpl.arizona.edu/events/poster-p909) and thus in [VizieR HATS implementation](https://vizcat.cds.unistra.fr/hats:n=10000/)
+* [FITSTable](https://github.com/cds-astro/cds-fitstable-rust) to support [FITS-plus](https://www.star.bris.ac.uk/mbt/stilts/sun256/fitsPlus.html) files
 
 ## Status
 

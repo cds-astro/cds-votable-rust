@@ -2,12 +2,12 @@ use std::{
   fmt::{self, Formatter},
   marker::PhantomData,
   str::from_utf8,
+  string::String,
 };
 
 use serde::{
   de::{Error, SeqAccess, Unexpected, Visitor},
   Deserialize,
-  __private::from_utf8_lossy,
 };
 
 use crate::error::VOTableError;
@@ -128,7 +128,7 @@ impl<'de> Visitor<'de> for CharVisitor {
     let n_bytes = ucs2::decode(&[v], &mut buf)
       .map_err(VOTableError::FromUCS2)
       .map_err(Error::custom)?;
-    let s = from_utf8_lossy(&buf[..n_bytes]);
+    let s = String::from_utf8_lossy(&buf[..n_bytes]);
     let mut iter = s.chars();
     match (iter.next(), iter.next()) {
       (Some(c), None) => Ok(c),
