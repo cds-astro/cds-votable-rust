@@ -1551,32 +1551,12 @@ impl<'de> DeserializeSeed<'de> for &Schema {
       Schema::CharUnicode => deserializer
         .deserialize_u16(CharVisitor)
         .map(VOTableValue::CharUnicode),
-      Schema::FixedLengthStringUTF8 { n_bytes } => {
-        FixedLengthUTF8StringSeed::new(*n_bytes)
-          .deserialize(deserializer)
-          .map(VOTableValue::String)
-        /*let visitor = FixedLengthArrayVisitor::new(*n_bytes);
-        deserializer
-          .deserialize_tuple(*n_bytes, visitor)
-          .and_then(|bytes| String::from_utf8(bytes).map_err(D::Error::custom))
-          .map(VOTableValue::String)*/
-        /*deserializer
-        .deserialize_tuple(*n_bytes, FixedLengthUTF8StringVisitor::new(*n_bytes))
-        .map(VOTableValue::String)*/
-      }
-      Schema::FixedLengthStringUnicode { n_chars } => {
-        /*let visitor = FixedLengthArrayVisitor::new(*n_chars);
-        let bytes: Vec<u16> = deserializer.deserialize_tuple(*n_chars, visitor)?;
-        decode_ucs2(bytes)
-          .map_err(D::Error::custom)
-          .map(VOTableValue::String)*/
-        /*deserializer
-        .deserialize_tuple(*n_chars, FixedLengthUnicodeStringVisitor::new(*n_chars))
-        .map(VOTableValue::String)*/
-        FixedLengthUnicodeStringSeed::new(*n_chars)
-          .deserialize(deserializer)
-          .map(VOTableValue::String)
-      }
+      Schema::FixedLengthStringUTF8 { n_bytes } => FixedLengthUTF8StringSeed::new(*n_bytes)
+        .deserialize(deserializer)
+        .map(VOTableValue::String),
+      Schema::FixedLengthStringUnicode { n_chars } => FixedLengthUnicodeStringSeed::new(*n_chars)
+        .deserialize(deserializer)
+        .map(VOTableValue::String),
       Schema::VariableLengthStringUTF8 {
         n_bytes_max: n_chars_max,
       } => {

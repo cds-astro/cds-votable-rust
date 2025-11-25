@@ -5,53 +5,18 @@ use std::{
   string::String,
 };
 
-use crate::error::VOTableError;
-use crate::impls::{decode_ucs2, VOTableValue};
-use serde::de::{DeserializeOwned, DeserializeSeed};
 use serde::{
-  de::{Error, SeqAccess, Unexpected, Visitor},
+  de::{DeserializeOwned, DeserializeSeed, Error, SeqAccess, Unexpected, Visitor},
   Deserialize, Deserializer, Serialize,
 };
+
+use crate::{error::VOTableError, impls::decode_ucs2};
 
 /// Structure made to visit a primitive or an optional primitive.
 /// Attempts to visit a primitive different from the one it as been made for will fail.
 pub struct VisitorPrim<E> {
   _marker: PhantomData<E>,
 }
-
-/*
-pub fn get_visitor<E>() -> VisitorPrim<E> {
-  VisitorPrim {
-    _marker: PhantomData
-  }
-}
-
-macro_rules! primitive_visitor {
-  ($ty:ty, $doc:tt, $method:ident) => {
-    impl<'de> Visitor<'de> for VisitorPrim<$ty> {
-      type Value = $ty;
-
-      fn expecting(&self, formatter: & mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, $doc)
-      }
-
-      fn $method<E> (self, v: $ty) -> Result<Self::Value, E>
-        where E: Error {
-        Ok(v)
-      }
-    }
-  };
-}
-
-primitive_visitor!(bool, "a boolean", visit_bool);
-primitive_visitor!(char, "a char", visit_char);
-primitive_visitor!(u8, "an u8", visit_u8);
-primitive_visitor!(i16, "an i16", visit_i16);
-primitive_visitor!(i32, "an i32", visit_i32);
-primitive_visitor!(i64, "an i64", visit_i64);
-primitive_visitor!(f32, "an f32", visit_f32);
-primitive_visitor!(f64, "an f64", visit_f64);
-*/
 
 pub struct StringVisitor;
 
@@ -184,31 +149,6 @@ impl<'a> Visitor<'a> for BytesVisitor {
   }
 }
 
-/*
-pub struct ComplexFloatVisitor;
-
-impl<'a> Visitor<'a> for BytesVisitor {
-  type Value = (f32, f32);
-
-  fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-    formatter.write_str("a borrowed byte array")
-  }
-
-  fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
-    where
-      A: SeqAccess<'de>,
-  {
-    let seq = seq;
-
-    seed: DeserializeSeed<'de>;
-
-    seq.next_element_seed()
-    seq.next_element_seed()
-    Err(Error::invalid_type(Unexpected::Seq, &self))
-  }
-}
-*/
-
 pub struct FixedLengthArrayVisitor<'de, T: Deserialize<'de>> {
   len: usize,
   _marker: &'de PhantomData<T>,
@@ -328,159 +268,6 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for VariableLengthArrayVisitor<'de, 
   }
 }
 
-/*
-pub struct FixedLengthUTF8StringVisitor {
-  n_bytes: usize,
-}
-
-impl FixedLengthUTF8StringVisitor {
-  pub fn new(n_bytes: usize) -> Self {
-    Self { n_bytes }
-  }
-}
-
-impl<'de> Visitor<'de> for FixedLengthUTF8StringVisitor {
-  type Value = String;
-
-  fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
-    formatter.write_str(&format!("an UTF-8 String of {} bytes", self.n_bytes))
-  }
-
-  fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-  where
-    A: SeqAccess<'de>,
-  {
-    (0..self.n_bytes)
-      .into_iter()
-      .map(|_| {
-        seq.next_element().and_then(|elem| {
-          elem.ok_or_else(|| Error::custom(String::from("Premature end of stream")))
-        })
-      })
-      .collect::<Result<Vec<u8>, _>>()
-      .and_then(|bytes| String::from_utf8(bytes).map_err(Error::custom))
-  }
-}
-*/
-
-/*
-pub struct FixedLengthUnicodeStringVisitor {
-  n_chars: usize,
-}
-
-impl FixedLengthUnicodeStringVisitor {
-  pub fn new(n_chars: usize) -> Self {
-    Self { n_chars }
-  }
-}
-
-impl<'de> Visitor<'de> for FixedLengthUnicodeStringVisitor {
-  type Value = String;
-
-  fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
-    formatter.write_str(&format!("a Unicode String of {} chars", self.n_chars))
-  }
-
-  fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-  where
-    A: SeqAccess<'de>,
-  {
-    (0..self.n_chars)
-      .into_iter()
-      .map(|_| {
-        seq.next_element().and_then(|elem| {
-          elem.ok_or_else(|| Error::custom(String::from("Premature end of stream")))
-        })
-      })
-      .collect::<Result<Vec<u16>, _>>()
-      .and_then(|chars| decode_ucs2(chars).map_err(Error::custom))
-  }
-}
-*/
-
-/*
-/// Array of fixed length bytes.
-pub struct FixedLengthArrayOfUTF8StringVisitor {
-  len: usize,
-  str_n_bytes: usize,
-}
-
-impl FixedLengthArrayOfUTF8StringVisitor {
-  pub fn new(len: usize, str_n_bytes: usize) -> Self {
-    Self { len, str_n_bytes }
-  }
-}
-
-impl<'de> Visitor<'de> for FixedLengthArrayOfUTF8StringVisitor {
-  type Value = Vec<String>;
-
-  fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
-    formatter.write_str(&format!("an array of {} UTF-8 Strings", self.len))
-  }
-
-  fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-  where
-    A: SeqAccess<'de>,
-  {
-    (0..self.len)
-      .into_iter()
-      .map(|_| {
-        (0..self.str_n_bytes)
-          .into_iter()
-          .map(|_| {
-            seq.next_element().and_then(|elem| {
-              elem.ok_or_else(|| Error::custom(String::from("Premature end of stream")))
-            })
-          })
-          .collect::<Result<Vec<u8>, _>>()
-          .and_then(|bytes| String::from_utf8(bytes).map_err(Error::custom))
-      })
-      .collect::<Result<Vec<String>, _>>()
-  }
-}
-*/
-
-/*
-/// Array of fixed length bytes.
-pub struct FixedLengthArrayOUnicodeStringVisitor {
-  len: usize,
-  str_n_chars: usize,
-}
-
-impl FixedLengthArrayOUnicodeStringVisitor {
-  pub fn new(len: usize, str_n_chars: usize) -> Self {
-    Self { len, str_n_chars }
-  }
-}
-
-impl<'de> Visitor<'de> for FixedLengthArrayOUnicodeStringVisitor {
-  type Value = Vec<String>;
-
-  fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
-    formatter.write_str(&format!("an array of {} UTF-8 Strings", self.len))
-  }
-
-  fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-  where
-    A: SeqAccess<'de>,
-  {
-    (0..self.len)
-      .into_iter()
-      .map(|_| {
-        (0..self.str_n_chars)
-          .into_iter()
-          .map(|_| {
-            seq.next_element().and_then(|elem| {
-              elem.ok_or_else(|| Error::custom(String::from("Premature end of stream")))
-            })
-          })
-          .collect::<Result<Vec<u16>, _>>()
-          .and_then(|chars| decode_ucs2(chars).map_err(Error::custom))
-      })
-      .collect::<Result<Vec<String>, _>>()
-  }
-}
-*/
 #[derive(Clone)]
 /// An object implementing 'deserialize' for fixed lengh array of primitive types.
 pub struct FixedLengthArrayPhantomSeed<T: DeserializeOwned> {
