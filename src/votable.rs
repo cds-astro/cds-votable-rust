@@ -1127,6 +1127,47 @@ mod tests {
   }
 
   #[test]
+  fn test_array_of_utf8_strings() {
+    let mut votable =
+      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/vot_utf8_array_dt.xml")
+        .unwrap()
+        .unwrap();
+    match serde_json::ser::to_string_pretty(&votable) {
+      Ok(_content) => println!("\nOK"), // println!("{}", &content),
+      Err(error) => {
+        println!("{:?}", &error);
+        assert!(false)
+      }
+    }
+    match toml::ser::to_string_pretty(&votable) {
+      Ok(_content) => println!("\nOK"), // println!("{}", &content),
+      Err(error) => {
+        println!("{:?}", &error);
+        assert!(false)
+      }
+    }
+
+    // println!("\n\n#### XML ####\n");
+
+    // println!("OBJ FROM DATABLE: {:?}", votable);
+    votable.to_binary().unwrap();
+    println!("Convert to binary... done!");
+    let vot_bin_bytes = votable.wrap().to_ivoa_xml_bytes().unwrap();
+    println!("Write BINARY... done!");
+    let mut votable_obj =
+      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_bytes(vot_bin_bytes.as_slice()).unwrap();
+    // println!("OBJ FROM BINARY: {:?}", votable_bin);
+    votable_obj.to_tabledata().unwrap();
+    let vot_td_bytes = votable_obj.to_ivoa_xml_string().unwrap();
+    println!("{}", &vot_td_bytes);
+
+    /*match votable.to quick_xml::se::to_string(&votable) {
+      Ok(content) => println!("{}", &content),
+      Err(error) => println!("{:?}", &error),
+    }*/
+  }
+
+  #[test]
   fn test_votable_read_obscore_file() {
     let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/obscore.vot");
     assert!(votable.is_ok())

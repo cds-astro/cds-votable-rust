@@ -88,6 +88,7 @@ impl<'a, R: BufRead> Read for B64Cleaner<'a, R> {
   }
 }
 
+/// Read at once all bytes of a row.
 pub struct BulkBinaryRowDeserializer<'a, R: BufRead> {
   reader: BufReader<DecoderReader<'static, GeneralPurpose, B64Cleaner<'a, R>>>,
   bulk_reader: Vec<BulkReaderElem>,
@@ -622,6 +623,7 @@ impl<'de, 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializer<R> {
     unreachable!("No newtype struct in VOTable binary data")
   }
 
+  /// Dedicated to variable length arrays
   fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error>
   where
     V: Visitor<'de>,
@@ -636,7 +638,6 @@ impl<'de, 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializer<R> {
       len: usize,
     }
 
-    // impl<'de, 'b, 'a: 'b, R: BufRead> serde::de::SeqAccess<'de> for Access<'b, 'a, R> {
     impl<'de, 'b, R: BufRead> serde::de::SeqAccess<'de> for Access<'b, R> {
       type Error = VOTableError;
 
@@ -646,8 +647,9 @@ impl<'de, 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializer<R> {
       {
         if self.len > 0 {
           self.len -= 1;
-          let value = serde::de::DeserializeSeed::deserialize(seed, &mut *self.deserializer)?;
-          Ok(Some(value))
+          // let value = serde::de::DeserializeSeed::deserialize(seed, &mut *self.deserializer)?;
+          // Ok(Some(value))
+          seed.deserialize(&mut *self.deserializer).map(Some)
         } else {
           Ok(None)
         }
@@ -668,6 +670,7 @@ impl<'de, 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializer<R> {
     })
   }
 
+  /// Dedicated to fixed length arrays
   fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
   where
     V: Visitor<'de>,

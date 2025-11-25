@@ -446,7 +446,9 @@ impl TableDataContent for InMemTableDataRows {
     // Read rows
     while let Ok(true) = binary_deser.has_data_left() {
       let mut row: Vec<VOTableValue> = Vec::with_capacity(schema.len());
+      eprintln!("NEW ROW. Schema: {:?}.", &schema);
       for field_schema in schema.iter() {
+        eprintln!("* FIELD SCHEMA: {:?}", field_schema);
         let field = field_schema.deserialize(&mut binary_deser)?;
         row.push(field);
       }

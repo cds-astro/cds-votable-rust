@@ -164,8 +164,13 @@ impl<'a, W: Write> Serializer for &'a mut BinarySerializer<W> {
     self.serialize_u16(buf[0])
   }
 
-  fn serialize_str(self, _v: &str) -> Result<Self::Ok, Self::Error> {
-    unreachable!("Use serialize_seq or serialize_tuple to serialize str.")
+  fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error> {
+    // unreachable!("Use serialize_seq or serialize_tuple to serialize str.")
+    // Used for UTF-8 strings
+    self
+      .writer
+      .write_all(v.as_bytes())
+      .map_err(VOTableError::Io)
   }
 
   fn serialize_bytes(self, _v: &[u8]) -> Result<Self::Ok, Self::Error> {

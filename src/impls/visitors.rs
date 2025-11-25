@@ -5,12 +5,13 @@ use std::{
   string::String,
 };
 
+use crate::error::VOTableError;
+use crate::impls::{decode_ucs2, VOTableValue};
+use serde::de::{DeserializeOwned, DeserializeSeed};
 use serde::{
   de::{Error, SeqAccess, Unexpected, Visitor},
-  Deserialize,
+  Deserialize, Deserializer, Serialize,
 };
-
-use crate::error::VOTableError;
 
 /// Structure made to visit a primitive or an optional primitive.
 /// Attempts to visit a primitive different from the one it as been made for will fail.
@@ -245,6 +246,45 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for FixedLengthArrayVisitor<'de, T> 
   }
 }
 
+pub struct FixedLengthArrayVisitorWithSeed<T: Clone> {
+  len: usize,
+  seed: T,
+}
+
+impl<U: DeserializeOwned> FixedLengthArrayVisitorWithSeed<PhantomData<U>> {
+  pub fn new_default(len: usize) -> Self {
+    Self::new(len, PhantomData)
+  }
+}
+
+impl<T: Clone> FixedLengthArrayVisitorWithSeed<T> {
+  pub fn new(len: usize, seed: T) -> Self {
+    Self { len, seed }
+  }
+}
+
+impl<'de, T: DeserializeSeed<'de> + Clone> Visitor<'de> for FixedLengthArrayVisitorWithSeed<T> {
+  type Value = Vec<T::Value>;
+
+  fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+    formatter.write_str("an array")
+  }
+
+  fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+  where
+    A: SeqAccess<'de>,
+  {
+    (0..self.len)
+      .into_iter()
+      .map(|_| {
+        seq
+          .next_element_seed(self.seed.clone())
+          .and_then(|opt| opt.ok_or_else(|| Error::custom(String::from("Premature end of stream"))))
+      })
+      .collect()
+  }
+}
+
 pub struct VariableLengthArrayVisitor<'de, T: Deserialize<'de>> {
   upper_n_elems: Option<usize>,
   _marker: &'de PhantomData<T>,
@@ -285,5 +325,305 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for VariableLengthArrayVisitor<'de, 
       v.push(value);
     }
     Ok(v)
+  }
+}
+
+/*
+pub struct FixedLengthUTF8StringVisitor {
+  n_bytes: usize,
+}
+
+impl FixedLengthUTF8StringVisitor {
+  pub fn new(n_bytes: usize) -> Self {
+    Self { n_bytes }
+  }
+}
+
+impl<'de> Visitor<'de> for FixedLengthUTF8StringVisitor {
+  type Value = String;
+
+  fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+    formatter.write_str(&format!("an UTF-8 String of {} bytes", self.n_bytes))
+  }
+
+  fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+  where
+    A: SeqAccess<'de>,
+  {
+    (0..self.n_bytes)
+      .into_iter()
+      .map(|_| {
+        seq.next_element().and_then(|elem| {
+          elem.ok_or_else(|| Error::custom(String::from("Premature end of stream")))
+        })
+      })
+      .collect::<Result<Vec<u8>, _>>()
+      .and_then(|bytes| String::from_utf8(bytes).map_err(Error::custom))
+  }
+}
+*/
+
+/*
+pub struct FixedLengthUnicodeStringVisitor {
+  n_chars: usize,
+}
+
+impl FixedLengthUnicodeStringVisitor {
+  pub fn new(n_chars: usize) -> Self {
+    Self { n_chars }
+  }
+}
+
+impl<'de> Visitor<'de> for FixedLengthUnicodeStringVisitor {
+  type Value = String;
+
+  fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+    formatter.write_str(&format!("a Unicode String of {} chars", self.n_chars))
+  }
+
+  fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+  where
+    A: SeqAccess<'de>,
+  {
+    (0..self.n_chars)
+      .into_iter()
+      .map(|_| {
+        seq.next_element().and_then(|elem| {
+          elem.ok_or_else(|| Error::custom(String::from("Premature end of stream")))
+        })
+      })
+      .collect::<Result<Vec<u16>, _>>()
+      .and_then(|chars| decode_ucs2(chars).map_err(Error::custom))
+  }
+}
+*/
+
+/*
+/// Array of fixed length bytes.
+pub struct FixedLengthArrayOfUTF8StringVisitor {
+  len: usize,
+  str_n_bytes: usize,
+}
+
+impl FixedLengthArrayOfUTF8StringVisitor {
+  pub fn new(len: usize, str_n_bytes: usize) -> Self {
+    Self { len, str_n_bytes }
+  }
+}
+
+impl<'de> Visitor<'de> for FixedLengthArrayOfUTF8StringVisitor {
+  type Value = Vec<String>;
+
+  fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+    formatter.write_str(&format!("an array of {} UTF-8 Strings", self.len))
+  }
+
+  fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+  where
+    A: SeqAccess<'de>,
+  {
+    (0..self.len)
+      .into_iter()
+      .map(|_| {
+        (0..self.str_n_bytes)
+          .into_iter()
+          .map(|_| {
+            seq.next_element().and_then(|elem| {
+              elem.ok_or_else(|| Error::custom(String::from("Premature end of stream")))
+            })
+          })
+          .collect::<Result<Vec<u8>, _>>()
+          .and_then(|bytes| String::from_utf8(bytes).map_err(Error::custom))
+      })
+      .collect::<Result<Vec<String>, _>>()
+  }
+}
+*/
+
+/*
+/// Array of fixed length bytes.
+pub struct FixedLengthArrayOUnicodeStringVisitor {
+  len: usize,
+  str_n_chars: usize,
+}
+
+impl FixedLengthArrayOUnicodeStringVisitor {
+  pub fn new(len: usize, str_n_chars: usize) -> Self {
+    Self { len, str_n_chars }
+  }
+}
+
+impl<'de> Visitor<'de> for FixedLengthArrayOUnicodeStringVisitor {
+  type Value = Vec<String>;
+
+  fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+    formatter.write_str(&format!("an array of {} UTF-8 Strings", self.len))
+  }
+
+  fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+  where
+    A: SeqAccess<'de>,
+  {
+    (0..self.len)
+      .into_iter()
+      .map(|_| {
+        (0..self.str_n_chars)
+          .into_iter()
+          .map(|_| {
+            seq.next_element().and_then(|elem| {
+              elem.ok_or_else(|| Error::custom(String::from("Premature end of stream")))
+            })
+          })
+          .collect::<Result<Vec<u16>, _>>()
+          .and_then(|chars| decode_ucs2(chars).map_err(Error::custom))
+      })
+      .collect::<Result<Vec<String>, _>>()
+  }
+}
+*/
+#[derive(Clone)]
+/// An object implementing 'deserialize' for fixed lengh array of primitive types.
+pub struct FixedLengthArrayPhantomSeed<T: DeserializeOwned> {
+  len: usize,
+  _phantom: PhantomData<T>,
+}
+impl<T: DeserializeOwned> FixedLengthArrayPhantomSeed<T> {
+  pub fn new(len: usize) -> Self {
+    Self {
+      len,
+      _phantom: PhantomData,
+    }
+  }
+}
+impl<'de, T: DeserializeOwned + 'de> DeserializeSeed<'de> for FixedLengthArrayPhantomSeed<T> {
+  type Value = Vec<T>;
+
+  fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+  where
+    D: Deserializer<'de>,
+  {
+    // deserializer.deserialize_tuple(self.len, FixedLengthArrayVisitor::<T>::new(self.len))
+    deserializer.deserialize_tuple(
+      self.len,
+      FixedLengthArrayVisitorWithSeed::<PhantomData<T>>::new_default(self.len),
+    )
+  }
+}
+
+#[derive(Clone)]
+pub struct FixedLengthArraySeed<T: Clone> {
+  len: usize,
+  seed: T,
+}
+impl<T: Clone> FixedLengthArraySeed<T> {
+  pub fn new(len: usize, seed: T) -> Self {
+    Self { len, seed }
+  }
+}
+
+impl<'de, T: 'de + DeserializeSeed<'de> + Clone> DeserializeSeed<'de> for FixedLengthArraySeed<T> {
+  type Value = Vec<T::Value>;
+
+  fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+  where
+    D: Deserializer<'de>,
+  {
+    // deserializer.deserialize_tuple(self.len, FixedLengthArrayVisitor::<T>::new(self.len))
+    deserializer.deserialize_tuple(
+      self.len,
+      FixedLengthArrayVisitorWithSeed::new(self.len, self.seed),
+    )
+  }
+}
+
+#[derive(Clone)]
+pub struct FixedLengthUTF8StringSeed {
+  n_bytes: usize,
+}
+impl FixedLengthUTF8StringSeed {
+  pub fn new(n_bytes: usize) -> Self {
+    Self { n_bytes }
+  }
+}
+impl<'de> DeserializeSeed<'de> for FixedLengthUTF8StringSeed {
+  type Value = String;
+
+  fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+  where
+    D: Deserializer<'de>,
+  {
+    FixedLengthArrayPhantomSeed::<u8>::new(self.n_bytes)
+      .deserialize(deserializer)
+      .and_then(|bytes| String::from_utf8(bytes).map_err(Error::custom))
+  }
+}
+
+#[derive(Clone)]
+pub struct FixedLengthArrayOfUTF8StringSeed {
+  array_size: usize,
+  seed: FixedLengthUTF8StringSeed,
+}
+impl FixedLengthArrayOfUTF8StringSeed {
+  pub fn new(array_size: usize, n_bytes_per_string: usize) -> Self {
+    Self {
+      array_size,
+      seed: FixedLengthUTF8StringSeed::new(n_bytes_per_string),
+    }
+  }
+}
+impl<'de> DeserializeSeed<'de> for FixedLengthArrayOfUTF8StringSeed {
+  type Value = Vec<String>;
+
+  fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+  where
+    D: Deserializer<'de>,
+  {
+    FixedLengthArraySeed::new(self.array_size, self.seed).deserialize(deserializer)
+  }
+}
+
+#[derive(Clone)]
+pub struct FixedLengthUnicodeStringSeed {
+  n_chars: usize,
+}
+impl FixedLengthUnicodeStringSeed {
+  pub fn new(n_chars: usize) -> Self {
+    Self { n_chars }
+  }
+}
+impl<'de> DeserializeSeed<'de> for FixedLengthUnicodeStringSeed {
+  type Value = String;
+
+  fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+  where
+    D: Deserializer<'de>,
+  {
+    FixedLengthArrayPhantomSeed::<u16>::new(self.n_chars)
+      .deserialize(deserializer)
+      .and_then(|chars| decode_ucs2(chars).map_err(Error::custom))
+  }
+}
+
+#[derive(Clone)]
+pub struct FixedLengthArrayOfUnidecodeStringSeed {
+  array_size: usize,
+  seed: FixedLengthUnicodeStringSeed,
+}
+impl FixedLengthArrayOfUnidecodeStringSeed {
+  pub fn new(array_size: usize, n_chars_per_string: usize) -> Self {
+    Self {
+      array_size,
+      seed: FixedLengthUnicodeStringSeed::new(n_chars_per_string),
+    }
+  }
+}
+impl<'de> DeserializeSeed<'de> for FixedLengthArrayOfUnidecodeStringSeed {
+  type Value = Vec<String>;
+
+  fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+  where
+    D: Deserializer<'de>,
+  {
+    FixedLengthArraySeed::new(self.array_size, self.seed).deserialize(deserializer)
   }
 }
