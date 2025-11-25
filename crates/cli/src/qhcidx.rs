@@ -60,7 +60,7 @@ impl QueryHealpixCumulIndex {
         }
         // Ok, load index data
         let hci = fits_hci.get_hcindex();
-        // Checl len
+        // Check len
         let depth = hci.depth();
         if depth < self.depth {
           return Err(VOTableError::Custom(format!(

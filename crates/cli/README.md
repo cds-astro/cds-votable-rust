@@ -392,7 +392,7 @@ See [env_logger](https://docs.rs/env_logger/latest/env_logger/) for more details
 To convert large tables, use the `sconvert` sub-command with the `--parallel` option.
 
 WARNING: so far, the `--parallel` option does not preserve the rows order, 
-let me know if it is problematic.
+let me know if it is problematic (not true anymore; now order is preserved!).
 
 Test on my computer:
 * Intel(R) Core(TM) i5-6600 (4 cores, 4 threads)
