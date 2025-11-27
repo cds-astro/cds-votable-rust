@@ -227,7 +227,7 @@ impl TableDataContent for InMemTableDataStringRows {
 /// Save in memory all rows in a vector.
 /// Each row is itself a vector of field.
 /// Each field is `VOTableValue` parse according to the table schema.
-#[derive(Default, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Default, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct InMemTableDataRows {
   pub rows: Vec<Vec<VOTableValue>>,
 }
