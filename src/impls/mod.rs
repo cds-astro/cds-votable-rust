@@ -207,7 +207,7 @@ impl Display for VOTableValue {
       if let Some(e) = it.next() {
         fmt.write_fmt(format_args!("{} {}", e.0, e.1))?;
         for e in elems.iter() {
-          fmt.write_fmt(format_args!("{} {}", e.0, e.1))?;
+          fmt.write_fmt(format_args!(" {} {}", e.0, e.1))?;
         }
       }
       Ok(())

@@ -1157,15 +1157,15 @@ mod tests {
 
     // println!("OBJ FROM DATABLE: {:?}", votable);
     votable.to_binary().unwrap();
-    println!("Convert to binary... done!");
+    // println!("Convert to binary... done!");
     let vot_bin_bytes = votable.wrap().to_ivoa_xml_bytes().unwrap();
-    println!("Write BINARY... done!");
+    // println!("Write BINARY... done!");
     let mut votable_obj =
       VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_bytes(vot_bin_bytes.as_slice()).unwrap();
     // println!("OBJ FROM BINARY: {:?}", votable_bin);
     votable_obj.to_tabledata().unwrap();
     let vot_td_bytes = votable_obj.to_ivoa_xml_string().unwrap();
-    println!("{}", &vot_td_bytes);
+    // println!("{}", &vot_td_bytes);
     assert_eq!(
       vot_td_bytes,
       r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -1200,10 +1200,9 @@ mod tests {
     // > RUST_LOG=TRACE cargo test test_unicode -- --nocapture
     env_logger::init();
 
-    let mut votable =
-      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/unicode.vot")
-        .unwrap()
-        .unwrap();
+    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/unicode.vot")
+      .unwrap()
+      .unwrap();
     match serde_json::ser::to_string_pretty(&votable) {
       Ok(_content) => println!("\nOK"), // println!("{}", &content),
       Err(error) => {
@@ -1220,28 +1219,93 @@ mod tests {
     }
 
     // println!("\n\n#### XML ####\n");
-    let mut votable = votable.wrap();
-    println!("{}", votable.to_ivoa_xml_string().unwrap());
+    let votable = votable.wrap();
+    // println!("{}", votable.to_ivoa_xml_string().unwrap());
     let mut votable = votable.unwrap();
     // println!("OBJ FROM DATABLE: {:?}", votable);
     votable.to_binary().unwrap();
-    println!("Convert to binary... done!");
+    // println!("Convert to binary... done!");
     let vot_bin_bytes = votable.wrap().to_ivoa_xml_bytes().unwrap();
-    println!("Write BINARY... done!");
+    /*println!("Write BINARY... done!");
     println!(
       "BINARY: {}",
       String::from_utf8_lossy(vot_bin_bytes.as_slice())
-    );
+    );*/
     let mut votable_obj =
       VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_bytes(vot_bin_bytes.as_slice()).unwrap();
     votable_obj.to_tabledata().unwrap();
     let vot_td_bytes = votable_obj.to_ivoa_xml_string().unwrap();
-    println!("{}", &vot_td_bytes);
-
-    /*match votable.to quick_xml::se::to_string(&votable) {
-      Ok(content) => println!("{}", &content),
-      Err(error) => println!("{:?}", &error),
-    }*/
+    // println!("{}", &vot_td_bytes);
+    assert_eq!(
+      vot_td_bytes,
+      r#"<?xml version="1.0" encoding="UTF-8"?>
+<VOTABLE version="1.6" xmlns="http://www.ivoa.net/xml/VOTable/v1.3">
+    <RESOURCE>
+        <TABLE>
+            <INFO name="misc" value="Борщ ꙮ 😀"/>
+            <PARAM name="soup1" datatype="char" value="oxtail" arraysize="6"/>
+            <PARAM name="soup2" datatype="char" value="Борщ" arraysize="8"/>
+            <FIELD name="chr1" datatype="char" arraysize="1"/>
+            <FIELD name="txt" datatype="char" arraysize="*"/>
+            <FIELD name="word10" datatype="char" arraysize="10"/>
+            <FIELD name="words" datatype="char" arraysize="10x2"/>
+            <FIELD name="uchr1" datatype="unicodeChar" arraysize="1"/>
+            <FIELD name="utxt" datatype="unicodeChar" arraysize="*"/>
+            <FIELD name="uword10" datatype="unicodeChar" arraysize="5"/>
+            <FIELD name="uwords" datatype="unicodeChar" arraysize="5x2"/>
+            <FIELD name="ialph" datatype="int"/>
+            <DATA>
+                <TABLEDATA>
+                    <TR>
+                        <TD>A</TD>
+                        <TD>Alpha</TD>
+                        <TD>Alpha.....</TD>
+                        <TD>A123456789a123456789</TD>
+                        <TD>A</TD>
+                        <TD>Alpha</TD>
+                        <TD>Alpha</TD>
+                        <TD>A1234a1234</TD>
+                        <TD>1</TD>
+                    </TR>
+                    <TR>
+                        <TD>B</TD>
+                        <TD>Βητα</TD>
+                        <TD>Βητα..</TD>
+                        <TD>Βητα..beta......</TD>
+                        <TD>B</TD>
+                        <TD>Βητα</TD>
+                        <TD>Βητα.</TD>
+                        <TD>Βητα.beta.</TD>
+                        <TD>2</TD>
+                    </TR>
+                    <TR>
+                        <TD>G</TD>
+                        <TD>Γ</TD>
+                        <TD>Γꙮ.....</TD>
+                        <TD>Γꙮ😀 ABCDEFGHIJ</TD>
+                        <TD>Γ</TD>
+                        <TD>Γαμμα</TD>
+                        <TD>Γꙮ...</TD>
+                        <TD>Γꙮ...ABCDE</TD>
+                        <TD>3</TD>
+                    </TR>
+                    <TR>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD>-2147483648</TD>
+                    </TR>
+                </TABLEDATA>
+            </DATA>
+        </TABLE>
+    </RESOURCE>
+</VOTABLE>"#
+    );
   }
 
   #[test]

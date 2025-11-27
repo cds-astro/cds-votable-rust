@@ -100,7 +100,14 @@ impl<'de> DeserializeSeed<'de> for FixedLengthUTF8StringSeed {
   {
     FixedLengthArrayPhantomSeed::<u8>::new(self.n_bytes)
       .deserialize(deserializer)
-      .and_then(|bytes| String::from_utf8(bytes).map_err(Error::custom))
+      .and_then(|bytes| {
+        // If starts with ascii char NULL, the string is empty
+        if bytes.starts_with(&[0]) {
+          Ok(String::new())
+        } else {
+          String::from_utf8(bytes).map_err(Error::custom)
+        }
+      })
   }
 }
 
@@ -148,7 +155,14 @@ impl<'de> DeserializeSeed<'de> for FixedLengthUnicodeStringSeed {
   {
     FixedLengthArrayPhantomSeed::<u16>::new(self.n_chars)
       .deserialize(deserializer)
-      .and_then(|chars| decode_ucs2(chars).map_err(Error::custom))
+      .and_then(|chars| {
+        // If starts with ascii char NULL, the string is empty
+        if chars.starts_with(&[0]) {
+          Ok(String::new())
+        } else {
+          decode_ucs2(chars).map_err(Error::custom)
+        }
+      })
   }
 }
 
