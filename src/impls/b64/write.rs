@@ -1,16 +1,17 @@
 use std::io::Write;
+
 // Re-export base64 to be sure to use the same version in an external code
 pub use base64::{
   engine::{general_purpose, GeneralPurpose},
   write::EncoderWriter,
 };
 use byteorder::{BigEndian, WriteBytesExt};
-use serde::ser::{
-  SerializeMap, SerializeStruct, SerializeStructVariant, SerializeTupleStruct,
-  SerializeTupleVariant,
-};
+use log::trace;
 use serde::{
-  ser::{SerializeSeq, SerializeTuple},
+  ser::{
+    SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTuple,
+    SerializeTupleStruct, SerializeTupleVariant,
+  },
   Serialize, Serializer,
 };
 
@@ -18,7 +19,9 @@ use crate::error::VOTableError;
 
 const N_CHAR_PER_LINE: usize = 64;
 
+/// Write BASE64 content line by line.
 pub struct B64Formatter<W: Write> {
+  /// Number fo char already written in the current line
   n_curr: usize,
   writer: W,
 }
@@ -31,10 +34,13 @@ impl<W: Write> B64Formatter<W> {
 
 impl<W: Write> Write for B64Formatter<W> {
   fn write(&mut self, mut buf: &[u8]) -> std::io::Result<usize> {
+    trace!("Write: {}", unsafe { str::from_utf8_unchecked(buf) });
     let buf_size = buf.len();
     while !buf.is_empty() {
+      // n: number of chars to be written to complete a line
       let n = N_CHAR_PER_LINE - self.n_curr;
       if n <= buf.len() {
+        // More characters to be written than remaining free characters in the current line
         self.n_curr = 0;
         let (bl, br) = buf.split_at(n);
         self.writer.write_all(bl)?;
@@ -239,7 +245,7 @@ impl<'a, W: Write> Serializer for &'a mut BinarySerializer<W> {
   }
 
   fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple, Self::Error> {
-    // no need to write the len, it is known by the deserializer thanks to the schema
+    // No need to write the len, it is known by the deserializer thanks to the schema
     Ok(SerializeSeqOrTuple { ser: self })
   }
 

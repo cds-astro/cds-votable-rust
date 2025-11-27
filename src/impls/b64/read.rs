@@ -8,6 +8,7 @@ use base64::{
   read::DecoderReader,
 };
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use log::trace;
 use serde::{de::Visitor, Deserializer};
 
 use crate::{error::VOTableError, impls::Schema};
@@ -664,6 +665,7 @@ impl<'de, 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializer<R> {
       .reader
       .read_i32::<BigEndian>()
       .map_err(VOTableError::Io)? as usize;
+    trace!("Deserialize sequence of len: {}", &len);
     visitor.visit_seq(Access {
       deserializer: self,
       len,

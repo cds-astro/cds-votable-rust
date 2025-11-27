@@ -61,6 +61,8 @@ pub enum Version {
   V1_4,
   #[serde(rename = "1.5")]
   V1_5,
+  #[serde(rename = "1.6")]
+  V1_6,
 }
 impl Version {
   /// Returns the **XML** **N**ame**S**pace associated to this particular VOTable version.
@@ -70,8 +72,9 @@ impl Version {
       Self::V1_1 => "http://www.ivoa.net/xml/VOTable/v1.1",
       Self::V1_2 => "http://www.ivoa.net/xml/VOTable/v1.2",
       Self::V1_3 => "http://www.ivoa.net/xml/VOTable/v1.3",
-      Self::V1_4 => "http://www.ivoa.net/xml/VOTable/v1.4",
-      Self::V1_5 => "http://www.ivoa.net/xml/VOTable/v1.5",
+      Self::V1_4 => "http://www.ivoa.net/xml/VOTable/v1.3",
+      Self::V1_5 => "http://www.ivoa.net/xml/VOTable/v1.3",
+      Self::V1_6 => "http://www.ivoa.net/xml/VOTable/v1.3",
     }
   }
 
@@ -83,6 +86,7 @@ impl Version {
       Self::V1_3 => "http://www.ivoa.net/xml/VOTable/v1.3",
       Self::V1_4 => "http://www.ivoa.net/xml/VOTable/v1.4",
       Self::V1_5 => "http://www.ivoa.net/xml/VOTable/v1.5",
+      Self::V1_6 => "http://www.ivoa.net/xml/VOTable/v1.6",
     }
   }
 }
@@ -103,8 +107,9 @@ impl FromStr for Version {
       "1.3" => Ok(Version::V1_3),
       "1.4" => Ok(Version::V1_4),
       "1.5" => Ok(Version::V1_5),
+      "1.6" => Ok(Version::V1_6),
       _ => Err(format!(
-        "Unrecognized version. Actual: '{}'. Expected: '1.1', '1.2', '1.3', '1.4' or '1.5'",
+        "Unrecognized version. Actual: '{}'. Expected: '1.1', '1.2', '1.3', '1.4', '1.5' or '1.6'",
         s
       )),
     }
@@ -120,6 +125,7 @@ impl From<&Version> for &'static str {
       Version::V1_3 => "1.3",
       Version::V1_4 => "1.4",
       Version::V1_5 => "1.5",
+      Version::V1_6 => "1.6",
     }
   }
 }
@@ -1157,6 +1163,77 @@ mod tests {
     let mut votable_obj =
       VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_bytes(vot_bin_bytes.as_slice()).unwrap();
     // println!("OBJ FROM BINARY: {:?}", votable_bin);
+    votable_obj.to_tabledata().unwrap();
+    let vot_td_bytes = votable_obj.to_ivoa_xml_string().unwrap();
+    println!("{}", &vot_td_bytes);
+    assert_eq!(
+      vot_td_bytes,
+      r#"<?xml version="1.0" encoding="UTF-8"?>
+<VOTABLE version="1.5" xmlns="http://www.ivoa.net/xml/VOTable/v1.3">
+    <RESOURCE>
+        <TABLE>
+            <FIELD name="places" datatype="char" arraysize="10x4"/>
+            <DATA>
+                <TABLEDATA>
+                    <TR>
+                        <TD>0123456789012345678901234567890123456789</TD>
+                    </TR>
+                    <TR>
+                        <TD>Valletta..Coll. ParkGörlitz..Strasbourg</TD>
+                    </TR>
+                </TABLEDATA>
+            </DATA>
+        </TABLE>
+    </RESOURCE>
+</VOTABLE>"#
+    );
+
+    /*match votable.to quick_xml::se::to_string(&votable) {
+      Ok(content) => println!("{}", &content),
+      Err(error) => println!("{:?}", &error),
+    }*/
+  }
+
+  #[test]
+  fn test_unicode() {
+    // To see debug purpose logs, run:
+    // > RUST_LOG=TRACE cargo test test_unicode -- --nocapture
+    env_logger::init();
+
+    let mut votable =
+      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/unicode.vot")
+        .unwrap()
+        .unwrap();
+    match serde_json::ser::to_string_pretty(&votable) {
+      Ok(_content) => println!("\nOK"), // println!("{}", &content),
+      Err(error) => {
+        println!("{:?}", &error);
+        assert!(false)
+      }
+    }
+    match toml::ser::to_string_pretty(&votable) {
+      Ok(_content) => println!("\nOK"), // println!("{}", &content),
+      Err(error) => {
+        println!("{:?}", &error);
+        assert!(false)
+      }
+    }
+
+    // println!("\n\n#### XML ####\n");
+    let mut votable = votable.wrap();
+    println!("{}", votable.to_ivoa_xml_string().unwrap());
+    let mut votable = votable.unwrap();
+    // println!("OBJ FROM DATABLE: {:?}", votable);
+    votable.to_binary().unwrap();
+    println!("Convert to binary... done!");
+    let vot_bin_bytes = votable.wrap().to_ivoa_xml_bytes().unwrap();
+    println!("Write BINARY... done!");
+    println!(
+      "BINARY: {}",
+      String::from_utf8_lossy(vot_bin_bytes.as_slice())
+    );
+    let mut votable_obj =
+      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_bytes(vot_bin_bytes.as_slice()).unwrap();
     votable_obj.to_tabledata().unwrap();
     let vot_td_bytes = votable_obj.to_ivoa_xml_string().unwrap();
     println!("{}", &vot_td_bytes);

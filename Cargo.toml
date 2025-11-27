@@ -2,8 +2,8 @@
 name = "votable"
 version = "0.6.3"
 authors = [
-  "F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>",
-  "T. Dumortier <thibault.dumortier@astro.unistra.fr>"
+    "F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>",
+    "T. Dumortier <thibault.dumortier@astro.unistra.fr>"
 ]
 description = """
 Rust implementation of a VOTable serializer/deserializer with support for
@@ -18,7 +18,7 @@ homepage = "https://github.com/cds-astro/cds-votable-rust/"
 repository = "https://github.com/cds-astro/cds-votable-rust/"
 edition = "2021"
 exclude = [
-  "resources",
+    "resources",
 ]
 
 [lib]
@@ -32,7 +32,7 @@ bench = true
 
 [workspace]
 members = [
-  "crates/cli",
+    "crates/cli",
 ]
 exclude = ["crates/wasm"]
 
@@ -55,6 +55,8 @@ bitvec = { version = "1", features = ["std", "alloc", "serde"] }
 bstringify = "0.1"
 log = "0.4"
 
+[dev-dependencies]
+env_logger = "0.11" # RUST_LOG=TRACE carog test -- --nocapture
 
 [features]
 default = []

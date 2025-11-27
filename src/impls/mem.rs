@@ -4,6 +4,7 @@ use std::{
 };
 
 use base64::{engine::general_purpose, read::DecoderReader, write::EncoderWriter};
+use log::trace;
 use quick_xml::{
   events::{BytesStart, BytesText, Event},
   Reader, Writer,
@@ -248,6 +249,7 @@ impl InMemTableDataRows {
   {
     let tr_tag = BytesStart::borrowed_name(b"TR");
     for row_ref in iterator {
+      trace!("Serialized row in DATATABLE: {:?}", row_ref.as_ref());
       writer
         .write_event(Event::Start(tr_tag.to_borrowed()))
         .map_err(VOTableError::Write)
@@ -303,6 +305,7 @@ impl InMemTableDataRows {
     ));
     // Write data
     for row_ref in iterator {
+      trace!("Serialized row in BINARY: {:?}", row_ref.as_ref());
       Self::write_binary_row(&mut serializer, row_ref.as_ref().iter(), &schema)?;
     }
     Ok(())
@@ -327,6 +330,7 @@ impl InMemTableDataRows {
     ));
     // Write data
     for row_ref in iterator {
+      trace!("Serialized row in BINARY2: {:?}", row_ref.as_ref());
       Self::write_binary2_row(&mut serializer, row_ref, &schema)?;
     }
     Ok(())
@@ -345,6 +349,11 @@ impl InMemTableDataRows {
     let n_expected = schema.0.len();
     let mut n_actual = 0;
     for (field_ref, schema_ref) in row_it.zip(schema.0.iter()) {
+      trace!(
+        "Serialize field: {:?}; Schema: {:?}",
+        field_ref.as_ref(),
+        schema_ref
+      );
       schema_ref.serialize_seed(field_ref.as_ref(), &mut *serializer)?;
       n_actual += 1;
     }
@@ -412,6 +421,8 @@ impl TableDataContent for InMemTableDataRows {
             .zip(schema.iter())
             .map(|(f_res, s)| f_res.and_then(|f| s.value_from_str(f.trim())))
             .collect::<Result<Vec<VOTableValue>, VOTableError>>()?;
+          trace!("Deserialize DATATABLE row: {:?}.", &fields);
+
           if fields.len() == schema.len() {
             self.rows.push(fields);
           } else {
@@ -446,12 +457,12 @@ impl TableDataContent for InMemTableDataRows {
     // Read rows
     while let Ok(true) = binary_deser.has_data_left() {
       let mut row: Vec<VOTableValue> = Vec::with_capacity(schema.len());
-      eprintln!("NEW ROW. Schema: {:?}.", &schema);
       for field_schema in schema.iter() {
-        eprintln!("* FIELD SCHEMA: {:?}", field_schema);
         let field = field_schema.deserialize(&mut binary_deser)?;
         row.push(field);
       }
+      trace!("Deserialize BINARY row: {:?}.", &row);
+
       self
         .rows
         .push(mem::replace(&mut row, Vec::with_capacity(schema.len())));
@@ -487,6 +498,8 @@ impl TableDataContent for InMemTableDataRows {
           row.push(field)
         };
       }
+      trace!("Deserialize BINARY2 row: {:?}.", &row);
+
       self
         .rows
         .push(mem::replace(&mut row, Vec::with_capacity(schema.len())));

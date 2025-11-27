@@ -7,10 +7,11 @@ use std::{
 
 use serde::{
   de::{DeserializeOwned, DeserializeSeed, Error, SeqAccess, Unexpected, Visitor},
-  Deserialize, Deserializer, Serialize,
+  Deserialize,
 };
 
-use crate::{error::VOTableError, impls::decode_ucs2};
+use super::seeds::{FixedLengthVectorAppenderSeed, FixedLengthVectorAppenderSeedWithSeed};
+use crate::error::VOTableError;
 
 /// Structure made to visit a primitive or an optional primitive.
 /// Attempts to visit a primitive different from the one it as been made for will fail.
@@ -226,7 +227,8 @@ impl<'de, T: DeserializeSeed<'de> + Clone> Visitor<'de> for FixedLengthArrayVisi
 }
 
 pub struct VariableLengthArrayVisitor<'de, T: Deserialize<'de>> {
-  upper_n_elems: Option<usize>,
+  /// Maximum size of the array, if knowned.
+  max_len: Option<usize>,
   _marker: &'de PhantomData<T>,
 }
 
@@ -237,9 +239,9 @@ impl<'de, T: Deserialize<'de>> Default for VariableLengthArrayVisitor<'de, T> {
 }
 
 impl<'de, T: Deserialize<'de>> VariableLengthArrayVisitor<'de, T> {
-  pub fn new(upper_n_elems: Option<usize>) -> Self {
+  pub fn new(max_len: Option<usize>) -> Self {
     Self {
-      upper_n_elems,
+      max_len,
       _marker: &PhantomData,
     }
   }
@@ -258,7 +260,7 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for VariableLengthArrayVisitor<'de, 
   {
     let mut v: Vec<T> = Vec::with_capacity(
       self
-        .upper_n_elems
+        .max_len
         .unwrap_or_else(|| seq.size_hint().unwrap_or(16)),
     );
     while let Some(value) = seq.next_element()? {
@@ -268,149 +270,196 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for VariableLengthArrayVisitor<'de, 
   }
 }
 
-#[derive(Clone)]
-/// An object implementing 'deserialize' for fixed lengh array of primitive types.
-pub struct FixedLengthArrayPhantomSeed<T: DeserializeOwned> {
-  len: usize,
-  _phantom: PhantomData<T>,
-}
-impl<T: DeserializeOwned> FixedLengthArrayPhantomSeed<T> {
-  pub fn new(len: usize) -> Self {
-    Self {
-      len,
-      _phantom: PhantomData,
-    }
-  }
-}
-impl<'de, T: DeserializeOwned + 'de> DeserializeSeed<'de> for FixedLengthArrayPhantomSeed<T> {
-  type Value = Vec<T>;
-
-  fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-  where
-    D: Deserializer<'de>,
-  {
-    // deserializer.deserialize_tuple(self.len, FixedLengthArrayVisitor::<T>::new(self.len))
-    deserializer.deserialize_tuple(
-      self.len,
-      FixedLengthArrayVisitorWithSeed::<PhantomData<T>>::new_default(self.len),
-    )
-  }
-}
-
-#[derive(Clone)]
-pub struct FixedLengthArraySeed<T: Clone> {
-  len: usize,
+pub struct VariableLengthArrayVisitorWithSeed<T: Clone> {
+  /// Maximum size of the array, if knowned.
+  max_len: Option<usize>,
   seed: T,
 }
-impl<T: Clone> FixedLengthArraySeed<T> {
-  pub fn new(len: usize, seed: T) -> Self {
-    Self { len, seed }
+
+impl<U: DeserializeOwned> VariableLengthArrayVisitorWithSeed<PhantomData<U>> {
+  pub fn new_default(max_len: Option<usize>) -> Self {
+    Self::new(max_len, PhantomData)
   }
 }
 
-impl<'de, T: 'de + DeserializeSeed<'de> + Clone> DeserializeSeed<'de> for FixedLengthArraySeed<T> {
+impl<T: Clone> VariableLengthArrayVisitorWithSeed<T> {
+  pub fn new(max_len: Option<usize>, seed: T) -> Self {
+    Self { max_len, seed }
+  }
+}
+
+impl<'de, T: DeserializeSeed<'de> + Clone> Visitor<'de> for VariableLengthArrayVisitorWithSeed<T> {
   type Value = Vec<T::Value>;
 
-  fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+  fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+    formatter.write_str("an array")
+  }
+
+  fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
   where
-    D: Deserializer<'de>,
+    A: SeqAccess<'de>,
   {
-    // deserializer.deserialize_tuple(self.len, FixedLengthArrayVisitor::<T>::new(self.len))
-    deserializer.deserialize_tuple(
+    let mut v: Vec<T::Value> = Vec::with_capacity(
+      self
+        .max_len
+        .unwrap_or_else(|| seq.size_hint().unwrap_or(16)),
+    );
+    while let Some(value) = seq.next_element_seed(self.seed.clone())? {
+      v.push(value);
+    }
+    Ok(v)
+  }
+}
+
+// VAR ARRAYS OF FIXED ARRAYS FOR PRIMITIVES
+
+/// Appender for fixed length arrays
+pub struct FixedLengthVectorAppenderVisitor<'a, T: 'a> {
+  len: usize,
+  v: &'a mut Vec<T>,
+}
+impl<'a, T: 'a> FixedLengthVectorAppenderVisitor<'a, T> {
+  pub fn new(len: usize, v: &'a mut Vec<T>) -> Self {
+    Self { len, v }
+  }
+}
+impl<'de, 'a, T> Visitor<'de> for FixedLengthVectorAppenderVisitor<'a, T>
+where
+  T: Deserialize<'de>,
+{
+  type Value = ();
+  fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+    formatter.write_str("an array")
+  }
+  fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+  where
+    A: SeqAccess<'de>,
+  {
+    for _ in 0..self.len {
+      let e = seq.next_element().and_then(|opt| {
+        opt.ok_or_else(|| Error::custom(String::from("Premature end of stream")))
+      })?;
+      self.v.push(e);
+    }
+    Ok(())
+  }
+}
+
+/// Appender for variable array of fixed length arrays
+pub struct VarVectorOfFixedVectorAppenderVisitor<'a, T: 'a> {
+  len: usize,
+  v: &'a mut Vec<T>,
+}
+impl<'a, T: 'a> VarVectorOfFixedVectorAppenderVisitor<'a, T> {
+  pub fn new(len: usize, v: &'a mut Vec<T>) -> Self {
+    Self { len, v }
+  }
+}
+impl<'de, 'a, T> Visitor<'de> for VarVectorOfFixedVectorAppenderVisitor<'a, T>
+where
+  T: Deserialize<'de>,
+{
+  type Value = ();
+
+  fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+    formatter.write_str("an array")
+  }
+
+  fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+  where
+    A: SeqAccess<'de>,
+  {
+    while let Some(()) =
+      seq.next_element_seed(FixedLengthVectorAppenderSeed::new(self.len, self.v))?
+    {}
+    Ok(())
+  }
+}
+
+// VAR ARRAYS OF FIXED ARRAYS FOR TYPES WITH SEEDS
+
+/// Appender for fixed length arrays
+pub struct FixedLengthVectorAppenderVisitorWithSeed<'a, T, S>
+where
+  T: 'a,
+  S: Clone,
+{
+  len: usize,
+  v: &'a mut Vec<T>,
+  seed: S,
+}
+
+impl<'a, T, S> FixedLengthVectorAppenderVisitorWithSeed<'a, T, S>
+where
+  T: 'a,
+  S: Clone,
+{
+  pub fn new(len: usize, v: &'a mut Vec<T>, seed: S) -> Self {
+    Self { len, v, seed }
+  }
+}
+impl<'de, 'a, T, S> Visitor<'de> for FixedLengthVectorAppenderVisitorWithSeed<'a, T, S>
+where
+  T: Deserialize<'de>,
+  S: DeserializeSeed<'de, Value = T> + Clone,
+{
+  type Value = ();
+  fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+    formatter.write_str("an array")
+  }
+  fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+  where
+    A: SeqAccess<'de>,
+  {
+    for _ in 0..self.len {
+      let e = seq.next_element_seed(self.seed.clone()).and_then(|opt| {
+        opt.ok_or_else(|| Error::custom(String::from("Premature end of stream")))
+      })?;
+      self.v.push(e);
+    }
+    Ok(())
+  }
+}
+
+/// Appender for variable array of fixed length arrays
+pub struct VarVectorOfFixedVectorAppenderVisitorWithSeed<'a, T, S>
+where
+  T: 'a,
+  S: Clone,
+{
+  len: usize,
+  v: &'a mut Vec<T>,
+  seed: S,
+}
+impl<'a, T, S> VarVectorOfFixedVectorAppenderVisitorWithSeed<'a, T, S>
+where
+  T: 'a,
+  S: Clone,
+{
+  pub fn new(len: usize, v: &'a mut Vec<T>, seed: S) -> Self {
+    Self { len, v, seed }
+  }
+}
+impl<'de, 'a, T, S> Visitor<'de> for VarVectorOfFixedVectorAppenderVisitorWithSeed<'a, T, S>
+where
+  T: Deserialize<'de>,
+  S: DeserializeSeed<'de, Value = T> + Clone,
+{
+  type Value = ();
+
+  fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+    formatter.write_str("an array")
+  }
+
+  fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+  where
+    A: SeqAccess<'de>,
+  {
+    while let Some(()) = seq.next_element_seed(FixedLengthVectorAppenderSeedWithSeed::new(
       self.len,
-      FixedLengthArrayVisitorWithSeed::new(self.len, self.seed),
-    )
-  }
-}
-
-#[derive(Clone)]
-pub struct FixedLengthUTF8StringSeed {
-  n_bytes: usize,
-}
-impl FixedLengthUTF8StringSeed {
-  pub fn new(n_bytes: usize) -> Self {
-    Self { n_bytes }
-  }
-}
-impl<'de> DeserializeSeed<'de> for FixedLengthUTF8StringSeed {
-  type Value = String;
-
-  fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-  where
-    D: Deserializer<'de>,
-  {
-    FixedLengthArrayPhantomSeed::<u8>::new(self.n_bytes)
-      .deserialize(deserializer)
-      .and_then(|bytes| String::from_utf8(bytes).map_err(Error::custom))
-  }
-}
-
-#[derive(Clone)]
-pub struct FixedLengthArrayOfUTF8StringSeed {
-  array_size: usize,
-  seed: FixedLengthUTF8StringSeed,
-}
-impl FixedLengthArrayOfUTF8StringSeed {
-  pub fn new(array_size: usize, n_bytes_per_string: usize) -> Self {
-    Self {
-      array_size,
-      seed: FixedLengthUTF8StringSeed::new(n_bytes_per_string),
-    }
-  }
-}
-impl<'de> DeserializeSeed<'de> for FixedLengthArrayOfUTF8StringSeed {
-  type Value = Vec<String>;
-
-  fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-  where
-    D: Deserializer<'de>,
-  {
-    FixedLengthArraySeed::new(self.array_size, self.seed).deserialize(deserializer)
-  }
-}
-
-#[derive(Clone)]
-pub struct FixedLengthUnicodeStringSeed {
-  n_chars: usize,
-}
-impl FixedLengthUnicodeStringSeed {
-  pub fn new(n_chars: usize) -> Self {
-    Self { n_chars }
-  }
-}
-impl<'de> DeserializeSeed<'de> for FixedLengthUnicodeStringSeed {
-  type Value = String;
-
-  fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-  where
-    D: Deserializer<'de>,
-  {
-    FixedLengthArrayPhantomSeed::<u16>::new(self.n_chars)
-      .deserialize(deserializer)
-      .and_then(|chars| decode_ucs2(chars).map_err(Error::custom))
-  }
-}
-
-#[derive(Clone)]
-pub struct FixedLengthArrayOfUnidecodeStringSeed {
-  array_size: usize,
-  seed: FixedLengthUnicodeStringSeed,
-}
-impl FixedLengthArrayOfUnidecodeStringSeed {
-  pub fn new(array_size: usize, n_chars_per_string: usize) -> Self {
-    Self {
-      array_size,
-      seed: FixedLengthUnicodeStringSeed::new(n_chars_per_string),
-    }
-  }
-}
-impl<'de> DeserializeSeed<'de> for FixedLengthArrayOfUnidecodeStringSeed {
-  type Value = Vec<String>;
-
-  fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-  where
-    D: Deserializer<'de>,
-  {
-    FixedLengthArraySeed::new(self.array_size, self.seed).deserialize(deserializer)
+      self.v,
+      self.seed.clone(),
+    ))? {}
+    Ok(())
   }
 }
