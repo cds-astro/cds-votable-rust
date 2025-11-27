@@ -1200,31 +1200,7 @@ mod tests {
     // > RUST_LOG=TRACE cargo test test_unicode -- --nocapture
     env_logger::init();
 
-    // Read from DATATABLE
-    let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/unicode.vot")
-      .unwrap()
-      .unwrap();
-    match serde_json::ser::to_string_pretty(&votable) {
-      Ok(_content) => println!("\nOK"), // println!("{}", &content),
-      Err(error) => {
-        println!("{:?}", &error);
-        assert!(false)
-      }
-    }
-    match toml::ser::to_string_pretty(&votable) {
-      Ok(_content) => println!("\nOK"), // println!("{}", &content),
-      Err(error) => {
-        println!("{:?}", &error);
-        assert!(false)
-      }
-    }
-
-    // Re-write into TABLEDATA
-    let mut votable = votable.wrap();
-    let votable_dt_string = votable.to_ivoa_xml_string().unwrap();
-    assert_eq!(
-      votable_dt_string,
-      r#"<?xml version="1.0" encoding="UTF-8"?>
+    let expected = r#"<?xml version="1.0" encoding="UTF-8"?>
 <VOTABLE version="1.6" xmlns="http://www.ivoa.net/xml/VOTable/v1.3">
     <RESOURCE>
         <TABLE>
@@ -1290,8 +1266,28 @@ mod tests {
             </DATA>
         </TABLE>
     </RESOURCE>
-</VOTABLE>"#
-    );
+</VOTABLE>"#;
+
+    // Read from DATATABLE
+    let mut votable =
+      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/unicode.vot").unwrap();
+
+    // JSON conversion
+    let json = serde_json::ser::to_string_pretty(&votable).unwrap();
+    let mut votable_json = VOTableWrapper::<InMemTableDataRows>::from_json_str(&json).unwrap();
+    let votable_dt_string = votable_json.to_ivoa_xml_string().unwrap();
+    assert_eq!(votable_dt_string, expected);
+
+    // TOML
+    let toml = toml::ser::to_string_pretty(&votable).unwrap();
+    let mut votable_toml = VOTableWrapper::<InMemTableDataRows>::from_toml_str(&toml).unwrap();
+    let votable_dt_string = votable_toml.to_ivoa_xml_string().unwrap();
+    assert_eq!(votable_dt_string, expected);
+
+    // Re-write into TABLEDATA
+    // let mut votable = votable;
+    let votable_dt_string = votable.to_ivoa_xml_string().unwrap();
+    assert_eq!(votable_dt_string, expected);
 
     // Convert in-memory into BINARY, convert into XML, read from XML, convert in TABLEDATA and compare
     let mut votable_bin = votable.clone();
