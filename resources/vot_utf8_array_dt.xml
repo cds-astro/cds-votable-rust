@@ -1,0 +1,13 @@
+<VOTABLE version="1.5" xmlns="http://www.ivoa.net/xml/VOTable/v1.3">
+<RESOURCE>
+<TABLE>
+<FIELD name="places" datatype="char" arraysize="10x4"/>
+<DATA>
+<TABLEDATA>
+<TR><TD>0123456789012345678901234567890123456789</TD></TR>
+<TR><TD>Valletta..Coll. ParkGörlitz..Strasbourg</TD></TR>
+</TABLEDATA>
+</DATA>
+</TABLE>
+</RESOURCE>
+</VOTABLE>
