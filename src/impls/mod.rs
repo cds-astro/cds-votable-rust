@@ -1,18 +1,3 @@
-use std::{
-  cmp::Ordering,
-  fmt::{self, Display, Formatter, Write},
-  mem::size_of,
-  slice::Iter,
-};
-
-use bitvec::{order::Msb0, vec::BitVec as BV};
-use log::{trace, warn};
-use serde::{
-  de::{DeserializeSeed, Error as DeError},
-  ser::{Error as SerError, SerializeSeq, SerializeTuple},
-  Deserialize, Deserializer, Serialize, Serializer,
-};
-
 use crate::{
   datatype::Datatype,
   error::VOTableError,
@@ -20,6 +5,19 @@ use crate::{
   field::Field,
   impls::visitors::{FixedLengthArrayVisitor, VariableLengthArrayVisitor},
   table::TableElem,
+};
+use bitvec::{order::Msb0, vec::BitVec as BV};
+use log::{trace, warn};
+use serde::{
+  de::{DeserializeSeed, Error as DeError},
+  ser::{Error as SerError, SerializeSeq, SerializeTuple},
+  Deserialize, Deserializer, Serialize, Serializer,
+};
+use std::{
+  cmp::Ordering,
+  fmt::{self, Display, Formatter, Write},
+  mem::size_of,
+  slice::Iter,
 };
 
 pub mod b64;
@@ -126,8 +124,7 @@ impl<'a> Serialize for VariableLengthStringUnicode<'a> {
 }
 
 // WARNING: THE ORDER IS IMPORTANT WHEN DESERIALIZING JSON, NOT TO LOOSE SIGNIFICANT DIGITS!!
-#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
-#[serde(untagged)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum VOTableValue {
   Null,
   Bool(bool), // <=> Bit(bool)
@@ -206,6 +203,110 @@ impl Serialize for VOTableValue {
       VOTableValue::ComplexDoubleArray(v) => v.serialize(serializer),
       VOTableValue::StringArray(v) => v.serialize(serializer), // depends on unicode vs regular utf8-strings ?
     }
+  }
+}
+
+impl<'de> Deserialize<'de> for VOTableValue {
+  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+  where
+    D: Deserializer<'de>,
+  {
+    use serde::__private226::de::{ContentRefDeserializer, ContentVisitor, UntaggedUnitVisitor};
+
+    let content = ContentVisitor::new().deserialize(deserializer)?;
+    let deserializer = ContentRefDeserializer::<'_, '_, D::Error>::new(&content);
+    // First try Null value
+    if let Ok(()) = deserializer.deserialize_any(UntaggedUnitVisitor::new("VOTableValue", "Null")) {
+      return Ok(VOTableValue::Null);
+    }
+    if let Ok(v) = <bool>::deserialize(deserializer) {
+      return Ok(VOTableValue::Bool(v));
+    }
+    if let Ok(v) = <u8>::deserialize(deserializer) {
+      return Ok(VOTableValue::Byte(v));
+    }
+    if let Ok(v) = <i16>::deserialize(deserializer) {
+      return Ok(VOTableValue::Short(v));
+    }
+    if let Ok(v) = <i32>::deserialize(deserializer) {
+      return Ok(VOTableValue::Int(v));
+    }
+    if let Ok(v) = <i64>::deserialize(deserializer) {
+      return Ok(VOTableValue::Long(v));
+    }
+    /*if let Ok(v) = <f32>::deserialize(deserializer) {
+      return Ok(VOTableValue::Float(v));
+    }*/
+    if let Ok(v) = <f64>::deserialize(deserializer) {
+      return Ok(VOTableValue::Double(v));
+    }
+    if let Ok(v) = <char>::deserialize(deserializer) {
+      if v.is_ascii() {
+        return Ok(VOTableValue::CharASCII(v));
+      } else {
+        return Ok(VOTableValue::CharUnicode(v));
+      }
+    }
+    if let Ok(v) = <String>::deserialize(deserializer) {
+      if v.is_empty() {
+        // TODO: also check that the deserializer is the TOML deserializer?
+        return Ok(VOTableValue::Null);
+      } else {
+        return Ok(VOTableValue::String(v));
+      }
+    }
+    if let Ok(v) = <BitVec>::deserialize(deserializer) {
+      return Ok(VOTableValue::BitArray(v));
+    }
+    if let Ok(v) = <Vec<Option<bool>>>::deserialize(deserializer) {
+      return Ok(VOTableValue::BooleanArray(v));
+    }
+    if let Ok(v) = <Vec<u8>>::deserialize(deserializer) {
+      return Ok(VOTableValue::ByteArray(v));
+    }
+    if let Ok(v) = <Vec<i16>>::deserialize(deserializer) {
+      return Ok(VOTableValue::ShortArray(v));
+    }
+    if let Ok(v) = <Vec<i32>>::deserialize(deserializer) {
+      return Ok(VOTableValue::IntArray(v));
+    }
+    if let Ok(v) = <(f32, f32)>::deserialize(deserializer) {
+      return Ok(VOTableValue::ComplexFloat(v));
+    }
+    if let Ok(v) = <(f64, f64)>::deserialize(deserializer) {
+      return Ok(VOTableValue::ComplexDouble(v));
+    }
+    if let Ok(v) = <Vec<i64>>::deserialize(deserializer) {
+      return Ok(VOTableValue::LongArray(v));
+    }
+    if let Ok(v) = <Vec<f32>>::deserialize(deserializer) {
+      return Ok(VOTableValue::FloatArray(v));
+    }
+    if let Ok(mut v) = <Vec<Option<f32>>>::deserialize(deserializer) {
+      return Ok(VOTableValue::FloatArray(
+        v.drain(..).map(|v| v.unwrap_or(f32::NAN)).collect(),
+      ));
+    }
+    if let Ok(v) = <Vec<f64>>::deserialize(deserializer) {
+      return Ok(VOTableValue::DoubleArray(v));
+    }
+    if let Ok(mut v) = <Vec<Option<f64>>>::deserialize(deserializer) {
+      return Ok(VOTableValue::DoubleArray(
+        v.drain(..).map(|v| v.unwrap_or(f64::NAN)).collect(),
+      ));
+    }
+    if let Ok(v) = <Vec<(f32, f32)>>::deserialize(deserializer) {
+      return Ok(VOTableValue::ComplexFloatArray(v));
+    }
+    if let Ok(v) = <Vec<(f64, f64)>>::deserialize(deserializer) {
+      return Ok(VOTableValue::ComplexDoubleArray(v));
+    }
+    if let Ok(v) = <Vec<String>>::deserialize(deserializer) {
+      return Ok(VOTableValue::StringArray(v));
+    }
+    Err(D::Error::custom(
+      "Data did not match any variant of untagged enum VOTableValueUnknown VOTableValue",
+    ))
   }
 }
 
@@ -1287,9 +1388,27 @@ impl Schema {
       VOTableValue::ComplexFloat((l, r)) => match self {
         Schema::ComplexFloat => None,
         Schema::ComplexDouble => Some(VOTableValue::ComplexDouble((*l as f64, *r as f64))),
+        Schema::FixedLengthArray {
+          n_elems: _,
+          elem_schema,
+        }
+        | Schema::VariableLengthArray {
+          n_elems_max: _,
+          elem_schema,
+        } => elem_schema
+          .primitive_schema()
+          .map_err(|e| e.to_string())
+          .and_then(|ps| match ps {
+            Schema::Float => Ok(Some(VOTableValue::FloatArray(vec![*l, *r]))),
+            Schema::Double => Ok(Some(VOTableValue::DoubleArray(vec![*l as f64, *r as f64]))),
+            _ => Err(format!(
+              "Value of type ComplexFloat with primitive schema: {:?}",
+              ps
+            )),
+          })?,
         _ => {
           return Err(format!(
-            "Value of type ComplexDouble with schema: {:?}",
+            "Value of type ComplexFloat with schema: {:?}",
             self
           ))
         }
@@ -1297,6 +1416,24 @@ impl Schema {
       VOTableValue::ComplexDouble((l, r)) => match self {
         Schema::ComplexFloat => Some(VOTableValue::ComplexFloat((*l as f32, *r as f32))),
         Schema::ComplexDouble => None,
+        Schema::FixedLengthArray {
+          n_elems: _,
+          elem_schema,
+        }
+        | Schema::VariableLengthArray {
+          n_elems_max: _,
+          elem_schema,
+        } => elem_schema
+          .primitive_schema()
+          .map_err(|e| e.to_string())
+          .and_then(|ps| match ps {
+            Schema::Float => Ok(Some(VOTableValue::FloatArray(vec![*l as f32, *r as f32]))),
+            Schema::Double => Ok(Some(VOTableValue::DoubleArray(vec![*l, *r]))),
+            _ => Err(format!(
+              "Value of type ComplexDouble with primitive schema: {:?}",
+              ps
+            )),
+          })?,
         _ => {
           return Err(format!(
             "Value of type ComplexDouble with schema: {:?}",

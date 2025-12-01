@@ -1,0 +1,517 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VOTABLE version="1.4" xmlns="http://www.ivoa.net/xml/VOTable/v1.3">
+    <RESOURCE>
+        <TABLE nrows="10">
+            <FIELD name="i_index" datatype="int">
+                <DESCRIPTION>Row index</DESCRIPTION>
+            </FIELD>
+            <FIELD name="b_int" datatype="int"/>
+            <FIELD name="b_double" datatype="double"/>
+            <FIELD name="b_string" datatype="char" arraysize="*"/>
+            <FIELD name="s_byte" datatype="short"/>
+            <FIELD name="s_short" datatype="short"/>
+            <FIELD name="s_int" datatype="int"/>
+            <FIELD name="s_long" datatype="long"/>
+            <FIELD name="s_float" datatype="float"/>
+            <FIELD name="s_double" datatype="double"/>
+            <FIELD name="s_string" datatype="char" arraysize="*"/>
+            <FIELD name="s_boolean" datatype="boolean"/>
+            <FIELD name="f_byte" datatype="short" arraysize="3"/>
+            <FIELD name="f_short" datatype="short" arraysize="3"/>
+            <FIELD name="f_int" datatype="int" arraysize="3"/>
+            <FIELD name="f_long" datatype="long" arraysize="3"/>
+            <FIELD name="f_float" datatype="float" arraysize="3"/>
+            <FIELD name="f_double" datatype="double" arraysize="3"/>
+            <FIELD name="f_string" datatype="char" arraysize="14x3"/>
+            <FIELD name="f_boolean" datatype="boolean" arraysize="3"/>
+            <FIELD name="g_byte" datatype="short" arraysize="3"/>
+            <FIELD name="g_short" datatype="short" arraysize="3"/>
+            <FIELD name="g_int" datatype="int" arraysize="3"/>
+            <FIELD name="g_long" datatype="long" arraysize="3"/>
+            <FIELD name="g_float" datatype="float" arraysize="3"/>
+            <FIELD name="g_double" datatype="double" arraysize="3"/>
+            <FIELD name="g_boolean" datatype="boolean" arraysize="3"/>
+            <FIELD name="v_byte" datatype="short" arraysize="*"/>
+            <FIELD name="v_short" datatype="short" arraysize="*"/>
+            <FIELD name="v_int" datatype="int" arraysize="*"/>
+            <FIELD name="v_long" datatype="long" arraysize="*"/>
+            <FIELD name="v_float" datatype="float" arraysize="*"/>
+            <FIELD name="v_double" datatype="double" arraysize="*"/>
+            <FIELD name="v_string" datatype="char" arraysize="14x*"/>
+            <FIELD name="v_boolean" datatype="boolean" arraysize="*"/>
+            <FIELD name="w_byte" datatype="short" arraysize="*"/>
+            <FIELD name="w_short" datatype="short" arraysize="*"/>
+            <FIELD name="w_int" datatype="int" arraysize="*"/>
+            <FIELD name="w_long" datatype="long" arraysize="*"/>
+            <FIELD name="w_float" datatype="float" arraysize="*"/>
+            <FIELD name="w_double" datatype="double" arraysize="*"/>
+            <FIELD name="w_boolean" datatype="boolean" arraysize="*"/>
+            <FIELD name="m_int" datatype="int" arraysize="2x4"/>
+            <FIELD name="m_double" datatype="double" arraysize="3x2"/>
+            <DATA>
+                <TABLEDATA>
+                    <TR>
+                        <TD>0</TD>
+                        <TD>0</TD>
+                        <TD>0</TD>
+                        <TD>zero</TD>
+                        <TD>0</TD>
+                        <TD>0</TD>
+                        <TD>0</TD>
+                        <TD>0</TD>
+                        <TD>0</TD>
+                        <TD>0</TD>
+                        <TD>zero</TD>
+                        <TD>false</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 NaN 2.5</TD>
+                        <TD>0 0 NaN 2.5</TD>
+                        <TD>foo                         zero          </TD>
+                        <TD>false false false false</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 NaN 2.5</TD>
+                        <TD>0 0 NaN 2.5</TD>
+                        <TD>false false false false</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 NaN 2.5</TD>
+                        <TD>0 0 NaN 2.5</TD>
+                        <TD>foo                         zero          </TD>
+                        <TD>false false false false</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 1 2</TD>
+                        <TD>0 0 NaN 2.5</TD>
+                        <TD>0 0 NaN 2.5</TD>
+                        <TD>false false false false</TD>
+                        <TD>1000 1000 1001 2000 2001 3000 3001 4000 4001</TD>
+                        <TD>0.25 0.25 0.5 0.75 -0.25 -0.5 -0.75</TD>
+                    </TR>
+                    <TR>
+                        <TD>1</TD>
+                        <TD>-2147483648</TD>
+                        <TD>1</TD>
+                        <TD>one</TD>
+                        <TD>-32768</TD>
+                        <TD>1</TD>
+                        <TD>1</TD>
+                        <TD>1</TD>
+                        <TD>1</TD>
+                        <TD>1</TD>
+                        <TD>one</TD>
+                        <TD>true</TD>
+                        <TD>0 0 0 0</TD>
+                        <TD>1 1 2 3</TD>
+                        <TD>1 1 2 3</TD>
+                        <TD>1 1 2 3</TD>
+                        <TD>1 1 NaN 3.5</TD>
+                        <TD>1 1 NaN 3.5</TD>
+                        <TD>foo                         one           </TD>
+                        <TD>true true false false</TD>
+                        <TD>0 0 0 0</TD>
+                        <TD>1 1 2 3</TD>
+                        <TD>1 1 2 3</TD>
+                        <TD>1 1 2 3</TD>
+                        <TD>1 1 NaN 3.5</TD>
+                        <TD>1 1 NaN 3.5</TD>
+                        <TD>true true false false</TD>
+                        <TD></TD>
+                        <TD>1 1 2</TD>
+                        <TD>1 1 2</TD>
+                        <TD>1 1 2</TD>
+                        <TD>1 1 NaN</TD>
+                        <TD>1 1 NaN</TD>
+                        <TD>foo                         </TD>
+                        <TD>true true false</TD>
+                        <TD></TD>
+                        <TD>1 1 2</TD>
+                        <TD>1 1 2</TD>
+                        <TD>1 1 2</TD>
+                        <TD>1 1 NaN</TD>
+                        <TD>1 1 NaN</TD>
+                        <TD>true true false</TD>
+                        <TD>0 0 0 0 0 0 0 0 0</TD>
+                        <TD>1.25 1.25 1.5 1.75 -1.25 -1.5 -1.75</TD>
+                    </TR>
+                    <TR>
+                        <TD>2</TD>
+                        <TD>2</TD>
+                        <TD></TD>
+                        <TD>two</TD>
+                        <TD>2</TD>
+                        <TD>-32768</TD>
+                        <TD>2</TD>
+                        <TD>2</TD>
+                        <TD>2</TD>
+                        <TD>2</TD>
+                        <TD>two</TD>
+                        <TD>false</TD>
+                        <TD>2 2 3 4</TD>
+                        <TD>0 0 0 0</TD>
+                        <TD>2 2 3 4</TD>
+                        <TD>2 2 3 4</TD>
+                        <TD>2 2 NaN 4.5</TD>
+                        <TD>2 2 NaN 4.5</TD>
+                        <TD>foo                         two           </TD>
+                        <TD>false false true false</TD>
+                        <TD>2 2 3 4</TD>
+                        <TD>0 0 0 0</TD>
+                        <TD>2 2 3 4</TD>
+                        <TD>2 2 3 4</TD>
+                        <TD>2 2 NaN 4.5</TD>
+                        <TD>2 2 NaN 4.5</TD>
+                        <TD>false false true false</TD>
+                        <TD>2 2</TD>
+                        <TD></TD>
+                        <TD>2 2</TD>
+                        <TD>2 2</TD>
+                        <TD>2 2</TD>
+                        <TD>2 2</TD>
+                        <TD>foo           </TD>
+                        <TD>false false</TD>
+                        <TD>2 2</TD>
+                        <TD></TD>
+                        <TD>2 2</TD>
+                        <TD>2 2</TD>
+                        <TD>2 2</TD>
+                        <TD>2 2</TD>
+                        <TD>false false</TD>
+                        <TD>1002 1002 1003 2002 2003 3002 3003 4002 4003</TD>
+                        <TD>0 0 0 0 0 0 0</TD>
+                    </TR>
+                    <TR>
+                        <TD>3</TD>
+                        <TD>3</TD>
+                        <TD>3</TD>
+                        <TD></TD>
+                        <TD>3</TD>
+                        <TD>3</TD>
+                        <TD>-2147483648</TD>
+                        <TD>3</TD>
+                        <TD>3</TD>
+                        <TD>3</TD>
+                        <TD>three</TD>
+                        <TD>true</TD>
+                        <TD>3 3 4 5</TD>
+                        <TD>3 3 4 5</TD>
+                        <TD>0 0 0 0</TD>
+                        <TD>3 3 4 5</TD>
+                        <TD>3 3 NaN 5.5</TD>
+                        <TD>3 3 NaN 5.5</TD>
+                        <TD>foo                         three         </TD>
+                        <TD>true true true false</TD>
+                        <TD>3 3 4 5</TD>
+                        <TD>3 3 4 5</TD>
+                        <TD>0 0 0 0</TD>
+                        <TD>3 3 4 5</TD>
+                        <TD>3 3 NaN 5.5</TD>
+                        <TD>3 3 NaN 5.5</TD>
+                        <TD>true true true false</TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD>1003 1003 1004 2003 2004 3003 3004 4003 4004</TD>
+                        <TD>3.25 3.25 3.5 3.75 -3.25 -3.5 -3.75</TD>
+                    </TR>
+                    <TR>
+                        <TD>4</TD>
+                        <TD>4</TD>
+                        <TD>4</TD>
+                        <TD>four</TD>
+                        <TD>4</TD>
+                        <TD>4</TD>
+                        <TD>4</TD>
+                        <TD>-9223372036854775808</TD>
+                        <TD>4</TD>
+                        <TD>4</TD>
+                        <TD>four</TD>
+                        <TD>false</TD>
+                        <TD>4 4 5 6</TD>
+                        <TD>4 4 5 6</TD>
+                        <TD>4 4 5 6</TD>
+                        <TD>0 0 0 0</TD>
+                        <TD>4 4 NaN 6.5</TD>
+                        <TD>4 4 NaN 6.5</TD>
+                        <TD>foo                         four          </TD>
+                        <TD>false false false true</TD>
+                        <TD>4 4 5 6</TD>
+                        <TD>4 4 5 6</TD>
+                        <TD>4 4 5 6</TD>
+                        <TD>0 0 0 0</TD>
+                        <TD>4 4 NaN 6.5</TD>
+                        <TD>4 4 NaN 6.5</TD>
+                        <TD>false false false true</TD>
+                        <TD>4 4 5 6</TD>
+                        <TD>4 4 5 6</TD>
+                        <TD>4 4 5 6</TD>
+                        <TD></TD>
+                        <TD>4 4 NaN 6.5</TD>
+                        <TD>4 4 NaN 6.5</TD>
+                        <TD>foo                         four          </TD>
+                        <TD>false false false true</TD>
+                        <TD>4 4 5 6</TD>
+                        <TD>4 4 5 6</TD>
+                        <TD>4 4 5 6</TD>
+                        <TD></TD>
+                        <TD>4 4 NaN 6.5</TD>
+                        <TD>4 4 NaN 6.5</TD>
+                        <TD>false false false true</TD>
+                        <TD>1004 1004 1005 2004 2005 3004 3005 4004 4005</TD>
+                        <TD>4.25 4.25 4.5 4.75 -4.25 -4.5 -4.75</TD>
+                    </TR>
+                    <TR>
+                        <TD>5</TD>
+                        <TD>5</TD>
+                        <TD>5</TD>
+                        <TD>five</TD>
+                        <TD>5</TD>
+                        <TD>5</TD>
+                        <TD>5</TD>
+                        <TD>5</TD>
+                        <TD></TD>
+                        <TD>5</TD>
+                        <TD>five</TD>
+                        <TD>true</TD>
+                        <TD>5 5 6 7</TD>
+                        <TD>5 5 6 7</TD>
+                        <TD>5 5 6 7</TD>
+                        <TD>5 5 6 7</TD>
+                        <TD>0 0 0 0</TD>
+                        <TD>5 5 NaN 7.5</TD>
+                        <TD>foo                         five          </TD>
+                        <TD>true true false true</TD>
+                        <TD>5 5 6 7</TD>
+                        <TD>5 5 6 7</TD>
+                        <TD>5 5 6 7</TD>
+                        <TD>5 5 6 7</TD>
+                        <TD>0 0 0 0</TD>
+                        <TD>5 5 NaN 7.5</TD>
+                        <TD>true true false true</TD>
+                        <TD>5 5 6</TD>
+                        <TD>5 5 6</TD>
+                        <TD>5 5 6</TD>
+                        <TD>5 5 6</TD>
+                        <TD></TD>
+                        <TD>5 5 NaN</TD>
+                        <TD>foo                         </TD>
+                        <TD>true true false</TD>
+                        <TD>5 5 6</TD>
+                        <TD>5 5 6</TD>
+                        <TD>5 5 6</TD>
+                        <TD>5 5 6</TD>
+                        <TD></TD>
+                        <TD>5 5 NaN</TD>
+                        <TD>true true false</TD>
+                        <TD>1005 1005 1006 2005 2006 3005 3006 4005 4006</TD>
+                        <TD>5.25 5.25 5.5 5.75 -5.25 -5.5 -5.75</TD>
+                    </TR>
+                    <TR>
+                        <TD>6</TD>
+                        <TD>6</TD>
+                        <TD>6</TD>
+                        <TD>six</TD>
+                        <TD>6</TD>
+                        <TD>6</TD>
+                        <TD>6</TD>
+                        <TD>6</TD>
+                        <TD>6</TD>
+                        <TD></TD>
+                        <TD>six</TD>
+                        <TD>false</TD>
+                        <TD>6 6 7 8</TD>
+                        <TD>6 6 7 8</TD>
+                        <TD>6 6 7 8</TD>
+                        <TD>6 6 7 8</TD>
+                        <TD>6 6 NaN 8.5</TD>
+                        <TD>0 0 0 0</TD>
+                        <TD>foo                         six           </TD>
+                        <TD>false false true true</TD>
+                        <TD>6 6 7 8</TD>
+                        <TD>6 6 7 8</TD>
+                        <TD>6 6 7 8</TD>
+                        <TD>6 6 7 8</TD>
+                        <TD>6 6 NaN 8.5</TD>
+                        <TD>0 0 0 0</TD>
+                        <TD>false false true true</TD>
+                        <TD>6 6</TD>
+                        <TD>6 6</TD>
+                        <TD>6 6</TD>
+                        <TD>6 6</TD>
+                        <TD>6 6</TD>
+                        <TD></TD>
+                        <TD>foo           </TD>
+                        <TD>false false</TD>
+                        <TD>6 6</TD>
+                        <TD>6 6</TD>
+                        <TD>6 6</TD>
+                        <TD>6 6</TD>
+                        <TD>6 6</TD>
+                        <TD></TD>
+                        <TD>false false</TD>
+                        <TD>1006 1006 1007 2006 2007 3006 3007 4006 4007</TD>
+                        <TD>6.25 6.25 6.5 6.75 -6.25 -6.5 -6.75</TD>
+                    </TR>
+                    <TR>
+                        <TD>7</TD>
+                        <TD>7</TD>
+                        <TD>7</TD>
+                        <TD>seven</TD>
+                        <TD>7</TD>
+                        <TD>7</TD>
+                        <TD>7</TD>
+                        <TD>7</TD>
+                        <TD>7</TD>
+                        <TD>7</TD>
+                        <TD></TD>
+                        <TD>true</TD>
+                        <TD>7 7 8 9</TD>
+                        <TD>7 7 8 9</TD>
+                        <TD>7 7 8 9</TD>
+                        <TD>7 7 8 9</TD>
+                        <TD>7 7 NaN 9.5</TD>
+                        <TD>7 7 NaN 9.5</TD>
+                        <TD></TD>
+                        <TD>true true true true</TD>
+                        <TD>7 7 8 9</TD>
+                        <TD>7 7 8 9</TD>
+                        <TD>7 7 8 9</TD>
+                        <TD>7 7 8 9</TD>
+                        <TD>7 7 NaN 9.5</TD>
+                        <TD>7 7 NaN 9.5</TD>
+                        <TD>? ? ? ?</TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD>1007 1007 1008 2007 2008 3007 3008 4007 4008</TD>
+                        <TD>7.25 7.25 7.5 7.75 -7.25 -7.5 -7.75</TD>
+                    </TR>
+                    <TR>
+                        <TD>8</TD>
+                        <TD>8</TD>
+                        <TD>8</TD>
+                        <TD>eight</TD>
+                        <TD>8</TD>
+                        <TD>8</TD>
+                        <TD>8</TD>
+                        <TD>8</TD>
+                        <TD>8</TD>
+                        <TD>8</TD>
+                        <TD>&apos; &quot;\&quot;&quot;&apos; ; &apos;&amp;&lt;&gt;</TD>
+                        <TD></TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 NaN 10.5</TD>
+                        <TD>8 8 NaN 10.5</TD>
+                        <TD>foo                         &apos; &quot;\&quot;&quot;&apos; ; &apos;&amp;&lt;&gt;</TD>
+                        <TD>? ? ? ?</TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 NaN 10.5</TD>
+                        <TD>8 8 NaN 10.5</TD>
+                        <TD>false false false false</TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 NaN 10.5</TD>
+                        <TD>8 8 NaN 10.5</TD>
+                        <TD>foo                         &apos; &quot;\&quot;&quot;&apos; ; &apos;&amp;&lt;&gt;</TD>
+                        <TD></TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 9 10</TD>
+                        <TD>8 8 NaN 10.5</TD>
+                        <TD>8 8 NaN 10.5</TD>
+                        <TD>false false false false</TD>
+                        <TD>1008 1008 1009 2008 2009 3008 3009 4008 4009</TD>
+                        <TD>8.25 8.25 8.5 8.75 -8.25 -8.5 -8.75</TD>
+                    </TR>
+                    <TR>
+                        <TD>9</TD>
+                        <TD>9</TD>
+                        <TD>9</TD>
+                        <TD></TD>
+                        <TD>9</TD>
+                        <TD>9</TD>
+                        <TD>9</TD>
+                        <TD>9</TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD></TD>
+                        <TD>true</TD>
+                        <TD>9 9 10 11</TD>
+                        <TD>9 9 10 11</TD>
+                        <TD>9 9 10 11</TD>
+                        <TD>9 9 10 11</TD>
+                        <TD>9 9 NaN 11.5</TD>
+                        <TD>9 9 NaN 11.5</TD>
+                        <TD>foo                                       </TD>
+                        <TD>true true false false</TD>
+                        <TD>9 9 10 11</TD>
+                        <TD>9 9 10 11</TD>
+                        <TD>9 9 10 11</TD>
+                        <TD>9 9 10 11</TD>
+                        <TD>9 9 NaN 11.5</TD>
+                        <TD>9 9 NaN 11.5</TD>
+                        <TD>true true false false</TD>
+                        <TD>9 9 10</TD>
+                        <TD>9 9 10</TD>
+                        <TD>9 9 10</TD>
+                        <TD>9 9 10</TD>
+                        <TD>9 9 NaN</TD>
+                        <TD>9 9 NaN</TD>
+                        <TD>foo                         </TD>
+                        <TD>true true false</TD>
+                        <TD>9 9 10</TD>
+                        <TD>9 9 10</TD>
+                        <TD>9 9 10</TD>
+                        <TD>9 9 10</TD>
+                        <TD>9 9 NaN</TD>
+                        <TD>9 9 NaN</TD>
+                        <TD>true true false</TD>
+                        <TD>1009 1009 1010 2009 2010 3009 3010 4009 4010</TD>
+                        <TD>9.25 9.25 9.5 9.75 -9.25 -9.5 -9.75</TD>
+                    </TR>
+                </TABLEDATA>
+            </DATA>
+        </TABLE>
+    </RESOURCE>
+</VOTABLE>

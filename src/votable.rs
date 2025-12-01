@@ -780,7 +780,7 @@ impl<C: TableDataContent> VOTable<C> {
   /// Assume the input stream has been read till (including) the end of a
   /// `TABLEDATA` or `BINARY` or `BINARY2` tag.
   /// Then continue reading (and storing) the remaining of the VOTable (assuming
-  /// it will not contains another table).
+  /// it will not contains another table)./
   pub(crate) fn read_from_data_end_to_end<R: BufRead>(
     &mut self,
     reader: &mut Reader<R>,
@@ -1198,7 +1198,7 @@ mod tests {
   fn test_unicode() {
     // To see debug purpose logs, run:
     // > RUST_LOG=TRACE cargo test test_unicode -- --nocapture
-    env_logger::init();
+    // env_logger::init();
 
     let expected = r#"<?xml version="1.0" encoding="UTF-8"?>
 <VOTABLE version="1.6" xmlns="http://www.ivoa.net/xml/VOTable/v1.3">
@@ -1431,24 +1431,21 @@ mod tests {
     // Remove trailing '\n'
     expected3.pop();
 
-    // PROBLEMS WITH ARRAYS CONTAINING NULL VALUES!
-    // E.G. NaN IS NOT A VALID JSON VALUE, AND WE DO NOT IMPLEMENTED ARRAYS OF FIELDs BEING POSSIBLY NULL.
-    // IN PRACTICE, WE SHOULD E.G. REPLACE FloatArrays<f32> by FloatArray<Option<f32>> (OR AT LEAST,
-    // USING FloatArray<Option<f32>> FOR DESERIALIZATION FROM JSON/TOML...
-    // TODO LATER!
-
     // JSON conversion
-    /*let json = serde_json::ser::to_string_pretty(&votable).unwrap();
-    std::fs::write("resources/stilts_all_but_k_test.actual.json", &json).unwrap();
+    let json = serde_json::ser::to_string_pretty(&votable).unwrap();
+    // std::fs::write("resources/stilts_all_but_k_test.actual.json", &json).unwrap();
     let mut votable_json = VOTableWrapper::<InMemTableDataRows>::from_json_str(&json).unwrap();
     let votable_dt_string = votable_json.to_ivoa_xml_string().unwrap();
-    assert_eq!(votable_dt_string, expected);*/
+    // println!("{}", votable_dt_string);
+    assert_eq!(votable_dt_string, expected3);
 
     // TOML
-    /*let toml = toml::ser::to_string_pretty(&votable).unwrap();
+    let toml = toml::ser::to_string_pretty(&votable).unwrap();
+    std::fs::write("resources/stilts_all_but_k_test.actual.toml", &toml).unwrap();
     let mut votable_toml = VOTableWrapper::<InMemTableDataRows>::from_toml_str(&toml).unwrap();
     let votable_dt_string = votable_toml.to_ivoa_xml_string().unwrap();
-    assert_eq!(votable_dt_string, expected);*/
+    // println!("{}", votable_dt_string);
+    assert_eq!(votable_dt_string, expected);
 
     // Re-write into TABLEDATA
     // let mut votable = votable;
@@ -1468,7 +1465,7 @@ mod tests {
     votable_obj.to_tabledata().unwrap();
     // * write TABLEDATA
     let vot_td_bytes = votable_obj.to_ivoa_xml_string().unwrap();
-    println!("{}", vot_td_bytes);
+    // println!("{}", vot_td_bytes);
     // * comapres with original TABLEDATA
     assert_eq!(vot_td_bytes, expected2);
 

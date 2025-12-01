@@ -752,6 +752,10 @@ mod tests {
           serde_json::de::from_str::<VOTable<InMemTableDataRows>>(content.as_str()).unwrap();
         votable2.ensures_consistency().unwrap();
         let content2 = serde_json::to_string_pretty(&votable2).unwrap();
+
+        // println!("Content1: {}", content);
+        // println!("Content2: {}", content2);
+
         assert_eq!(content, content2);
         // To solve this, we have to implement either:
         // * a Deserialiser with Seed on Table::data from the table schema
