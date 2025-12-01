@@ -19,6 +19,32 @@ pub struct VisitorPrim<E> {
   _marker: PhantomData<E>,
 }
 
+/// Visit the possible binary (u8) values of a boolean
+pub struct OptBoolVisitor;
+
+impl<'de> Visitor<'de> for OptBoolVisitor {
+  type Value = Option<bool>;
+
+  fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    formatter.write_str("a Option<bool>")
+  }
+
+  fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E>
+  where
+    E: Error,
+  {
+    match v {
+      b'0' | b'f' | b'F' => Ok(Some(false)),
+      b'1' | b't' | b'T' => Ok(Some(true)),
+      b'?' | b' ' | b'\0' => Ok(None),
+      _ => Err(Error::custom(format!(
+        "Wrong boolean code. Expected: '0', '1', 'f', 't', 'F', 'T', '?', ' ', '\0' . Actual: char={}, u8={}",
+        v as char, v
+      ))),
+    }
+  }
+}
+
 pub struct StringVisitor;
 
 // Copy/paste from serde::de::impls.rs

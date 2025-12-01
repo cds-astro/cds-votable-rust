@@ -419,7 +419,7 @@ impl TableDataContent for InMemTableDataRows {
         Event::Start(ref e) if e.local_name() == b"TR" => {
           let fields = FieldIterator::new(reader, reader_buff)
             .zip(schema.iter())
-            .map(|(f_res, s)| f_res.and_then(|f| s.value_from_str(f.trim())))
+            .map(|(f_res, s)| f_res.and_then(|f| s.value_from_str(f.trim_start())))
             .collect::<Result<Vec<VOTableValue>, VOTableError>>()?;
           trace!("Deserialize DATATABLE row: {:?}.", &fields);
 
@@ -459,6 +459,7 @@ impl TableDataContent for InMemTableDataRows {
       let mut row: Vec<VOTableValue> = Vec::with_capacity(schema.len());
       for field_schema in schema.iter() {
         let field = field_schema.deserialize(&mut binary_deser)?;
+        trace!("Deserialized field: {:?}", &field);
         row.push(field);
       }
       trace!("Deserialize BINARY row: {:?}.", &row);
@@ -492,6 +493,7 @@ impl TableDataContent for InMemTableDataRows {
       for (i_col, field_schema) in schema.iter().enumerate() {
         let field = field_schema.deserialize(&mut binary_deser)?;
         let is_null = (null_flags[i_col >> 3] & (128_u8 >> (i_col & 7))) != 0;
+        trace!("Deserialized field: {:?}. Is null: {}.", &field, is_null);
         if is_null {
           row.push(VOTableValue::Null)
         } else {

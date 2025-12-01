@@ -113,7 +113,7 @@ impl<'a, R: BufRead> Iterator for DataTableRowValueIterator<'a, R> {
             return Some(
               FieldIterator::new(self.reader, self.reader_buff)
                 .zip(self.schema.iter())
-                .map(|(f_res, s)| f_res.and_then(|f| s.value_from_str(f.trim())))
+                .map(|(f_res, s)| f_res.and_then(|f| s.value_from_str(f.trim_start())))
                 .collect::<Result<Vec<VOTableValue>, VOTableError>>()
                 .and_then(|fields| {
                   if fields.len() == nf {

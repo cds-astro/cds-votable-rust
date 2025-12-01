@@ -1392,6 +1392,104 @@ mod tests {
   }
 
   #[test]
+  fn test_from_stilts_all_but_k() {
+    // To see debug purpose logs, run:
+    // > RUST_LOG=TRACE cargo test test_from_stilts_all_but_k -- --nocapture
+    env_logger::init();
+
+    // We generate the test file using (see: https://www.star.bristol.ac.uk/mbt/stilts/sun256/scheme-test.html):
+    // > stilts tpipe ":test:10,ibsfgvwm" out=stilts_all_but_k_test.vot
+
+    // Read from DATATABLE
+    let mut votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file(
+      "resources/stilts_all_but_k_test.vot",
+    )
+    .unwrap();
+
+    // TABLEDATA->TABLEDATA output
+    let mut expected =
+      std::fs::read_to_string("resources/stilts_all_but_k_test.expect.vot").unwrap();
+    // Remove trailing '\n'
+    expected.pop();
+
+    // TABLEDATA->BINARY->TABLEDATA output
+    // Differences with 'expect' are mainly arrays containing NUL values.
+    // REMARK: We may need a mechanism to set the NULL value of a FIELD when encountering
+    // a NULL value at serialization, but:
+    // * not compatible with streaming mode
+    // * always set the NULL value to the default (u8::MAX, ixx::MIN)?
+    //   + BUT: no more difference with VOTable containing those values (but not NULL)!
+    let mut expected2 =
+      std::fs::read_to_string("resources/stilts_all_but_k_test.expect.2.vot").unwrap();
+    // Remove trailing '\n'
+    expected2.pop();
+
+    // TABLEDATA->BINARY2->TABLEDATA output
+    // Differences with 'expect' are 1 float and 1 double that are NaN which are in empty TDs.
+    let mut expected3 =
+      std::fs::read_to_string("resources/stilts_all_but_k_test.expect.3.vot").unwrap();
+    // Remove trailing '\n'
+    expected3.pop();
+
+    // PROBLEMS WITH ARRAYS CONTAINING NULL VALUES!
+    // E.G. NaN IS NOT A VALID JSON VALUE, AND WE DO NOT IMPLEMENTED ARRAYS OF FIELDs BEING POSSIBLY NULL.
+    // IN PRACTICE, WE SHOULD E.G. REPLACE FloatArrays<f32> by FloatArray<Option<f32>> (OR AT LEAST,
+    // USING FloatArray<Option<f32>> FOR DESERIALIZATION FROM JSON/TOML...
+    // TODO LATER!
+
+    // JSON conversion
+    /*let json = serde_json::ser::to_string_pretty(&votable).unwrap();
+    std::fs::write("resources/stilts_all_but_k_test.actual.json", &json).unwrap();
+    let mut votable_json = VOTableWrapper::<InMemTableDataRows>::from_json_str(&json).unwrap();
+    let votable_dt_string = votable_json.to_ivoa_xml_string().unwrap();
+    assert_eq!(votable_dt_string, expected);*/
+
+    // TOML
+    /*let toml = toml::ser::to_string_pretty(&votable).unwrap();
+    let mut votable_toml = VOTableWrapper::<InMemTableDataRows>::from_toml_str(&toml).unwrap();
+    let votable_dt_string = votable_toml.to_ivoa_xml_string().unwrap();
+    assert_eq!(votable_dt_string, expected);*/
+
+    // Re-write into TABLEDATA
+    // let mut votable = votable;
+    let votable_dt_string = votable.to_ivoa_xml_string().unwrap();
+    // println!("{}", votable_dt_string);
+    assert_eq!(votable_dt_string, expected);
+
+    let mut votable_bin = votable.clone();
+    votable_bin.to_binary().unwrap();
+    // * write BINARY
+    let votable_bin_bytes = votable_bin.to_ivoa_xml_bytes().unwrap();
+    // * read from BINARY
+    let mut votable_obj =
+      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_bytes(votable_bin_bytes.as_slice())
+        .unwrap();
+    // * convert into TABLEDATA
+    votable_obj.to_tabledata().unwrap();
+    // * write TABLEDATA
+    let vot_td_bytes = votable_obj.to_ivoa_xml_string().unwrap();
+    println!("{}", vot_td_bytes);
+    // * comapres with original TABLEDATA
+    assert_eq!(vot_td_bytes, expected2);
+
+    let mut votable_bin2 = votable;
+    votable_bin2.to_binary2().unwrap();
+    // * write BINARY
+    let votable_bin2_bytes = votable_bin2.to_ivoa_xml_bytes().unwrap();
+    // * read from BINARY
+    let mut votable_obj =
+      VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_bytes(votable_bin2_bytes.as_slice())
+        .unwrap();
+    // * convert into TABLEDATA
+    votable_obj.to_tabledata().unwrap();
+    // * write TABLEDATA
+    let vot_td_bytes = votable_obj.to_ivoa_xml_string().unwrap();
+    //  println!("{}", vot_td_bytes);
+    // * comapres with original TABLEDATA
+    assert_eq!(vot_td_bytes, expected3)
+  }
+
+  #[test]
   fn test_votable_read_obscore_file() {
     let votable = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/obscore.vot");
     assert!(votable.is_ok())

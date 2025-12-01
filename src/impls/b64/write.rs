@@ -6,7 +6,6 @@ pub use base64::{
   write::EncoderWriter,
 };
 use byteorder::{BigEndian, WriteBytesExt};
-use log::trace;
 use serde::{
   ser::{
     SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTuple,
@@ -34,7 +33,6 @@ impl<W: Write> B64Formatter<W> {
 
 impl<W: Write> Write for B64Formatter<W> {
   fn write(&mut self, mut buf: &[u8]) -> std::io::Result<usize> {
-    trace!("Write: {}", unsafe { str::from_utf8_unchecked(buf) });
     let buf_size = buf.len();
     while !buf.is_empty() {
       // n: number of chars to be written to complete a line
@@ -97,8 +95,12 @@ impl<'a, W: Write> Serializer for &'a mut BinarySerializer<W> {
   type SerializeStruct = DummySerialize;
   type SerializeStructVariant = DummySerialize;
 
-  fn serialize_bool(self, _v: bool) -> Result<Self::Ok, Self::Error> {
-    unreachable!("bool serialize in u8 (because of the null value case '?' and of '[tTfF]'.")
+  fn serialize_bool(self, v: bool) -> Result<Self::Ok, Self::Error> {
+    // The following 'unreachable' was true, but we now use this method
+    // when serializing arrays of bool
+    // unreachable!("bool serialize in u8 (because of the null value case '?' and of '[tTfF]'.")
+    let v = 48 + v as u8;
+    self.serialize_u8(v)
   }
 
   fn serialize_i8(self, _v: i8) -> Result<Self::Ok, Self::Error> {

@@ -2,7 +2,6 @@
 
 use std::{marker::PhantomData, string::String};
 
-use crate::impls::visitors::VarVectorOfFixedVectorAppenderVisitor;
 use serde::{
   de::{Deserialize, DeserializeOwned, DeserializeSeed, Error},
   Deserializer,
@@ -12,7 +11,8 @@ use super::{
   decode_ucs2,
   visitors::{
     FixedLengthArrayVisitorWithSeed, FixedLengthVectorAppenderVisitor,
-    FixedLengthVectorAppenderVisitorWithSeed, VarVectorOfFixedVectorAppenderVisitorWithSeed,
+    FixedLengthVectorAppenderVisitorWithSeed, OptBoolVisitor,
+    VarVectorOfFixedVectorAppenderVisitor, VarVectorOfFixedVectorAppenderVisitorWithSeed,
     VariableLengthArrayVisitor, VariableLengthArrayVisitorWithSeed,
   },
 };
@@ -79,6 +79,34 @@ impl<'de, T: 'de + DeserializeSeed<'de> + Clone> DeserializeSeed<'de> for FixedL
       FixedLengthArrayVisitorWithSeed::new(self.len, self.seed),
     )
   }
+}
+
+/// Seed to deserialize a Option<bool> in an array of boolean.
+#[derive(Clone)]
+pub struct BooleanSead;
+impl<'de> DeserializeSeed<'de> for BooleanSead {
+  type Value = Option<bool>;
+
+  fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+  where
+    D: Deserializer<'de>,
+  {
+    deserializer.deserialize_u8(OptBoolVisitor)
+  }
+}
+pub fn new_fixed_length_array_of_boolean_seed(len: usize) -> FixedLengthArraySeed<BooleanSead> {
+  FixedLengthArraySeed::with_seed(len, BooleanSead)
+}
+pub fn new_var_length_array_of_boolean_seed(
+  max_len: Option<usize>,
+) -> VarLengthArraySeed<BooleanSead> {
+  VarLengthArraySeed::with_seed(max_len, BooleanSead)
+}
+pub fn new_var_length_of_fixed_len_array_of_boolean_seed(
+  var_len: Option<usize>,
+  fixed_len: usize,
+) -> VarLengthVectorOfVectorSeedWithSeed<BooleanSead> {
+  VarLengthVectorOfVectorSeedWithSeed::new_for_boolean(var_len, fixed_len)
 }
 
 /// Structure implementing 'deserialize' for fixed length UTF-8 Strings.
@@ -465,6 +493,7 @@ where
   }
 }
 
+/*
 pub struct VarLengthVectorAppenderSeedWithSeed<'a, T: 'a, S> {
   len: usize,
   v: &'a mut Vec<T>,
@@ -490,17 +519,18 @@ where
       self.len, self.v, self.seed,
     ))
   }
-}
+}*/
 
-pub struct VarLengthVectorOfVectorOfStringSeed<S> {
+/*
+pub struct VarLengthVectorOfVectorSeedWithSeed<S> {
   /// upper limit on the number of fixed length array the variable array contains.
   var_max_len: Option<usize>,
   /// Size of the fixed length array the variable array contains.
   len: usize,
-  /// Vector in which all results are concatenated
+  /// Seed to retrieve the elements of the vector
   seed: S,
 }
-impl<S> VarLengthVectorOfVectorOfStringSeed<S> {
+impl<S> VarLengthVectorOfVectorSeedWithSeed<S> {
   pub fn new(var_max_len: Option<usize>, len: usize, seed: S) -> Self {
     Self {
       var_max_len,
@@ -509,17 +539,58 @@ impl<S> VarLengthVectorOfVectorOfStringSeed<S> {
     }
   }
 }
-impl VarLengthVectorOfVectorOfStringSeed<FixedLengthUTF8StringSeed> {
+impl<'de, S> DeserializeSeed<'de> for VarLengthVectorOfVectorSeedWithSeed<S>
+where
+  S: DeserializeSeed<'de> + Clone,
+  S::Value: Deserialize<'de>,
+{
+  type Value = ();
+
+  fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+  where
+    D: Deserializer<'de>,
+  {
+    let mut v = Vec::<S::Value>::with_capacity(self.var_max_len.unwrap_or(16) * self.len);
+    deserializer.deserialize_seq(VarVectorOfFixedVectorAppenderVisitorWithSeed::new(
+      self.len, self.v, self.seed,
+    ))
+  }
+}
+ */
+
+pub struct VarLengthVectorOfVectorSeedWithSeed<S> {
+  /// upper limit on the number of fixed length array the variable array contains.
+  var_max_len: Option<usize>,
+  /// Size of the fixed length array the variable array contains.
+  len: usize,
+  /// Seed to retrieve the elements of the vector
+  seed: S,
+}
+impl<S> VarLengthVectorOfVectorSeedWithSeed<S> {
+  pub fn new(var_max_len: Option<usize>, len: usize, seed: S) -> Self {
+    Self {
+      var_max_len,
+      len,
+      seed,
+    }
+  }
+}
+impl VarLengthVectorOfVectorSeedWithSeed<FixedLengthUTF8StringSeed> {
   pub fn new_for_utf8_string(var_max_len: Option<usize>, len: usize, str_len: usize) -> Self {
     Self::new(var_max_len, len, FixedLengthUTF8StringSeed::new(str_len))
   }
 }
-impl VarLengthVectorOfVectorOfStringSeed<FixedLengthUnicodeStringSeed> {
+impl VarLengthVectorOfVectorSeedWithSeed<FixedLengthUnicodeStringSeed> {
   pub fn new_for_unicode_string(var_max_len: Option<usize>, len: usize, str_len: usize) -> Self {
     Self::new(var_max_len, len, FixedLengthUnicodeStringSeed::new(str_len))
   }
 }
-impl<'de, S> DeserializeSeed<'de> for VarLengthVectorOfVectorOfStringSeed<S>
+impl VarLengthVectorOfVectorSeedWithSeed<BooleanSead> {
+  pub fn new_for_boolean(var_max_len: Option<usize>, len: usize) -> Self {
+    Self::new(var_max_len, len, BooleanSead)
+  }
+}
+impl<'de, S> DeserializeSeed<'de> for VarLengthVectorOfVectorSeedWithSeed<S>
 where
   S: DeserializeSeed<'de> + Clone,
   S::Value: Deserialize<'de>,
