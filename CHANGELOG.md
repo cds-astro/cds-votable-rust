@@ -1,5 +1,15 @@
 # `votable` Change Log
 
+## 0.7.0
+
+Released 2025-12-02
+
+* Better support for arrays of arrays
+* Add support for arrays of Strings (both UTF-8 and Unicode)
+* Add VOTable tag 1.6 
+* Improve internal code
+
+
 ## 0.6.3
 
 Released 2025-09-24

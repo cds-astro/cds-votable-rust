@@ -1,11 +1,21 @@
 # `vot-wasm` Change Log
 
+## 0.7.0
+
+Released 2025-12-02
+
+* Better array of array support
+* Add support for array of Strings
+* Improve code
+
+
 ## 0.6.2
 
 Released 2024-10-18
 
 * Fix boolean value to support any mix of case
 * Supports `info` and `post_info` in `TABLE`
+
 
 ## 0.6.1
 
