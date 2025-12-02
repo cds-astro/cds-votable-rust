@@ -4,13 +4,13 @@ name = "votable-cli"
 classifiers = [
     "Programming Language :: Rust",
 ]
-readme = "README.md"
+readme = { file = "README.md", content-type = "text/markdown" }
 
 [project.urls]
 repository = "https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli"
 
 [build-system]
-requires = ["maturin>=0.17"]
+requires = ["maturin>=1.10"]
 build-backend = "maturin"
 
 [tool.maturin]
