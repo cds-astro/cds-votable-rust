@@ -138,7 +138,7 @@ impl TableDataContent for InMemTableDataStringRows {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) if e.local_name() == b"TR" => {
+        Event::Start(e) if e.local_name() == b"TR" => {
           let fields = parse_fields::<_, EOTR>(reader, reader_buff, n_fields)?;
           if fields.len() == n_fields {
             self.rows.push(fields);
@@ -416,7 +416,7 @@ impl TableDataContent for InMemTableDataRows {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) if e.local_name() == b"TR" => {
+        Event::Start(e) if e.local_name() == b"TR" => {
           let fields = FieldIterator::new(reader, reader_buff)
             .zip(schema.iter())
             .map(|(f_res, s)| f_res.and_then(|f| s.value_from_str(f.trim_start())))

@@ -222,7 +222,7 @@ mod test {
     loop {
       let mut event = reader.read_event(&mut buff).unwrap();
       match &mut event {
-        Event::Start(ref mut e) if e.local_name() == X::TAG_BYTES => {
+        Event::Start(e) if e.local_name() == X::TAG_BYTES => {
           if !special_cond {
             let res = X::from_event_start(e)
               .and_then(|info| info.read_content(&mut reader, &mut buff, &()));
@@ -232,7 +232,7 @@ mod test {
           }
           break;
         }
-        Event::Empty(ref mut e) if e.local_name() == X::TAG_BYTES => {
+        Event::Empty(e) if e.local_name() == X::TAG_BYTES => {
           if special_cond {
             let info = X::from_event_empty(e);
             assert!(info.is_err());
@@ -241,7 +241,7 @@ mod test {
           };
           break;
         }
-        Event::Text(ref mut e) if e.escaped().is_empty() => (), // First even read
+        Event::Text(e) if e.escaped().is_empty() => (), // First even read
         Event::Comment(_) => (),
         Event::DocType(_) => (),
         Event::Decl(_) => (),

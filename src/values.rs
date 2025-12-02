@@ -265,7 +265,7 @@ impl HasSubElements for Opt {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.name() {
+        Event::Start(e) => match e.name() {
           Self::TAG_BYTES => push_from_event_start!(self, Opt, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -274,7 +274,7 @@ impl HasSubElements for Opt {
             ))
           }
         },
-        Event::Empty(ref e) => match e.name() {
+        Event::Empty(e) => match e.name() {
           Self::TAG_BYTES => push_from_event_empty!(self, Opt, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
@@ -425,7 +425,7 @@ impl HasSubElements for Values {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           Opt::TAG_BYTES => push_from_event_start!(self, Opt, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
@@ -434,7 +434,7 @@ impl HasSubElements for Values {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           Min::TAG_BYTES => set_from_event_empty!(self, Min, e),
           Max::TAG_BYTES => set_from_event_empty!(self, Max, e),
           Opt::TAG_BYTES => push_from_event_empty!(self, Opt, e),

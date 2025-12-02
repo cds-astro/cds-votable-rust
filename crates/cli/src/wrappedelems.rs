@@ -168,7 +168,7 @@ impl VOTableWrappedElem<VoidTableDataContent> {
 }
 
 impl<C: TableDataContent> VOTableWrappedElem<C> {
-  pub fn as_mut(&mut self) -> VOTableWrappedElemMut<C> {
+  pub fn as_mut(&mut self) -> VOTableWrappedElemMut<'_, C> {
     match self {
       Self::VOTable(e) => VOTableWrappedElemMut::VOTable(e),
       Self::Resource(e) => VOTableWrappedElemMut::Resource(e),

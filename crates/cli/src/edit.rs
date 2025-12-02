@@ -198,7 +198,7 @@ impl Edit {
         .map_err(|e| VOTableError::Custom(e.to_string()))?;
     }
     if vot.write_to_data_beginning(&mut writer, &(), false)? {
-      it.copy_remaining_data(&mut writer.inner())
+      it.copy_remaining_data(writer.inner())
         .and_then(|_| it.read_to_end())
         .and_then(|mut out_vot| {
           out_vot
@@ -267,14 +267,13 @@ pub enum Condition {
 }
 impl Condition {
   pub fn is_ok(&self, vid: &str, id: Option<&String>, name: Option<&String>) -> bool {
-    let res = match self {
+    match self {
       Self::VirtualIdEq(s) => vid == s.as_str(),
       Self::IdEq(s) => id.map(|id| id.as_str() == s.as_str()).unwrap_or(false),
       Self::NameEq(s) => name
         .map(|name| name.as_str() == s.as_str())
         .unwrap_or(false),
-    };
-    res
+    }
   }
 }
 impl FromStr for Condition {

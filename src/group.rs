@@ -188,7 +188,7 @@ impl HasSubElements for Group {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
           ParamRef::TAG_BYTES => push_from_event_start!(self, ParamRef, reader, reader_buff, e),
           Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
@@ -200,7 +200,7 @@ impl HasSubElements for Group {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           ParamRef::TAG_BYTES => push_from_event_empty!(self, ParamRef, e),
           Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
           _ => {
@@ -405,7 +405,7 @@ impl HasSubElements for TableGroup {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
           FieldRef::TAG_BYTES => push_from_event_start!(self, FieldRef, reader, reader_buff, e),
           ParamRef::TAG_BYTES => push_from_event_start!(self, ParamRef, reader, reader_buff, e),
@@ -418,7 +418,7 @@ impl HasSubElements for TableGroup {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           FieldRef::TAG_BYTES => push_from_event_empty!(self, FieldRef, e),
           ParamRef::TAG_BYTES => push_from_event_empty!(self, ParamRef, e),
           Param::TAG_BYTES => push_from_event_empty!(self, Param, e),

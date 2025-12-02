@@ -159,7 +159,7 @@ impl Collection {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           Reference::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Reference(
             from_event_start_by_ref!(Reference, reader, reader_buff, e),
           )),
@@ -174,7 +174,7 @@ impl Collection {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           Reference::TAG_BYTES => {
             inst_or_ref_vec.push(InstanceOrRef::Reference(Reference::from_event_empty(e)?))
           }

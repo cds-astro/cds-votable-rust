@@ -115,7 +115,7 @@ impl<C: TableDataContent> QuickXmlReadWrite<SpecialElem> for Binary2<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.name() {
+        Event::Start(e) => match e.name() {
           Stream::<C>::TAG_BYTES => {
             // We could detect if current stream.content.is_some() to prevent from multi-stream...
             let mut stream = Stream::<C>::from_event_start(e)?;
@@ -144,7 +144,7 @@ impl<C: TableDataContent> QuickXmlReadWrite<SpecialElem> for Binary2<C> {
             ))
           }
         },
-        Event::Empty(ref e) => match e.name() {
+        Event::Empty(e) => match e.name() {
           Stream::<C>::TAG_BYTES => self.stream = Stream::<C>::from_event_empty(e)?,
           _ => {
             return Err(VOTableError::UnexpectedStartTag(

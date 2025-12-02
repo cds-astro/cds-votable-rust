@@ -168,7 +168,7 @@ impl<C: TableDataContent> Table<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
           Field::TAG_BYTES => {
             self.push_field_by_ref(from_event_start_by_ref!(Field, reader, reader_buff, e))
@@ -200,7 +200,7 @@ impl<C: TableDataContent> Table<C> {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           Field::TAG_BYTES => self.push_field_by_ref(Field::from_event_empty(e)?),
           Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
           TableGroup::TAG_BYTES => self.push_tablegroup_by_ref(TableGroup::from_event_empty(e)?),
@@ -242,10 +242,8 @@ impl<C: TableDataContent> Table<C> {
     write_elem_vec!(self, infos, writer, context);
     write_elem_vec_no_context!(self, elems, writer);
     write_elem_vec!(self, links, writer, context);
-    if !stop_before_data {
-      if let Some(elem) = &mut self.data {
-        elem.write_to_data_beginning(writer)?;
-      }
+    if !stop_before_data && let Some(elem) = &mut self.data {
+      elem.write_to_data_beginning(writer)?;
     }
     Ok(())
   }
@@ -259,10 +257,8 @@ impl<C: TableDataContent> Table<C> {
   ) -> Result<(), VOTableError> {
     let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
 
-    if !start_after_data {
-      if let Some(elem) = &mut self.data {
-        elem.write_from_data_end(writer)?;
-      }
+    if !start_after_data && let Some(elem) = &mut self.data {
+      elem.write_from_data_end(writer)?;
     }
 
     write_elem_vec!(self, post_infos, writer, context);
@@ -318,7 +314,7 @@ impl<C: TableDataContent> VOTableElement for Table<C> {
   where
     K: AsRef<str> + Into<String>,
     V: AsRef<str> + Into<String>,
-    I: Iterator<Item = (K, V)>,
+    I: Iterator<Item=(K, V)>,
   {
     Self::default().set_attrs(attrs)
   }
@@ -327,7 +323,7 @@ impl<C: TableDataContent> VOTableElement for Table<C> {
   where
     K: AsRef<str> + Into<String>,
     V: AsRef<str> + Into<String>,
-    I: Iterator<Item = (K, V)>,
+    I: Iterator<Item=(K, V)>,
   {
     for (key, val) in attrs {
       let key_str = key.as_ref();
@@ -393,7 +389,7 @@ impl<C: TableDataContent> HasSubElements for Table<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
           Field::TAG_BYTES => {
             self.push_field_by_ref(from_event_start_by_ref!(Field, reader, reader_buff, e))
@@ -433,7 +429,7 @@ impl<C: TableDataContent> HasSubElements for Table<C> {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           Field::TAG_BYTES => self.push_field_by_ref(Field::from_event_empty(e)?),
           Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
           TableGroup::TAG_BYTES => self.push_tablegroup_by_ref(TableGroup::from_event_empty(e)?),

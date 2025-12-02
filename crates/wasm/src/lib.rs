@@ -35,7 +35,7 @@ pub fn debug_on() {
 
 // XML
 
-#[wasm_bindgen(js_name = "fromXML", catch)]
+#[wasm_bindgen(js_name = "fromXML")]
 pub fn from_xml(xml: &str) -> Result<JsValue, JsValue> {
   let vot = VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_str(xml)
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -44,7 +44,7 @@ pub fn from_xml(xml: &str) -> Result<JsValue, JsValue> {
     .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
-#[wasm_bindgen(js_name = "toXML", catch)]
+#[wasm_bindgen(js_name = "toXML")]
 pub fn to_xml(js_val: JsValue) -> Result<String, JsValue> {
   let mut vot: VOT =
     serde_wasm_bindgen::from_value(js_val).map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -53,7 +53,7 @@ pub fn to_xml(js_val: JsValue) -> Result<String, JsValue> {
     .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
-#[wasm_bindgen(js_name = "toDatatableXML", catch)]
+#[wasm_bindgen(js_name = "toDatatableXML")]
 pub fn to_xml_tabledata(js_val: JsValue) -> Result<String, JsValue> {
   let mut vot: VOT =
     serde_wasm_bindgen::from_value(js_val).map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -65,7 +65,7 @@ pub fn to_xml_tabledata(js_val: JsValue) -> Result<String, JsValue> {
     .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
-#[wasm_bindgen(js_name = "toBinaryXML", catch)]
+#[wasm_bindgen(js_name = "toBinaryXML")]
 pub fn to_xml_binary(js_val: JsValue) -> Result<String, JsValue> {
   let mut vot: VOT =
     serde_wasm_bindgen::from_value(js_val).map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -77,7 +77,7 @@ pub fn to_xml_binary(js_val: JsValue) -> Result<String, JsValue> {
     .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
-#[wasm_bindgen(js_name = "toBinary2XML", catch)]
+#[wasm_bindgen(js_name = "toBinary2XML")]
 pub fn to_xml_binary2(js_val: JsValue) -> Result<String, JsValue> {
   let mut vot: VOT =
     serde_wasm_bindgen::from_value(js_val).map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -91,7 +91,7 @@ pub fn to_xml_binary2(js_val: JsValue) -> Result<String, JsValue> {
 
 // JSON
 
-#[wasm_bindgen(js_name = "fromJSON", catch)]
+#[wasm_bindgen(js_name = "fromJSON")]
 pub fn from_json(json: &str) -> Result<JsValue, JsValue> {
   let vot = VOTableWrapper::<InMemTableDataRows>::from_json_str(json)
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -100,7 +100,7 @@ pub fn from_json(json: &str) -> Result<JsValue, JsValue> {
     .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
-#[wasm_bindgen(js_name = "toJSON", catch)]
+#[wasm_bindgen(js_name = "toJSON")]
 pub fn to_json(js_val: JsValue, pretty: bool) -> Result<String, JsValue> {
   let mut vot: VOT =
     serde_wasm_bindgen::from_value(js_val).map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -111,7 +111,7 @@ pub fn to_json(js_val: JsValue, pretty: bool) -> Result<String, JsValue> {
 
 // TOML
 
-#[wasm_bindgen(js_name = "fromTOML", catch)]
+#[wasm_bindgen(js_name = "fromTOML")]
 pub fn from_toml(toml: &str) -> Result<JsValue, JsValue> {
   let vot = VOTableWrapper::<InMemTableDataRows>::from_toml_str(toml)
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -120,7 +120,7 @@ pub fn from_toml(toml: &str) -> Result<JsValue, JsValue> {
     .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
-#[wasm_bindgen(js_name = "toTOML", catch)]
+#[wasm_bindgen(js_name = "toTOML")]
 pub fn to_toml(js_val: JsValue, pretty: bool) -> Result<String, JsValue> {
   let mut vot: VOT =
     serde_wasm_bindgen::from_value(js_val).map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -131,7 +131,7 @@ pub fn to_toml(js_val: JsValue, pretty: bool) -> Result<String, JsValue> {
 
 // YAML
 
-#[wasm_bindgen(js_name = "fromYAML", catch)]
+#[wasm_bindgen(js_name = "fromYAML")]
 pub fn from_yaml(yaml: &str) -> Result<JsValue, JsValue> {
   let vot = VOTableWrapper::<InMemTableDataRows>::from_yaml_str(yaml)
     .map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -140,7 +140,7 @@ pub fn from_yaml(yaml: &str) -> Result<JsValue, JsValue> {
     .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
-#[wasm_bindgen(js_name = "toYAML", catch)]
+#[wasm_bindgen(js_name = "toYAML")]
 pub fn to_yaml(js_val: JsValue) -> Result<String, JsValue> {
   let mut vot: VOT =
     serde_wasm_bindgen::from_value(js_val).map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -168,10 +168,11 @@ pub(crate) fn get_last_loaded() -> &'static RwLock<Result<JsValue, JsValue>> {
         LAST_LOADED = Some(RwLock::new(Ok(JsValue::NULL)));
       });
     }
-    match &LAST_LOADED {
+    /*match (&raw const LAST_LOADED) {
       Some(v) => v,
       None => unreachable!(),
-    }
+    }*/
+    (&raw const LAST_LOADED).as_ref().unwrap().as_ref().unwrap()
   }
 }
 
@@ -185,7 +186,7 @@ pub(crate) fn set_last_loaded(res: Result<JsValue, JsValue>) -> Result<(), JsVal
 }
 
 /// Returns the String content of the last read file
-#[wasm_bindgen(js_name = "getLastLoaded", catch)]
+#[wasm_bindgen(js_name = "getLastLoaded")]
 pub fn get_last_loaded_file() -> Result<JsValue, JsValue> {
   let mut store = get_last_loaded()
     .write()
@@ -200,7 +201,7 @@ pub fn get_last_loaded_file() -> Result<JsValue, JsValue> {
 /// # Warning
 /// Because of security restriction, the call to this method
 /// **"needs to be triggered within a code block that was the handler of a user-initiated event"**
-#[wasm_bindgen(js_name = "fromLocalFile", catch)]
+#[wasm_bindgen(js_name = "fromLocalFile")]
 pub fn from_local_file() -> Result<(), JsValue> {
   // Create the file input action that will be fired by the event 'change'
   let file_input_action = Closure::wrap(Box::new(move |event: Event| {
@@ -217,10 +218,9 @@ pub fn from_local_file() -> Result<(), JsValue> {
       let file_name = file.name();
       let file_reader = unsafe { FileReader::new().unchecked_unwrap_ok() };
       // There is a stream method, but I am not sure how to use it. I am so far going the easy way.
-      match file_reader.read_as_array_buffer(&file) {
-        Err(_) => log("Error reading file content"),
-        _ => {}
-      };
+      if file_reader.read_as_array_buffer(&file).is_err() {
+        log("Error reading file content");
+      }
       let file_onload = Closure::wrap(Box::new(move |event: Event| {
         let file_reader: FileReader = unsafe {
           event
@@ -235,16 +235,15 @@ pub fn from_local_file() -> Result<(), JsValue> {
         // We accept only files with given extensions so splitting on "." should be safe.
         let (_name, ext) = unsafe { file_name.rsplit_once('.').unchecked_unwrap() };
         let res = match ext {
-          "xml" | "vot" | "b64" => from_xml(&file_content_str),
-          "json" => from_json(&file_content_str),
-          "toml" => from_toml(&file_content_str),
-          "yaml" => from_yaml(&file_content_str),
+          "xml" | "vot" | "b64" => from_xml(file_content_str),
+          "json" => from_json(file_content_str),
+          "toml" => from_toml(file_content_str),
+          "yaml" => from_yaml(file_content_str),
           _ => unreachable!(), // since file_input.set_attribute("accept", ".vot, .xml, .json, .toml, .yaml");
         };
         // put in the globla variable
-        match set_last_loaded(res) {
-          Err(e) => log(format!("Error acquiring lock: {:?}", e).as_str()),
-          _ => {}
+        if let Err(e) = set_last_loaded(res) {
+          log(format!("Error acquiring lock: {:?}", e).as_str());
         }
       }) as Box<dyn FnMut(_)>);
       file_reader.set_onload(Some(file_onload.as_ref().unchecked_ref()));

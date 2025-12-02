@@ -169,7 +169,7 @@ impl HasSubElements for Instance {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           InstanceChildOfInstance::TAG_BYTES => self.push_instance_by_ref(
             from_event_start_by_ref!(InstanceChildOfInstance, reader, reader_buff, e),
           ),
@@ -195,7 +195,7 @@ impl HasSubElements for Instance {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           PrimaryKey::TAG_BYTES => self.push_primarykey_by_ref(PrimaryKey::from_event_empty(e)?),
           Attribute::TAG_BYTES => self.push_attribute_by_ref(Attribute::from_event_empty(e)?),
           Reference::TAG_BYTES => self.push_reference_by_ref(Reference::from_event_empty(e)?),

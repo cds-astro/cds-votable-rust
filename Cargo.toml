@@ -16,7 +16,7 @@ keywords = ["ivoa", "votable", "xml", "json", "toml"]
 documentation = "https://docs.rs/votable"
 homepage = "https://github.com/cds-astro/cds-votable-rust/"
 repository = "https://github.com/cds-astro/cds-votable-rust/"
-edition = "2021"
+edition = "2024"
 exclude = [
     "resources",
 ]

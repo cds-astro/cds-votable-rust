@@ -222,13 +222,13 @@ impl HasSubElements for ReferenceDyn {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => {
+        Event::Start(e) => {
           return Err(VOTableError::UnexpectedStartTag(
             e.local_name().to_vec(),
             Self::TAG,
           ))
         }
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           ForeignKey::TAG_BYTES => self.push_foreignkey_by_ref(ForeignKey::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(

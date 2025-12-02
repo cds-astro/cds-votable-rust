@@ -155,17 +155,17 @@ mod tests {
     loop {
       let mut event = reader.read_event(&mut buff).unwrap();
       match &mut event {
-        Event::Start(ref mut e) if e.local_name() == Info::TAG_BYTES => {
+        Event::Start(e) if e.local_name() == Info::TAG_BYTES => {
           let info = Info::from_event_start(&e)
             .and_then(|info| info.read_content(&mut reader, &mut buff, &()))
             .unwrap();
           return info;
         }
-        Event::Empty(ref mut e) if e.local_name() == Info::TAG_BYTES => {
+        Event::Empty(e) if e.local_name() == Info::TAG_BYTES => {
           let info = Info::from_event_empty(&e).unwrap();
           return info;
         }
-        Event::Text(ref mut e) if e.escaped().is_empty() => (), // First even read
+        Event::Text(e) if e.escaped().is_empty() => (), // First even read
         _ => unreachable!(),
       }
     }

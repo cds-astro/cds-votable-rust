@@ -4,7 +4,7 @@
 use std::{fs::File, io::BufWriter, path::PathBuf};
 
 use clap::Args;
-use log::{error, info, warn};
+use log::{error, info};
 
 use cdshealpix::{
   n_hash,
@@ -89,16 +89,13 @@ impl HealpixCumulIndex {
           }
         }
         (Some(Err(e)), _) => {
-          error!(
-            "Error parsing RA value: {}. Assigned HEALPix cell is 0.",
-            e.to_string()
-          );
+          error!("Error parsing RA value: {}. Assigned HEALPix cell is 0.", e);
           0
         }
         (_, Some(Err(e))) => {
           error!(
             "Error parsing Dec value: {}. Assigned HEALPix cell is 0.",
-            e.to_string()
+            e
           );
           0
         }

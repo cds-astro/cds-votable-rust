@@ -121,20 +121,20 @@ fn next_tabledata_row<T: BufRead>(
     loop {
       let event = reader.read_event(reader_buff);
       match event {
-        Ok(Event::Start(ref e)) if e.name() == b"TR" => {
+        Ok(Event::Start(e)) if e.name() == b"TR" => {
           let mut raw_row: Vec<u8> = Vec::with_capacity(256);
           return Some(
             read_until_found(TR_END_FINDER.as_ref(), reader, &mut raw_row).map(move |_| raw_row),
           );
         }
-        Ok(Event::End(ref e)) if e.name() == TableData::<VoidTableDataContent>::TAG_BYTES => {
+        Ok(Event::End(e)) if e.name() == TableData::<VoidTableDataContent>::TAG_BYTES => {
           *has_next = false;
           return None;
         }
         Ok(Event::Eof) => return Some(Err(VOTableError::PrematureEOF("reading rows"))),
-        Ok(Event::Text(ref e)) if is_empty(e) => {}
-        Ok(Event::Comment(ref e)) => {
-          discard_comment(e, reader, TableData::<VoidTableDataContent>::TAG)
+        Ok(Event::Text(e)) if is_empty(&e) => {}
+        Ok(Event::Comment(e)) => {
+          discard_comment(&e, reader, TableData::<VoidTableDataContent>::TAG)
         }
         Ok(event) => discard_event(event, TableData::<VoidTableDataContent>::TAG),
         Err(e) => return Some(Err(VOTableError::Read(e))),
@@ -563,7 +563,7 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
     match &mut sub_elem {
       ResourceSubElem {
         links: _,
-        resource_or_table: ResourceOrTable::<_>::Table(ref mut table),
+        resource_or_table: ResourceOrTable::<_>::Table(table),
         ..
       } => {
         if let Some(mut data) = table.read_till_data_by_ref(&mut reader, &mut reader_buff)? {

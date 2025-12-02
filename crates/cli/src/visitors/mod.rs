@@ -51,9 +51,10 @@ impl Debug for StringError {
 }
 
 // Remark: only VALUES and DESCRIPTION are unique in a given tag
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 pub enum Tag {
   // Elements possibly having sub-elements
+  #[default]
   VOTABLE = 0,
   RESOURCE,
   TABLE,
@@ -83,11 +84,6 @@ pub enum Tag {
   // TEMPLATE
   // ATTRIBUTE / COLLECTION / INSTANCE / REFERENCE
   // JOIN / WHERE / PRIMARY_KEY / FOREIGN_KEY
-}
-impl Default for Tag {
-  fn default() -> Self {
-    Self::VOTABLE
-  }
 }
 const TAGS: [Tag; Tag::len()] = [
   Tag::VOTABLE,

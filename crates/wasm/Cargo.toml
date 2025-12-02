@@ -5,7 +5,7 @@ authors = ["F.-X. Pineau <francois-xavier.pineau@astro.unistra.fr>"]
 description = "Convert, in WASM, IVOA VOTables in XML, JSON, YAML and TOML"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,19 +15,19 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 votable = { package = "votable", path = "../..", features = ["mivot"] }
 
-serde = { version = "1.0.80", features = ["derive"] }
-wasm-bindgen = { version = "0.2", features = ["serde-serialize"]  }
-wasm-bindgen-futures = "0.4"
-serde-wasm-bindgen = "0.4"
-js-sys = "0.3"
+serde = { version = "1.0.228", features = ["derive"] }
+wasm-bindgen = { version = "0.2.106", features = ["serde-serialize"] }
+wasm-bindgen-futures = "0.4.56"
+serde-wasm-bindgen = "0.6.5"
+js-sys = "0.3.83"
 unreachable = "0.1" # Added for wasm size optimization, see  https://rustwasm.github.io/book/reference/code-size.html
 console_error_panic_hook = "0.1.7"
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.0"
+wasm-bindgen-test = "0.3.56"
 
 [dependencies.web-sys]
-version = "0.3.52"
+version = "0.3.83"
 features = [
     'console',
     'Blob',

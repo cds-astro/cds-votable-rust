@@ -130,7 +130,7 @@ impl HasSubElements for Definitions {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           CooSys::TAG_BYTES => push_from_event_start!(self, CooSys, reader, reader_buff, e),
           Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
           _ => {
@@ -140,7 +140,7 @@ impl HasSubElements for Definitions {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           CooSys::TAG_BYTES => push_from_event_empty!(self, CooSys, e),
           Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
           _ => {

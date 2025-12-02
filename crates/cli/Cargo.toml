@@ -10,7 +10,7 @@ keywords = ["ivoa", "votable", "xml"]
 documentation = "https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli"
 homepage = "https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli"
 repository = "https://github.com/cds-astro/cds-votable-rust/tree/main/crates/cli"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

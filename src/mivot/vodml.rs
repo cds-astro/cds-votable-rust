@@ -15,6 +15,7 @@
 //!     + `JOIN`: defines a join, to populate a collection with instances elements from another collection
 //!     + `PRIMARY_KEY`: defines a unique instance identifier
 //!     + `FOREIGN_KEY`: link to the primary key of another instance
+//!
 //! Possibly containing the following attributes:
 //! * Model related:
 //!     + `name`: name of the model
@@ -27,7 +28,7 @@
 //!     + `arrayindex`: index of the value of the attribute in case the value or the ref are arrays
 //! * VOTable related:
 //!     + `ref`: reference pointing to a FIELD ID or a PARAM ID. `ref` are possible in `GLOABLAS`
-//!              but they point to a `PARAM`
+//!       but they point to a `PARAM`
 //!     + `tableref`: reference pointing to a TABLE
 //! * Mapping elements:
 //!     + `dmref`: reference to the `dmid` of an `INSTANCE` or a `COLLECTION`
@@ -41,6 +42,7 @@
 //!     + `dmrole`:
 //!         - all childs of a `COLLECTION` have no `dmrole`;
 //!         - is mandatory in `INSTANCE` child of `INSTANCE`
+//!
 //! Look at:
 //! * the MIVOT [spec](https://github.com/ivoa-std/ModelInstanceInVot)
 //! * the [parser code](https://github.com/ivoa/modelinstanceinvot-code)
@@ -186,7 +188,7 @@ impl HasSubElements for Vodml {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           Report::TAG_BYTES => set_from_event_start!(self, Report, reader, reader_buff, e),
           Model::TAG_BYTES => push_from_event_start!(self, Model, reader, reader_buff, e),
           Globals::TAG_BYTES => set_from_event_start!(self, Globals, reader, reader_buff, e),
@@ -198,7 +200,7 @@ impl HasSubElements for Vodml {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           Report::TAG_BYTES => set_from_event_empty!(self, Report, e),
           Model::TAG_BYTES => push_from_event_empty!(self, Model, e),
           Globals::TAG_BYTES => set_from_event_empty!(self, Globals, e),

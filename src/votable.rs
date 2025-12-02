@@ -554,8 +554,8 @@ impl<C: TableDataContent> VOTable<C> {
     loop {
       let mut event = reader.read_event(&mut buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Decl(ref e) => check_declaration(e),
-        Event::Start(ref mut e) if e.local_name() == VOTable::<C>::TAG_BYTES => {
+        Event::Decl(e) => check_declaration(e),
+        Event::Start(e) if e.local_name() == VOTable::<C>::TAG_BYTES => {
           // Ignore the remaining of the reader !
           return VOTable::<C>::from_event_start(e)
             .and_then(|vot| vot.read_content(&mut reader, &mut buff, &()));
@@ -577,8 +577,8 @@ impl<C: TableDataContent> VOTable<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Decl(ref e) => check_declaration(e),
-        Event::Start(ref mut e) if e.local_name() == VOTable::<C>::TAG_BYTES => {
+        Event::Decl(e) => check_declaration(e),
+        Event::Start(e) if e.local_name() == VOTable::<C>::TAG_BYTES => {
           return VOTable::<C>::from_event_start(e).and_then(|mut votable| {
             votable
               .read_till_next_resource(reader, reader_buff)
@@ -707,7 +707,7 @@ impl<C: TableDataContent> VOTable<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
           Definitions::TAG_BYTES => {
             set_from_event_start!(self, Definitions, reader, reader_buff, e)
@@ -730,7 +730,7 @@ impl<C: TableDataContent> VOTable<C> {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           Definitions::TAG_BYTES => set_from_event_empty!(self, Definitions, e),
           Info::TAG_BYTES => {
             let info = Info::from_event_empty(e)?;
@@ -961,7 +961,7 @@ impl<C: TableDataContent> HasSubElements for VOTable<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
           Definitions::TAG_BYTES => {
             set_from_event_start!(self, Definitions, reader, reader_buff, e)
@@ -984,7 +984,7 @@ impl<C: TableDataContent> HasSubElements for VOTable<C> {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           Definitions::TAG_BYTES => set_from_event_empty!(self, Definitions, e),
           Info::TAG_BYTES => {
             let info = Info::from_event_empty(e)?;

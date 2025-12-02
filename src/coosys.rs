@@ -218,7 +218,7 @@ impl HasSubElements for CooSys {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           FieldRef::TAG_BYTES => push_from_event_start!(self, FieldRef, reader, reader_buff, e),
           ParamRef::TAG_BYTES => push_from_event_start!(self, ParamRef, reader, reader_buff, e),
           _ => {
@@ -228,7 +228,7 @@ impl HasSubElements for CooSys {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           FieldRef::TAG_BYTES => push_from_event_empty!(self, FieldRef, e),
           ParamRef::TAG_BYTES => push_from_event_empty!(self, ParamRef, e),
           _ => {
@@ -642,7 +642,7 @@ mod tests {
     let mut coosys = loop {
       let mut event = reader.read_event(&mut buff).unwrap();
       match &mut event {
-        Event::Empty(ref mut e) if e.local_name() == CooSys::TAG_BYTES => {
+        Event::Empty(e) if e.local_name() == CooSys::TAG_BYTES => {
           let coosys = CooSys::from_event_empty(e).unwrap();
           assert_eq!(coosys.id, "J2000");
           match &coosys.coosys {
@@ -654,7 +654,7 @@ mod tests {
           }
           break coosys;
         }
-        Event::Text(ref mut e) if e.escaped().is_empty() => (), // First even read
+        Event::Text(e) if e.escaped().is_empty() => (), // First even read
         _ => unreachable!(),
       }
     };

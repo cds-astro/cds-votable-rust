@@ -4,6 +4,7 @@
 
 Released 2025-12-02
 
+* Bump Rust version to 2024
 * Better support for arrays of arrays
 * Add support for arrays of Strings (both UTF-8 and Unicode)
 * Add VOTable tag 1.6 

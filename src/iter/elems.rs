@@ -108,7 +108,7 @@ impl<'a, R: BufRead> Iterator for DataTableRowValueIterator<'a, R> {
       match event {
         Err(e) => return Some(Err(VOTableError::Read(e))),
         Ok(mut event) => match &mut event {
-          Event::Start(ref e) if e.local_name() == b"TR" => {
+          Event::Start(e) if e.local_name() == b"TR" => {
             let nf = self.schema.len();
             return Some(
               FieldIterator::new(self.reader, self.reader_buff)
@@ -340,7 +340,7 @@ fn skip_until<R: BufRead + ?Sized>(r: &mut R, delim: u8) -> std::io::Result<usiz
     let (done, used) = {
       let available = match r.fill_buf() {
         Ok(n) => n,
-        Err(ref e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+        Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
         Err(e) => return Err(e),
       };
       match memchr::memchr(delim, available) {

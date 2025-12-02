@@ -308,7 +308,7 @@ mod tests {
     let mut timesys = loop {
       let mut event = reader.read_event(&mut buff).unwrap();
       match &mut event {
-        Event::Empty(ref mut e) if e.local_name() == TimeSys::TAG_BYTES => {
+        Event::Empty(e) if e.local_name() == TimeSys::TAG_BYTES => {
           let timesys = TimeSys::from_event_empty(e).unwrap();
           assert_eq!(timesys.id, "time_frame");
           assert_eq!(timesys.timeorigin, Some(2455197.5));
@@ -316,7 +316,7 @@ mod tests {
           assert_eq!(timesys.refposition, RefPosition::BARYCENTER);
           break timesys;
         }
-        Event::Text(ref mut e) if e.escaped().is_empty() => (), // First even read
+        Event::Text(e) if e.escaped().is_empty() => (), // First even read
         _ => unreachable!(),
       }
     };

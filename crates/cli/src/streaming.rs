@@ -343,7 +343,7 @@ fn bin2row2fieldit<'a>(
   bytes: &'a [u8],
   schema: &'a TableSchema,
 ) -> impl Iterator<Item = VOTableValue> + 'a {
-  let n_bytes = (schema.as_slice().len() + 7) / 8;
+  let n_bytes = schema.as_slice().len().div_ceil(8);
   let mut binary_deser = BinaryDeserializer::new(Cursor::new(bytes));
   let bytes_visitor = FixedLengthArrayVisitor::new(n_bytes);
   let null_flags: Vec<u8> = (&mut binary_deser)
@@ -407,7 +407,7 @@ fn to_same<R: BufRead, W: Write>(
     .votable
     .write_to_data_beginning(&mut writer, &(), false)?
   {
-    it.copy_remaining_data(&mut writer.inner())
+    it.copy_remaining_data(writer.inner())
       .and_then(|_| it.read_to_end())
       .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {

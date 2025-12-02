@@ -109,7 +109,7 @@ impl HasSubElements for Fits {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.name() {
+        Event::Start(e) => match e.name() {
           Stream::<VoidTableDataContent>::TAG_BYTES => {
             self.stream = from_event_start_by_ref!(Stream, reader, reader_buff, e)
           }
@@ -120,7 +120,7 @@ impl HasSubElements for Fits {
             ))
           }
         },
-        Event::Empty(ref e) => match e.name() {
+        Event::Empty(e) => match e.name() {
           Stream::<VoidTableDataContent>::TAG_BYTES => self.stream = Stream::from_event_empty(e)?,
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(

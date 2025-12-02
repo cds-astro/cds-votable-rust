@@ -205,7 +205,7 @@ impl HasSubElements for Join {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           Where::TAG_BYTES => {
             self.push_where_by_ref(from_event_start_by_ref!(Where, reader, reader_buff, e))
           }
@@ -216,7 +216,7 @@ impl HasSubElements for Join {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           Where::TAG_BYTES => self.push_where_by_ref(Where::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(

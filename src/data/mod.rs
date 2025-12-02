@@ -67,10 +67,10 @@ impl<C: TableDataContent> DataElem<C> {
     context: &Vec<TableElem>,
   ) -> Result<(), VOTableError> {
     match self {
-      DataElem::TableData(ref mut e) => e.read_content_by_ref(reader, reader_buff, context),
-      DataElem::Binary(ref mut e) => e.read_content_by_ref(reader, reader_buff, context),
-      DataElem::Binary2(ref mut e) => e.read_content_by_ref(reader, reader_buff, context),
-      DataElem::Fits(ref mut e) => e.read_content_by_ref(reader, reader_buff, &()),
+      DataElem::TableData(e) => e.read_content_by_ref(reader, reader_buff, context),
+      DataElem::Binary(e) => e.read_content_by_ref(reader, reader_buff, context),
+      DataElem::Binary2(e) => e.read_content_by_ref(reader, reader_buff, context),
+      DataElem::Fits(e) => e.read_content_by_ref(reader, reader_buff, &()),
     }
   }
 
@@ -219,7 +219,7 @@ impl<C: TableDataContent> Data<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           TableData::<VoidTableDataContent>::TAG_BYTES => {
             return Ok(Some(TableOrBinOrBin2::TableData))
           }
@@ -241,7 +241,7 @@ impl<C: TableDataContent> Data<C> {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           Info::TAG_BYTES => push_from_event_empty!(self, Info, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
@@ -341,7 +341,7 @@ impl<C: TableDataContent> HasSubElements for Data<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           TableData::<C>::TAG_BYTES => {
             // Nothing here because the default is a TableData
             self
@@ -371,7 +371,7 @@ impl<C: TableDataContent> HasSubElements for Data<C> {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           Info::TAG_BYTES => push_from_event_empty!(self, Info, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(

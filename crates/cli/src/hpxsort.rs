@@ -160,16 +160,13 @@ impl HpxSort {
             }
           }
           (Some(Err(e)), _) => {
-            warn!(
-              "Error parsing RA value: {}. Assigned HEALPix cell is 0.",
-              e.to_string()
-            );
+            warn!("Error parsing RA value: {}. Assigned HEALPix cell is 0.", e);
             0
           }
           (_, Some(Err(e))) => {
             warn!(
               "Error parsing Dec value: {}. Assigned HEALPix cell is 0.",
-              e.to_string()
+              e
             );
             0
           }
@@ -205,7 +202,7 @@ impl HpxSort {
           self.count_map_path,
           Some(params),
         )
-        .map_err(|e| VOTableError::Custom(e.to_string()))?;
+          .map_err(|e| VOTableError::Custom(e.to_string()))?;
         for row_res in sorted_raw_row_it {
           let row = row_res.map_err(|e| VOTableError::Custom(e.to_string()))?;
           w.write_all(b"<TR>")
@@ -279,16 +276,14 @@ fn look_for_float_col_index_having_ucd(
   target_ucd: &str,
 ) -> Option<Result<usize, String>> {
   for (i, field) in fields.iter().enumerate() {
-    if let Some(ucd) = &field.ucd {
-      if ucd.as_str() == target_ucd {
-        return Some(match field.datatype {
-          Datatype::Float | Datatype::Double => Ok(i),
-          _ => Err(format!(
-            "Column '{}' is not a float or a double.",
-            &field.name
-          )),
-        });
-      }
+    if let Some(ucd) = &field.ucd && ucd.as_str() == target_ucd {
+      return Some(match field.datatype {
+        Datatype::Float | Datatype::Double => Ok(i),
+        _ => Err(format!(
+          "Column '{}' is not a float or a double.",
+          &field.name
+        )),
+      });
     }
   }
   None
@@ -301,13 +296,13 @@ fn look_for_float_col_index_name_startswith(
   for (i, field) in fields.iter().enumerate() {
     match field.datatype {
       Datatype::Float | Datatype::Double
-        if field
-          .name
-          .to_lowercase()
-          .starts_with(prefix.to_lowercase().as_str()) =>
-      {
-        return Ok(i);
-      }
+      if field
+        .name
+        .to_lowercase()
+        .starts_with(prefix.to_lowercase().as_str()) =>
+        {
+          return Ok(i);
+        }
       _ => continue,
     }
   }

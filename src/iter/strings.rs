@@ -32,7 +32,7 @@ impl<'a, R: BufRead> Iterator for RowStringIterator<'a, R> {
       match event {
         Err(e) => return Some(Err(VOTableError::Read(e))),
         Ok(mut event) => match &mut event {
-          Event::Start(ref e) if e.local_name() == b"TR" => {
+          Event::Start(e) if e.local_name() == b"TR" => {
             // TODO: we could avoid allocations by adding as attribute the number of FIELDs in the VOTable
             // (and using 'for' with 'push' in a pre-allocated Vec instead of collecting)!
             let res = FieldIterator::new(self.reader, self.reader_buff)

@@ -68,7 +68,7 @@ pub fn parse_fields<R: BufRead, I: IsRowEnd>(
   loop {
     let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
-      Event::Start(ref e) if e.local_name() == b"TD" => {
+      Event::Start(e) if e.local_name() == b"TD" => {
         let mut field = String::new();
         loop {
           let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
@@ -127,7 +127,7 @@ impl<'a, R: BufRead> Iterator for FieldIterator<'a, R> {
       match event {
         Err(e) => return Some(Err(VOTableError::Read(e))),
         Ok(mut event) => match &mut event {
-          Event::Start(ref e) if e.local_name() == b"TD" => {
+          Event::Start(e) if e.local_name() == b"TD" => {
             let mut field = String::new();
             loop {
               let event = self.reader.read_event(self.reader_buff);
@@ -190,7 +190,7 @@ impl<'a> Iterator for FieldIteratorUnbuffered<'a> {
       match event {
         Err(e) => return Some(Err(VOTableError::Read(e))),
         Ok(mut event) => match &mut event {
-          Event::Start(ref e) if e.local_name() == b"TD" => {
+          Event::Start(e) if e.local_name() == b"TD" => {
             let mut field = String::new();
             loop {
               let event = self.reader.read_event_unbuffered();

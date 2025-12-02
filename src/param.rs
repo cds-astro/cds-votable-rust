@@ -208,7 +208,7 @@ impl HasSubElements for Param {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           Description::TAG_BYTES => {
             set_from_event_start!(self, Description, reader, reader_buff, e)
           }
@@ -221,7 +221,7 @@ impl HasSubElements for Param {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           Values::TAG_BYTES => set_from_event_empty!(self, Values, e),
           Link::TAG_BYTES => push_from_event_empty!(self, Link, e),
           _ => {

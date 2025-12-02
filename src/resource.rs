@@ -498,7 +498,7 @@ impl<C: TableDataContent> Resource<C> {
     for elem in self.sub_elems.iter_mut() {
       match elem.resource_or_table {
         ResourceOrTable::Table(_) => return Some(self),
-        ResourceOrTable::Resource(ref mut resource) => {
+        ResourceOrTable::Resource(resource) => {
           let first_resource_containing_a_table =
             resource.get_first_resource_containing_a_table_mut();
           if first_resource_containing_a_table.is_some() {
@@ -616,7 +616,7 @@ impl<C: TableDataContent> Resource<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
           Info::TAG_BYTES => {
             let info = from_event_start_by_ref!(Info, reader, reader_buff, e);
@@ -650,7 +650,7 @@ impl<C: TableDataContent> Resource<C> {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           Info::TAG_BYTES => {
             let info = Info::from_event_empty(e)?;
             if let Some(sub_elem) = self.sub_elems.last_mut() {
@@ -698,7 +698,7 @@ impl<C: TableDataContent> Resource<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
           Info::TAG_BYTES => {
             let info = from_event_start_by_ref!(Info, reader, reader_buff, e);
@@ -731,7 +731,7 @@ impl<C: TableDataContent> Resource<C> {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           Info::TAG_BYTES => {
             let info = Info::from_event_empty(e)?;
             if let Some(sub_elem) = self.sub_elems.last_mut() {
@@ -941,7 +941,7 @@ impl<C: TableDataContent> HasSubElements for Resource<C> {
     loop {
       let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(ref e) => match e.local_name() {
+        Event::Start(e) => match e.local_name() {
           Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
           Info::TAG_BYTES => {
             let info = from_event_start_by_ref!(Info, reader, reader_buff, e);
@@ -975,7 +975,7 @@ impl<C: TableDataContent> HasSubElements for Resource<C> {
             ))
           }
         },
-        Event::Empty(ref e) => match e.local_name() {
+        Event::Empty(e) => match e.local_name() {
           Info::TAG_BYTES => {
             let info = Info::from_event_empty(e)?;
             if let Some(sub_elem) = self.sub_elems.last_mut() {
