@@ -1407,8 +1407,9 @@ mod tests {
     .unwrap();
 
     // TABLEDATA->TABLEDATA output
-    let mut expected =
-      std::fs::read_to_string("resources/stilts_all_but_k_test.expect.vot").unwrap();
+    let expected = std::fs::read_to_string("resources/stilts_all_but_k_test.expect.vot").unwrap();
+    // Fow windows tests
+    let mut expected = expected.replace("\r\n", "\n");
     // Remove trailing '\n'
     expected.pop();
 
@@ -1419,15 +1420,19 @@ mod tests {
     // * not compatible with streaming mode
     // * always set the NULL value to the default (u8::MAX, ixx::MIN)?
     //   + BUT: no more difference with VOTable containing those values (but not NULL)!
-    let mut expected2 =
+    let expected2 =
       std::fs::read_to_string("resources/stilts_all_but_k_test.expect.2.vot").unwrap();
+    // Fow windows tests
+    let mut expected2 = expected2.replace("\r\n", "\n");
     // Remove trailing '\n'
     expected2.pop();
 
     // TABLEDATA->BINARY2->TABLEDATA output
     // Differences with 'expect' are 1 float and 1 double that are NaN which are in empty TDs.
-    let mut expected3 =
+    let expected3 =
       std::fs::read_to_string("resources/stilts_all_but_k_test.expect.3.vot").unwrap();
+    // Fow windows tests
+    let mut expected3 = expected3.replace("\r\n", "\n");
     // Remove trailing '\n'
     expected3.pop();
 
