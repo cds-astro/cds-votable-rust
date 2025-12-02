@@ -242,7 +242,6 @@ impl<'de, T: DeserializeSeed<'de> + Clone> Visitor<'de> for FixedLengthArrayVisi
     A: SeqAccess<'de>,
   {
     (0..self.len)
-      .into_iter()
       .map(|_| {
         seq
           .next_element_seed(self.seed.clone())

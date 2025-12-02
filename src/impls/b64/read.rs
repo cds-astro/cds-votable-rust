@@ -135,7 +135,7 @@ impl BulkReaderElem {
     let mut elems: Vec<BulkReaderElem> = Vec::new();
     let mut prev_n_bytes = if binary2 {
       // Fixed Array of bytes
-      (schemas.len() + 7) / 8 // bytes for the null flags
+      schemas.len().div_ceil(8) // bytes for the null flags
     } else {
       0_usize
     };
@@ -429,7 +429,7 @@ impl<R: BufRead> BinaryDeserializer<R> {
   }
 }
 
-impl<'de, 'b, R: BufRead> Deserializer<'de> for &'b mut BinaryDeserializer<R> {
+impl<'de, R: BufRead> Deserializer<'de> for &mut BinaryDeserializer<R> {
   type Error = VOTableError;
 
   fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error>

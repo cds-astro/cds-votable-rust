@@ -401,6 +401,42 @@ macro_rules! impl_builder_push_elem {
   };
 }
 
+/// E.g. `impl_builder_push_boxed_elem(CooSys, ResourceElem)` leads to
+/// ```ignore
+/// pub fn push_coosys(mut self, coosys: CooSys) -> Self {
+///   self.elems.push(ResourceElem::CooSyst(Box::new(coosys)));
+///   self
+/// }
+/// ```
+macro_rules! impl_builder_push_boxed_elem {
+  ($t: ident, $e: expr) => {
+    paste! {
+      #[doc = concat!("Add the given `", stringify!($e), "` to the element list.")]
+      pub fn [<push_ $t:lower>](mut self, [<$t:lower>]: $t) -> Self {
+        self.[<push_ $t:lower _by_ref>]([<$t:lower>]);
+        self
+      }
+      #[doc = concat!("Add the given `", stringify!($e), "` to the element list, by mutable ref.")]
+      pub fn [<push_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $t) {
+        self.elems.push($e::$t(Box::new([<$t:lower>])));
+      }
+    }
+  };
+  ($t: ident, $e: expr, $a: ident) => {
+    paste! {
+      #[doc = concat!("Add the given `", stringify!($a), "` to the element list.")]
+      pub fn [<push_ $t:lower>](mut self, [<$t:lower>]: $a) -> Self {
+        self.[<push_ $t:lower _by_ref>]([<$t:lower>]);
+        self
+      }
+      #[doc = concat!("Add the given `", stringify!($a), "` to the element list, by mutable ref.")]
+      pub fn [<push_ $t:lower _by_ref>](&mut self, [<$t:lower>]: $a) {
+        self.elems.push($e::$t([<$t:lower>]));
+      }
+    }
+  };
+}
+
 /*
 macro_rules! impl_builder_prepend_elem {
   ($t: ident, $e: expr) => {

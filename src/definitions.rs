@@ -18,8 +18,8 @@ use super::{
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "def_type")]
 pub enum DefinitionsElem {
-  CooSys(CooSys),
-  Param(Param),
+  CooSys(Box<CooSys>),
+  Param(Box<Param>),
 }
 
 impl DefinitionsElem {
@@ -65,8 +65,8 @@ impl Definitions {
     }
   }
 
-  impl_builder_push_elem!(Param, DefinitionsElem);
-  impl_builder_push_elem!(CooSys, DefinitionsElem);
+  impl_builder_push_boxed_elem!(Param, DefinitionsElem);
+  impl_builder_push_boxed_elem!(CooSys, DefinitionsElem);
 
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where

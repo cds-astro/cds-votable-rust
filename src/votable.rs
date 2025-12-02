@@ -133,11 +133,11 @@ impl From<&Version> for &'static str {
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum VOTableElem {
-  CooSys(CooSys),
-  TimeSys(TimeSys),
-  Group(Group),
-  Param(Param),
-  Info(Info),
+  CooSys(Box<CooSys>),
+  TimeSys(Box<TimeSys>),
+  Group(Box<Group>),
+  Param(Box<Param>),
+  Info(Box<Info>),
 }
 
 impl VOTableElem {
@@ -606,11 +606,11 @@ impl<C: TableDataContent> VOTable<C> {
   impl_builder_opt_subelem!(description, Description);
   impl_builder_opt_subelem!(definitions, Definitions);
 
-  impl_builder_push_elem!(CooSys, VOTableElem);
-  impl_builder_push_elem!(TimeSys, VOTableElem);
-  impl_builder_push_elem!(Group, VOTableElem);
-  impl_builder_push_elem!(Param, VOTableElem);
-  impl_builder_push_elem!(Info, VOTableElem);
+  impl_builder_push_boxed_elem!(CooSys, VOTableElem);
+  impl_builder_push_boxed_elem!(TimeSys, VOTableElem);
+  impl_builder_push_boxed_elem!(Group, VOTableElem);
+  impl_builder_push_boxed_elem!(Param, VOTableElem);
+  impl_builder_push_boxed_elem!(Info, VOTableElem);
 
   pub fn push_elem(mut self, elem: VOTableElem) -> Self {
     self.push_elem_by_ref(elem);
@@ -1395,7 +1395,7 @@ mod tests {
   fn test_from_stilts_all_but_k() {
     // To see debug purpose logs, run:
     // > RUST_LOG=TRACE cargo test test_from_stilts_all_but_k -- --nocapture
-    env_logger::init();
+    // env_logger::init();
 
     // We generate the test file using (see: https://www.star.bristol.ac.uk/mbt/stilts/sun256/scheme-test.html):
     // > stilts tpipe ":test:10,ibsfgvwm" out=stilts_all_but_k_test.vot
@@ -1496,7 +1496,7 @@ mod tests {
   fn test_votable_read_with_cdata() {
     let votable =
       VOTableWrapper::<InMemTableDataRows>::from_ivoa_xml_file("resources/vot_with_cdata.vot");
-    println!("{:?}", votable);
+    // println!("{:?}", votable);
     assert!(votable.is_ok())
   }
 

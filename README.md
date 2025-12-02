@@ -38,8 +38,24 @@ We are still (reasonably) open to changes, e.g.:
 * we could change the `post_infos` name for something else
 * ...
 
-More testing is required, especially the bit type and arrays.
+More round-trip testing is required, especially the bit type in TOML/YAML.
 Please, provide us with your VOTable examples!
+
+### Remark
+
+To build tests files, one can use [stilts tpipe](https://www.star.bristol.ac.uk/mbt/stilts/sun256/scheme-test.html), e.g.:
+```bash
+stilts tpipe ":test:10,ibsfgvwm" out=test.vot
+```
+
+### Round-trip limitations
+
+It is sometime hard to achieve a 'perfect' round-trip transformation.
+
+For example, with BINTABLE, one cannot make the distinction between an empty array of double (`<TD></TD>`) and
+and array of double containin only NULL values (`<TD>NaN NaN NaN</TD>`).
+Idem for integers type, if the NULL value is not provided in the FIELD, a `<TD></TD>` could be transformed into
+`<TD>255</TD>` for a unsigned byte (255 being the default NULL value).
 
 
 ## Why JSON, TOML, YAML in addition to XML

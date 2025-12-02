@@ -375,7 +375,7 @@ impl InMemTableDataRows {
   {
     let row = row.as_ref();
     // Compute size of null flags
-    let n_null_flag_bytes = (schema.0.len() + 7) / 8;
+    let n_null_flag_bytes = schema.0.len().div_ceil(8);
     // Check null values
     let mut null_flags = vec![0_u8; n_null_flag_bytes];
     for (i, field) in row.iter().enumerate() {
@@ -485,7 +485,7 @@ impl TableDataContent for InMemTableDataRows {
     // Get schema
     let schema: Vec<Schema> = TableSchema::from(context).unwrap();
     // Read rows
-    let n_bytes = (schema.len() + 7) / 8;
+    let n_bytes = schema.len().div_ceil(8);
     while let Ok(true) = binary_deser.has_data_left() {
       let mut row: Vec<VOTableValue> = Vec::with_capacity(schema.len());
       let bytes_visitor = FixedLengthArrayVisitor::new(n_bytes);

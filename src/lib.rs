@@ -381,10 +381,10 @@ pub trait TableDataContent: Default + PartialEq + serde::Serialize {
   /// When deserializing from JSON, TOML or YAML, we should implement a 'DeserializeSeed'
   /// based on the table Schema. But:
   /// * we have to implement `Deserialize` by hand on `Table`, `Data`, `DataElem`,
-  /// `TableData`, `Binary`, `Binary2` and `Stream`, which is daunting task, even using
-  /// `cargo expand`...
+  ///   `TableData`, `Binary`, `Binary2` and `Stream`, which is daunting task, even using
+  ///   `cargo expand`...
   /// * even so, the metadata may be parsed after the data
-  /// (e.g. in JSON the key order is not guaranteed to be preserved)
+  ///   (e.g. in JSON the key order is not guaranteed to be preserved)
   ///
   /// So, the result of the deserialization without knowing the table schema may result in
   /// no-homogeneous datatype in a same column.
@@ -747,7 +747,7 @@ mod tests {
 
     match serde_json::to_string_pretty(&votable) {
       Ok(content) => {
-        println!("{}", &content);
+        // println!("{}", &content);
         let mut votable2 =
           serde_json::de::from_str::<VOTable<InMemTableDataRows>>(content.as_str()).unwrap();
         votable2.ensures_consistency().unwrap();
@@ -772,7 +772,7 @@ mod tests {
 
     match serde_yaml::to_string(&votable) {
       Ok(content) => {
-        println!("{}", &content);
+        // println!("{}", &content);
         let votable2 =
           serde_yaml::from_str::<VOTable<InMemTableDataRows>>(content.as_str()).unwrap();
         let content2 = serde_yaml::to_string(&votable2).unwrap();
@@ -790,7 +790,7 @@ mod tests {
     let mut write = Writer::new_with_indent(/*stdout()*/ &mut content, b' ', 4);
     match votable.write(&mut write, &()) {
       Ok(_) => {
-        println!("{}", from_utf8(content.as_slice()).unwrap());
+        // println!("{}", from_utf8(content.as_slice()).unwrap());
 
         let mut votable2 = VOTable::<InMemTableDataRows>::from_reader(content.as_slice()).unwrap();
         let mut content2 = Vec::new();
@@ -812,7 +812,7 @@ mod tests {
 
     match toml::ser::to_string_pretty(&votable) {
       Ok(content) => {
-        println!("{}", &content);
+        // println!("{}", &content);
         let votable2 = toml::de::from_str::<VOTable<InMemTableDataRows>>(content.as_str()).unwrap();
         let content2 = toml::ser::to_string_pretty(&votable2).unwrap();
         assert_eq!(content, content2);

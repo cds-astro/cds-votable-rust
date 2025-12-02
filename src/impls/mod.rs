@@ -59,7 +59,7 @@ impl TableSchema {
     self.0.iter()
   }
 }
-impl<'a> From<&'a [TableElem]> for TableSchema {
+impl From<&[TableElem]> for TableSchema {
   fn from(context: &[TableElem]) -> Self {
     let schema: Vec<Schema> = context
       .iter()
@@ -211,7 +211,7 @@ impl<'de> Deserialize<'de> for VOTableValue {
   where
     D: Deserializer<'de>,
   {
-    use serde::__private226::de::{ContentRefDeserializer, ContentVisitor, UntaggedUnitVisitor};
+    use serde::__private228::de::{ContentRefDeserializer, ContentVisitor, UntaggedUnitVisitor};
 
     let content = ContentVisitor::new().deserialize(deserializer)?;
     let deserializer = ContentRefDeserializer::<'_, '_, D::Error>::new(&content);
@@ -225,16 +225,21 @@ impl<'de> Deserialize<'de> for VOTableValue {
     if let Ok(v) = <u8>::deserialize(deserializer) {
       return Ok(VOTableValue::Byte(v));
     }
-    if let Ok(v) = <i16>::deserialize(deserializer) {
+    /*if let Ok(v) = <i16>::deserialize(deserializer) {
       return Ok(VOTableValue::Short(v));
     }
     if let Ok(v) = <i32>::deserialize(deserializer) {
       return Ok(VOTableValue::Int(v));
-    }
+    }*/
     if let Ok(v) = <i64>::deserialize(deserializer) {
       return Ok(VOTableValue::Long(v));
     }
-    /*if let Ok(v) = <f32>::deserialize(deserializer) {
+    /*
+    To avoid precision issues, we do not deserialize in Float, but in Double.
+    Then, according to the schema, we possibly transform into Float.
+    This code is used for JSON/TOML/YAML deserialization, it is not intended to parse
+    large volume, but to hold the full data in memory.
+    if let Ok(v) = <f32>::deserialize(deserializer) {
       return Ok(VOTableValue::Float(v));
     }*/
     if let Ok(v) = <f64>::deserialize(deserializer) {
@@ -264,29 +269,29 @@ impl<'de> Deserialize<'de> for VOTableValue {
     if let Ok(v) = <Vec<u8>>::deserialize(deserializer) {
       return Ok(VOTableValue::ByteArray(v));
     }
-    if let Ok(v) = <Vec<i16>>::deserialize(deserializer) {
+    /*if let Ok(v) = <Vec<i16>>::deserialize(deserializer) {
       return Ok(VOTableValue::ShortArray(v));
     }
     if let Ok(v) = <Vec<i32>>::deserialize(deserializer) {
       return Ok(VOTableValue::IntArray(v));
-    }
-    if let Ok(v) = <(f32, f32)>::deserialize(deserializer) {
-      return Ok(VOTableValue::ComplexFloat(v));
-    }
-    if let Ok(v) = <(f64, f64)>::deserialize(deserializer) {
-      return Ok(VOTableValue::ComplexDouble(v));
-    }
+    }*/
     if let Ok(v) = <Vec<i64>>::deserialize(deserializer) {
       return Ok(VOTableValue::LongArray(v));
     }
-    if let Ok(v) = <Vec<f32>>::deserialize(deserializer) {
+    /*if let Ok(v) = <(f32, f32)>::deserialize(deserializer) {
+      return Ok(VOTableValue::ComplexFloat(v));
+    }*/
+    if let Ok(v) = <(f64, f64)>::deserialize(deserializer) {
+      return Ok(VOTableValue::ComplexDouble(v));
+    }
+    /*if let Ok(v) = <Vec<f32>>::deserialize(deserializer) {
       return Ok(VOTableValue::FloatArray(v));
     }
     if let Ok(mut v) = <Vec<Option<f32>>>::deserialize(deserializer) {
       return Ok(VOTableValue::FloatArray(
         v.drain(..).map(|v| v.unwrap_or(f32::NAN)).collect(),
       ));
-    }
+    }*/
     if let Ok(v) = <Vec<f64>>::deserialize(deserializer) {
       return Ok(VOTableValue::DoubleArray(v));
     }
@@ -295,9 +300,9 @@ impl<'de> Deserialize<'de> for VOTableValue {
         v.drain(..).map(|v| v.unwrap_or(f64::NAN)).collect(),
       ));
     }
-    if let Ok(v) = <Vec<(f32, f32)>>::deserialize(deserializer) {
+    /*if let Ok(v) = <Vec<(f32, f32)>>::deserialize(deserializer) {
       return Ok(VOTableValue::ComplexFloatArray(v));
-    }
+    }*/
     if let Ok(v) = <Vec<(f64, f64)>>::deserialize(deserializer) {
       return Ok(VOTableValue::ComplexDoubleArray(v));
     }
@@ -376,7 +381,7 @@ impl Display for VOTableValue {
       VOTableValue::ComplexDoubleArray(v) => write_array_of_complex(fmt, v.as_slice()),
       VOTableValue::StringArray(v) => {
         for s in v.iter() {
-          fmt.write_str(&s)?;
+          fmt.write_str(s)?;
         }
         Ok(())
       }
@@ -475,7 +480,7 @@ impl Schema {
         n_elems,
         elem_schema,
       } => match elem_schema.as_ref() {
-        Schema::Bit => Ok((*n_elems + 7) / 8),
+        Schema::Bit => Ok(n_elems.div_ceil(8)),
         _ => elem_schema.byte_len().map(|l| l * n_elems),
       },
       Schema::VariableLengthArray {
@@ -487,9 +492,9 @@ impl Schema {
           .expect("Variable size array of variable size elements not supported in VOTable!");
         Err((elem_byte_len, n_elems_max.map(move |n| n * elem_byte_len)))
       }
-      Schema::FixedLengthBitArray { n_bits } => Ok((*n_bits + 7) / 8),
+      Schema::FixedLengthBitArray { n_bits } => Ok(n_bits.div_ceil(8)),
       Schema::VariableLengthBitArray { n_bits_max } => {
-        Err((0, n_bits_max.map(move |n_bits| (n_bits + 7) / 8)))
+        Err((0, n_bits_max.map(move |n_bits| n_bits.div_ceil(8))))
       }
     }
   }
@@ -534,7 +539,7 @@ impl Schema {
   }
 
   /// For arrays (of arrays), returns the Schema of the primitive elements.
-  pub fn primitive_schema(&self) -> Result<&Schema, VOTableError> {
+  pub fn primitive_schema(&self) -> &Schema {
     match self {
       Schema::Bool
       | Schema::Bit
@@ -549,19 +554,19 @@ impl Schema {
       | Schema::CharASCII
       | Schema::CharUnicode
       | Schema::FixedLengthStringUTF8 { .. }
-      | Schema::FixedLengthStringUnicode { .. } => Ok(self),
-      Schema::VariableLengthStringUTF8 { .. } | Schema::VariableLengthStringUnicode { .. } => Err(
-        VOTableError::Custom(String::from("No primitive type for variable String")),
-      ),
+      | Schema::FixedLengthStringUnicode { .. }
+      | Schema::VariableLengthStringUTF8 { .. }
+      | Schema::VariableLengthStringUnicode { .. }
+      | Schema::FixedLengthBitArray { .. }
+      | Schema::VariableLengthBitArray { .. } => self,
       Schema::FixedLengthArray {
         n_elems: _,
         elem_schema,
+      }
+      | Schema::VariableLengthArray {
+        n_elems_max: _,
+        elem_schema,
       } => elem_schema.primitive_schema(),
-      Schema::VariableLengthArray { .. }
-      | Schema::FixedLengthBitArray { .. }
-      | Schema::VariableLengthBitArray { .. } => Err(VOTableError::Custom(String::from(
-        "No primitive type for variable arrays",
-      ))),
     }
   }
 
@@ -606,7 +611,7 @@ impl Schema {
   /// For arrays (of arrays), returns the Schema of the primitive elements and the total number
   /// of elements in fixed length array (of fixed length arrays), flattening possibly nested fixed length arrays.
   /// * String are considered as primitives here, and the size of the string is not included into
-  ///  the returned array len.
+  ///   the returned array len.
   pub fn primitive_type_and_array_len(&self) -> Result<(&Schema, usize), VOTableError> {
     match self {
       Schema::Bool
@@ -767,9 +772,18 @@ impl Schema {
         Schema::VariableLengthStringUTF8 { n_bytes_max: _ } => {
           Ok(VOTableValue::String(s.to_owned()))
         }
-        Schema::FixedLengthStringUnicode { n_chars: _ } => {
-          // TODO: convert into unicode and count the number of chars, possibly truncate or pad pad with '\0'
-          Ok(VOTableValue::String(s.to_owned()))
+        Schema::FixedLengthStringUnicode { n_chars } => {
+          let mut utf16_encoded = encode_ucs2(s)?;
+          match utf16_encoded.len().cmp(n_chars) {
+            Ordering::Equal => {}
+            Ordering::Less => {
+              utf16_encoded.append(&mut vec![0_u16; *n_chars - utf16_encoded.len()]);
+            }
+            Ordering::Greater => {
+              utf16_encoded.truncate(*n_chars);
+            }
+          }
+          decode_ucs2(utf16_encoded).map(VOTableValue::String)
         }
         Schema::VariableLengthStringUnicode { n_chars_max: _ } => {
           Ok(VOTableValue::String(s.to_owned()))
@@ -826,10 +840,10 @@ impl Schema {
       | Schema::Short { .. }
       | Schema::Int { .. }
       | Schema::Long { .. }
-      | Schema::Float { .. }
-      | Schema::Double { .. }
-      | Schema::ComplexFloat { .. }
-      | Schema::ComplexDouble { .. } => {
+      | Schema::Float
+      | Schema::Double
+      | Schema::ComplexFloat
+      | Schema::ComplexDouble => {
         self
           .parse_array_of_number(array_str)
           .and_then(|(n_actual_elems, value)| {
@@ -881,10 +895,10 @@ impl Schema {
       | Schema::Short { .. }
       | Schema::Int { .. }
       | Schema::Long { .. }
-      | Schema::Float { .. }
-      | Schema::Double { .. }
-      | Schema::ComplexFloat { .. }
-      | Schema::ComplexDouble { .. } => self.parse_array_of_number(array_str).map(|(_n, v)| v),
+      | Schema::Float
+      | Schema::Double
+      | Schema::ComplexFloat
+      | Schema::ComplexDouble => self.parse_array_of_number(array_str).map(|(_n, v)| v),
       Schema::FixedLengthStringUTF8 { .. } | Schema::FixedLengthStringUnicode { .. } => {
         self.parse_variable_array_of_char(array_str)
       }
@@ -1097,7 +1111,7 @@ impl Schema {
             serialize_variable_length_array(serializer, &[0_u8; 0])
           }
           Schema::Bit => serializer.serialize_u8(0_u8),
-          Schema::FixedLengthBitArray { n_bits } => serialize_fixed_length_array(serializer, &vec![0_u8; (7 + *n_bits) / 8]),
+          Schema::FixedLengthBitArray { n_bits } => serialize_fixed_length_array(serializer, &vec![0_u8; n_bits.div_ceil(8)]),
           Schema::VariableLengthBitArray { n_bits_max: _ } => serialize_variable_length_array(serializer, &[0_u8; 0]),
         }
       VOTableValue::Bool(v) => {
@@ -1204,7 +1218,7 @@ impl Schema {
         let v: Vec<u8> = BV::clone(&bitvec.0).into_vec();
         match &self {
           Schema::FixedLengthBitArray { n_bits } => {
-            let n_bytes = (7 + *n_bits) / 8;
+            let n_bytes = n_bits.div_ceil(8);
             if n_bytes != v.len() {
               return Err(S::Error::custom(format!("Wrong number of bytes in BitArray. Actual: {}. Expected: {}.", v.len(), n_bytes)));
             }
@@ -1216,9 +1230,9 @@ impl Schema {
       }
       VOTableValue::BooleanArray(v) =>
         match &self {
-          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Bool { .. }) =>
+          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Bool) =>
             serialize_fixed_length_iter(serializer, v.iter().map(OptBool)),
-          Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Bool { .. }) =>
+          Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Bool) =>
             serialize_variable_length_iter(serializer, v.len(), v.iter().map(OptBool)),
           Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::FixedLengthArray { .. }) =>
             elem_schema.fixed_len().map_err(S::Error::custom)
@@ -1238,7 +1252,7 @@ impl Schema {
         }
       VOTableValue::ShortArray(v) =>
         match &self {
-          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), Ok(&Schema::Short { .. })) =>
+          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), &Schema::Short { .. }) =>
             serialize_fixed_length_array(serializer, v),
           Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Short { .. }) =>
             serialize_variable_length_array(serializer, v),
@@ -1249,7 +1263,7 @@ impl Schema {
         }
       VOTableValue::IntArray(v) =>
         match &self {
-          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), Ok(&Schema::Int { .. })) =>
+          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), &Schema::Int { .. }) =>
             serialize_fixed_length_array(serializer, v),
           Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Int { .. }) =>
             serialize_variable_length_array(serializer, v),
@@ -1260,7 +1274,7 @@ impl Schema {
         }
       VOTableValue::LongArray(v) =>
         match &self {
-          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), Ok(&Schema::Long { .. })) =>
+          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), &Schema::Long { .. }) =>
             serialize_fixed_length_array(serializer, v),
           Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Long { .. }) =>
             serialize_variable_length_array(serializer, v),
@@ -1271,7 +1285,7 @@ impl Schema {
         }
       VOTableValue::FloatArray(v) =>
         match &self {
-          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), Ok(&Schema::Float)) =>
+          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), &Schema::Float) =>
             serialize_fixed_length_array(serializer, v),
           Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Float) =>
             serialize_variable_length_array(serializer, v),
@@ -1282,7 +1296,7 @@ impl Schema {
         }
       VOTableValue::DoubleArray(v) =>
         match &self {
-          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), Ok(&Schema::Double)) =>
+          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), &Schema::Double) =>
             serialize_fixed_length_array(serializer, v),
           Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::Double) =>
             serialize_variable_length_array(serializer, v),
@@ -1292,7 +1306,7 @@ impl Schema {
         }
       VOTableValue::ComplexFloatArray(v) =>
         match &self {
-          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), Ok(&Schema::ComplexFloat)) =>
+          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), &Schema::ComplexFloat) =>
             serialize_fixed_length_array(serializer, v),
           Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::ComplexFloat) =>
             serialize_variable_length_array(serializer, v),
@@ -1302,7 +1316,7 @@ impl Schema {
         }
       VOTableValue::ComplexDoubleArray(v) =>
         match &self {
-          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), Ok(&Schema::ComplexDouble)) =>
+          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), &Schema::ComplexDouble) =>
             serialize_fixed_length_array(serializer, v),
           Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::ComplexDouble) =>
             serialize_variable_length_array(serializer, v),
@@ -1313,23 +1327,23 @@ impl Schema {
       VOTableValue::StringArray(v) => {
         match &self {
           // UTF-8
-          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), Ok(&Schema::FixedLengthStringUTF8 { .. })) => {
+          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), &Schema::FixedLengthStringUTF8 { .. }) => {
             serialize_fixed_length_iter(serializer, v.iter().map(|s| FixedLengthStringUTF8(s.as_str())))
           }
           Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::FixedLengthStringUTF8 { .. }) => {
             serialize_variable_length_iter(serializer, v.len(), v.iter().map(|s| FixedLengthStringUTF8(s.as_str())))
           }
-          Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.primitive_schema(), Ok(&Schema::FixedLengthStringUTF8 { .. })) => {
+          Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.primitive_schema(), &Schema::FixedLengthStringUTF8 { .. }) => {
             elem_schema.fixed_len().map_err(S::Error::custom).and_then(|len| serialize_variable_length_iter(serializer, v.len() / len, v.iter().map(|s| FixedLengthStringUTF8(s.as_str()))))
           }
           // Unicode
-          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), Ok(&Schema::FixedLengthStringUnicode { .. })) => {
+          Schema::FixedLengthArray { n_elems: _, elem_schema } if matches!(elem_schema.primitive_schema(), &Schema::FixedLengthStringUnicode { .. }) => {
             serialize_fixed_length_iter(serializer, v.iter().map(|s| FixedLengthStringUnicode(s.as_str())))
           }
           Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.as_ref(), &Schema::FixedLengthStringUnicode { .. }) => {
             serialize_variable_length_iter(serializer, v.len(), v.iter().map(|s| FixedLengthStringUnicode(s.as_str())))
           }
-          Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.primitive_schema(), Ok(&Schema::FixedLengthStringUnicode { .. })) => {
+          Schema::VariableLengthArray { n_elems_max: _, elem_schema } if matches!(elem_schema.primitive_schema(), &Schema::FixedLengthStringUnicode { .. }) => {
             elem_schema.fixed_len().map_err(S::Error::custom).and_then(|len| serialize_variable_length_iter(serializer, v.len() / len, v.iter().map(|s| FixedLengthStringUnicode(s.as_str()))))
           }
           _ => Err(S::Error::custom(format!("Wrong schema associated to StringArray. Actual: {:?}. Expected: FixedLengthArray(FixedLengthStringASCII) or VariableLengthArray(FixedLengthStringUnicode).", &self)))
@@ -1395,17 +1409,19 @@ impl Schema {
         | Schema::VariableLengthArray {
           n_elems_max: _,
           elem_schema,
-        } => elem_schema
-          .primitive_schema()
-          .map_err(|e| e.to_string())
-          .and_then(|ps| match ps {
-            Schema::Float => Ok(Some(VOTableValue::FloatArray(vec![*l, *r]))),
-            Schema::Double => Ok(Some(VOTableValue::DoubleArray(vec![*l as f64, *r as f64]))),
-            _ => Err(format!(
-              "Value of type ComplexFloat with primitive schema: {:?}",
-              ps
-            )),
-          })?,
+        } => {
+          let ps = elem_schema.primitive_schema();
+          match ps {
+            Schema::Float => Some(VOTableValue::FloatArray(vec![*l, *r])),
+            Schema::Double => Some(VOTableValue::DoubleArray(vec![*l as f64, *r as f64])),
+            _ => {
+              return Err(format!(
+                "Value of type ComplexFloat with primitive schema: {:?}",
+                ps
+              ))
+            }
+          }
+        }
         _ => {
           return Err(format!(
             "Value of type ComplexFloat with schema: {:?}",
@@ -1423,17 +1439,19 @@ impl Schema {
         | Schema::VariableLengthArray {
           n_elems_max: _,
           elem_schema,
-        } => elem_schema
-          .primitive_schema()
-          .map_err(|e| e.to_string())
-          .and_then(|ps| match ps {
-            Schema::Float => Ok(Some(VOTableValue::FloatArray(vec![*l as f32, *r as f32]))),
-            Schema::Double => Ok(Some(VOTableValue::DoubleArray(vec![*l, *r]))),
-            _ => Err(format!(
-              "Value of type ComplexDouble with primitive schema: {:?}",
-              ps
-            )),
-          })?,
+        } => {
+          let ps = elem_schema.primitive_schema();
+          match ps {
+            Schema::Float => Some(VOTableValue::FloatArray(vec![*l as f32, *r as f32])),
+            Schema::Double => Some(VOTableValue::DoubleArray(vec![*l, *r])),
+            _ => {
+              return Err(format!(
+                "Value of type ComplexDouble with primitive schema: {:?}",
+                ps
+              ))
+            }
+          }
+        }
         _ => {
           return Err(format!(
             "Value of type ComplexDouble with schema: {:?}",
@@ -1476,17 +1494,209 @@ impl Schema {
           None
         }
       }
-      VOTableValue::BitArray(_) => None,
-      VOTableValue::BooleanArray(_) => None, // TODO: convert array if not the right type...
-      VOTableValue::ByteArray(_) => None,    // TODO: convert array if not the right type...
-      VOTableValue::ShortArray(_) => None,   // TODO: convert array if not the right type...
-      VOTableValue::IntArray(_) => None,     // TODO: convert array if not the right type...
-      VOTableValue::LongArray(_) => None,    // TODO: convert array if not the right type...
-      VOTableValue::FloatArray(_) => None,   // TODO: convert array if not the right type...
-      VOTableValue::DoubleArray(_) => None,  // TODO: convert array if not the right type...
-      VOTableValue::ComplexFloatArray(_) => None, // TODO: convert array if not the right type...
-      VOTableValue::ComplexDoubleArray(_) => None, // TODO: convert array if not the right type...
-      VOTableValue::StringArray(_) => None,  // TODO: convert array if not the right type...
+      VOTableValue::BitArray(_) => {
+        let prim_type = self.primitive_schema();
+        match prim_type {
+          Schema::FixedLengthBitArray { .. } | Schema::VariableLengthBitArray { .. } => None,
+          _ => {
+            return Err(format!(
+              "Unexpected primitive type {:?} for BitArray",
+              prim_type
+            ));
+          }
+        }
+      }
+      VOTableValue::BooleanArray(_) => {
+        let prim_type = self.primitive_schema();
+        match prim_type {
+          Schema::Bool => None,
+          _ => {
+            return Err(format!(
+              "Unexpected primitive type {:?} for BooleanArray",
+              prim_type
+            ));
+          }
+        }
+      }
+      VOTableValue::ByteArray(a) => {
+        let prim_type = self.primitive_schema();
+        match prim_type {
+          Schema::Byte { .. } => None,
+          Schema::Short { .. } => Some(VOTableValue::ShortArray(
+            a.drain(..).map(|e| e as i16).collect(),
+          )),
+          Schema::Int { .. } => Some(VOTableValue::IntArray(
+            a.drain(..).map(|e| e as i32).collect(),
+          )),
+          Schema::Long { .. } => Some(VOTableValue::LongArray(
+            a.drain(..).map(|e| e as i64).collect(),
+          )),
+          _ => {
+            return Err(format!(
+              "Unexpected primitive type {:?} for ByteArray",
+              prim_type
+            ));
+          }
+        }
+      }
+      VOTableValue::ShortArray(a) => {
+        let prim_type = self.primitive_schema();
+        match prim_type {
+          Schema::Byte { .. } => Some(VOTableValue::ByteArray(
+            a.drain(..).map(|e| e as u8).collect(),
+          )),
+          Schema::Short { .. } => None,
+          Schema::Int { .. } => Some(VOTableValue::IntArray(
+            a.drain(..).map(|e| e as i32).collect(),
+          )),
+          Schema::Long { .. } => Some(VOTableValue::LongArray(
+            a.drain(..).map(|e| e as i64).collect(),
+          )),
+          _ => {
+            return Err(format!(
+              "Unexpected primitive type {:?} for ShortArray",
+              prim_type
+            ));
+          }
+        }
+      }
+      VOTableValue::IntArray(a) => {
+        let prim_type = self.primitive_schema();
+        match prim_type {
+          Schema::Byte { .. } => Some(VOTableValue::ByteArray(
+            a.drain(..).map(|e| e as u8).collect(),
+          )),
+          Schema::Short { .. } => Some(VOTableValue::ShortArray(
+            a.drain(..).map(|e| e as i16).collect(),
+          )),
+          Schema::Int { .. } => None,
+          Schema::Long { .. } => Some(VOTableValue::LongArray(
+            a.drain(..).map(|e| e as i64).collect(),
+          )),
+          _ => {
+            return Err(format!(
+              "Unexpected primitive type {:?} for IntArray",
+              prim_type
+            ));
+          }
+        }
+      }
+      VOTableValue::LongArray(a) => {
+        let prim_type = self.primitive_schema();
+        match prim_type {
+          Schema::Byte { .. } => Some(VOTableValue::ByteArray(
+            a.drain(..).map(|e| e as u8).collect(),
+          )),
+          Schema::Short { .. } => Some(VOTableValue::ShortArray(
+            a.drain(..).map(|e| e as i16).collect(),
+          )),
+          Schema::Int { .. } => Some(VOTableValue::IntArray(
+            a.drain(..).map(|e| e as i32).collect(),
+          )),
+          Schema::Long { .. } => None,
+          _ => {
+            return Err(format!(
+              "Unexpected primitive type {:?} for LongArray",
+              prim_type
+            ));
+          }
+        }
+      }
+      VOTableValue::FloatArray(a) => {
+        let prim_type = self.primitive_schema();
+        match prim_type {
+          Schema::Float => None,
+          Schema::Double => Some(VOTableValue::DoubleArray(
+            a.drain(..).map(|e| e as f64).collect(),
+          )),
+          // ComplexFloat - Not done because we deserialize array of complex before array
+          // ComplexDouble - Not done because we deserialize array of complex before array
+          _ => {
+            return Err(format!(
+              "Unexpected primitive type {:?} for FloatArray",
+              prim_type
+            ));
+          }
+        }
+      }
+      VOTableValue::DoubleArray(a) => {
+        let prim_type = self.primitive_schema();
+        match prim_type {
+          Schema::Float => Some(VOTableValue::FloatArray(
+            a.drain(..).map(|e| e as f32).collect(),
+          )),
+          Schema::Double => None,
+          // ComplexFloat - Not done because we deserialize array of complex before array
+          // ComplexDouble - Not done because we deserialize array of complex before array
+          _ => {
+            return Err(format!(
+              "Unexpected primitive type {:?} for DoubleArray",
+              prim_type
+            ));
+          }
+        }
+      }
+      VOTableValue::ComplexFloatArray(a) => {
+        let prim_type = self.primitive_schema();
+        match prim_type {
+          Schema::Float => Some(VOTableValue::FloatArray(
+            a.drain(..).flat_map(|(l, r)| [l, r]).collect(),
+          )),
+          Schema::Double => Some(VOTableValue::DoubleArray(
+            a.drain(..)
+              .flat_map(|(l, r)| [l as f64, r as f64])
+              .collect(),
+          )),
+          Schema::ComplexFloat => None,
+          Schema::ComplexDouble => Some(VOTableValue::ComplexDoubleArray(
+            a.drain(..).map(|(l, r)| (l as f64, r as f64)).collect(),
+          )),
+          _ => {
+            return Err(format!(
+              "Unexpected primitive type {:?} for ComplexFloatArray",
+              prim_type
+            ));
+          }
+        }
+      }
+      VOTableValue::ComplexDoubleArray(a) => {
+        let prim_type = self.primitive_schema();
+        match prim_type {
+          Schema::Float => Some(VOTableValue::FloatArray(
+            a.drain(..)
+              .flat_map(|(l, r)| [l as f32, r as f32])
+              .collect(),
+          )),
+          Schema::Double => Some(VOTableValue::DoubleArray(
+            a.drain(..).flat_map(|(l, r)| [l, r]).collect(),
+          )),
+          Schema::ComplexFloat => Some(VOTableValue::ComplexFloatArray(
+            a.drain(..).map(|(l, r)| (l as f32, r as f32)).collect(),
+          )),
+          Schema::ComplexDouble => None,
+          _ => {
+            return Err(format!(
+              "Unexpected primitive type {:?} for ComplexDoubleArray",
+              prim_type
+            ));
+          }
+        }
+      }
+      VOTableValue::StringArray(_) => {
+        let prim_type = self.primitive_schema();
+        match prim_type {
+          Schema::FixedLengthStringUTF8 { .. }
+          | Schema::FixedLengthStringUnicode { .. }
+          | Schema::VariableLengthStringUTF8 { .. }
+          | Schema::VariableLengthStringUnicode { .. } => None,
+          _ => {
+            return Err(format!(
+              "Unexpected primitive type {:?} for StringArray",
+              prim_type
+            ));
+          }
+        }
+      }
     };
     if let Some(new_val) = new_val {
       let _ = std::mem::replace(value, new_val);
@@ -1539,7 +1749,7 @@ where
 /// For variable length array, only the size of the variable part must be written!
 /// # Param
 /// * `var_len`: in case of arrays of arrays, size of the outer, variable, array;
-///               else, it is the actual len of the given slice `v`
+///   else, it is the actual len of the given slice `v`
 fn serialize_variable_length_iter<T, S, I>(
   serializer: S,
   var_len: usize,
@@ -2155,14 +2365,14 @@ impl<'de> DeserializeSeed<'de> for &Schema {
         ))),
       },
       Schema::FixedLengthBitArray { n_bits } => {
-        let n_bytes = (7 + *n_bits) / 8;
+        let n_bytes = n_bits.div_ceil(8);
         let visitor = FixedLengthArrayVisitor::<u8>::new(n_bytes);
         let bytes: Vec<u8> = deserializer.deserialize_tuple(n_bytes, visitor)?;
         Ok(VOTableValue::BitArray(BitVec(BV::from_vec(bytes))))
       }
       Schema::VariableLengthBitArray { n_bits_max } => {
         let visitor =
-          VariableLengthArrayVisitor::<u8>::new((*n_bits_max).map(|n_bits| (n_bits + 7) / 8));
+          VariableLengthArrayVisitor::<u8>::new((*n_bits_max).map(|n_bits| n_bits.div_ceil(8)));
         let bytes: Vec<u8> = deserializer.deserialize_seq(visitor)?;
         Ok(VOTableValue::BitArray(BitVec(BV::from_vec(bytes))))
       }

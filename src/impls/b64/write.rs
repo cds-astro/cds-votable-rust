@@ -189,9 +189,9 @@ impl<'a, W: Write> Serializer for &'a mut BinarySerializer<W> {
     unreachable!("No none in VOTable")
   }
 
-  fn serialize_some<T: ?Sized>(self, _value: &T) -> Result<Self::Ok, Self::Error>
+  fn serialize_some<T>(self, _value: &T) -> Result<Self::Ok, Self::Error>
   where
-    T: Serialize,
+    T: ?Sized + Serialize,
   {
     unreachable!("No some in VOTable")
   }
@@ -213,18 +213,18 @@ impl<'a, W: Write> Serializer for &'a mut BinarySerializer<W> {
     unreachable!("No unit variant in VOTable")
   }
 
-  fn serialize_newtype_struct<T: ?Sized>(
+  fn serialize_newtype_struct<T>(
     self,
     _name: &'static str,
     _value: &T,
   ) -> Result<Self::Ok, Self::Error>
   where
-    T: Serialize,
+    T: ?Sized + Serialize,
   {
     unreachable!("No newtpe struct in VOTable")
   }
 
-  fn serialize_newtype_variant<T: ?Sized>(
+  fn serialize_newtype_variant<T>(
     self,
     _name: &'static str,
     _variant_index: u32,
@@ -232,7 +232,7 @@ impl<'a, W: Write> Serializer for &'a mut BinarySerializer<W> {
     _value: &T,
   ) -> Result<Self::Ok, Self::Error>
   where
-    T: Serialize,
+    T: ?Sized + Serialize,
   {
     unreachable!("No newtype variant in VOTable")
   }
@@ -300,9 +300,9 @@ impl<'a, W: Write> SerializeSeq for SerializeSeqOrTuple<'a, W> {
   type Ok = ();
   type Error = VOTableError;
 
-  fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+  fn serialize_element<T>(&mut self, value: &T) -> Result<(), Self::Error>
   where
-    T: Serialize,
+    T: ?Sized + Serialize,
   {
     value.serialize(&mut *self.ser)
   }
@@ -316,9 +316,9 @@ impl<'a, W: Write> SerializeTuple for SerializeSeqOrTuple<'a, W> {
   type Ok = ();
   type Error = VOTableError;
 
-  fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+  fn serialize_element<T>(&mut self, value: &T) -> Result<(), Self::Error>
   where
-    T: Serialize,
+    T: ?Sized + Serialize,
   {
     value.serialize(&mut *self.ser)
   }
@@ -334,9 +334,9 @@ impl SerializeTupleStruct for DummySerialize {
   type Ok = ();
   type Error = VOTableError;
 
-  fn serialize_field<T: ?Sized>(&mut self, _value: &T) -> Result<(), Self::Error>
+  fn serialize_field<T>(&mut self, _value: &T) -> Result<(), Self::Error>
   where
-    T: Serialize,
+    T: ?Sized + Serialize,
   {
     unreachable!()
   }
@@ -350,9 +350,9 @@ impl SerializeTupleVariant for DummySerialize {
   type Ok = ();
   type Error = VOTableError;
 
-  fn serialize_field<T: ?Sized>(&mut self, _value: &T) -> Result<(), Self::Error>
+  fn serialize_field<T>(&mut self, _value: &T) -> Result<(), Self::Error>
   where
-    T: Serialize,
+    T: ?Sized + Serialize,
   {
     unreachable!()
   }
@@ -366,16 +366,16 @@ impl SerializeMap for DummySerialize {
   type Ok = ();
   type Error = VOTableError;
 
-  fn serialize_key<T: ?Sized>(&mut self, _key: &T) -> Result<(), Self::Error>
+  fn serialize_key<T>(&mut self, _key: &T) -> Result<(), Self::Error>
   where
-    T: Serialize,
+    T: ?Sized + Serialize,
   {
     unreachable!()
   }
 
-  fn serialize_value<T: ?Sized>(&mut self, _value: &T) -> Result<(), Self::Error>
+  fn serialize_value<T>(&mut self, _value: &T) -> Result<(), Self::Error>
   where
-    T: Serialize,
+    T: ?Sized + Serialize,
   {
     unreachable!()
   }
@@ -389,13 +389,9 @@ impl SerializeStruct for DummySerialize {
   type Ok = ();
   type Error = VOTableError;
 
-  fn serialize_field<T: ?Sized>(
-    &mut self,
-    _key: &'static str,
-    _value: &T,
-  ) -> Result<(), Self::Error>
+  fn serialize_field<T>(&mut self, _key: &'static str, _value: &T) -> Result<(), Self::Error>
   where
-    T: Serialize,
+    T: ?Sized + Serialize,
   {
     unreachable!()
   }
@@ -409,13 +405,9 @@ impl SerializeStructVariant for DummySerialize {
   type Ok = ();
   type Error = VOTableError;
 
-  fn serialize_field<T: ?Sized>(
-    &mut self,
-    _key: &'static str,
-    _value: &T,
-  ) -> Result<(), Self::Error>
+  fn serialize_field<T>(&mut self, _key: &'static str, _value: &T) -> Result<(), Self::Error>
   where
-    T: Serialize,
+    T: ?Sized + Serialize,
   {
     unreachable!()
   }

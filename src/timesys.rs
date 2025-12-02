@@ -17,6 +17,7 @@ pub struct TimeSys {
   /// Julian Date in MJD.
   /// * `MJD-origin` = 2400000.5
   /// *  `JD-origin` = 0.0
+  ///
   /// Not clear to me so far: "The timeorigin attribute MUST be given unless the time's
   /// representation contains a year of a calendar era, in which case it MUST NOT be present"
   #[serde(skip_serializing_if = "Option::is_none")]

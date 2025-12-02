@@ -38,7 +38,8 @@ exclude = ["crates/wasm"]
 
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
+# We pin Serde version because with use the internal serde::__private228
+serde = { version = "1.0.228", features = ["derive"] }
 byteorder = "1.4"
 paste = "1.0" # To create new identifier in macro
 quick-xml = "0.23"

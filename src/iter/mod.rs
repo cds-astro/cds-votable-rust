@@ -816,7 +816,7 @@ pub trait TableIter: Iterator<Item = Result<Vec<VOTableValue>, VOTableError>> {
 /// The iteration on a table rows must be complete before iterating to the the new table.
 /// TODO:
 /// * to use this iterator like `SimpleVOTableRowIterator`, we **must** implement
-/// methods starting reading again after the last table.
+///   methods starting reading again after the last table.
 pub struct VOTableIterator<R: BufRead> {
   reader: Reader<R>,
   reader_buff: Vec<u8>,

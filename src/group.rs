@@ -22,9 +22,9 @@ use super::{
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum GroupElem {
-  ParamRef(ParamRef),
-  Param(Param),
-  Group(Group),
+  ParamRef(Box<ParamRef>),
+  Param(Box<Param>),
+  Group(Box<Group>),
 }
 
 impl GroupElem {
@@ -96,9 +96,9 @@ impl Group {
   impl_builder_opt_string_attr!(utype);
   // sub-elements
   impl_builder_opt_subelem!(description, Description);
-  impl_builder_push_elem!(ParamRef, GroupElem);
-  impl_builder_push_elem!(Param, GroupElem);
-  impl_builder_push_elem!(Group, GroupElem);
+  impl_builder_push_boxed_elem!(ParamRef, GroupElem);
+  impl_builder_push_boxed_elem!(Param, GroupElem);
+  impl_builder_push_boxed_elem!(Group, GroupElem);
 
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where
@@ -234,10 +234,10 @@ impl HasSubElements for Group {
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum TableGroupElem {
-  FieldRef(FieldRef),
-  ParamRef(ParamRef),
-  Param(Param),
-  TableGroup(TableGroup),
+  FieldRef(Box<FieldRef>),
+  ParamRef(Box<ParamRef>),
+  Param(Box<Param>),
+  TableGroup(Box<TableGroup>),
 }
 
 impl TableGroupElem {
@@ -312,10 +312,10 @@ impl TableGroup {
   impl_builder_opt_string_attr!(utype);
   // sub-elements
   impl_builder_opt_subelem!(description, Description);
-  impl_builder_push_elem!(FieldRef, TableGroupElem);
-  impl_builder_push_elem!(ParamRef, TableGroupElem);
-  impl_builder_push_elem!(Param, TableGroupElem);
-  impl_builder_push_elem!(TableGroup, TableGroupElem);
+  impl_builder_push_boxed_elem!(FieldRef, TableGroupElem);
+  impl_builder_push_boxed_elem!(ParamRef, TableGroupElem);
+  impl_builder_push_boxed_elem!(Param, TableGroupElem);
+  impl_builder_push_boxed_elem!(TableGroup, TableGroupElem);
 
   pub fn visit<C, V>(&mut self, visitor: &mut V) -> Result<(), V::E>
   where

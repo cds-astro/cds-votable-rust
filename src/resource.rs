@@ -35,10 +35,10 @@ use super::{
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "elem_type")]
 pub enum ResourceElem {
-  CooSys(CooSys),
-  TimeSys(TimeSys),
-  Group(Group),
-  Param(Param),
+  CooSys(Box<CooSys>),
+  TimeSys(Box<TimeSys>),
+  Group(Box<Group>),
+  Param(Box<Param>),
 }
 
 impl ResourceElem {
@@ -346,10 +346,10 @@ impl<C: TableDataContent> Resource<C> {
   impl_builder_opt_subelem!(description, Description);
   impl_builder_push!(Info);
   // - choice elements
-  impl_builder_push_elem!(CooSys, ResourceElem);
-  impl_builder_push_elem!(TimeSys, ResourceElem);
-  impl_builder_push_elem!(Group, ResourceElem);
-  impl_builder_push_elem!(Param, ResourceElem);
+  impl_builder_push_boxed_elem!(CooSys, ResourceElem);
+  impl_builder_push_boxed_elem!(TimeSys, ResourceElem);
+  impl_builder_push_boxed_elem!(Group, ResourceElem);
+  impl_builder_push_boxed_elem!(Param, ResourceElem);
 
   pub fn push_elem(mut self, elem: ResourceElem) -> Self {
     self.push_elem_by_ref(elem);

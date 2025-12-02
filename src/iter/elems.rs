@@ -243,7 +243,7 @@ impl<'a, R: BufRead> Binary2RowValueIterator<'a, R> {
     let b64_cleaner = B64Cleaner::new(internal_reader);
     let decoder = DecoderReader::new(b64_cleaner, &general_purpose::STANDARD);
     let binary_deser = BinaryDeserializer::new(BufReader::new(decoder));
-    let n_bytes = (schema.len() + 7) / 8;
+    let n_bytes = schema.len().div_ceil(8);
     Self {
       table,
       schema,
