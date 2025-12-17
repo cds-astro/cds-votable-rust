@@ -298,7 +298,7 @@ fn write_csv_field<W: Write>(write: &mut W, field: &str, sep: char) -> Result<()
   .map_err(VOTableError::Io)
 }
 fn need_double_quotes(field: &str, sep: char) -> bool {
-  field.contains(sep) && !(field.starts_with('"') && field.ends_with('"'))
+  field.contains(sep) || field.contains('"')
 }
 /// According to [RFC-4180](https://www.ietf.org/rfc/rfc4180.txt):
 /// > If double-quotes are used to enclose fields, then a double-quote
