@@ -9,16 +9,17 @@ use std::{
 use log::warn;
 use paste::paste;
 use quick_xml::{
-  events::{BytesStart, Event},
   Reader, Writer,
+  events::{BytesStart, Event},
 };
 use serde_json::Value;
 
 #[cfg(feature = "mivot")]
 use super::mivot::vodml::Vodml;
 use super::{
+  HasSubElements, HasSubElems, QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
   coosys::CooSys,
-  data::{binary::Binary, binary2::Binary2, Data},
+  data::{Data, binary::Binary, binary2::Binary2},
   desc::Description,
   error::VOTableError,
   group::Group,
@@ -29,7 +30,6 @@ use super::{
   table::Table,
   timesys::TimeSys,
   utils::{discard_comment, discard_event, is_empty},
-  HasSubElements, HasSubElems, QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -626,7 +626,9 @@ impl<C: TableDataContent> Resource<C> {
               self.push_info_by_ref(info)
             }
           }
-          CooSys::TAG_BYTES => push_from_event_start!(self, CooSys, reader, reader_buff, e),
+          CooSys::TAG_BYTES => {
+            push_from_event_start_fallible!(self, CooSys, reader, reader_buff, e)
+          }
           Group::TAG_BYTES => push_from_event_start!(self, Group, reader, reader_buff, e),
           Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
           Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
@@ -647,7 +649,7 @@ impl<C: TableDataContent> Resource<C> {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
               Self::TAG,
-            ))
+            ));
           }
         },
         Event::Empty(e) => match e.local_name() {
@@ -660,7 +662,7 @@ impl<C: TableDataContent> Resource<C> {
             }
           }
           TimeSys::TAG_BYTES => push_from_event_empty!(self, TimeSys, e),
-          CooSys::TAG_BYTES => push_from_event_empty!(self, CooSys, e),
+          CooSys::TAG_BYTES => push_from_event_empty_fallible!(self, CooSys, e),
           Group::TAG_BYTES => push_from_event_empty!(self, Group, e),
           Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
           Link::TAG_BYTES => links.push(Link::from_event_empty(e)?),
@@ -668,7 +670,7 @@ impl<C: TableDataContent> Resource<C> {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
               Self::TAG,
-            ))
+            ));
           }
         },
         Event::Text(e) if is_empty(e) => {}
@@ -679,7 +681,7 @@ impl<C: TableDataContent> Resource<C> {
             || e.local_name() == Table::<VoidTableDataContent>::TAG_BYTES
             || e.local_name() == Self::TAG_BYTES =>
         {
-          return Ok(None)
+          return Ok(None);
         }
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         Event::Comment(e) => discard_comment(e, reader, Self::TAG),
@@ -708,7 +710,9 @@ impl<C: TableDataContent> Resource<C> {
               self.push_info_by_ref(info)
             }
           }
-          CooSys::TAG_BYTES => push_from_event_start!(self, CooSys, reader, reader_buff, e),
+          CooSys::TAG_BYTES => {
+            push_from_event_start_fallible!(self, CooSys, reader, reader_buff, e)
+          }
           Group::TAG_BYTES => push_from_event_start!(self, Group, reader, reader_buff, e),
           Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
           Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
@@ -728,7 +732,7 @@ impl<C: TableDataContent> Resource<C> {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
               Self::TAG,
-            ))
+            ));
           }
         },
         Event::Empty(e) => match e.local_name() {
@@ -741,7 +745,7 @@ impl<C: TableDataContent> Resource<C> {
             }
           }
           TimeSys::TAG_BYTES => push_from_event_empty!(self, TimeSys, e),
-          CooSys::TAG_BYTES => push_from_event_empty!(self, CooSys, e),
+          CooSys::TAG_BYTES => push_from_event_empty_fallible!(self, CooSys, e),
           Group::TAG_BYTES => push_from_event_empty!(self, Group, e),
           Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
           Link::TAG_BYTES => links.push(Link::from_event_empty(e)?),
@@ -749,7 +753,7 @@ impl<C: TableDataContent> Resource<C> {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
               Self::TAG,
-            ))
+            ));
           }
         },
         Event::Text(e) if is_empty(e) => {}
@@ -760,7 +764,7 @@ impl<C: TableDataContent> Resource<C> {
             || e.local_name() == Table::<VoidTableDataContent>::TAG_BYTES
             || e.local_name() == Self::TAG_BYTES =>
         {
-          return Ok(None)
+          return Ok(None);
         }
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         Event::Comment(e) => discard_comment(e, reader, Self::TAG),
@@ -802,7 +806,7 @@ impl<C: TableDataContent> Resource<C> {
         ResourceOrTable::Table(table) => {
           return table
             .write_to_data_beginning(writer, &(), stop_before_data)
-            .map(|()| true)
+            .map(|()| true);
         }
       }
       for info in se.infos.iter_mut() {
@@ -972,7 +976,7 @@ impl<C: TableDataContent> HasSubElements for Resource<C> {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
               Self::TAG,
-            ))
+            ));
           }
         },
         Event::Empty(e) => match e.local_name() {
@@ -985,7 +989,7 @@ impl<C: TableDataContent> HasSubElements for Resource<C> {
             }
           }
           TimeSys::TAG_BYTES => push_from_event_empty!(self, TimeSys, e),
-          CooSys::TAG_BYTES => push_from_event_empty!(self, CooSys, e),
+          CooSys::TAG_BYTES => push_from_event_empty_fallible!(self, CooSys, e),
           Group::TAG_BYTES => push_from_event_empty!(self, Group, e),
           Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
           Link::TAG_BYTES => links.push(Link::from_event_empty(e)?),
@@ -993,7 +997,7 @@ impl<C: TableDataContent> HasSubElements for Resource<C> {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
               Self::TAG,
-            ))
+            ));
           }
         },
         Event::Text(e) if is_empty(e) => {}

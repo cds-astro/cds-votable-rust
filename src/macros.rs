@@ -929,11 +929,43 @@ macro_rules! push_from_event_start {
   };
 }
 
+macro_rules! push_from_event_start_fallible {
+  ($self:ident, $elem:ident, $reader:ident, $reader_buff:ident, $e:ident) => {
+    paste! {
+      $elem::from_event_start($e)
+      .and_then(|elem| elem.read_content(&mut $reader, &mut $reader_buff, &()))
+      .map(|elem| $self.[<push_ $elem:lower _by_ref>](elem))
+      .map_err(|e| log::error!(concat!("Fail to build element: ", stringify!($elem), ". Will be excluded from the VOTable. Error: {:?}."), e))
+      .unwrap_or(())
+    }
+  };
+  ($self:ident, $elem:ident, $reader:ident, $reader_buff:ident, $e:ident, $context:expr) => {
+    paste! {
+      $elem::from_event_start($e)
+      .and_then(|elem| elem.read_content(&mut $reader, &mut $reader_buff, &$context))
+      .map(|elem| $self.[<push_ $elem:lower _by_ref>](elem))
+      .map_err(|e| log::error!(concat!("Fail to build element: ", stringify!($elem), ". Will be excluded from the VOTable. Error: {:?}."), e))
+      .unwrap_or(())
+    }
+  };
+}
+
 macro_rules! push_from_event_empty {
   ($self:ident, $elem:ident, $e:ident) => {
     paste! {
       $elem::from_event_empty($e)
       .map(|elem| $self.[<push_ $elem:lower _by_ref>](elem))?
+    }
+  };
+}
+
+macro_rules! push_from_event_empty_fallible  {
+  ($self:ident, $elem:ident, $e:ident) => {
+    paste! {
+      $elem::from_event_empty($e)
+      .map(|elem| $self.[<push_ $elem:lower _by_ref>](elem))
+      .map_err(|e| log::error!(concat!("Fail to build element: ", stringify!($elem), ". Will be excluded from the VOTable. Error: {:?}."), e))
+      .unwrap_or(())
     }
   };
 }

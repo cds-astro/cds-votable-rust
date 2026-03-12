@@ -9,15 +9,15 @@ use std::{
 
 use log::trace;
 use paste::paste;
-use quick_xml::{events::Event, Reader, Writer};
+use quick_xml::{Reader, Writer, events::Event};
 
 use crate::{
+  HasSubElements, HasSubElems, QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
   error::VOTableError,
   fieldref::FieldRef,
   paramref::ParamRef,
   timesys::RefPosition,
   utils::{discard_comment, discard_event, unexpected_attr_warn},
-  HasSubElements, HasSubElems, QuickXmlReadWrite, TableDataContent, VOTableElement, VOTableVisitor,
 };
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -135,7 +135,7 @@ impl VOTableElement for CooSys {
     if let (Some(id), Some(system)) = (id, system) {
       // Create and set system
       let mut system = equinox
-        .map(|equinox| System::from_system_and_equinox(&system, equinox))
+        .map(|equinox| System::from_system_and_equinox(&system, &equinox))
         .unwrap_or(System::from_system(system))?;
       if let Some(epoch) = epoch {
         system.set_epoch_from_str_by_ref(epoch)?;
@@ -225,7 +225,7 @@ impl HasSubElements for CooSys {
             return Err(VOTableError::UnexpectedStartTag(
               e.local_name().to_vec(),
               Self::TAG,
-            ))
+            ));
           }
         },
         Event::Empty(e) => match e.local_name() {
@@ -235,7 +235,7 @@ impl HasSubElements for CooSys {
             return Err(VOTableError::UnexpectedEmptyTag(
               e.local_name().to_vec(),
               Self::TAG,
-            ))
+            ));
           }
         },
         Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
@@ -394,7 +394,7 @@ impl System {
   }
 
   pub fn new_default_ecl_fk5() -> System {
-    System::new_ecl_fk4(2000.0)
+    System::new_ecl_fk4(1950.0)
   }
 
   pub fn new_ecl_fk5(equinox_in_julian_year: f64) -> System {
@@ -429,12 +429,11 @@ impl System {
       "ecl_FK5" => Ok(System::new_default_ecl_fk5()),
       "galactic" => Ok(System::new_galactic()),
       "supergalactic" => Ok(System::new_supergalactic()),
-      _ => {
-        Err(VOTableError::Custom(format!(
-          "System not recognized in tag '{}'. Expected: one of [eq_FK4, eq_FK5, ICRS, ecl_FK4, ecl_FK5, galactic, supergalactic]. Actual: '{}'.",
-          CooSys::TAG, system,
-        )))
-      }
+      _ => Err(VOTableError::Custom(format!(
+        "System not recognized in tag '{}'. Expected: one of [eq_FK4, eq_FK5, ICRS, ecl_FK4, ecl_FK5, galactic, supergalactic]. Actual: '{}'.",
+        CooSys::TAG,
+        system,
+      ))),
     }
   }
 
@@ -467,7 +466,8 @@ impl System {
       "supergalactic" => Ok(System::new_supergalactic()),
       _ => Err(VOTableError::Custom(format!(
         "System not recognized in tag '{}'. Expected: one of [eq_FK4, eq_FK5, ICRS, ecl_FK4, ecl_FK5, galactic, supergalactic]. Actual: '{}'.",
-        CooSys::TAG, system,
+        CooSys::TAG,
+        system,
       ))),
     }
   }
@@ -626,11 +626,11 @@ impl System {
 mod tests {
   use std::io::Cursor;
 
-  use quick_xml::{events::Event, Reader, Writer};
+  use quick_xml::{Reader, Writer, events::Event};
 
   use crate::{
-    coosys::{CooSys, System},
     QuickXmlReadWrite, VOTableElement,
+    coosys::{CooSys, System},
   };
 
   #[test]
