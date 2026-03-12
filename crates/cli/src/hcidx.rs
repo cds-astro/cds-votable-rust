@@ -15,9 +15,9 @@ use cdshealpix::{
 };
 
 use votable::{
-  data::{tabledata::FieldIteratorUnbuffered, TableOrBinOrBin2},
-  iter::SimpleVOTableRowIterator,
   VOTableError,
+  data::{TableOrBinOrBin2, tabledata::FieldIteratorUnbuffered},
+  iter::SimpleVOTableRowIterator,
 };
 
 use crate::hpxsort::{get_fields, look_for_positional_columns};
@@ -100,7 +100,9 @@ impl HealpixCumulIndex {
           0
         }
         _ => {
-          error!("Error retrieving coordinates: Check your VOTable with votlint, ensure all rows do have positions, in decimal degrees. Exec with flag 'RUST_LOG=\"trace\"' for more information.");
+          error!(
+            "Error retrieving coordinates: Check your VOTable with votlint, ensure all rows do have positions, in decimal degrees. Exec with flag 'RUST_LOG=\"trace\"' for more information."
+          );
           0
         }
       }
@@ -141,8 +143,8 @@ impl HealpixCumulIndex {
         }
         // Write the cumulative map
         let file_metadata = self.input.metadata().ok();
-        OwnedCIndex::new_unchecked(self.depth, map.into_boxed_slice())
-          .to_fits(
+        OwnedCIndex::new_unsafe(self.depth, map.into_boxed_slice())
+          .to_fits_implicit(
             out_fits_write,
             self.input.file_name().and_then(|name| name.to_str()),
             file_metadata.as_ref().map(|meta| meta.len()),

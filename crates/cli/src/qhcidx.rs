@@ -5,7 +5,7 @@ use memmap2::MmapOptions;
 
 use cdshealpix::{
   n_hash,
-  nested::sort::cindex::{FITSCIndex, HCIndex},
+  nested::sort::cindex::{FITSCIndex, FitsMMappedCIndex, HCIndex},
 };
 
 use votable::VOTableError;
@@ -28,7 +28,7 @@ pub struct QueryHealpixCumulIndex {
 impl QueryHealpixCumulIndex {
   pub fn exec(self) -> Result<(), VOTableError> {
     match FITSCIndex::from_fits_file(self.input).map_err(|e| VOTableError::Custom(e.to_string()))? {
-      FITSCIndex::U64(fits_hci) => {
+      FITSCIndex::ImplicitU64(fits_hci) => {
         let votable_name = fits_hci
           .get_indexed_file_name()
           .expect("No file name found in the FITS HCI file.");
@@ -70,7 +70,7 @@ impl QueryHealpixCumulIndex {
         }
         // Performs the query
         let data_start = hci.get(0) as usize;
-        let data_end = hci.get(n_hash(depth) as usize) as usize;
+        let data_end = hci.get(n_hash(depth)) as usize;
         let bytes_range = hci.get_cell(self.depth, self.ipix);
         let file = File::open(votable_name).map_err(VOTableError::Io)?;
         let mmap = unsafe { MmapOptions::new().map(&file).map_err(VOTableError::Io)? };
