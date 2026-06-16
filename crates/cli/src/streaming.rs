@@ -2,31 +2,31 @@
 
 use std::{
   fs::File,
-  io::{stdin, stdout, BufRead, BufReader, BufWriter, Cursor, Write},
+  io::{BufRead, BufReader, BufWriter, Cursor, Write, stdin, stdout},
   path::PathBuf,
   str::FromStr,
   thread::scope,
 };
 
 use clap::Args;
-use crossbeam::channel::{bounded, Receiver, Sender};
-use serde::{de::DeserializeSeed, Deserializer};
+use crossbeam::channel::{Receiver, Sender, bounded};
+use serde::{Deserializer, de::DeserializeSeed};
 
 use votable::{
-  data::{tabledata::FieldIteratorUnbuffered, TableOrBinOrBin2},
+  TableElem, VOTable, VoidTableDataContent,
+  data::{TableOrBinOrBin2, tabledata::FieldIteratorUnbuffered},
   error::VOTableError,
   impls::{
+    TableSchema, VOTableValue,
     b64::{
       read::BinaryDeserializer,
-      write::{general_purpose, B64Formatter, BinarySerializer, EncoderWriter},
+      write::{B64Formatter, BinarySerializer, EncoderWriter, general_purpose},
     },
     mem::InMemTableDataRows,
     visitors::FixedLengthArrayVisitor,
-    TableSchema, VOTableValue,
   },
   iter::SimpleVOTableRowIterator,
   votable::new_xml_writer,
-  TableElem, VOTable, VoidTableDataContent,
 };
 
 #[derive(Debug, Copy, Clone)]
@@ -289,11 +289,9 @@ fn write_1st_csv_field_with_newline<W: Write>(
 }
 fn write_csv_field<W: Write>(write: &mut W, field: &str, sep: char) -> Result<(), VOTableError> {
   if need_double_quotes(field, sep) {
-    write
-      .write_all(b",")
-      .and_then(|_| write_double_quoted_field(field, write))
+    write!(write, "{}", sep).and_then(|_| write_double_quoted_field(field, write))
   } else {
-    write.write_fmt(format_args!(",{}", field))
+    write!(write, "{}{}", sep, field)
   }
   .map_err(VOTableError::Io)
 }
@@ -306,9 +304,9 @@ fn need_double_quotes(field: &str, sep: char) -> bool {
 /// > another double quote.
 fn write_double_quoted_field<W: Write>(field: &str, write: &mut W) -> Result<(), std::io::Error> {
   if field.contains('"') {
-    write.write_fmt(format_args!("\"{}\"", field.replace('"', "\"\"")))
+    write!(write, "\"{}\"", field.replace('"', "\"\""))
   } else {
-    write.write_fmt(format_args!("\"{}\"", field))
+    write!(write, "\"{}\"", field)
   }
 }
 
@@ -352,11 +350,7 @@ fn bin2row2fieldit<'a>(
   schema.iter().enumerate().map(move |(i_col, field_schema)| {
     let field = field_schema.deserialize(&mut binary_deser).unwrap();
     let is_null = (null_flags[i_col >> 3] & (128_u8 >> (i_col & 7))) != 0;
-    if is_null {
-      VOTableValue::Null
-    } else {
-      field
-    }
+    if is_null { VOTableValue::Null } else { field }
   })
 }
 
@@ -390,7 +384,7 @@ where
     res.push('\n');
     push_field(s.as_ref(), sep, &mut res);
     for s in it {
-      res.push(',');
+      res.push(sep);
       push_field(s.as_ref(), sep, &mut res);
     }
   }
