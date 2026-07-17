@@ -7,7 +7,7 @@ use std::{
 
 use paste::paste;
 
-use super::{error::VOTableError, utils::unexpected_attr_warn, EmptyElem, VOTableElement};
+use super::{EmptyElem, VOTableElement, error::VOTableError, utils::unexpected_attr_warn};
 
 /// Struct corresponding to the `TIMESYS` XML tag.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -160,11 +160,13 @@ const TCB_INFO: Info = Info::new(
   "Barycentric Coordinate Time TCB",
   " Derived from TCG, but taking into account the relativistic effects of the gravitational potential at the barycenter as well as velocity time dilation variations due to the eccentricity of the Earth's orbit.  See 1999A&A...348..642I for details.",
 );
-const TDB_INFO: Info = Info::new("Barycentric Dynamical Time TDB",
-                                 "Runs slower than TCB at a constant rate so as to remain approximately in step with TT. Therefore runs quasi-synchronously with TT, except for the relativistic effects introduced by variations in the Earth's velocity relative to the barycenter.",
+const TDB_INFO: Info = Info::new(
+  "Barycentric Dynamical Time TDB",
+  "Runs slower than TCB at a constant rate so as to remain approximately in step with TT. Therefore runs quasi-synchronously with TT, except for the relativistic effects introduced by variations in the Earth's velocity relative to the barycenter.",
 );
-const UNKNOWN_TIMESCALE_INFO: Info = Info::new("Unknown or unavailable timescale",
-                                               "This value indicates clients cannot transform the times reliably. This is to be used for simulated data, free-running clocks, or data for which information on the time scale has been lost.",
+const UNKNOWN_TIMESCALE_INFO: Info = Info::new(
+  "Unknown or unavailable timescale",
+  "This value indicates clients cannot transform the times reliably. This is to be used for simulated data, free-running clocks, or data for which information on the time scale has been lost.",
 );
 
 /// See the [IVOA timescale vocabulary](https://www.ivoa.net/rdf/timescale/2019-03-15/timescale.html)
@@ -241,7 +243,7 @@ const UNKNOWN_REFPOS_INFO: Info = Info::new(
   "The times cannot be transformed to a different reference position reliably.  This is to be used for simulated data or for data for which the reference position has been lost.",
 );
 
-/// See the [IVOA refposition vocabulary](https://www.ivoa.net/rdf/refposition/2019-03-15/refposition.html)
+/// See the [IVOA refposition vocabulary](http://www.ivoa.net/rdf/refposition)
 // #[serde(tag = "refposition")]
 #[derive(Clone, PartialEq, Eq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum RefPosition {
@@ -292,11 +294,11 @@ impl fmt::Display for RefPosition {
 mod tests {
   use std::io::Cursor;
 
-  use quick_xml::{events::Event, Reader, Writer};
+  use quick_xml::{Reader, Writer, events::Event};
 
   use crate::{
-    timesys::{RefPosition, TimeScale, TimeSys},
     QuickXmlReadWrite, VOTableElement,
+    timesys::{RefPosition, TimeScale, TimeSys},
   };
 
   #[test]

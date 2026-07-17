@@ -21,8 +21,8 @@ use std::{
 };
 
 use quick_xml::{
-  events::{attributes::Attributes, BytesStart, BytesText, Event},
   Reader, Writer,
+  events::{BytesStart, BytesText, Event, attributes::Attributes},
 };
 
 #[macro_use]
@@ -59,7 +59,7 @@ use self::utils::{discard_comment, discard_event};
 pub use self::{
   coosys::CooSys,
   data::{
-    binary::Binary, binary2::Binary2, fits::Fits, stream::Stream, tabledata::TableData, Data,
+    Data, binary::Binary, binary2::Binary2, fits::Fits, stream::Stream, tabledata::TableData,
   },
   definitions::Definitions,
   desc::Description,
@@ -596,7 +596,7 @@ pub trait VOTableVisitor<C: TableDataContent> {
   fn visit_binary2_stream(&mut self, stream: &mut Stream<C>) -> Result<(), Self::E>;
   fn visit_fits_start(&mut self, fits: &mut Fits) -> Result<(), Self::E>;
   fn visit_fits_stream(&mut self, stream: &mut Stream<VoidTableDataContent>)
-    -> Result<(), Self::E>;
+  -> Result<(), Self::E>;
   fn visit_fits_ended(&mut self, fits: &mut Fits) -> Result<(), Self::E>;
 
   fn visit_values_start(&mut self, values: &mut Values) -> Result<(), Self::E>;
@@ -611,22 +611,22 @@ pub trait VOTableVisitor<C: TableDataContent> {
 mod tests {
   use std::{i64, io::Cursor, str::from_utf8};
 
-  use quick_xml::{events::Event, Reader, Writer};
+  use quick_xml::{Reader, Writer, events::Event};
   use serde_json::{Number, Value};
 
   use super::{
+    HasContent, QuickXmlReadWrite, VOTableElement,
     coosys::{CooSys, System},
     data::Data,
     datatype::Datatype,
     field::{ArraySize, Field, Precision},
-    impls::{mem::InMemTableDataRows, VOTableValue},
+    impls::{VOTableValue, mem::InMemTableDataRows},
     info::Info,
     link::Link,
     resource::{Resource, ResourceSubElem},
     table::Table,
     values::Values,
     votable::{VOTable, Version},
-    HasContent, QuickXmlReadWrite, VOTableElement,
   };
 
   #[test]
@@ -684,7 +684,7 @@ mod tests {
         r#"Photometric and spectroscopic catalog of objects in the field around HE0226-4110"#
           .into(),
       )
-      .push_coosys(CooSys::new("J2000", System::new_default_eq_fk5()))
+      .push_coosys(CooSys::new("J2000", System::new_default_eq_fk5_deprec()))
       .push_coosys(CooSys::new("J2015.5", System::new_icrs().set_epoch(2015.5)))
       .insert_extra(
         "toto",
@@ -885,7 +885,7 @@ mod tests {
         r#"Photometric and spectroscopic catalog of objects in the field around HE0226-4110"#
           .into(),
       )
-      .push_coosys(CooSys::new("J2000", System::new_default_eq_fk5()))
+      .push_coosys(CooSys::new("J2000", System::new_default_eq_fk5_deprec()))
       .push_coosys(CooSys::new("J2015.5", System::new_icrs().set_epoch(2015.5)))
       .push_sub_elem(ResourceSubElem::from_table(table).push_info(
         Info::new("QUERY_STATUS", "OVERFLOW").set_content("truncated result (maxtup=2)"),
