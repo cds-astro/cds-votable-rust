@@ -26,7 +26,7 @@ clap = { version = "4.5", features = ["derive"] }
 log = { version = "0.4", features = ["max_level_trace", "release_max_level_trace"] }
 env_logger = "0.11"
 crossbeam = "0.8"
-serde = "1.0"
+serde = "=1.0.229"
 cdshealpix = "0.9.1"
 memmap2 = "0.9"
 

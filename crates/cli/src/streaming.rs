@@ -2,31 +2,31 @@
 
 use std::{
   fs::File,
-  io::{BufRead, BufReader, BufWriter, Cursor, Write, stdin, stdout},
+  io::{stdin, stdout, BufRead, BufReader, BufWriter, Cursor, Write},
   path::PathBuf,
   str::FromStr,
   thread::scope,
 };
 
 use clap::Args;
-use crossbeam::channel::{Receiver, Sender, bounded};
-use serde::{Deserializer, de::DeserializeSeed};
+use crossbeam::channel::{bounded, Receiver, Sender};
+use serde::{de::DeserializeSeed, Deserializer};
 
 use votable::{
-  TableElem, VOTable, VoidTableDataContent,
-  data::{TableOrBinOrBin2, tabledata::FieldIteratorUnbuffered},
+  data::{tabledata::FieldIteratorUnbuffered, TableOrBinOrBin2},
   error::VOTableError,
   impls::{
-    TableSchema, VOTableValue,
     b64::{
       read::BinaryDeserializer,
-      write::{B64Formatter, BinarySerializer, EncoderWriter, general_purpose},
+      write::{general_purpose, B64Formatter, BinarySerializer, EncoderWriter},
     },
     mem::InMemTableDataRows,
     visitors::FixedLengthArrayVisitor,
+    TableSchema, VOTableValue,
   },
   iter::SimpleVOTableRowIterator,
   votable::new_xml_writer,
+  TableElem, VOTable, VoidTableDataContent,
 };
 
 #[derive(Debug, Copy, Clone)]
@@ -350,7 +350,11 @@ fn bin2row2fieldit<'a>(
   schema.iter().enumerate().map(move |(i_col, field_schema)| {
     let field = field_schema.deserialize(&mut binary_deser).unwrap();
     let is_null = (null_flags[i_col >> 3] & (128_u8 >> (i_col & 7))) != 0;
-    if is_null { VOTableValue::Null } else { field }
+    if is_null {
+      VOTableValue::Null
+    } else {
+      field
+    }
   })
 }
 
