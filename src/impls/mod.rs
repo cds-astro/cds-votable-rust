@@ -21,11 +21,13 @@ use std::{
 };
 
 pub mod b64;
+mod content;
 pub mod mem;
 pub mod seeds;
 pub mod visitors;
 
 use crate::impls::{
+  content::{Content, ContentRefDeserializer},
   seeds::{
     BooleanSead, FixedLengthArrayOfUTF8StringSeed, FixedLengthArrayOfUnidecodeStringSeed,
     FixedLengthArrayPhantomSeed, FixedLengthUTF8StringSeed, FixedLengthUnicodeStringSeed,
@@ -122,7 +124,8 @@ impl<'a> Serialize for VariableLengthStringUnicode<'a> {
   }
 }
 
-// WARNING: THE ORDER IS IMPORTANT WHEN DESERIALIZING JSON, NOT TO LOOSE SIGNIFICANT DIGITS!!
+// The order in which variants are tried when deserializing (e.g. from JSON) is defined in the
+// `Deserialize` implementation, not by the order of the variants here.
 #[derive(Debug, Clone, PartialEq)]
 pub enum VOTableValue {
   Null,
@@ -205,17 +208,26 @@ impl Serialize for VOTableValue {
   }
 }
 
+/// Variants are tried from the most specific to the least specific, so that a value matching
+/// several types is deserialized in the narrowest one (the schema possibly converts it later):
+/// * unit/none before anything else;
+/// * integers before floats (not to lose significant digits), narrow before wide
+///   (`u8` before `i64`);
+/// * a single character string is a `char`, else a `String` (an empty string being a null value);
+/// * a bit array (serialized as a structure) before any other array;
+/// * the same rules apply to array elements: booleans (possibly null), then `u8`, then `i64`,
+///   then floats;
+/// * among floats, fixed length before variable length (2 floats are a complex, not an array of
+///   floats), and arrays without null elements before arrays with null elements.
 impl<'de> Deserialize<'de> for VOTableValue {
   fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
   where
     D: Deserializer<'de>,
   {
-    use serde::__private229::de::{ContentRefDeserializer, ContentVisitor, UntaggedUnitVisitor};
-
-    let content = ContentVisitor::new().deserialize(deserializer)?;
-    let deserializer = ContentRefDeserializer::<'_, '_, D::Error>::new(&content);
+    let content = Content::deserialize(deserializer)?;
+    let deserializer = ContentRefDeserializer::<'_, D::Error>::new(&content);
     // First try Null value
-    if let Ok(()) = deserializer.deserialize_any(UntaggedUnitVisitor::new("VOTableValue", "Null")) {
+    if content.is_unit_or_none() {
       return Ok(VOTableValue::Null);
     }
     if let Ok(v) = <bool>::deserialize(deserializer) {
