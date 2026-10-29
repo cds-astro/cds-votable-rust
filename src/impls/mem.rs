@@ -136,9 +136,9 @@ impl TableDataContent for InMemTableDataStringRows {
       .filter(|e| matches!(e, TableElem::Field(_)))
       .count();
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) if e.local_name() == b"TR" => {
+        Event::Start(e) if e.local_name().into_inner() == "TR" => {
           let fields = parse_fields::<_, EOTR>(reader, reader_buff, n_fields)?;
           if fields.len() == n_fields {
             self.rows.push(fields);
@@ -146,7 +146,7 @@ impl TableDataContent for InMemTableDataStringRows {
             return Err(VOTableError::WrongFieldNumber(n_fields, fields.len()));
           }
         }
-        Event::End(e) if e.local_name() == TableData::<Self>::TAG_BYTES => {
+        Event::End(e) if e.local_name().into_inner() == TableData::<Self>::TAG => {
           reader_buff.clear();
           return Ok(());
         }
@@ -185,15 +185,15 @@ impl TableDataContent for InMemTableDataStringRows {
     writer: &mut Writer<W>,
     _context: &[TableElem],
   ) -> Result<(), VOTableError> {
-    let tr_tag = BytesStart::borrowed_name(b"TR");
+    let tr_tag = BytesStart::new("TR");
     for row in &self.rows {
       writer
-        .write_event(Event::Start(tr_tag.to_borrowed()))
+        .write_event(Event::Start(tr_tag.borrow()))
         .map_err(VOTableError::Write)?;
       for field in row {
-        let elem_writer = writer.create_element(b"TD");
+        let elem_writer = writer.create_element("TD");
         elem_writer
-          .write_text_content(BytesText::from_plain_str(field.as_str()))
+          .write_text_content(BytesText::new(field.as_str()))
           .map_err(VOTableError::Write)?;
       }
       writer
@@ -247,11 +247,11 @@ impl InMemTableDataRows {
     I: Iterator,
     I::Item: AsRef<[VOTableValue]>,
   {
-    let tr_tag = BytesStart::borrowed_name(b"TR");
+    let tr_tag = BytesStart::new("TR");
     for row_ref in iterator {
       trace!("Serialized row in DATATABLE: {:?}", row_ref.as_ref());
       writer
-        .write_event(Event::Start(tr_tag.to_borrowed()))
+        .write_event(Event::Start(tr_tag.borrow()))
         .map_err(VOTableError::Write)
         .and_then(|_| Self::write_tabledata_row(writer, row_ref.as_ref().iter(), &schema))
         .and_then(|_| {
@@ -277,8 +277,8 @@ impl InMemTableDataRows {
     // (for instance). But I am not sure it is worth it...
     for field in row_it {
       writer
-        .create_element(b"TD")
-        .write_text_content(BytesText::from_plain_str(
+        .create_element("TD")
+        .write_text_content(BytesText::new(
           field.as_ref().to_string().as_str(),
         ))
         .map_err(VOTableError::Write)?;
@@ -414,9 +414,9 @@ impl TableDataContent for InMemTableDataRows {
   ) -> Result<(), VOTableError> {
     let schema: Vec<Schema> = TableSchema::from(context).unwrap();
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) if e.local_name() == b"TR" => {
+        Event::Start(e) if e.local_name().into_inner() == "TR" => {
           let fields = FieldIterator::new(reader, reader_buff)
             .zip(schema.iter())
             .map(|(f_res, s)| f_res.and_then(|f| s.value_from_str(f.trim_start())))
@@ -429,7 +429,7 @@ impl TableDataContent for InMemTableDataRows {
             return Err(VOTableError::WrongFieldNumber(schema.len(), fields.len()));
           }
         }
-        Event::End(e) if e.local_name() == TableData::<Self>::TAG_BYTES => {
+        Event::End(e) if e.local_name().into_inner() == TableData::<Self>::TAG => {
           reader_buff.clear();
           return Ok(());
         }
@@ -522,7 +522,7 @@ impl TableDataContent for InMemTableDataRows {
     writer: &mut Writer<W>,
     context: &[TableElem],
   ) -> Result<(), VOTableError> {
-    Self::write_binary_rows(writer.inner(), self.rows.iter(), TableSchema::from(context))
+    Self::write_binary_rows(writer.get_mut(), self.rows.iter(), TableSchema::from(context))
   }
 
   fn write_in_binary2<W: Write>(
@@ -530,6 +530,6 @@ impl TableDataContent for InMemTableDataRows {
     writer: &mut Writer<W>,
     context: &[TableElem],
   ) -> Result<(), VOTableError> {
-    Self::write_binary2_rows(writer.inner(), self.rows.iter(), TableSchema::from(context))
+    Self::write_binary2_rows(writer.get_mut(), self.rows.iter(), TableSchema::from(context))
   }
 }

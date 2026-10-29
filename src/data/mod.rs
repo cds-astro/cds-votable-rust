@@ -217,15 +217,15 @@ impl<C: TableDataContent> Data<C> {
     mut reader_buff: &mut Vec<u8>,
   ) -> Result<Option<TableOrBinOrBin2>, VOTableError> {
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.local_name() {
-          TableData::<VoidTableDataContent>::TAG_BYTES => {
+        Event::Start(e) => match e.local_name().into_inner() {
+          TableData::<VoidTableDataContent>::TAG => {
             return Ok(Some(TableOrBinOrBin2::TableData))
           }
-          Binary::<VoidTableDataContent>::TAG_BYTES => return Ok(Some(TableOrBinOrBin2::Binary)),
-          Binary2::<VoidTableDataContent>::TAG_BYTES => return Ok(Some(TableOrBinOrBin2::Binary2)),
-          Fits::TAG_BYTES => {
+          Binary::<VoidTableDataContent>::TAG => return Ok(Some(TableOrBinOrBin2::Binary)),
+          Binary2::<VoidTableDataContent>::TAG => return Ok(Some(TableOrBinOrBin2::Binary2)),
+          Fits::TAG => {
             return Ok(Some(TableOrBinOrBin2::Fits(from_event_start_by_ref!(
               Fits,
               reader,
@@ -233,25 +233,25 @@ impl<C: TableDataContent> Data<C> {
               e
             ))))
           }
-          Info::TAG_BYTES => push_from_event_start!(self, Info, reader, reader_buff, e),
+          Info::TAG => push_from_event_start!(self, Info, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::Empty(e) => match e.local_name() {
-          Info::TAG_BYTES => push_from_event_empty!(self, Info, e),
+        Event::Empty(e) => match e.local_name().into_inner() {
+          Info::TAG => push_from_event_empty!(self, Info, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
         Event::Text(e) if is_empty(e) => {}
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
+        Event::End(e) if e.local_name().into_inner() == Self::TAG => return Ok(None),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         Event::Comment(e) => discard_comment(e, reader, Self::TAG),
         _ => discard_event(event, Self::TAG),
@@ -266,9 +266,9 @@ impl<C: TableDataContent> Data<C> {
     &mut self,
     writer: &mut Writer<W>,
   ) -> Result<(), VOTableError> {
-    let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    let tag = BytesStart::new(Self::TAG);
     writer
-      .write_event(Event::Start(tag.to_borrowed()))
+      .write_event(Event::Start(tag.borrow()))
       .map_err(VOTableError::Write)?;
     // Write sub-element
     self.data.write_to_data_beginning(writer)
@@ -281,7 +281,7 @@ impl<C: TableDataContent> Data<C> {
     &mut self,
     writer: &mut Writer<W>,
   ) -> Result<(), VOTableError> {
-    let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    let tag = BytesStart::new(Self::TAG);
     // Write sub-element
     self.data.write_from_data_end(writer)?;
     write_elem_vec_empty_context!(self, infos, writer);
@@ -339,49 +339,49 @@ impl<C: TableDataContent> HasSubElements for Data<C> {
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.local_name() {
-          TableData::<C>::TAG_BYTES => {
+        Event::Start(e) => match e.local_name().into_inner() {
+          TableData::<C>::TAG => {
             // Nothing here because the default is a TableData
             self
               .data
               .read_sub_elements_by_ref(reader, reader_buff, context)?
           }
-          Binary::<C>::TAG_BYTES => {
+          Binary::<C>::TAG => {
             self.data = DataElem::Binary(Binary::new());
             self
               .data
               .read_sub_elements_by_ref(reader, reader_buff, context)?
           }
-          Binary2::<C>::TAG_BYTES => {
+          Binary2::<C>::TAG => {
             self.data = DataElem::Binary2(Binary2::new());
             self
               .data
               .read_sub_elements_by_ref(reader, reader_buff, context)?
           }
-          Fits::TAG_BYTES => {
+          Fits::TAG => {
             self.data = DataElem::Fits(from_event_start_by_ref!(Fits, reader, reader_buff, e))
           }
-          Info::TAG_BYTES => push_from_event_start!(self, Info, reader, reader_buff, e),
+          Info::TAG => push_from_event_start!(self, Info, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::Empty(e) => match e.local_name() {
-          Info::TAG_BYTES => push_from_event_empty!(self, Info, e),
+        Event::Empty(e) => match e.local_name().into_inner() {
+          Info::TAG => push_from_event_empty!(self, Info, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
         Event::Text(e) if is_empty(e) => {}
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
+        Event::End(e) if e.local_name().into_inner() == Self::TAG => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => discard_event(event, Self::TAG),
       }

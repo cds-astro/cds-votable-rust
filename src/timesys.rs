@@ -308,9 +308,9 @@ mod tests {
     let mut reader = Reader::from_reader(Cursor::new(xml.as_bytes()));
     let mut buff: Vec<u8> = Vec::with_capacity(xml.len());
     let mut timesys = loop {
-      let mut event = reader.read_event(&mut buff).unwrap();
+      let mut event = reader.read_event_into(&mut buff).unwrap();
       match &mut event {
-        Event::Empty(e) if e.local_name() == TimeSys::TAG_BYTES => {
+        Event::Empty(e) if e.local_name().into_inner() == TimeSys::TAG => {
           let timesys = TimeSys::from_event_empty(e).unwrap();
           assert_eq!(timesys.id, "time_frame");
           assert_eq!(timesys.timeorigin, Some(2455197.5));
@@ -318,7 +318,7 @@ mod tests {
           assert_eq!(timesys.refposition, RefPosition::BARYCENTER);
           break timesys;
         }
-        Event::Text(e) if e.escaped().is_empty() => (), // First even read
+        Event::Text(e) if e.is_empty() => (), // First even read
         _ => unreachable!(),
       }
     };

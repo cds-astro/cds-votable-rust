@@ -153,19 +153,19 @@ mod tests {
     let mut reader = Reader::from_reader(Cursor::new(xml.as_bytes()));
     let mut buff: Vec<u8> = Vec::with_capacity(xml.len());
     loop {
-      let mut event = reader.read_event(&mut buff).unwrap();
+      let mut event = reader.read_event_into(&mut buff).unwrap();
       match &mut event {
-        Event::Start(e) if e.local_name() == Info::TAG_BYTES => {
+        Event::Start(e) if e.local_name().into_inner() == Info::TAG => {
           let info = Info::from_event_start(&e)
             .and_then(|info| info.read_content(&mut reader, &mut buff, &()))
             .unwrap();
           return info;
         }
-        Event::Empty(e) if e.local_name() == Info::TAG_BYTES => {
+        Event::Empty(e) if e.local_name().into_inner() == Info::TAG => {
           let info = Info::from_event_empty(&e).unwrap();
           return info;
         }
-        Event::Text(e) if e.escaped().is_empty() => (), // First even read
+        Event::Text(e) if e.is_empty() => (), // First even read
         _ => unreachable!(),
       }
     }

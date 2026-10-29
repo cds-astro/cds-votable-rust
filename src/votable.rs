@@ -253,7 +253,8 @@ impl<C: TableDataContent> VOTableWrapper<C> {
   pub fn to_ivoa_xml_writer<W: Write>(&mut self, write: W) -> Result<(), VOTableError> {
     let mut write = Writer::new_with_indent(write, b' ', 4);
     write
-      .write(
+      .get_mut()
+      .write_all(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 "#
         .as_bytes(),
@@ -552,10 +553,10 @@ impl<C: TableDataContent> VOTable<C> {
     let mut reader = Reader::from_reader(reader);
     let mut buff: Vec<u8> = Vec::with_capacity(1024);
     loop {
-      let mut event = reader.read_event(&mut buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(&mut buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Decl(e) => check_declaration(e),
-        Event::Start(e) if e.local_name() == VOTable::<C>::TAG_BYTES => {
+        Event::Start(e) if e.local_name().into_inner() == VOTable::<C>::TAG => {
           // Ignore the remaining of the reader !
           return VOTable::<C>::from_event_start(e)
             .and_then(|vot| vot.read_content(&mut reader, &mut buff, &()));
@@ -575,10 +576,10 @@ impl<C: TableDataContent> VOTable<C> {
   ) -> Result<(VOTable<C>, Resource<C>, Reader<R>), VOTableError> {
     let mut reader = Reader::from_reader(reader);
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Decl(e) => check_declaration(e),
-        Event::Start(e) if e.local_name() == VOTable::<C>::TAG_BYTES => {
+        Event::Start(e) if e.local_name().into_inner() == VOTable::<C>::TAG => {
           return VOTable::<C>::from_event_start(e).and_then(|mut votable| {
             votable
               .read_till_next_resource(reader, reader_buff)
@@ -705,34 +706,34 @@ impl<C: TableDataContent> VOTable<C> {
     // `read_event_unbuffered` to avoid a copy.
     // But are more generic that this to be able to read in streaming mode
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.local_name() {
-          Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
-          Definitions::TAG_BYTES => {
+        Event::Start(e) => match e.local_name().into_inner() {
+          Description::TAG => set_desc_from_event_start!(self, reader, reader_buff, e),
+          Definitions::TAG => {
             set_from_event_start!(self, Definitions, reader, reader_buff, e)
           }
-          Info::TAG_BYTES if self.resources.is_empty() => {
+          Info::TAG if self.resources.is_empty() => {
             push_from_event_start!(self, Info, reader, reader_buff, e)
           }
-          Group::TAG_BYTES => push_from_event_start!(self, Group, reader, reader_buff, e),
-          Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
-          Resource::<C>::TAG_BYTES => {
+          Group::TAG => push_from_event_start!(self, Group, reader, reader_buff, e),
+          Param::TAG => push_from_event_start!(self, Param, reader, reader_buff, e),
+          Resource::<C>::TAG => {
             return Resource::<C>::from_event_start(e).map(Some);
           }
-          Info::TAG_BYTES => {
+          Info::TAG => {
             self.push_post_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::Empty(e) => match e.local_name() {
-          Definitions::TAG_BYTES => set_from_event_empty!(self, Definitions, e),
-          Info::TAG_BYTES => {
+        Event::Empty(e) => match e.local_name().into_inner() {
+          Definitions::TAG => set_from_event_empty!(self, Definitions, e),
+          Info::TAG => {
             let info = Info::from_event_empty(e)?;
             if self.resources.is_empty() {
               self.push_info_by_ref(info);
@@ -740,18 +741,18 @@ impl<C: TableDataContent> VOTable<C> {
               self.push_post_info_by_ref(info);
             }
           }
-          CooSys::TAG_BYTES => push_from_event_empty!(self, CooSys, e),
-          TimeSys::TAG_BYTES => push_from_event_empty!(self, TimeSys, e),
-          Group::TAG_BYTES => push_from_event_empty!(self, Group, e),
-          Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
+          CooSys::TAG => push_from_event_empty!(self, CooSys, e),
+          TimeSys::TAG => push_from_event_empty!(self, TimeSys, e),
+          Group::TAG => push_from_event_empty!(self, Group, e),
+          Param::TAG => push_from_event_empty!(self, Param, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
+        Event::End(e) if e.local_name().into_inner() == Self::TAG => return Ok(None),
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         Event::Comment(e) => discard_comment(e, reader, Self::TAG),
@@ -806,17 +807,18 @@ impl<C: TableDataContent> VOTable<C> {
     stop_before_data: bool,
   ) -> Result<bool, VOTableError> {
     writer
-      .write(
+      .get_mut()
+      .write_all(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 "#
         .as_bytes(),
       )
       .map_err(VOTableError::Write)?;
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    let mut tag = BytesStart::new(Self::TAG);
     // Write tag + attributes
     self.for_each_attribute(|k, v| tag.push_attribute((k, v)));
     writer
-      .write_event(Event::Start(tag.to_borrowed()))
+      .write_event(Event::Start(tag.borrow()))
       .map_err(VOTableError::Write)?;
     // Write sub-elems
     write_elem!(self, description, writer, context);
@@ -853,7 +855,7 @@ impl<C: TableDataContent> VOTable<C> {
     if write {
       write_elem_vec!(self, post_infos, writer, context);
       // Close tag
-      let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+      let tag = BytesStart::new(Self::TAG);
       writer
         .write_event(Event::End(tag.to_end()))
         .map_err(VOTableError::Write)
@@ -866,19 +868,19 @@ impl<C: TableDataContent> VOTable<C> {
 fn check_declaration(decl: &BytesDecl) {
   let version = decl
     .version()
-    .map(|v| unsafe { String::from_utf8_unchecked(v.as_ref().to_vec()) })
+    .map(|v| v.into_owned())
     .unwrap_or_else(|e| format!("Error: {:?}", e));
   let encoding = decl
     .encoding()
     .map(|r| {
-      r.map(|r| unsafe { String::from_utf8_unchecked(r.as_ref().to_vec()) })
+      r.map(|r| r.into_owned())
         .unwrap_or_else(|e| format!("Error: {:?}", e))
     })
     .unwrap_or_else(|| String::from("error"));
   let standalone = decl
     .standalone()
     .map(|r| {
-      r.map(|r| unsafe { String::from_utf8_unchecked(r.as_ref().to_vec()) })
+      r.map(|r| r.into_owned())
         .unwrap_or_else(|e| format!("Error: {:?}", e))
     })
     .unwrap_or_else(|| String::from("error"));
@@ -959,34 +961,34 @@ impl<C: TableDataContent> HasSubElements for VOTable<C> {
     // `read_event_unbuffered` to avoid a copy.
     // But are more generic that this to be able to read in streaming mode
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.local_name() {
-          Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
-          Definitions::TAG_BYTES => {
+        Event::Start(e) => match e.local_name().into_inner() {
+          Description::TAG => set_desc_from_event_start!(self, reader, reader_buff, e),
+          Definitions::TAG => {
             set_from_event_start!(self, Definitions, reader, reader_buff, e)
           }
-          Info::TAG_BYTES if self.resources.is_empty() => {
+          Info::TAG if self.resources.is_empty() => {
             push_from_event_start!(self, Info, reader, reader_buff, e)
           }
-          Group::TAG_BYTES => push_from_event_start!(self, Group, reader, reader_buff, e),
-          Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
-          Resource::<C>::TAG_BYTES => {
+          Group::TAG => push_from_event_start!(self, Group, reader, reader_buff, e),
+          Param::TAG => push_from_event_start!(self, Param, reader, reader_buff, e),
+          Resource::<C>::TAG => {
             self.push_resource_by_ref(from_event_start_by_ref!(Resource, reader, reader_buff, e))
           }
-          Info::TAG_BYTES => {
+          Info::TAG => {
             self.push_post_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::Empty(e) => match e.local_name() {
-          Definitions::TAG_BYTES => set_from_event_empty!(self, Definitions, e),
-          Info::TAG_BYTES => {
+        Event::Empty(e) => match e.local_name().into_inner() {
+          Definitions::TAG => set_from_event_empty!(self, Definitions, e),
+          Info::TAG => {
             let info = Info::from_event_empty(e)?;
             if self.resources.is_empty() {
               self.push_info_by_ref(info);
@@ -994,18 +996,18 @@ impl<C: TableDataContent> HasSubElements for VOTable<C> {
               self.push_post_info_by_ref(info);
             }
           }
-          CooSys::TAG_BYTES => push_from_event_empty!(self, CooSys, e),
-          TimeSys::TAG_BYTES => push_from_event_empty!(self, TimeSys, e),
-          Group::TAG_BYTES => push_from_event_empty!(self, Group, e),
-          Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
+          CooSys::TAG => push_from_event_empty!(self, CooSys, e),
+          TimeSys::TAG => push_from_event_empty!(self, TimeSys, e),
+          Group::TAG => push_from_event_empty!(self, Group, e),
+          Param::TAG => push_from_event_empty!(self, Param, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => {
+        Event::End(e) if e.local_name().into_inner() == Self::TAG => {
           return if self.resources.is_empty() {
             Err(VOTableError::Custom(String::from(
               "No resource found in the VOTable",
@@ -1047,11 +1049,11 @@ impl<C: TableDataContent> QuickXmlReadWrite<HasSubElems> for VOTable<C> {
   ) -> Result<(), VOTableError> {
     // We do not use the 'default' write impleemntation because of this first line.
 
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    let mut tag = BytesStart::new(Self::TAG);
     // Write tag + attributes
     self.for_each_attribute(|k, v| tag.push_attribute((k, v)));
     writer
-      .write_event(Event::Start(tag.to_borrowed()))
+      .write_event(Event::Start(tag.borrow()))
       .map_err(VOTableError::Write)?;
     // Write sub-elems
     self.write_sub_elements_by_ref(writer, context)?;

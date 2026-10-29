@@ -186,34 +186,34 @@ impl HasSubElements for Vodml {
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.local_name() {
-          Report::TAG_BYTES => set_from_event_start!(self, Report, reader, reader_buff, e),
-          Model::TAG_BYTES => push_from_event_start!(self, Model, reader, reader_buff, e),
-          Globals::TAG_BYTES => set_from_event_start!(self, Globals, reader, reader_buff, e),
-          Templates::TAG_BYTES => push_from_event_start!(self, Templates, reader, reader_buff, e),
+        Event::Start(e) => match e.local_name().into_inner() {
+          Report::TAG => set_from_event_start!(self, Report, reader, reader_buff, e),
+          Model::TAG => push_from_event_start!(self, Model, reader, reader_buff, e),
+          Globals::TAG => set_from_event_start!(self, Globals, reader, reader_buff, e),
+          Templates::TAG => push_from_event_start!(self, Templates, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::Empty(e) => match e.local_name() {
-          Report::TAG_BYTES => set_from_event_empty!(self, Report, e),
-          Model::TAG_BYTES => push_from_event_empty!(self, Model, e),
-          Globals::TAG_BYTES => set_from_event_empty!(self, Globals, e),
-          Templates::TAG_BYTES => push_from_event_empty!(self, Templates, e),
+        Event::Empty(e) => match e.local_name().into_inner() {
+          Report::TAG => set_from_event_empty!(self, Report, e),
+          Model::TAG => push_from_event_empty!(self, Model, e),
+          Globals::TAG => set_from_event_empty!(self, Globals, e),
+          Templates::TAG => push_from_event_empty!(self, Templates, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
         Event::Text(e) if is_empty(e) => {}
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => {
+        Event::End(e) if e.local_name().into_inner() == Self::TAG => {
           if !self.models.is_empty() {
             return Ok(());
           } else {

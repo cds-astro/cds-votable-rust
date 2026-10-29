@@ -124,29 +124,29 @@ impl HasSubElements for Templates {
     _context: &Self::Context,
   ) -> Result<(), crate::error::VOTableError> {
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.local_name() {
-          Instance::TAG_BYTES => push_from_event_start!(self, Instance, reader, reader_buff, e),
+        Event::Start(e) => match e.local_name().into_inner() {
+          Instance::TAG => push_from_event_start!(self, Instance, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Templates::TAG,
             ))
           }
         },
-        Event::Empty(e) => match e.local_name() {
-          Where::TAG_BYTES => push_from_event_empty!(self, Where, e),
-          Instance::TAG_BYTES => push_from_event_empty!(self, Instance, e),
+        Event::Empty(e) => match e.local_name().into_inner() {
+          Where::TAG => push_from_event_empty!(self, Where, e),
+          Instance::TAG => push_from_event_empty!(self, Instance, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Templates::TAG,
             ))
           }
         },
         Event::Text(e) if is_empty(e) => {}
-        Event::End(e) if e.local_name() == Templates::TAG_BYTES => {
+        Event::End(e) if e.local_name().into_inner() == Templates::TAG => {
           if self.instances.is_empty() {
             return Err(VOTableError::Custom(
               "At least one instance should be present in a templates tag.".to_owned(),

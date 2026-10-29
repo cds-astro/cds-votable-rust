@@ -10,7 +10,7 @@ use std::{
 use base64::{engine::general_purpose, read::DecoderReader};
 use memchr::memmem::Finder;
 use once_cell::sync::Lazy;
-use quick_xml::{events::Event, Reader};
+use quick_xml::{events::Event, name::QName, Reader};
 
 use crate::{
   data::{
@@ -83,11 +83,12 @@ impl<R: BufRead> OwnedTabledataRowIterator<R> {
   pub fn skip_remaining_data(&mut self) -> Result<(), VOTableError> {
     self
       .reader
-      .read_to_end(
-        TableData::<VoidTableDataContent>::TAG_BYTES,
+      .read_to_end_into(
+        QName(TableData::<VoidTableDataContent>::TAG),
         &mut self.reader_buff,
       )
       .map_err(VOTableError::Read)
+      .map(|_| ())
   }
 
   pub fn read_to_end(self) -> Result<VOTable<VoidTableDataContent>, VOTableError> {
@@ -119,15 +120,15 @@ fn next_tabledata_row<T: BufRead>(
   if *has_next {
     reader_buff.clear();
     loop {
-      let event = reader.read_event(reader_buff);
+      let event = reader.read_event_into(reader_buff);
       match event {
-        Ok(Event::Start(e)) if e.name() == b"TR" => {
+        Ok(Event::Start(e)) if e.name().into_inner() == "TR" => {
           let mut raw_row: Vec<u8> = Vec::with_capacity(256);
           return Some(
             read_until_found(TR_END_FINDER.as_ref(), reader, &mut raw_row).map(move |_| raw_row),
           );
         }
-        Ok(Event::End(e)) if e.name() == TableData::<VoidTableDataContent>::TAG_BYTES => {
+        Ok(Event::End(e)) if e.name().into_inner() == TableData::<VoidTableDataContent>::TAG => {
           *has_next = false;
           return None;
         }
@@ -161,11 +162,12 @@ impl<R: BufRead> OwnedTabledataRowIteratorWithPosition<R> {
   pub fn skip_remaining_data(&mut self) -> Result<(), VOTableError> {
     self
       .reader
-      .read_to_end(
-        TableData::<VoidTableDataContent>::TAG_BYTES,
+      .read_to_end_into(
+        QName(TableData::<VoidTableDataContent>::TAG),
         &mut self.reader_buff,
       )
       .map_err(VOTableError::Read)
+      .map(|_| ())
   }
 
   pub fn read_to_end(self) -> Result<VOTable<VoidTableDataContent>, VOTableError> {
@@ -209,22 +211,24 @@ fn next_tabledata_row_with_position<T: BufRead>(
     reader_buff.clear();
     loop {
       // Save position before reading the next event
-      let pos = reader.buffer_position();
-      let event = reader.read_event(reader_buff);
+      let pos = reader.buffer_position() as usize;
+      let event = reader.read_event_into(reader_buff);
       match event {
-        Ok(Event::Start(ref e)) if e.name() == b"TR" => {
+        Ok(Event::Start(ref e)) if e.name().into_inner() == "TR" => {
           let mut raw_row: Vec<u8> = Vec::with_capacity(256);
           return match read_until_found(TR_END_FINDER.as_ref(), reader, &mut raw_row) {
             Ok(n_bytes_readen) => {
               let start = pos + *n_bytes_readen_cumul;
               *n_bytes_readen_cumul += n_bytes_readen;
-              let end = reader.buffer_position() + *n_bytes_readen_cumul;
+              let end = reader.buffer_position() as usize + *n_bytes_readen_cumul;
               Some(Ok((start..end, raw_row)))
             }
             Err(e) => Some(Err(e)),
           };
         }
-        Ok(Event::End(ref e)) if e.name() == TableData::<VoidTableDataContent>::TAG_BYTES => {
+        Ok(Event::End(ref e))
+          if e.name().into_inner() == TableData::<VoidTableDataContent>::TAG =>
+        {
           *has_next = false;
           return None;
         }
@@ -478,15 +482,11 @@ impl<R: BufRead> OwnedBinary1or2RowIterator<R> {
     } = self;
     // TODO: partly redundant code with SimpleVOTableRowIterator...
     let mut reader = Reader::from_reader(reader.into_inner());
-    reader.check_end_names(false);
+    reader.config_mut().check_end_names = false;
     let mut reader_buff: Vec<u8> = Vec::with_capacity(512);
     reader
-      .read_to_end(
-        if is_binary2 {
-          b"BINARY2".to_vec()
-        } else {
-          b"BINARY".to_vec()
-        },
+      .read_to_end_into(
+        QName(if is_binary2 { "BINARY2" } else { "BINARY" }),
         &mut reader_buff,
       )
       .map_err(|e| VOTableError::Custom(format!("Reading to BINARY or BINARY2... {:?}", e)))?;
@@ -719,42 +719,47 @@ impl<R: BufRead> SimpleVOTableRowIterator<R> {
     match self.data_type {
       TableOrBinOrBin2::TableData => self
         .reader
-        .read_to_end(
-          TableData::<VoidTableDataContent>::TAG_BYTES,
-          &mut self.reader_buff,
-        )
-        .map_err(VOTableError::Read),
-      TableOrBinOrBin2::Binary => self
-        .reader
-        .read_to_end(
-          Stream::<VoidTableDataContent>::TAG_BYTES,
+        .read_to_end_into(
+          QName(TableData::<VoidTableDataContent>::TAG),
           &mut self.reader_buff,
         )
         .map_err(VOTableError::Read)
+        .map(|_| ()),
+      TableOrBinOrBin2::Binary => self
+        .reader
+        .read_to_end_into(
+          QName(Stream::<VoidTableDataContent>::TAG),
+          &mut self.reader_buff,
+        )
+        .map_err(VOTableError::Read)
+        .map(|_| ())
         .and_then(|_| {
           self
             .reader
-            .read_to_end(
-              Binary::<VoidTableDataContent>::TAG_BYTES,
+            .read_to_end_into(
+              QName(Binary::<VoidTableDataContent>::TAG),
               &mut self.reader_buff,
             )
             .map_err(VOTableError::Read)
+            .map(|_| ())
         }),
       TableOrBinOrBin2::Binary2 => self
         .reader
-        .read_to_end(
-          Stream::<VoidTableDataContent>::TAG_BYTES,
+        .read_to_end_into(
+          QName(Stream::<VoidTableDataContent>::TAG),
           &mut self.reader_buff,
         )
         .map_err(VOTableError::Read)
+        .map(|_| ())
         .and_then(|_| {
           self
             .reader
-            .read_to_end(
-              Binary2::<VoidTableDataContent>::TAG_BYTES,
+            .read_to_end_into(
+              QName(Binary2::<VoidTableDataContent>::TAG),
               &mut self.reader_buff,
             )
             .map_err(VOTableError::Read)
+            .map(|_| ())
         }),
       _ => unreachable!(),
     }

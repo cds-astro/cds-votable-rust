@@ -47,7 +47,7 @@ quick_error! {
     Read(err: quick_xml::Error) {
       display("Error while reading: {}", err)
     }
-    Write(err: quick_xml::Error) {
+    Write(err: std::io::Error) {
       display("Error while writing: {}", err)
     }
     Attr(err: quick_xml::events::attributes::AttrError) {

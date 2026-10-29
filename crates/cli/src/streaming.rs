@@ -405,7 +405,7 @@ fn to_same<R: BufRead, W: Write>(
     .votable
     .write_to_data_beginning(&mut writer, &(), false)?
   {
-    it.copy_remaining_data(writer.inner())
+    it.copy_remaining_data(writer.get_mut())
       .and_then(|_| it.read_to_end())
       .and_then(|mut out_vot| out_vot.write_from_data_end(&mut writer, &(), false))
   } else {
@@ -453,7 +453,7 @@ fn to_binary<R: BufRead, W: Write>(
   {
     let schema = get_schema(&it.votable);
     InMemTableDataRows::write_binary_rows(
-      writer.inner(),
+      writer.get_mut(),
       it.to_row_value_iter().map(|r| match r {
         Ok(row) => row,
         Err(e) => panic!("Error reading rows: {:?}", e),
@@ -480,7 +480,7 @@ fn to_binary2<R: BufRead, W: Write>(
   {
     let schema = get_schema(&it.votable);
     InMemTableDataRows::write_binary2_rows(
-      writer.inner(),
+      writer.get_mut(),
       it.to_row_value_iter().map(|r| match r {
         Ok(row) => row,
         Err(e) => panic!("Error reading rows: {:?}", e),
@@ -555,7 +555,7 @@ fn td_to_binary_par<R: BufRead + Send, W: Write>(
       bin_row.into_boxed_slice()
     }
     let write = EncoderWriter::new(
-      B64Formatter::new(writer.inner()),
+      B64Formatter::new(writer.get_mut()),
       &general_purpose::STANDARD,
     );
     convert_par(
@@ -604,7 +604,7 @@ fn td_to_binary2_par<R: BufRead + Send, W: Write>(
       bin_row.into_boxed_slice()
     }
     let write = EncoderWriter::new(
-      B64Formatter::new(writer.inner()),
+      B64Formatter::new(writer.get_mut()),
       &general_purpose::STANDARD,
     );
     convert_par(
@@ -654,7 +654,7 @@ fn binary_to_td_par<R: BufRead + Send, W: Write>(
       &mut raw_row_it,
       schema,
       convert,
-      writer.inner(),
+      writer.get_mut(),
       ' ',
       n_threads,
       chunk_size,
@@ -697,7 +697,7 @@ fn binary_to_binary2_par<R: BufRead + Send, W: Write>(
       &mut raw_row_it,
       schema,
       convert,
-      B64Formatter::new(writer.inner()),
+      B64Formatter::new(writer.get_mut()),
       ' ',
       n_threads,
       chunk_size,
@@ -738,7 +738,7 @@ fn binary2_to_td_par<R: BufRead + Send, W: Write>(
       td_row.into_boxed_slice()
     }
     let write = EncoderWriter::new(
-      B64Formatter::new(writer.inner()),
+      B64Formatter::new(writer.get_mut()),
       &general_purpose::STANDARD,
     );
     convert_par(
@@ -785,7 +785,7 @@ fn binary2_to_binary_par<R: BufRead + Send, W: Write>(
       bin_row.into_boxed_slice()
     }
     let write = EncoderWriter::new(
-      B64Formatter::new(writer.inner()),
+      B64Formatter::new(writer.get_mut()),
       &general_purpose::STANDARD,
     );
     convert_par(

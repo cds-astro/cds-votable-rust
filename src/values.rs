@@ -263,27 +263,27 @@ impl HasSubElements for Opt {
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.name() {
-          Self::TAG_BYTES => push_from_event_start!(self, Opt, reader, reader_buff, e),
+        Event::Start(e) => match e.name().into_inner() {
+          Self::TAG => push_from_event_start!(self, Opt, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.name().to_vec(),
+              e.name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::Empty(e) => match e.name() {
-          Self::TAG_BYTES => push_from_event_empty!(self, Opt, e),
+        Event::Empty(e) => match e.name().into_inner() {
+          Self::TAG => push_from_event_empty!(self, Opt, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.name().to_vec(),
+              e.name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(()),
+        Event::End(e) if e.name().into_inner() == Self::TAG => return Ok(()),
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         Event::Comment(e) => discard_comment(e, reader, Self::TAG),
@@ -423,29 +423,29 @@ impl HasSubElements for Values {
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.local_name() {
-          Opt::TAG_BYTES => push_from_event_start!(self, Opt, reader, reader_buff, e),
+        Event::Start(e) => match e.local_name().into_inner() {
+          Opt::TAG => push_from_event_start!(self, Opt, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::Empty(e) => match e.local_name() {
-          Min::TAG_BYTES => set_from_event_empty!(self, Min, e),
-          Max::TAG_BYTES => set_from_event_empty!(self, Max, e),
-          Opt::TAG_BYTES => push_from_event_empty!(self, Opt, e),
+        Event::Empty(e) => match e.local_name().into_inner() {
+          Min::TAG => set_from_event_empty!(self, Min, e),
+          Max::TAG => set_from_event_empty!(self, Max, e),
+          Opt::TAG => push_from_event_empty!(self, Opt, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
+        Event::End(e) if e.local_name().into_inner() == Self::TAG => return Ok(()),
         Event::Text(e) if is_empty(e) => {}
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         Event::Comment(e) => discard_comment(e, reader, Self::TAG),

@@ -612,13 +612,13 @@ impl<C: TableDataContent> Resource<C> {
     mut reader_buff: &mut Vec<u8>,
   ) -> Result<Option<ResourceSubElem<C>>, VOTableError> {
     let mut links: Vec<Link> = Default::default();
-    reader = reader.check_end_names(false);
+    reader.config_mut().check_end_names = false;
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.local_name() {
-          Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
-          Info::TAG_BYTES => {
+        Event::Start(e) => match e.local_name().into_inner() {
+          Description::TAG => set_desc_from_event_start!(self, reader, reader_buff, e),
+          Info::TAG => {
             let info = from_event_start_by_ref!(Info, reader, reader_buff, e);
             if let Some(sub_elem) = self.sub_elems.last_mut() {
               sub_elem.push_info_by_ref(info)
@@ -626,20 +626,20 @@ impl<C: TableDataContent> Resource<C> {
               self.push_info_by_ref(info)
             }
           }
-          CooSys::TAG_BYTES => {
+          CooSys::TAG => {
             push_from_event_start_fallible!(self, CooSys, reader, reader_buff, e)
           }
-          Group::TAG_BYTES => push_from_event_start!(self, Group, reader, reader_buff, e),
-          Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
-          Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
+          Group::TAG => push_from_event_start!(self, Group, reader, reader_buff, e),
+          Param::TAG => push_from_event_start!(self, Param, reader, reader_buff, e),
+          Link::TAG => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
           #[cfg(feature = "mivot")]
-          Vodml::TAG_BYTES => set_from_event_start!(self, Vodml, reader, reader_buff, e),
-          Table::<C>::TAG_BYTES => {
+          Vodml::TAG => set_from_event_start!(self, Vodml, reader, reader_buff, e),
+          Table::<C>::TAG => {
             return Table::<C>::from_event_start(e).map(|table| {
               Some(ResourceSubElem::from_table(table).set_links(mem::take(&mut links)))
             });
           }
-          Resource::<C>::TAG_BYTES => {
+          Resource::<C>::TAG => {
             let resource = from_event_start_by_ref!(Resource, reader, reader_buff, e);
             self.push_sub_elem_by_ref(
               ResourceSubElem::from_resource(resource).set_links(mem::take(&mut links)),
@@ -647,13 +647,13 @@ impl<C: TableDataContent> Resource<C> {
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ));
           }
         },
-        Event::Empty(e) => match e.local_name() {
-          Info::TAG_BYTES => {
+        Event::Empty(e) => match e.local_name().into_inner() {
+          Info::TAG => {
             let info = Info::from_event_empty(e)?;
             if let Some(sub_elem) = self.sub_elems.last_mut() {
               sub_elem.push_info_by_ref(info)
@@ -661,25 +661,25 @@ impl<C: TableDataContent> Resource<C> {
               self.infos.push(info)
             }
           }
-          TimeSys::TAG_BYTES => push_from_event_empty!(self, TimeSys, e),
-          CooSys::TAG_BYTES => push_from_event_empty_fallible!(self, CooSys, e),
-          Group::TAG_BYTES => push_from_event_empty!(self, Group, e),
-          Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
-          Link::TAG_BYTES => links.push(Link::from_event_empty(e)?),
+          TimeSys::TAG => push_from_event_empty!(self, TimeSys, e),
+          CooSys::TAG => push_from_event_empty_fallible!(self, CooSys, e),
+          Group::TAG => push_from_event_empty!(self, Group, e),
+          Param::TAG => push_from_event_empty!(self, Param, e),
+          Link::TAG => links.push(Link::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ));
           }
         },
         Event::Text(e) if is_empty(e) => {}
         Event::End(e)
-          if e.local_name() == Binary::<VoidTableDataContent>::TAG_BYTES
-            || e.local_name() == Binary2::<VoidTableDataContent>::TAG_BYTES
-            || e.local_name() == Data::<VoidTableDataContent>::TAG_BYTES
-            || e.local_name() == Table::<VoidTableDataContent>::TAG_BYTES
-            || e.local_name() == Self::TAG_BYTES =>
+          if e.local_name().into_inner() == Binary::<VoidTableDataContent>::TAG
+            || e.local_name().into_inner() == Binary2::<VoidTableDataContent>::TAG
+            || e.local_name().into_inner() == Data::<VoidTableDataContent>::TAG
+            || e.local_name().into_inner() == Table::<VoidTableDataContent>::TAG
+            || e.local_name().into_inner() == Self::TAG =>
         {
           return Ok(None);
         }
@@ -696,13 +696,13 @@ impl<C: TableDataContent> Resource<C> {
     mut reader_buff: &mut Vec<u8>,
   ) -> Result<Option<ResourceSubElem<C>>, VOTableError> {
     let mut links: Vec<Link> = Default::default();
-    reader = reader.check_end_names(false);
+    reader.config_mut().check_end_names = false;
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.local_name() {
-          Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
-          Info::TAG_BYTES => {
+        Event::Start(e) => match e.local_name().into_inner() {
+          Description::TAG => set_desc_from_event_start!(self, reader, reader_buff, e),
+          Info::TAG => {
             let info = from_event_start_by_ref!(Info, reader, reader_buff, e);
             if let Some(sub_elem) = self.sub_elems.last_mut() {
               sub_elem.push_info_by_ref(info)
@@ -710,33 +710,33 @@ impl<C: TableDataContent> Resource<C> {
               self.push_info_by_ref(info)
             }
           }
-          CooSys::TAG_BYTES => {
+          CooSys::TAG => {
             push_from_event_start_fallible!(self, CooSys, reader, reader_buff, e)
           }
-          Group::TAG_BYTES => push_from_event_start!(self, Group, reader, reader_buff, e),
-          Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
-          Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
+          Group::TAG => push_from_event_start!(self, Group, reader, reader_buff, e),
+          Param::TAG => push_from_event_start!(self, Param, reader, reader_buff, e),
+          Link::TAG => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
           #[cfg(feature = "mivot")]
-          Vodml::TAG_BYTES => set_from_event_start!(self, Vodml, reader, reader_buff, e),
-          Table::<C>::TAG_BYTES => {
+          Vodml::TAG => set_from_event_start!(self, Vodml, reader, reader_buff, e),
+          Table::<C>::TAG => {
             return Table::<C>::from_event_start(e).map(|table| {
               Some(ResourceSubElem::from_table(table).set_links(mem::take(&mut links)))
             });
           }
-          Resource::<C>::TAG_BYTES => {
+          Resource::<C>::TAG => {
             return Resource::<C>::from_event_start(e).map(|resource| {
               Some(ResourceSubElem::from_resource(resource).set_links(mem::take(&mut links)))
             });
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ));
           }
         },
-        Event::Empty(e) => match e.local_name() {
-          Info::TAG_BYTES => {
+        Event::Empty(e) => match e.local_name().into_inner() {
+          Info::TAG => {
             let info = Info::from_event_empty(e)?;
             if let Some(sub_elem) = self.sub_elems.last_mut() {
               sub_elem.push_info_by_ref(info)
@@ -744,25 +744,25 @@ impl<C: TableDataContent> Resource<C> {
               self.infos.push(info)
             }
           }
-          TimeSys::TAG_BYTES => push_from_event_empty!(self, TimeSys, e),
-          CooSys::TAG_BYTES => push_from_event_empty_fallible!(self, CooSys, e),
-          Group::TAG_BYTES => push_from_event_empty!(self, Group, e),
-          Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
-          Link::TAG_BYTES => links.push(Link::from_event_empty(e)?),
+          TimeSys::TAG => push_from_event_empty!(self, TimeSys, e),
+          CooSys::TAG => push_from_event_empty_fallible!(self, CooSys, e),
+          Group::TAG => push_from_event_empty!(self, Group, e),
+          Param::TAG => push_from_event_empty!(self, Param, e),
+          Link::TAG => links.push(Link::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ));
           }
         },
         Event::Text(e) if is_empty(e) => {}
         Event::End(e)
-          if e.local_name() == Binary::<VoidTableDataContent>::TAG_BYTES
-            || e.local_name() == Binary2::<VoidTableDataContent>::TAG_BYTES
-            || e.local_name() == Data::<VoidTableDataContent>::TAG_BYTES
-            || e.local_name() == Table::<VoidTableDataContent>::TAG_BYTES
-            || e.local_name() == Self::TAG_BYTES =>
+          if e.local_name().into_inner() == Binary::<VoidTableDataContent>::TAG
+            || e.local_name().into_inner() == Binary2::<VoidTableDataContent>::TAG
+            || e.local_name().into_inner() == Data::<VoidTableDataContent>::TAG
+            || e.local_name().into_inner() == Table::<VoidTableDataContent>::TAG
+            || e.local_name().into_inner() == Self::TAG =>
         {
           return Ok(None);
         }
@@ -783,11 +783,11 @@ impl<C: TableDataContent> Resource<C> {
     context: &(),
     stop_before_data: bool,
   ) -> Result<bool, VOTableError> {
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    let mut tag = BytesStart::new(Self::TAG);
     // Write tag + attributes
     self.for_each_attribute(|k, v| tag.push_attribute((k, v)));
     writer
-      .write_event(Event::Start(tag.to_borrowed()))
+      .write_event(Event::Start(tag.borrow()))
       .map_err(VOTableError::Write)?;
     // Write sub-elements
     write_elem!(self, description, writer, context);
@@ -826,7 +826,7 @@ impl<C: TableDataContent> Resource<C> {
     context: &(),
     start_after_data: bool,
   ) -> Result<bool, VOTableError> {
-    let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    let tag = BytesStart::new(Self::TAG);
     let mut iter = self.sub_elems.iter_mut();
     let mut table_found = false;
     for se in iter.by_ref() {
@@ -943,11 +943,11 @@ impl<C: TableDataContent> HasSubElements for Resource<C> {
   ) -> Result<(), VOTableError> {
     let mut links: Vec<Link> = Default::default();
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.local_name() {
-          Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
-          Info::TAG_BYTES => {
+        Event::Start(e) => match e.local_name().into_inner() {
+          Description::TAG => set_desc_from_event_start!(self, reader, reader_buff, e),
+          Info::TAG => {
             let info = from_event_start_by_ref!(Info, reader, reader_buff, e);
             if let Some(sub_elem) = self.sub_elems.last_mut() {
               sub_elem.push_info_by_ref(info)
@@ -955,32 +955,32 @@ impl<C: TableDataContent> HasSubElements for Resource<C> {
               self.push_info_by_ref(info)
             }
           }
-          Group::TAG_BYTES => push_from_event_start!(self, Group, reader, reader_buff, e),
-          Param::TAG_BYTES => push_from_event_start!(self, Param, reader, reader_buff, e),
-          Link::TAG_BYTES => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
-          Table::<C>::TAG_BYTES => {
+          Group::TAG => push_from_event_start!(self, Group, reader, reader_buff, e),
+          Param::TAG => push_from_event_start!(self, Param, reader, reader_buff, e),
+          Link::TAG => links.push(from_event_start_by_ref!(Link, reader, reader_buff, e)),
+          Table::<C>::TAG => {
             let table = from_event_start_by_ref!(Table, reader, reader_buff, e);
             self.push_sub_elem_by_ref(
               ResourceSubElem::from_table(table).set_links(mem::take(&mut links)),
             );
           }
-          Resource::<C>::TAG_BYTES => {
+          Resource::<C>::TAG => {
             let resource = from_event_start_by_ref!(Resource, reader, reader_buff, e);
             self.push_sub_elem_by_ref(
               ResourceSubElem::from_resource(resource).set_links(mem::take(&mut links)),
             );
           }
           #[cfg(feature = "mivot")]
-          Vodml::TAG_BYTES => set_from_event_start!(self, Vodml, reader, reader_buff, e),
+          Vodml::TAG => set_from_event_start!(self, Vodml, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ));
           }
         },
-        Event::Empty(e) => match e.local_name() {
-          Info::TAG_BYTES => {
+        Event::Empty(e) => match e.local_name().into_inner() {
+          Info::TAG => {
             let info = Info::from_event_empty(e)?;
             if let Some(sub_elem) = self.sub_elems.last_mut() {
               sub_elem.push_info_by_ref(info)
@@ -988,20 +988,20 @@ impl<C: TableDataContent> HasSubElements for Resource<C> {
               self.infos.push(info)
             }
           }
-          TimeSys::TAG_BYTES => push_from_event_empty!(self, TimeSys, e),
-          CooSys::TAG_BYTES => push_from_event_empty_fallible!(self, CooSys, e),
-          Group::TAG_BYTES => push_from_event_empty!(self, Group, e),
-          Param::TAG_BYTES => push_from_event_empty!(self, Param, e),
-          Link::TAG_BYTES => links.push(Link::from_event_empty(e)?),
+          TimeSys::TAG => push_from_event_empty!(self, TimeSys, e),
+          CooSys::TAG => push_from_event_empty_fallible!(self, CooSys, e),
+          Group::TAG => push_from_event_empty!(self, Group, e),
+          Param::TAG => push_from_event_empty!(self, Param, e),
+          Link::TAG => links.push(Link::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ));
           }
         },
         Event::Text(e) if is_empty(e) => {}
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => {
+        Event::End(e) if e.local_name().into_inner() == Self::TAG => {
           return if links.is_empty() {
             Ok(())
           } else {

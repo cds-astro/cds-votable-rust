@@ -17,11 +17,11 @@ extern crate core;
 use std::{
   error::Error,
   io::{BufRead, Write},
-  str::from_utf8,
 };
 
 use quick_xml::{
   Reader, Writer,
+  escape::unescape,
   events::{BytesStart, BytesText, Event, attributes::Attributes},
 };
 
@@ -55,7 +55,7 @@ pub mod mivot;
 
 #[cfg(feature = "mivot")]
 pub use self::mivot::VodmlVisitor;
-use self::utils::{discard_comment, discard_event};
+use self::utils::{discard_comment, discard_event, push_general_ref};
 pub use self::{
   coosys::CooSys,
   data::{
@@ -184,7 +184,7 @@ impl<T: IsEmpty> QuickXmlReadWrite<EmptyElem> for T {
     writer: &mut Writer<W>,
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    let mut elem_writer = writer.create_element(Self::TAG_BYTES);
+    let mut elem_writer = writer.create_element(Self::TAG);
     elem_writer = elem_writer.with_attributes(
       self
         .get_attrs()
@@ -219,17 +219,12 @@ impl<T: HasContent> QuickXmlReadWrite<HasContentElem> for T {
   ) -> Result<(), VOTableError> {
     let mut content = String::new();
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Text(e) => content.push_str(
-          e.unescape_and_decode(reader)
-            .map_err(VOTableError::Read)?
-            .as_str(),
-        ),
-        Event::CData(e) => {
-          content.push_str(from_utf8(e.clone().into_inner().as_ref()).map_err(VOTableError::Utf8)?)
-        }
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => {
+        Event::Text(e) => content.push_str(e),
+        Event::GeneralRef(e) => push_general_ref(&mut content, e)?,
+        Event::CData(e) => content.push_str(e),
+        Event::End(e) if e.local_name().into_inner() == Self::TAG => {
           self.set_content_by_ref(content);
           reader_buff.clear();
           return Ok(());
@@ -246,7 +241,7 @@ impl<T: HasContent> QuickXmlReadWrite<HasContentElem> for T {
     writer: &mut Writer<W>,
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
-    let mut elem_writer = writer.create_element(Self::TAG_BYTES);
+    let mut elem_writer = writer.create_element(Self::TAG);
     elem_writer = elem_writer.with_attributes(
       self
         .get_attrs()
@@ -254,7 +249,7 @@ impl<T: HasContent> QuickXmlReadWrite<HasContentElem> for T {
         .map(|(k, v)| (k.as_str(), v.as_str())),
     );
     if let Some(content) = self.get_content() {
-      elem_writer.write_text_content(BytesText::from_plain_str(content))
+      elem_writer.write_text_content(BytesText::new(content))
     } else {
       elem_writer.write_empty()
     }
@@ -345,7 +340,7 @@ impl<T: HasSubElements> QuickXmlReadWrite<HasSubElems> for T {
     context: &Self::Context,
   ) -> Result<(), VOTableError> {
     if self.has_no_sub_elements() {
-      let mut elem_writer = writer.create_element(Self::TAG_BYTES);
+      let mut elem_writer = writer.create_element(Self::TAG);
       elem_writer = elem_writer.with_attributes(
         self
           .get_attrs()
@@ -357,11 +352,11 @@ impl<T: HasSubElements> QuickXmlReadWrite<HasSubElems> for T {
         .map_err(VOTableError::Write)
         .map(|_| ())
     } else {
-      let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+      let mut tag = BytesStart::new(Self::TAG);
       // Write tag + attributes
       self.for_each_attribute(|k, v| tag.push_attribute((k, v)));
       writer
-        .write_event(Event::Start(tag.to_borrowed()))
+        .write_event(Event::Start(tag.borrow()))
         .map_err(VOTableError::Write)?;
       // Write_sub-elems
       self.write_sub_elements_by_ref(writer, context)?;
@@ -480,28 +475,20 @@ pub trait QuickXmlReadWrite<VOTableElementType>: VOTableElement {
       //.filter_map(|r| {
       .map(|r| {
         r.map_err(VOTableError::Attr).and_then(|attr| {
-          from_utf8(attr.key)
-            .map_err(VOTableError::Utf8)
-            .and_then(|key| {
-              attr
-                .unescaped_value()
-                .map_err(VOTableError::Read)
-                .and_then(|val| {
-                  from_utf8(val.as_ref())
-                    .map(|val| val.to_string())
-                    .map_err(VOTableError::Utf8)
-                })
-                .map(
-                  |val| (key.to_string(), val),
-                  /*{
-                    if val.is_empty() {
-                      None
-                    } else {
-                      Some((key.to_string(), val))
-                    }
-                  }*/
-                )
-            })
+          let key = attr.key.into_inner();
+          unescape(&attr.value)
+            .map_err(|e| VOTableError::Read(e.into()))
+            .map(|val| val.into_owned())
+            .map(
+              |val| (key.to_string(), val),
+              /*{
+                if val.is_empty() {
+                  None
+                } else {
+                  Some((key.to_string(), val))
+                }
+              }*/
+            )
         })
         //.transpose()
       })
@@ -946,9 +933,9 @@ mod tests {
     let mut reader = Reader::from_reader(Cursor::new(xml.as_bytes()));
     let mut buff: Vec<u8> = Vec::with_capacity(xml.len());
     loop {
-      let mut event = reader.read_event(&mut buff).unwrap();
+      let mut event = reader.read_event_into(&mut buff).unwrap();
       match &mut event {
-        Event::Start(e) if e.local_name() == X::TAG_BYTES => {
+        Event::Start(e) if e.local_name().into_inner() == X::TAG => {
           match X::from_event_start(e)
             .and_then(|info| info.read_content(&mut reader, &mut buff, &()))
           {
@@ -959,11 +946,11 @@ mod tests {
             Ok(info) => return info,
           }
         }
-        Event::Empty(e) if e.local_name() == X::TAG_BYTES => {
+        Event::Empty(e) if e.local_name().into_inner() == X::TAG => {
           let info = X::from_event_start(e).unwrap();
           return info;
         }
-        Event::Text(e) if e.escaped().is_empty() => (), // First even read
+        Event::Text(e) if e.is_empty() => (), // First even read
         Event::Comment(_) => (),
         Event::DocType(_) => (),
         Event::Decl(_) => (),

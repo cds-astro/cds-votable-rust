@@ -150,16 +150,16 @@ impl HasSubElements for Instance {
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.local_name() {
-          InstanceChildOfInstance::TAG_BYTES => self.push_instance_by_ref(
+        Event::Start(e) => match e.local_name().into_inner() {
+          InstanceChildOfInstance::TAG => self.push_instance_by_ref(
             from_event_start_by_ref!(InstanceChildOfInstance, reader, reader_buff, e),
           ),
-          Reference::TAG_BYTES => {
+          Reference::TAG => {
             self.push_reference_by_ref(from_event_start_by_ref!(Reference, reader, reader_buff, e))
           }
-          Collection::TAG_BYTES => self.push_collection_by_ref(from_event_start_by_ref!(
+          Collection::TAG => self.push_collection_by_ref(from_event_start_by_ref!(
             Collection,
             reader,
             reader_buff,
@@ -167,24 +167,24 @@ impl HasSubElements for Instance {
           )),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::Empty(e) => match e.local_name() {
-          PrimaryKey::TAG_BYTES => self.push_primarykey_by_ref(PrimaryKey::from_event_empty(e)?),
-          Attribute::TAG_BYTES => self.push_attribute_by_ref(Attribute::from_event_empty(e)?),
-          Reference::TAG_BYTES => self.push_reference_by_ref(Reference::from_event_empty(e)?),
+        Event::Empty(e) => match e.local_name().into_inner() {
+          PrimaryKey::TAG => self.push_primarykey_by_ref(PrimaryKey::from_event_empty(e)?),
+          Attribute::TAG => self.push_attribute_by_ref(Attribute::from_event_empty(e)?),
+          Reference::TAG => self.push_reference_by_ref(Reference::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
         Event::Text(e) if is_empty(e) => {}
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => {
+        Event::End(e) if e.local_name().into_inner() == Self::TAG => {
           return if self.primarykeys.is_empty() {
             Err(VOTableError::Custom(String::from(
               "`INSTANCE` child of `COLLECTION` must contains at least ont `PRIMARY_KEY`",

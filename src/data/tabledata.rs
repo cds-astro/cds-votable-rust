@@ -66,19 +66,17 @@ pub fn parse_fields<R: BufRead, I: IsRowEnd>(
 ) -> Result<Vec<String>, VOTableError> {
   let mut row: Vec<String> = Vec::with_capacity(n_fields);
   loop {
-    let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+    let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
     match &mut event {
-      Event::Start(e) if e.local_name() == b"TD" => {
+      Event::Start(e) if e.local_name().into_inner() == "TD" => {
         let mut field = String::new();
         loop {
-          let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+          let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
           match &mut event {
-            Event::Text(e) => {
-              let raw_txt = e.unescaped().map_err(VOTableError::Read)?;
-              field.push_str(unsafe { str::from_utf8_unchecked(raw_txt.as_ref()) });
-            }
-            Event::CData(e) => field.push_str(unsafe { str::from_utf8_unchecked(e.as_ref()) }),
-            Event::End(e) if e.local_name() == b"TD" => {
+            Event::Text(e) => field.push_str(e),
+            Event::GeneralRef(e) => push_general_ref(&mut field, e)?,
+            Event::CData(e) => field.push_str(e),
+            Event::End(e) if e.local_name().into_inner() == "TD" => {
               row.push(field);
               reader_buff.clear();
               break;
@@ -89,8 +87,8 @@ pub fn parse_fields<R: BufRead, I: IsRowEnd>(
           }
         }
       }
-      Event::Empty(e) if e.local_name() == b"TD" => row.push(String::new()),
-      Event::End(e) if e.local_name() == b"TR" => return I::tr_end().map(|_| row),
+      Event::Empty(e) if e.local_name().into_inner() == "TD" => row.push(String::new()),
+      Event::End(e) if e.local_name().into_inner() == "TR" => return I::tr_end().map(|_| row),
       Event::Eof => return I::eof().map(|_| row),
       Event::Text(e) if is_empty(e) => {}
       Event::Comment(e) => discard_comment(e, reader, "TD"),
@@ -123,27 +121,25 @@ impl<'a, R: BufRead> Iterator for FieldIterator<'a, R> {
 
   fn next(&mut self) -> Option<Self::Item> {
     loop {
-      let event = self.reader.read_event(self.reader_buff);
+      let event = self.reader.read_event_into(self.reader_buff);
       match event {
         Err(e) => return Some(Err(VOTableError::Read(e))),
         Ok(mut event) => match &mut event {
-          Event::Start(e) if e.local_name() == b"TD" => {
+          Event::Start(e) if e.local_name().into_inner() == "TD" => {
             let mut field = String::new();
             loop {
-              let event = self.reader.read_event(self.reader_buff);
+              let event = self.reader.read_event_into(self.reader_buff);
               match event {
                 Err(e) => return Some(Err(VOTableError::Read(e))),
                 Ok(mut event) => match &mut event {
-                  Event::Text(e) => match e.unescaped() {
-                    Err(e) => return Some(Err(VOTableError::Read(e))),
-                    Ok(raw_txt) => {
-                      field.push_str(unsafe { str::from_utf8_unchecked(raw_txt.as_ref()) })
+                  Event::Text(e) => field.push_str(e),
+                  Event::GeneralRef(e) => {
+                    if let Err(e) = push_general_ref(&mut field, e) {
+                      return Some(Err(e));
                     }
-                  },
-                  Event::CData(e) => {
-                    field.push_str(unsafe { str::from_utf8_unchecked(e.as_ref()) })
                   }
-                  Event::End(e) if e.local_name() == b"TD" => {
+                  Event::CData(e) => field.push_str(e),
+                  Event::End(e) if e.local_name().into_inner() == "TD" => {
                     self.reader_buff.clear();
                     return Some(Ok(field));
                   }
@@ -154,8 +150,8 @@ impl<'a, R: BufRead> Iterator for FieldIterator<'a, R> {
               }
             }
           }
-          Event::Empty(e) if e.local_name() == b"TD" => return Some(Ok(String::new())),
-          Event::End(e) if e.local_name() == b"TR" => return None,
+          Event::Empty(e) if e.local_name().into_inner() == "TD" => return Some(Ok(String::new())),
+          Event::End(e) if e.local_name().into_inner() == "TR" => return None,
           Event::Eof => return Some(Err(VOTableError::PrematureEOF("TR"))),
           Event::Text(e) if is_empty(e) => {}
           Event::Comment(e) => discard_comment(e, self.reader, "TD"),
@@ -176,7 +172,7 @@ impl<'a> FieldIteratorUnbuffered<'a> {
   /// Slice going from '<TR>' (exclusive) to '</TR>' (exclusive).
   pub fn new(raw_row: &'a [u8]) -> Self {
     Self {
-      reader: Reader::from_bytes(raw_row),
+      reader: Reader::from_reader(raw_row),
     }
   }
 }
@@ -186,27 +182,25 @@ impl<'a> Iterator for FieldIteratorUnbuffered<'a> {
 
   fn next(&mut self) -> Option<Self::Item> {
     loop {
-      let event = self.reader.read_event_unbuffered();
+      let event = self.reader.read_event();
       match event {
         Err(e) => return Some(Err(VOTableError::Read(e))),
         Ok(mut event) => match &mut event {
-          Event::Start(e) if e.local_name() == b"TD" => {
+          Event::Start(e) if e.local_name().into_inner() == "TD" => {
             let mut field = String::new();
             loop {
-              let event = self.reader.read_event_unbuffered();
+              let event = self.reader.read_event();
               match event {
                 Err(e) => return Some(Err(VOTableError::Read(e))),
                 Ok(mut event) => match &mut event {
-                  Event::Text(e) => match e.unescaped() {
-                    Err(e) => return Some(Err(VOTableError::Read(e))),
-                    Ok(raw_txt) => {
-                      field.push_str(unsafe { str::from_utf8_unchecked(raw_txt.as_ref()) })
+                  Event::Text(e) => field.push_str(e),
+                  Event::GeneralRef(e) => {
+                    if let Err(e) = push_general_ref(&mut field, e) {
+                      return Some(Err(e));
                     }
-                  },
-                  Event::CData(e) => {
-                    field.push_str(unsafe { str::from_utf8_unchecked(e.as_ref()) })
                   }
-                  Event::End(e) if e.local_name() == b"TD" => {
+                  Event::CData(e) => field.push_str(e),
+                  Event::End(e) if e.local_name().into_inner() == "TD" => {
                     return Some(Ok(field));
                   }
                   Event::Eof => return Some(Err(VOTableError::PrematureEOF("TD"))),
@@ -216,7 +210,7 @@ impl<'a> Iterator for FieldIteratorUnbuffered<'a> {
               }
             }
           }
-          Event::Empty(e) if e.local_name() == b"TD" => return Some(Ok(String::new())),
+          Event::Empty(e) if e.local_name().into_inner() == "TD" => return Some(Ok(String::new())),
           Event::Eof => return None,
           Event::Text(e) if is_empty(e) => {}
           Event::Comment(e) => discard_comment(e, &self.reader, "TD"),
@@ -241,7 +235,7 @@ impl<C: TableDataContent> TableData<C> {
     writer: &mut Writer<W>,
   ) -> Result<(), VOTableError> {
     writer
-      .write_event(Event::Start(BytesStart::borrowed_name(Self::TAG_BYTES)))
+      .write_event(Event::Start(BytesStart::new(Self::TAG)))
       .map_err(VOTableError::Write)
   }
 
@@ -250,7 +244,7 @@ impl<C: TableDataContent> TableData<C> {
     writer: &mut Writer<W>,
   ) -> Result<(), VOTableError> {
     writer
-      .write_event(Event::End(BytesEnd::borrowed(Self::TAG_BYTES)))
+      .write_event(Event::End(BytesEnd::new(Self::TAG)))
       .map_err(VOTableError::Write)
   }
 }

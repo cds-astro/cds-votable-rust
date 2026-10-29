@@ -6,7 +6,7 @@ use base64::{
   engine::{general_purpose, GeneralPurpose},
   read::DecoderReader,
 };
-use quick_xml::{events::Event, Reader};
+use quick_xml::{events::Event, name::QName, Reader};
 use serde::{de::DeserializeSeed, Deserializer};
 
 use crate::{
@@ -91,11 +91,12 @@ impl<'a, R: BufRead> TableIter for DataTableRowValueIterator<'a, R> {
   fn read_to_end(self) -> Result<(), VOTableError> {
     self
       .reader
-      .read_to_end(
-        TableData::<VoidTableDataContent>::TAG_BYTES,
+      .read_to_end_into(
+        QName(TableData::<VoidTableDataContent>::TAG),
         self.reader_buff,
       )
       .map_err(VOTableError::Read)
+      .map(|_| ())
   }
 }
 
@@ -104,11 +105,11 @@ impl<'a, R: BufRead> Iterator for DataTableRowValueIterator<'a, R> {
 
   fn next(&mut self) -> Option<Self::Item> {
     loop {
-      let event = self.reader.read_event(self.reader_buff);
+      let event = self.reader.read_event_into(self.reader_buff);
       match event {
         Err(e) => return Some(Err(VOTableError::Read(e))),
         Ok(mut event) => match &mut event {
-          Event::Start(e) if e.local_name() == b"TR" => {
+          Event::Start(e) if e.local_name().into_inner() == "TR" => {
             let nf = self.schema.len();
             return Some(
               FieldIterator::new(self.reader, self.reader_buff)
@@ -125,7 +126,7 @@ impl<'a, R: BufRead> Iterator for DataTableRowValueIterator<'a, R> {
                 }),
             );
           }
-          Event::End(e) if e.local_name() == b"TABLEDATA" => return None,
+          Event::End(e) if e.local_name().into_inner() == "TABLEDATA" => return None,
           Event::Eof => return Some(Err(VOTableError::PrematureEOF("TABLEDATA"))),
           Event::Text(e) if is_empty(e) => {}
           Event::Comment(e) => discard_comment(e, self.reader, "TABLEDATA"),
@@ -172,7 +173,7 @@ impl<'a, R: BufRead> TableIter for BinaryRowValueIterator<'a, R> {
       .into_inner()
       .into_inner()
       .into_inner();
-    // Stream::<VoidTableDataContent>::TAG_BYTES,
+    // Stream::<VoidTableDataContent>::TAG,
     let mut stream_buf = [0_u8; 8];
     let mut bin_buf = [0_u8; 8]; // we could have reuse stream_buf, but not for BINARY2...
     skip_until(reader, b'<')
@@ -265,7 +266,7 @@ impl<'a, R: BufRead> TableIter for Binary2RowValueIterator<'a, R> {
       .into_inner()
       .into_inner()
       .into_inner();
-    // Stream::<VoidTableDataContent>::TAG_BYTES,
+    // Stream::<VoidTableDataContent>::TAG,
     let mut stream_buf = [0_u8; 8];
     let mut bin2_buf = [0_u8; 9]; // we could have reuse stream_buf, but not for BINARY2...
 

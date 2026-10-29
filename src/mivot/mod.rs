@@ -220,9 +220,9 @@ mod test {
     let mut reader = Reader::from_reader(Cursor::new(xml.as_bytes()));
     let mut buff: Vec<u8> = Vec::with_capacity(xml.len());
     loop {
-      let mut event = reader.read_event(&mut buff).unwrap();
+      let mut event = reader.read_event_into(&mut buff).unwrap();
       match &mut event {
-        Event::Start(e) if e.local_name() == X::TAG_BYTES => {
+        Event::Start(e) if e.local_name().into_inner() == X::TAG => {
           if !special_cond {
             let res = X::from_event_start(e)
               .and_then(|info| info.read_content(&mut reader, &mut buff, &()));
@@ -232,7 +232,7 @@ mod test {
           }
           break;
         }
-        Event::Empty(e) if e.local_name() == X::TAG_BYTES => {
+        Event::Empty(e) if e.local_name().into_inner() == X::TAG => {
           if special_cond {
             let info = X::from_event_empty(e);
             assert!(info.is_err());
@@ -241,7 +241,7 @@ mod test {
           };
           break;
         }
-        Event::Text(e) if e.escaped().is_empty() => (), // First even read
+        Event::Text(e) if e.is_empty() => (), // First even read
         Event::Comment(_) => (),
         Event::DocType(_) => (),
         Event::Decl(_) => (),

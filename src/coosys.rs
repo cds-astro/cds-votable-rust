@@ -216,29 +216,29 @@ impl HasSubElements for CooSys {
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.local_name() {
-          FieldRef::TAG_BYTES => push_from_event_start!(self, FieldRef, reader, reader_buff, e),
-          ParamRef::TAG_BYTES => push_from_event_start!(self, ParamRef, reader, reader_buff, e),
+        Event::Start(e) => match e.local_name().into_inner() {
+          FieldRef::TAG => push_from_event_start!(self, FieldRef, reader, reader_buff, e),
+          ParamRef::TAG => push_from_event_start!(self, ParamRef, reader, reader_buff, e),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ));
           }
         },
-        Event::Empty(e) => match e.local_name() {
-          FieldRef::TAG_BYTES => push_from_event_empty!(self, FieldRef, e),
-          ParamRef::TAG_BYTES => push_from_event_empty!(self, ParamRef, e),
+        Event::Empty(e) => match e.local_name().into_inner() {
+          FieldRef::TAG => push_from_event_empty!(self, FieldRef, e),
+          ParamRef::TAG => push_from_event_empty!(self, ParamRef, e),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ));
           }
         },
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
+        Event::End(e) if e.local_name().into_inner() == Self::TAG => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         Event::Comment(e) => discard_comment(e, reader, Self::TAG),
         _ => discard_event(event, Self::TAG),
@@ -964,13 +964,13 @@ mod tests {
     let mut reader = Reader::from_reader(Cursor::new(xml.as_bytes()));
     let mut buff: Vec<u8> = Vec::with_capacity(xml.len());
     let mut coosys = loop {
-      let mut event = reader.read_event(&mut buff).unwrap();
+      let mut event = reader.read_event_into(&mut buff).unwrap();
       match &mut event {
-        Event::Empty(e) if e.local_name() == CooSys::TAG_BYTES => {
+        Event::Empty(e) if e.local_name().into_inner() == CooSys::TAG => {
           let coosys = CooSys::from_event_empty(e).unwrap();
           break coosys;
         }
-        Event::Text(e) if e.escaped().is_empty() => (), // First even read
+        Event::Text(e) if e.is_empty() => (), // First even read
         _ => unreachable!(),
       }
     };
@@ -989,9 +989,9 @@ mod tests {
     let mut reader = Reader::from_reader(Cursor::new(xml.as_bytes()));
     let mut buff: Vec<u8> = Vec::with_capacity(xml.len());
     let mut coosys = loop {
-      let mut event = reader.read_event(&mut buff).unwrap();
+      let mut event = reader.read_event_into(&mut buff).unwrap();
       match &mut event {
-        Event::Empty(e) if e.local_name() == CooSys::TAG_BYTES => {
+        Event::Empty(e) if e.local_name().into_inner() == CooSys::TAG => {
           let coosys = CooSys::from_event_empty(e).unwrap();
           assert_eq!(coosys.id, "J2000");
           match &coosys.coosys {
@@ -1003,7 +1003,7 @@ mod tests {
           }
           break coosys;
         }
-        Event::Text(e) if e.escaped().is_empty() => (), // First even read
+        Event::Text(e) if e.is_empty() => (), // First even read
         _ => unreachable!(),
       }
     };
