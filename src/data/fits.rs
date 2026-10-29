@@ -107,29 +107,29 @@ impl HasSubElements for Fits {
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.name() {
-          Stream::<VoidTableDataContent>::TAG_BYTES => {
+        Event::Start(e) => match e.name().into_inner() {
+          Stream::<VoidTableDataContent>::TAG => {
             self.stream = from_event_start_by_ref!(Stream, reader, reader_buff, e)
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.name().to_vec(),
+              e.name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::Empty(e) => match e.name() {
-          Stream::<VoidTableDataContent>::TAG_BYTES => self.stream = Stream::from_event_empty(e)?,
+        Event::Empty(e) => match e.name().into_inner() {
+          Stream::<VoidTableDataContent>::TAG => self.stream = Stream::from_event_empty(e)?,
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.name().to_vec(),
+              e.name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(()),
+        Event::End(e) if e.name().into_inner() == Self::TAG => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         Event::Comment(e) => discard_comment(e, reader, Self::TAG),
         _ => discard_event(event, Self::TAG),

@@ -220,25 +220,25 @@ impl HasSubElements for ReferenceDyn {
     _context: &Self::Context,
   ) -> Result<(), VOTableError> {
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
         Event::Start(e) => {
           return Err(VOTableError::UnexpectedStartTag(
-            e.local_name().to_vec(),
+            e.local_name().into_inner().as_bytes().to_vec(),
             Self::TAG,
           ))
         }
-        Event::Empty(e) => match e.local_name() {
-          ForeignKey::TAG_BYTES => self.push_foreignkey_by_ref(ForeignKey::from_event_empty(e)?),
+        Event::Empty(e) => match e.local_name().into_inner() {
+          ForeignKey::TAG => self.push_foreignkey_by_ref(ForeignKey::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
         Event::Text(e) if is_empty(e) => {}
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => {
+        Event::End(e) if e.local_name().into_inner() == Self::TAG => {
           return if self.foreignkeys.is_empty() {
             Err(VOTableError::Custom(
               "A Dynamic Reference must have at least one ForeignKey".to_owned(),

@@ -182,7 +182,7 @@ impl HpxSort {
         // Internal sort
         let mut rows = (&mut raw_row_it).collect::<Result<Vec<Vec<u8>>, _>>()?;
         hpx_internal_sort(rows.as_mut_slice(), hpx29, self.parallel);
-        let w = &mut writer.inner();
+        let w = &mut writer.get_mut();
         // Write the result
         for row in rows {
           w.write_all(b"<TR>")
@@ -192,7 +192,7 @@ impl HpxSort {
         }
       } else {
         // External sort
-        let w = &mut writer.inner();
+        let w = &mut writer.get_mut();
         let params =
           SimpleExtSortParams::new(self.tmp_dir, self.chunk_size as u32, self.parallel, true);
         let sorted_raw_row_it = hpx_external_sort_stream(

@@ -47,13 +47,13 @@ impl<C: TableDataContent> Binary2<C> {
     writer: &mut Writer<W>,
   ) -> Result<(), VOTableError> {
     writer
-      .write_event(Event::Start(BytesStart::borrowed_name(Self::TAG_BYTES)))
+      .write_event(Event::Start(BytesStart::new(Self::TAG)))
       .map_err(VOTableError::Write)
       .and_then(|()| {
         self
           .stream
           .write_start(writer)
-          .and_then(|()| writer.write(b"\n").map_err(VOTableError::Write))
+          .and_then(|()| writer.get_mut().write_all(b"\n").map_err(VOTableError::Write))
       })
   }
 
@@ -64,7 +64,7 @@ impl<C: TableDataContent> Binary2<C> {
     //if self.stream.content.is_some() {
     self.stream.write_end(writer).and_then(|()| {
       writer
-        .write_event(Event::End(BytesEnd::borrowed(Self::TAG_BYTES)))
+        .write_event(Event::End(BytesEnd::new(Self::TAG)))
         .map_err(VOTableError::Write)
     })
   }
@@ -113,10 +113,10 @@ impl<C: TableDataContent> QuickXmlReadWrite<SpecialElem> for Binary2<C> {
     context: &Vec<TableElem>,
   ) -> Result<(), VOTableError> {
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.name() {
-          Stream::<C>::TAG_BYTES => {
+        Event::Start(e) => match e.name().into_inner() {
+          Stream::<C>::TAG => {
             // We could detect if current stream.content.is_some() to prevent from multi-stream...
             let mut stream = Stream::<C>::from_event_start(e)?;
             let mut content = C::new();
@@ -124,14 +124,15 @@ impl<C: TableDataContent> QuickXmlReadWrite<SpecialElem> for Binary2<C> {
             stream.content = Some(content);
             self.stream = stream;
             // the next call is a failure (because we consume </STREAM> in read_binary_content)
-            let tmp_reader = reader.check_end_names(false);
+            reader.config_mut().check_end_names = false;
+            let tmp_reader = reader;
             loop {
               let mut event = tmp_reader
-                .read_event(reader_buff)
+                .read_event_into(reader_buff)
                 .map_err(VOTableError::Read)?;
               match &mut event {
                 Event::Text(e) if is_empty(e) => {}
-                Event::End(e) if e.name() == Self::TAG_BYTES => return Ok(()),
+                Event::End(e) if e.name().into_inner() == Self::TAG => return Ok(()),
                 Event::Comment(e) => discard_comment(e, tmp_reader, Self::TAG),
                 _ => discard_event(event, Self::TAG),
               }
@@ -139,16 +140,16 @@ impl<C: TableDataContent> QuickXmlReadWrite<SpecialElem> for Binary2<C> {
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.name().to_vec(),
+              e.name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::Empty(e) => match e.name() {
-          Stream::<C>::TAG_BYTES => self.stream = Stream::<C>::from_event_empty(e)?,
+        Event::Empty(e) => match e.name().into_inner() {
+          Stream::<C>::TAG => self.stream = Stream::<C>::from_event_empty(e)?,
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.name().to_vec(),
+              e.name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }

@@ -198,7 +198,7 @@ impl Edit {
         .map_err(|e| VOTableError::Custom(e.to_string()))?;
     }
     if vot.write_to_data_beginning(&mut writer, &(), false)? {
-      it.copy_remaining_data(writer.inner())
+      it.copy_remaining_data(writer.get_mut())
         .and_then(|_| it.read_to_end())
         .and_then(|mut out_vot| {
           out_vot

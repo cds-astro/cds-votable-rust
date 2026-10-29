@@ -697,7 +697,7 @@ macro_rules! read_content_by_ref {
     let mut content = String::new();
     loop {
       let mut event = $reader
-        .read_event($reader_buff)
+        .read_event_into($reader_buff)
         .map_err(VOTableError::Read)?;
       match &mut event {
         Event::Text(e) => content.push_str(
@@ -707,7 +707,7 @@ macro_rules! read_content_by_ref {
         ),
         Event::CData(e) => content
           .push_str(str::from_utf8(e.clone().into_inner().as_ref()).map_err(VOTableError::Utf8)?),
-        Event::End(e) if e.local_name() == $Self::TAG_BYTES => {
+        Event::End(e) if e.local_name().into_inner() == $Self::TAG => {
           $self.content = Some(content);
           return Ok(());
         }
@@ -721,7 +721,7 @@ macro_rules! read_content_by_ref {
     let mut content = String::new();
     loop {
       let mut event = $reader
-        .read_event($reader_buff)
+        .read_event_into($reader_buff)
         .map_err(VOTableError::Read)?;
       match &mut event {
         Event::Text(e) => content.push_str(
@@ -732,7 +732,7 @@ macro_rules! read_content_by_ref {
         Event::CData(e) => content.push_str(
           std::str::from_utf8(e.clone().into_inner().as_ref()).map_err(VOTableError::Utf8)?,
         ),
-        Event::End(e) if e.local_name() == $Self::TAG_BYTES => {
+        Event::End(e) if e.local_name().into_inner() == $Self::TAG => {
           $self.$content = content;
           return Ok(());
         }

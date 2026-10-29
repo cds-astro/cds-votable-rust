@@ -11,6 +11,7 @@ use paste::paste;
 use quick_xml::{
   events::{attributes::Attributes, Event},
   Reader, Writer,
+  escape::unescape,
 };
 
 use crate::{
@@ -184,12 +185,17 @@ impl Collection {
     let mut dmid: Option<String> = None;
     for attr_res in attrs {
       let attr = attr_res.map_err(VOTableError::Attr)?;
-      let unescaped = attr.unescaped_value().map_err(VOTableError::Read)?;
-      let value = str::from_utf8(unescaped.as_ref()).map_err(VOTableError::Utf8)?;
+      let value = unescape(&attr.value).map_err(|e| VOTableError::Read(e.into()))?;
+      let value: &str = &value;
       if !value.is_empty() {
-        match attr.key {
-          b"dmid" => dmid = Some(value.into()),
-          _ => return Err(VOTableError::UnexpectedAttr(attr.key.to_vec(), Self::TAG)),
+        match attr.key.into_inner() {
+          "dmid" => dmid = Some(value.into()),
+          _ => {
+            return Err(VOTableError::UnexpectedAttr(
+              attr.key.into_inner().as_bytes().to_vec(),
+              Self::TAG,
+            ))
+          }
         }
       };
     }
@@ -209,50 +215,50 @@ impl Collection {
     let mut join_vec: Vec<Join> = Default::default();
 
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.local_name() {
-          Attribute::TAG_BYTES => {
+        Event::Start(e) => match e.local_name().into_inner() {
+          Attribute::TAG => {
             attr_vec.push(from_event_start_by_ref!(Attribute, reader, reader_buff, e))
           }
-          Reference::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Reference(
+          Reference::TAG => inst_or_ref_vec.push(InstanceOrRef::Reference(
             from_event_start_by_ref!(Reference, reader, reader_buff, e),
           )),
-          Self::TAG_BYTES => {
+          Self::TAG => {
             let opt_dmid = Self::get_opt_dmid_from_atttributes(e.attributes())?;
             let col =
               Self::from_opt_dmid_and_reading_sub_elems(opt_dmid, &(), reader, reader_buff)?;
             col_vec.push(col)
           }
-          Instance::TAG_BYTES => inst_or_ref_vec.push(InstanceOrRef::Instance(
+          Instance::TAG => inst_or_ref_vec.push(InstanceOrRef::Instance(
             from_event_start_by_ref!(Instance, reader, reader_buff, e),
           )),
-          Join::TAG_BYTES => join_vec.push(from_event_start_by_ref!(Join, reader, reader_buff, e)),
+          Join::TAG => join_vec.push(from_event_start_by_ref!(Join, reader, reader_buff, e)),
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::Empty(e) => match e.local_name() {
-          Attribute::TAG_BYTES => attr_vec.push(Attribute::from_event_empty(e)?),
-          Reference::TAG_BYTES => {
+        Event::Empty(e) => match e.local_name().into_inner() {
+          Attribute::TAG => attr_vec.push(Attribute::from_event_empty(e)?),
+          Reference::TAG => {
             inst_or_ref_vec.push(InstanceOrRef::Reference(Reference::from_event_empty(e)?))
           }
-          Instance::TAG_BYTES => {
+          Instance::TAG => {
             inst_or_ref_vec.push(InstanceOrRef::Instance(Instance::from_event_empty(e)?))
           }
-          Join::TAG_BYTES => join_vec.push(Join::from_event_empty(e)?),
+          Join::TAG => join_vec.push(Join::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
         Event::Text(e) if is_empty(e) => {}
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => {
+        Event::End(e) if e.local_name().into_inner() == Self::TAG => {
           return match (((!attr_vec.is_empty()) as u8) << 3)
             + (((!col_vec.is_empty()) as u8) << 2)
             + (((!inst_or_ref_vec.is_empty()) as u8) << 1)

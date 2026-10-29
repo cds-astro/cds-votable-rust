@@ -166,27 +166,27 @@ impl<C: TableDataContent> Table<C> {
     mut reader_buff: &mut Vec<u8>,
   ) -> Result<Option<Data<C>>, VOTableError> {
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.local_name() {
-          Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
-          Field::TAG_BYTES => {
+        Event::Start(e) => match e.local_name().into_inner() {
+          Description::TAG => set_desc_from_event_start!(self, reader, reader_buff, e),
+          Field::TAG => {
             self.push_field_by_ref(from_event_start_by_ref!(Field, reader, reader_buff, e))
           }
-          Param::TAG_BYTES => {
+          Param::TAG => {
             self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
           }
-          TableGroup::TAG_BYTES => self.push_tablegroup_by_ref(from_event_start_by_ref!(
+          TableGroup::TAG => self.push_tablegroup_by_ref(from_event_start_by_ref!(
             TableGroup,
             reader,
             reader_buff,
             e
           )),
-          Link::TAG_BYTES => {
+          Link::TAG => {
             self.push_link_by_ref(from_event_start_by_ref!(Link, reader, reader_buff, e))
           }
-          Data::<C>::TAG_BYTES => return Data::from_event_start(e).map(Some),
-          Info::TAG_BYTES => {
+          Data::<C>::TAG => return Data::from_event_start(e).map(Some),
+          Info::TAG => {
             if self.elems.is_empty() && self.links.is_empty() && self.data.is_none() {
               self.push_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
             } else {
@@ -195,26 +195,26 @@ impl<C: TableDataContent> Table<C> {
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::Empty(e) => match e.local_name() {
-          Field::TAG_BYTES => self.push_field_by_ref(Field::from_event_empty(e)?),
-          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
-          TableGroup::TAG_BYTES => self.push_tablegroup_by_ref(TableGroup::from_event_empty(e)?),
-          Link::TAG_BYTES => self.push_link_by_ref(Link::from_event_empty(e)?),
-          Info::TAG_BYTES => self.push_info_by_ref(Info::from_event_empty(e)?),
+        Event::Empty(e) => match e.local_name().into_inner() {
+          Field::TAG => self.push_field_by_ref(Field::from_event_empty(e)?),
+          Param::TAG => self.push_param_by_ref(Param::from_event_empty(e)?),
+          TableGroup::TAG => self.push_tablegroup_by_ref(TableGroup::from_event_empty(e)?),
+          Link::TAG => self.push_link_by_ref(Link::from_event_empty(e)?),
+          Info::TAG => self.push_info_by_ref(Info::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
         Event::Text(e) if is_empty(e) => {}
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(None),
+        Event::End(e) if e.local_name().into_inner() == Self::TAG => return Ok(None),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         Event::Comment(e) => discard_comment(e, reader, Self::TAG),
         _ => discard_event(event, Self::TAG),
@@ -231,11 +231,11 @@ impl<C: TableDataContent> Table<C> {
     context: &(),
     stop_before_data: bool,
   ) -> Result<(), VOTableError> {
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    let mut tag = BytesStart::new(Self::TAG);
     // Write tag + attributes
     self.for_each_attribute(|k, v| tag.push_attribute((k, v)));
     writer
-      .write_event(Event::Start(tag.to_borrowed()))
+      .write_event(Event::Start(tag.borrow()))
       .map_err(VOTableError::Write)?;
     // Write sub-elems
     write_elem!(self, description, writer, context);
@@ -255,7 +255,7 @@ impl<C: TableDataContent> Table<C> {
     context: &(),
     start_after_data: bool,
   ) -> Result<(), VOTableError> {
-    let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    let tag = BytesStart::new(Self::TAG);
 
     if !start_after_data && let Some(elem) = &mut self.data {
       elem.write_from_data_end(writer)?;
@@ -387,26 +387,26 @@ impl<C: TableDataContent> HasSubElements for Table<C> {
     // `read_event_unbuffered` to avoid a copy.
     // But are more generic that this to be able to read in streaming mode
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.local_name() {
-          Description::TAG_BYTES => set_desc_from_event_start!(self, reader, reader_buff, e),
-          Field::TAG_BYTES => {
+        Event::Start(e) => match e.local_name().into_inner() {
+          Description::TAG => set_desc_from_event_start!(self, reader, reader_buff, e),
+          Field::TAG => {
             self.push_field_by_ref(from_event_start_by_ref!(Field, reader, reader_buff, e))
           }
-          Param::TAG_BYTES => {
+          Param::TAG => {
             self.push_param_by_ref(from_event_start_by_ref!(Param, reader, reader_buff, e))
           }
-          TableGroup::TAG_BYTES => self.push_tablegroup_by_ref(from_event_start_by_ref!(
+          TableGroup::TAG => self.push_tablegroup_by_ref(from_event_start_by_ref!(
             TableGroup,
             reader,
             reader_buff,
             e
           )),
-          Link::TAG_BYTES => {
+          Link::TAG => {
             self.push_link_by_ref(from_event_start_by_ref!(Link, reader, reader_buff, e))
           }
-          Data::<C>::TAG_BYTES => {
+          Data::<C>::TAG => {
             self.data = Some(from_event_start_by_ref!(
               Data,
               reader,
@@ -415,7 +415,7 @@ impl<C: TableDataContent> HasSubElements for Table<C> {
               self.elems
             ))
           }
-          Info::TAG_BYTES => {
+          Info::TAG => {
             if self.elems.is_empty() && self.links.is_empty() && self.data.is_none() {
               self.push_info_by_ref(from_event_start_by_ref!(Info, reader, reader_buff, e))
             } else {
@@ -424,26 +424,26 @@ impl<C: TableDataContent> HasSubElements for Table<C> {
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::Empty(e) => match e.local_name() {
-          Field::TAG_BYTES => self.push_field_by_ref(Field::from_event_empty(e)?),
-          Param::TAG_BYTES => self.push_param_by_ref(Param::from_event_empty(e)?),
-          TableGroup::TAG_BYTES => self.push_tablegroup_by_ref(TableGroup::from_event_empty(e)?),
-          Link::TAG_BYTES => self.push_link_by_ref(Link::from_event_empty(e)?),
-          Info::TAG_BYTES => self.push_info_by_ref(Info::from_event_empty(e)?),
+        Event::Empty(e) => match e.local_name().into_inner() {
+          Field::TAG => self.push_field_by_ref(Field::from_event_empty(e)?),
+          Param::TAG => self.push_param_by_ref(Param::from_event_empty(e)?),
+          TableGroup::TAG => self.push_tablegroup_by_ref(TableGroup::from_event_empty(e)?),
+          Link::TAG => self.push_link_by_ref(Link::from_event_empty(e)?),
+          Info::TAG => self.push_info_by_ref(Info::from_event_empty(e)?),
           _ => {
             return Err(VOTableError::UnexpectedEmptyTag(
-              e.local_name().to_vec(),
+              e.local_name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
         Event::Text(e) if is_empty(e) => {}
-        Event::End(e) if e.local_name() == Self::TAG_BYTES => return Ok(()),
+        Event::End(e) if e.local_name().into_inner() == Self::TAG => return Ok(()),
         Event::Eof => return Err(VOTableError::PrematureEOF(Self::TAG)),
         _ => discard_event(event, Self::TAG),
       }

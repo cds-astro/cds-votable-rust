@@ -146,27 +146,27 @@ impl Stream<VoidTableDataContent> {
     reader_buff: &mut Vec<u8>,
   ) -> Result<Stream<VoidTableDataContent>, VOTableError> {
     loop {
-      let mut event = reader.read_event(reader_buff).map_err(VOTableError::Read)?;
+      let mut event = reader.read_event_into(reader_buff).map_err(VOTableError::Read)?;
       match &mut event {
-        Event::Start(e) => match e.name() {
-          Stream::<VoidTableDataContent>::TAG_BYTES => {
+        Event::Start(e) => match e.name().into_inner() {
+          Stream::<VoidTableDataContent>::TAG => {
             // We could detect if current stream.content.is_some() to prevent from multi-stream...
             return Stream::<VoidTableDataContent>::from_event_start(e);
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.name().to_vec(),
+              e.name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
         },
-        Event::Empty(e) => match e.name() {
-          Stream::<VoidTableDataContent>::TAG_BYTES => {
+        Event::Empty(e) => match e.name().into_inner() {
+          Stream::<VoidTableDataContent>::TAG => {
             return Stream::<VoidTableDataContent>::from_event_empty(e);
           }
           _ => {
             return Err(VOTableError::UnexpectedStartTag(
-              e.name().to_vec(),
+              e.name().into_inner().as_bytes().to_vec(),
               Self::TAG,
             ))
           }
@@ -202,18 +202,18 @@ impl<C: TableDataContent> Stream<C> {
   }
 
   pub fn write_start<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
-    let mut tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    let mut tag = BytesStart::new(Self::TAG);
     // Write tag + attributes
     self.for_each_attribute(|k, v| tag.push_attribute((k, v)));
     // push2write_extra!(self, tag);
     writer
-      .write_event(Event::Start(tag.to_borrowed()))
+      .write_event(Event::Start(tag.borrow()))
       .map_err(VOTableError::Write)
   }
 
   pub fn write_end<W: Write>(&mut self, writer: &mut Writer<W>) -> Result<(), VOTableError> {
     // Close tag
-    let tag = BytesStart::borrowed_name(Self::TAG_BYTES);
+    let tag = BytesStart::new(Self::TAG);
     writer
       .write_event(Event::End(tag.to_end()))
       .map_err(VOTableError::Write)
@@ -321,7 +321,7 @@ impl<C: TableDataContent> QuickXmlReadWrite<SpecialElem> for Stream<C> {
       "Writing STREAM with a content must be taken in charge by \
     the parent element (since the encoding depends on the parent: BINARy of BINARY2"
     );
-    let mut elem_writer = writer.create_element(Self::TAG_BYTES);
+    let mut elem_writer = writer.create_element(Self::TAG);
     write_opt_tostring_attr!(self, elem_writer, type_, "type");
     write_opt_string_attr!(self, elem_writer, href);
     write_opt_tostring_attr!(self, elem_writer, actuate);
